@@ -4,10 +4,16 @@
  */
 
 import React, { useState } from 'react';
-import { LayoutDashboard, FileText, DollarSign, Truck, PackageSearch, Bot, Settings, Search, Plus, Globe } from 'lucide-react';
+import { LayoutDashboard, FileText, DollarSign, Truck, PackageSearch, Bot, Settings, Search, Plus, Globe, LogOut, Lock, User } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
 
 export default function App() {
+  const { user, loading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50">加载中...</div>;
+
+  if (!user) return <LoginScreen />;
 
   return (
     <div className="bg-slate-50 min-h-screen w-full flex text-slate-800 font-sans p-4 overflow-hidden">
@@ -23,19 +29,27 @@ export default function App() {
             <NavItem icon={<FileText />} label="订单工作台 (Orders)" id="orders" activeTab={activeTab} setActiveTab={setActiveTab} />
             <NavItem icon={<DollarSign />} label="收款管理 (Finance)" id="finance" activeTab={activeTab} setActiveTab={setActiveTab} />
             <NavItem icon={<Truck />} label="物流打包 (Logistics)" id="logistics" activeTab={activeTab} setActiveTab={setActiveTab} />
-            <NavItem icon={<PackageSearch />} label="供应商与采购" id="suppliers" activeTab={activeTab} setActiveTab={setActiveTab} />
+            <NavItem icon={<PackageSearch />} label="客户与CRM" id="customers" activeTab={activeTab} setActiveTab={setActiveTab} />
             <div className="my-4 border-t border-slate-100 mx-2"></div>
-            <NavItem icon={<Bot />} label="AI 智能助手" id="ai" activeTab={activeTab} setActiveTab={setActiveTab} customClass="text-indigo-600 hover:bg-indigo-50" />
-            <NavItem icon={<Settings />} label="系统设置" id="settings" activeTab={activeTab} setActiveTab={setActiveTab} />
+            <NavItem icon={<Bot />} label="AI 智能向导" id="ai" activeTab={activeTab} setActiveTab={setActiveTab} customClass="text-indigo-600 hover:bg-indigo-50" />
+            <NavItem icon={<Settings />} label="系统与AI配置" id="settings" activeTab={activeTab} setActiveTab={setActiveTab} />
           </ul>
         </nav>
         
-        {/* Helper Widget */}
-        <div className="bg-slate-900 text-white p-4 rounded-xl mt-auto relative overflow-hidden shadow-lg">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-xl -translate-y-10 translate-x-10"></div>
-          <p className="text-xs text-slate-400 mb-2 flex items-center relative z-10"><Bot className="w-3 h-3 mr-1"/> AI 助手建议</p>
-          <p className="text-sm italic relative z-10">"检测到订单 #8911 的货代费率高于平均值 12%，建议重新询价。"</p>
-          <button className="mt-3 w-full bg-blue-600 hover:bg-blue-700 transition-colors py-2 rounded-lg text-xs font-semibold relative z-10">查看建议</button>
+        {/* User Card */}
+        <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl mt-auto relative shadow-sm flex items-center justify-between">
+          <div className="flex items-center">
+             <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-bold mr-2">
+               {user.name.charAt(0)}
+             </div>
+             <div>
+               <div className="text-sm font-bold text-slate-700">{user.name}</div>
+               <div className="text-[10px] text-slate-400 capitalize">{user.role}</div>
+             </div>
+          </div>
+          <button onClick={logout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="退出登录">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </aside>
 
@@ -46,10 +60,11 @@ export default function App() {
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">
             {activeTab === 'dashboard' && '订单工作台'}
             {activeTab === 'orders' && '订单与报价管理'}
-            {activeTab === 'finance' && '收付款与发票中心'}
-            {activeTab === 'logistics' && '物流与打包信息'}
-            {activeTab === 'ai' && 'AI 智能订单处理'}
-            {/* fallback */}
+            {activeTab === 'finance' && '业务收付款'}
+            {activeTab === 'logistics' && '物流与打包'}
+            {activeTab === 'customers' && '客户关系管理 (CRM)'}
+            {activeTab === 'ai' && 'AI 智能向导'}
+            {activeTab === 'settings' && '系统与 AI 配置'}
           </h2>
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -71,13 +86,170 @@ export default function App() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'ai' && <AIAssistantView />}
-          {(activeTab !== 'dashboard' && activeTab !== 'ai') && (
+          {activeTab === 'settings' && <SettingsView />}
+          {(activeTab !== 'dashboard' && activeTab !== 'ai' && activeTab !== 'settings') && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-white border border-slate-200 rounded-2xl shadow-sm">
-              <p className="font-medium">模块正在开发中...</p>
+              <p className="font-medium">模块 [{activeTab}] 正在按 PRD 规范开发中...</p>
             </div>
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+function LoginScreen() {
+  const [username, setUsername] = useState('root');
+  const [password, setPassword] = useState('root');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      login(data.user);
+    } catch (err: any) {
+      setError(err.message || '登录失败');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="bg-blue-600 p-8 text-center relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-10 translate-x-10"></div>
+           <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/30">
+             <Globe className="w-8 h-8 text-white" />
+           </div>
+           <h2 className="text-2xl font-bold text-white tracking-tight">SmartTrade AI</h2>
+           <p className="text-blue-100 text-sm mt-2 opacity-80">外贸业务与供应链管理系统</p>
+        </div>
+        <div className="p-8">
+          <form onSubmit={handleLogin} className="space-y-5">
+            {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">{error}</div>}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">登录账号</label>
+              <div className="relative">
+                <User className="w-5 h-5 absolute left-3 top-3 text-slate-400" />
+                <input 
+                  type="text" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-sm"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">密码</label>
+              <div className="relative">
+                <Lock className="w-5 h-5 absolute left-3 top-3 text-slate-400" />
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-sm"
+                  required
+                />
+              </div>
+              <div className="text-right mt-2"><a href="#" className="text-xs text-blue-600 font-medium hover:underline">忘记密码?</a></div>
+            </div>
+            <button 
+              disabled={isSubmitting}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] shadow-md shadow-blue-600/20 disabled:opacity-70 flex justify-center items-center"
+            >
+              {isSubmitting ? '验证中...' : '登录系统'}
+            </button>
+            <p className="text-xs text-slate-400 text-center mt-4">默认超管账号/密码: root / root</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsView() {
+  const [model, setModel] = useState('gemini');
+  const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  React.useEffect(() => {
+    fetch('/api/settings/ai')
+      .then(r => r.json())
+      .then(d => {
+        setModel(d.model);
+        setApiKey(d.apiKey);
+        setBaseUrl(d.baseUrl);
+      });
+  }, []);
+
+  const handleSave = async () => {
+    await fetch('/api/settings/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, apiKey, baseUrl })
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center">
+          <Bot className="w-5 h-5 mr-2 text-blue-600" /> 多模型 AI 网关配置
+        </h3>
+        <p className="text-sm text-slate-500 mb-6">配置您所需要使用的通用大模型接口，支持标准 OpenAI 格式的 API 或 Gemini、DeepSeek 等。</p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">默认激活模型</label>
+            <select 
+              value={model} onChange={e => setModel(e.target.value)}
+              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              <option value="gemini">Google Gemini Pro (当前环境原生)</option>
+              <option value="deepseek-chat">DeepSeek-V3 (API)</option>
+              <option value="gpt-4o">OpenAI GPT-4o (API)</option>
+              <option value="claude-3-5-sonnet">Anthropic Claude 3.5 (API)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">API 密钥 (API Key)</label>
+            <input 
+              type="password" 
+              value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="填入可更新密钥，留空则保持原有密钥"
+              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">接口地址 (Base URL)</label>
+            <input 
+              type="text" 
+              value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="如: https://api.deepseek.com/v1"
+              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div className="pt-4">
+            <button onClick={handleSave} className="bg-slate-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold shadow-sm transition-colors">
+              {saved ? '已保存 ✓' : '保存模型配置'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
