@@ -49,6 +49,14 @@ npm install
 npm run dev
 ```
 
+> **常见问题诊断 (macOS 相关)**: 
+> 如果你在 macOS 安装依赖后遇到类似 `Error: Cannot find module @rollup/rollup-darwin-x64` 的报错，这是 npm 处理可选依赖（Vite/Rollup）时的已知 Bug。
+> **修复方法**：在控制台中依次执行：
+> 1. `rm -rf node_modules package-lock.json`
+> 2. `npm cache clean --force`
+> 3. `npm install --force` 或换用 `pnpm install` 
+> 然后重新运行 `npm run dev` 即可。
+
 启动成功后，终端会显示类似如下信息：
 > `Database initialized.`
 > `Server running on http://0.0.0.0:3000`
