@@ -11,7 +11,7 @@ export let db: Database;
 
 export async function initDb() {
   db = await open({
-    filename: path.join(__dirname, '..', 'database.sqlite'),
+    filename: path.join(__dirname, '..', 'erp_database_v2.sqlite'),
     driver: sqlite3.Database
   });
 
@@ -37,17 +37,43 @@ export async function initDb() {
       contact TEXT,
       logistics_preference TEXT,
       payment_terms TEXT,
+      created_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      order_no TEXT UNIQUE,
+      display_id TEXT UNIQUE,
       customer_id INTEGER,
-      status TEXT, -- draft, confirmed, pending_shipment, shipped, completed
+      status TEXT,
+      details TEXT,
       total_amount REAL,
+      created_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(customer_id) REFERENCES customers(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS finance_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER,
+      type TEXT,
+      amount REAL,
+      target TEXT,
+      status TEXT,
+      remark TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS logistics_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER,
+      tracking_no TEXT,
+      carrier TEXT,
+      packing_details TEXT,
+      status TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id)
     );
   `);
 

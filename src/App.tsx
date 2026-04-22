@@ -6,6 +6,10 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, FileText, DollarSign, Truck, PackageSearch, Bot, Settings, Search, Plus, Globe, LogOut, Lock, User } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import CustomersView from './components/CustomersView';
+import OrdersView from './components/OrdersView';
+import FinanceView from './components/FinanceView';
+import LogisticsView from './components/LogisticsView';
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -75,19 +79,28 @@ export default function App() {
                 className="pl-9 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm w-64 transition-shadow"
               />
             </div>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center transition-colors shadow-[0_4px_14px_0_rgba(37,99,235,0.39)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)]">
-              <Plus className="w-4 h-4 mr-2" />
-              新建订单
-            </button>
+            {activeTab !== 'orders' && (
+              <button 
+                onClick={() => setActiveTab('orders')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center transition-colors shadow-[0_4px_14px_0_rgba(37,99,235,0.39)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)]"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                新建订单
+              </button>
+            )}
           </div>
         </header>
 
         {/* Dashboard Content Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
           {activeTab === 'dashboard' && <DashboardView />}
+          {activeTab === 'orders' && <OrdersView />}
+          {activeTab === 'finance' && <FinanceView />}
+          {activeTab === 'logistics' && <LogisticsView />}
+          {activeTab === 'customers' && <CustomersView />}
           {activeTab === 'ai' && <AIAssistantView />}
           {activeTab === 'settings' && <SettingsView />}
-          {(activeTab !== 'dashboard' && activeTab !== 'ai' && activeTab !== 'settings') && (
+          {(activeTab !== 'dashboard' && activeTab !== 'orders' && activeTab !== 'customers' && activeTab !== 'finance' && activeTab !== 'logistics' && activeTab !== 'ai' && activeTab !== 'settings') && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-white border border-slate-200 rounded-2xl shadow-sm">
               <p className="font-medium">模块 [{activeTab}] 正在按 PRD 规范开发中...</p>
             </div>
@@ -475,6 +488,33 @@ function DashboardView() {
 }
 
 function AIAssistantView() {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const handleParse = async () => {
+    if (!text.trim()) return alert("请输入需要解析的内容");
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/ai/parse-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || '解析失败');
+      }
+      const data = await res.json();
+      setResult(data);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center relative overflow-hidden">
@@ -482,34 +522,52 @@ function AIAssistantView() {
         <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl"></div>
         
         <div className="relative z-10 w-20 h-20 bg-indigo-50 mx-auto rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-indigo-100">
-          <Bot className="w-10 h-10 text-indigo-600" />
+          <Bot className="w-10 h-10 text-indigo-600 animate-pulse" />
         </div>
         
         <h2 className="text-3xl font-bold tracking-tight text-slate-800 mb-3">AI 外贸智能引擎</h2>
         <p className="text-slate-500 mb-10 max-w-lg mx-auto leading-relaxed">
-          将杂乱的 WhatsApp 聊天记录、客户邮件长文、或 PDF 文件粘贴到下方。AI 将自动分析并创建结构化订单数据。
+          将杂乱的 WhatsApp 聊天记录、客户邮件长文粘贴到下方。AI 将自动分析并提取结构化订单与客户数据。
         </p>
 
         <div className="relative max-w-2xl mx-auto shadow-sm rounded-xl mb-4 group ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-500 bg-white hover:ring-slate-300 transition-shadow">
            <textarea 
+             value={text}
+             onChange={e => setText(e.target.value)}
              placeholder="例如：客户 Amsource 昨天邮件说要 3000个A款不锈钢杯子，发到洛杉矶，指定货代是东方国际，FOB宁波，预计下周一付30%定金，要求加固包装..."
              className="w-full h-48 p-5 bg-transparent rounded-xl focus:outline-none resize-none text-slate-700 placeholder:text-slate-300 leading-relaxed custom-scrollbar"
              spellCheck={false}
            ></textarea>
-           
-           <div className="absolute bottom-3 left-3 flex space-x-2">
-             <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center text-xs font-semibold">
-               <FileText className="w-4 h-4 mr-1.5" /> 上传 PDF/水单
-             </button>
-           </div>
         </div>
         
         <div className="max-w-2xl mx-auto flex justify-end">
-          <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold flex items-center transition-transform active:scale-95 shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)]">
+          <button 
+            onClick={handleParse} 
+            disabled={loading}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-8 py-3.5 rounded-xl font-bold flex items-center transition-transform active:scale-95 shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)]"
+          >
             <Bot className="w-5 h-5 mr-2" />
-            一键智能生成
+            {loading ? 'AI 正在分析邮件...' : '一键智能提取'}
           </button>
         </div>
+
+        {result && (
+          <div className="max-w-2xl mx-auto mt-8 text-left bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
+            <h3 className="font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">🧠 智能提取结果</h3>
+            <div className="grid grid-cols-2 gap-4">
+               <div><span className="text-xs font-bold text-slate-500">客户名称:</span> <div className="text-sm font-semibold">{result.customerName}</div></div>
+               <div><span className="text-xs font-bold text-slate-500">所属国家:</span> <div className="text-sm font-semibold">{result.country}</div></div>
+               <div><span className="text-xs font-bold text-slate-500">交易金额:</span> <div className="text-sm font-bold text-green-600">${result.totalAmount}</div></div>
+               <div><span className="text-xs font-bold text-slate-500">付款方式:</span> <div className="text-sm">{result.payment}</div></div>
+               <div className="col-span-2"><span className="text-xs font-bold text-slate-500">物流要求:</span> <div className="text-sm">{result.logistics}</div></div>
+               <div className="col-span-2"><span className="text-xs font-bold text-slate-500">订单内容摘要:</span> <div className="text-sm bg-white p-3 rounded border border-slate-200 mt-1">{result.details}</div></div>
+               <div className="col-span-2"><span className="text-xs font-bold text-slate-500">AI 推荐礼貌性回复:</span> <div className="text-sm italic text-indigo-700 bg-indigo-50 p-3 rounded border border-indigo-100 mt-1">{result.suggestedReply}</div></div>
+            </div>
+            <div className="mt-6 flex justify-end">
+               <button onClick={() => alert("功能开发中：一键将以上数据带入到订单新建表单...")} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black transition-colors">草稿带入订单中心</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
