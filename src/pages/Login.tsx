@@ -1,0 +1,104 @@
+import React, { useState } from 'react';
+import { Globe, Lock, User } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { apiFetch, getErrorMessage } from '../lib/api';
+
+interface LoginResponse {
+  user: {
+    id: number;
+    username: string;
+    role: string;
+    name: string;
+  };
+}
+
+export default function LoginScreen() {
+  const [username, setUsername] = useState('root');
+  const [password, setPassword] = useState('root');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      const data = await apiFetch<LoginResponse>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      login(data.user);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, '登录失败'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+        <div className="relative bg-blue-600 p-8 text-center">
+          <div className="absolute right-0 top-0 h-32 w-32 translate-x-10 -translate-y-10 rounded-full bg-white/10 blur-2xl" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/30 bg-white/20 backdrop-blur-sm">
+            <Globe className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">SmartTrade AI CRM</h1>
+          <p className="mt-2 text-sm text-blue-100">先把业务主链跑通的外贸内用工作台</p>
+        </div>
+
+        <div className="p-8">
+          <form onSubmit={handleLogin} className="space-y-5">
+            {error ? (
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                {error}
+              </div>
+            ) : null}
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">登录账号</label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 text-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">密码</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 text-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              disabled={isSubmitting}
+              className="flex w-full items-center justify-center rounded-xl bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? '登录中...' : '登录系统'}
+            </button>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+              默认管理员账号：<span className="font-semibold text-slate-700">root</span> /
+              <span className="ml-1 font-semibold text-slate-700">root</span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

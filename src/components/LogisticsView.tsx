@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Truck, PackageCheck, Route, Ship } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Edit, Plus, Search, Truck } from 'lucide-react';
+import { apiFetch, getErrorMessage } from '../lib/api';
 
 interface LogisticsRecord {
   id: number;
@@ -7,7 +8,16 @@ interface LogisticsRecord {
   tracking_no: string;
   carrier: string;
   packing_details: string;
-  status: string;
+  status: 'preparing' | 'shipped' | 'arrived';
+  shipping_date: string | null;
+  segmentType?: 'domestic' | 'international';
+  packageCount?: number | null;
+  volumeCbm?: number | null;
+  grossWeightKg?: number | null;
+  incoterm?: string | null;
+  transportMode?: string | null;
+  vesselVoyage?: string | null;
+  billNo?: string | null;
   order_display_id?: string;
   order_status?: string;
   customer_name?: string;
@@ -20,182 +30,365 @@ interface Order {
   customer_name: string;
 }
 
+type LogisticsFormState = {
+  orderId: string;
+  segmentType: 'domestic' | 'international';
+  trackingNo: string;
+  carrier: string;
+  packingDetails: string;
+  status: 'preparing' | 'shipped' | 'arrived';
+  shippingDate: string;
+};
+
+const EMPTY_FORM: LogisticsFormState = {
+  orderId: '',
+  segmentType: 'international',
+  trackingNo: '',
+  carrier: '',
+  packingDetails: '',
+  status: 'preparing',
+  shippingDate: '',
+};
+
+function getLogisticsLabel(status: LogisticsRecord['status']) {
+  switch (status) {
+    case 'preparing':
+      return '备货中';
+    case 'shipped':
+      return '运输中';
+    case 'arrived':
+      return '已到货';
+    default:
+      return status;
+  }
+}
+
 export default function LogisticsView() {
   const [records, setRecords] = useState<LogisticsRecord[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    orderId: '',
-    trackingNo: '',
-    carrier: '',
-    packingDetails: '',
-    status: 'preparing'
-  });
+  const [editingRecord, setEditingRecord] = useState<LogisticsRecord | null>(null);
+  const [formData, setFormData] = useState<LogisticsFormState>(EMPTY_FORM);
 
   const fetchData = async () => {
+    setError('');
     try {
-      const [logRes, ordRes] = await Promise.all([
-        fetch('/api/logistics'),
-        fetch('/api/orders')
+      const [logisticsData, orderData] = await Promise.all([
+        apiFetch<LogisticsRecord[]>('/api/logistics'),
+        apiFetch<Order[]>('/api/orders'),
       ]);
-      const lData = await logRes.json();
-      const oData = await ordRes.json();
-      setRecords(lData);
-      setOrders(oData);
-    } catch (err) {
-      console.error(err);
+      setRecords(logisticsData);
+      setOrders(orderData);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, '读取物流数据失败'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.orderId) return alert("请选择关联订单");
+  const filteredRecords = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) {
+      return records;
+    }
+
+    return records.filter((record) =>
+      [
+        record.order_display_id || '',
+        record.customer_name || '',
+        record.carrier,
+        record.tracking_no,
+        record.packing_details,
+        record.shipping_date || '',
+      ].some((value) => value.toLowerCase().includes(keyword)),
+    );
+  }, [records, query]);
+
+  const openCreateForm = () => {
+    setEditingRecord(null);
+    setFormData(EMPTY_FORM);
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const openEditForm = (record: LogisticsRecord) => {
+    setEditingRecord(record);
+    setFormError('');
+    setFormData({
+      orderId: String(record.order_id),
+      segmentType: record.segmentType || 'international',
+      trackingNo: record.tracking_no || '',
+      carrier: record.carrier,
+      packingDetails: record.packing_details,
+      status: record.status,
+      shippingDate: record.shipping_date || '',
+    });
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setEditingRecord(null);
+    setFormData(EMPTY_FORM);
+    setFormError('');
+    setShowForm(false);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError('');
+
+    const payload = {
+      orderId: Number(formData.orderId),
+      segmentType: formData.segmentType,
+      trackingNo: formData.trackingNo.trim(),
+      carrier: formData.carrier.trim(),
+      packingDetails: formData.packingDetails.trim(),
+      status: formData.status,
+      shippingDate: formData.shippingDate,
+    };
+
     try {
-      const res = await fetch('/api/logistics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, orderId: Number(formData.orderId) })
-      });
-      if (!res.ok) throw new Error();
-      setShowForm(false);
-      setFormData({ orderId: '', trackingNo: '', carrier: '', packingDetails: '', status: 'preparing' });
-      fetchData();
-    } catch (err) {
-      alert('保存失败');
+      if (editingRecord) {
+        await apiFetch(`/api/logistics/${editingRecord.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch('/api/logistics', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+      closeForm();
+      await fetchData();
+    } catch (requestError) {
+      setFormError(getErrorMessage(requestError, '保存物流记录失败'));
     }
   };
 
-  const updateStatus = async (id: number, newStatus: string) => {
-    try {
-      await fetch(`/api/logistics/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      fetchData();
-    } catch (err) { }
-  };
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">物流打包看板 (Logistics)</h2>
-          <p className="text-sm text-slate-500 mt-1">集装箱装柜、报关与快递运单追踪</p>
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">物流与打包</h2>
+            <p className="mt-1 text-sm text-slate-500">发货日期会同步支撑订单列表中的“发货月份”筛选。</p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜索订单、客户、承运商或日期"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-72"
+              />
+            </div>
+            <button
+              onClick={showForm ? closeForm : openCreateForm}
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {showForm ? '取消录入' : '新增物流记录'}
+            </button>
+          </div>
         </div>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center transition-colors shadow-sm"
-        >
-          {showForm ? '取消发运记录' : <><Plus className="w-4 h-4 mr-2" /> 新增发货记录</>}
-        </button>
-      </div>
 
-      {showForm && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6 animate-in slide-in-from-top-4 fade-in duration-300">
-          <h3 className="font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2 flex items-center"><PackageCheck className="w-4 h-4 mr-2"/> 预报关发运装箱</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">选择待发货订单 *</label>
-              <select required value={formData.orderId} onChange={e => setFormData({...formData, orderId: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="">-- 选择订单 --</option>
-                {orders.map(o => <option key={o.id} value={o.id}>{o.display_id} - {o.customer_name}</option>)}
-              </select>
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+        ) : null}
+
+        {showForm ? (
+          <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="mb-4 text-sm font-semibold text-slate-700">
+              {editingRecord ? `编辑物流记录：${editingRecord.order_display_id || `#${editingRecord.id}`}` : '登记物流记录'}
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">物流公司 / 船东大票 *</label>
-              <input required value={formData.carrier} onChange={e => setFormData({...formData, carrier: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="如: COSCO, Maersk 或 DHL" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">运单号 / 提单号</label>
-              <input value={formData.trackingNo} onChange={e => setFormData({...formData, trackingNo: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="例如: MSCU1234567..." />
-            </div>
-            <div>
-               <label className="block text-xs font-bold text-slate-600 mb-1">物流追踪状态</label>
-               <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                 <option value="preparing">备货中 / 订舱中</option>
-                 <option value="shipped">已开船 / 运输中</option>
-                 <option value="arrived">已到港 / 签收</option>
-               </select>
-            </div>
-            <div className="col-span-2">
-               <label className="block text-xs font-bold text-slate-600 mb-1">装箱包材与毛重明细 *</label>
-               <input required value={formData.packingDetails} onChange={e => setFormData({...formData, packingDetails: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="如: 1x40HQ, 300 CTNS, 4500 KGS, 木托盘加固" />
-            </div>
-            <div className="col-span-2 flex justify-end mt-2">
-              <button type="submit" className="bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors">锁定发货信息</button>
-            </div>
-          </form>
-        </div>
-      )}
+            {formError ? (
+              <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {formError}
+              </div>
+            ) : null}
+            <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+              <Field label="关联订单 *">
+                <select
+                  required
+                  value={formData.orderId}
+                  onChange={(event) => setFormData({ ...formData, orderId: event.target.value })}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">请选择订单</option>
+                  {orders.map((order) => (
+                    <option key={order.id} value={order.id}>
+                      {order.display_id} · {order.customer_name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="物流段">
+                <select
+                  value={formData.segmentType}
+                  onChange={(event) => setFormData({ ...formData, segmentType: event.target.value as LogisticsFormState['segmentType'] })}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="domestic">国内物流</option>
+                  <option value="international">国际物流</option>
+                </select>
+              </Field>
+              <Field label="承运商 / 物流公司 *">
+                <input
+                  required
+                  value={formData.carrier}
+                  onChange={(event) => setFormData({ ...formData, carrier: event.target.value })}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </Field>
+              <Field label="运单号 / 提单号">
+                <input
+                  value={formData.trackingNo}
+                  onChange={(event) => setFormData({ ...formData, trackingNo: event.target.value })}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </Field>
+              <Field label="发货日期">
+                <input
+                  type="date"
+                  value={formData.shippingDate}
+                  onChange={(event) => setFormData({ ...formData, shippingDate: event.target.value })}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </Field>
+              <Field label="物流状态 *">
+                <select
+                  value={formData.status}
+                  onChange={(event) => setFormData({ ...formData, status: event.target.value as LogisticsFormState['status'] })}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="preparing">备货中</option>
+                  <option value="shipped">运输中</option>
+                  <option value="arrived">已到货</option>
+                </select>
+              </Field>
+              <Field label="装箱 / 打包明细 *" className="md:col-span-2">
+                <textarea
+                  required
+                  value={formData.packingDetails}
+                  onChange={(event) => setFormData({ ...formData, packingDetails: event.target.value })}
+                  className="h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </Field>
+              <div className="md:col-span-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black"
+                >
+                  {editingRecord ? '保存修改' : '保存物流记录'}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : null}
+      </section>
 
       {loading ? (
-        <div className="text-center py-10 text-slate-400">正在同步舱单...</div>
-      ) : records.length === 0 ? (
-        <div className="text-center py-20 bg-white border border-slate-200 rounded-2xl shadow-sm">
-           <Truck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-           <p className="text-slate-500 font-medium">没有物流运输条目，去录入一单发货吧。</p>
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">正在加载物流数据...</div>
+      ) : filteredRecords.length === 0 ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <Truck className="mx-auto mb-3 h-12 w-12 text-slate-300" />
+          <p className="text-sm font-medium text-slate-500">当前没有匹配的物流记录。</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {records.map(r => (
-            <div key={r.id} className="bg-white border flex flex-col border-slate-200 rounded-2xl p-5 shadow-sm group">
-              <div className="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
-                 <div>
-                   <h3 className="font-black text-slate-800 tracking-tight flex items-center hover:text-blue-600 cursor-pointer transition-colors">
-                     {r.order_display_id} 
-                   </h3>
-                   <p className="text-xs text-slate-500 mt-1">{r.customer_name}</p>
-                 </div>
-                 <div className="text-center">
-                   <select 
-                     value={r.status} onChange={e => updateStatus(r.id, e.target.value)}
-                     className={`text-xs font-bold rounded ring-1 ring-inset ${
-                       r.status === 'preparing' ? 'bg-orange-50 text-orange-600 ring-orange-200' : 
-                       r.status === 'shipped' ? 'bg-blue-50 text-blue-600 ring-blue-200' :
-                       'bg-green-50 text-green-600 ring-green-200'
-                     } px-2 py-1 focus:outline-none`}
-                   >
-                     <option value="preparing">备货配舱</option>
-                     <option value="shipped">头程在途</option>
-                     <option value="arrived">海外到港</option>
-                   </select>
-                 </div>
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredRecords.map((record) => (
+            <article key={record.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <div className="font-semibold text-slate-900">{record.order_display_id || '未关联订单'}</div>
+                  <div className="mt-1 text-xs text-slate-500">{record.customer_name || '未命名客户'}</div>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    record.status === 'arrived'
+                      ? 'bg-green-50 text-green-700'
+                      : record.status === 'shipped'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'bg-amber-50 text-amber-700'
+                  }`}
+                >
+                  {getLogisticsLabel(record.status)}
+                </span>
               </div>
-              
-              <div className="space-y-3 flex-1">
-                 <div className="flex">
-                   <Ship className="w-4 h-4 text-slate-400 mr-2 mt-0.5" />
-                   <div>
-                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">承运货代 / 船东</p>
-                     <p className="text-sm font-medium text-slate-700 mt-0.5">{r.carrier}</p>
-                   </div>
-                 </div>
-                 <div className="flex">
-                   <Route className="w-4 h-4 text-slate-400 mr-2 mt-0.5" />
-                   <div>
-                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">提单号/追踪号</p>
-                     <p className="text-sm font-bold text-slate-800 mt-0.5 font-mono">{r.tracking_no || '暂未出号'}</p>
-                   </div>
-                 </div>
+
+              <div className="space-y-3 text-sm text-slate-700">
+                <InfoRow label="物流段" value={record.segmentType === 'domestic' ? '国内物流' : '国际物流'} />
+                <InfoRow label="承运商" value={record.carrier} />
+                <InfoRow label="运单号" value={record.tracking_no || '暂无'} mono />
+                <InfoRow label="发货日期" value={record.shipping_date || '未填写'} />
+                <InfoRow
+                  label={record.segmentType === 'domestic' ? '包装数据' : '国际节点'}
+                  value={
+                    record.segmentType === 'domestic'
+                      ? `件数 ${record.packageCount ?? '-'} / CBM ${record.volumeCbm ?? '-'} / KG ${record.grossWeightKg ?? '-'}`
+                      : `条款 ${record.incoterm || '-'} / 方式 ${record.transportMode || '-'} / 航次 ${record.vesselVoyage || '-'}`
+                  }
+                />
+                <InfoRow label="装箱明细" value={record.packing_details} />
               </div>
-              
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                 <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">包装明细 (Packing List)</p>
-                 <p className="text-xs text-slate-600 leading-relaxed font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">{r.packing_details}</p>
+
+              <div className="mt-5 flex items-center justify-between gap-3">
+                <div className="text-xs text-slate-400">{new Date(record.created_at).toLocaleString()}</div>
+                <button
+                  onClick={() => openEditForm(record)}
+                  className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  <Edit className="mr-1.5 h-3.5 w-3.5" />
+                  编辑
+                </button>
               </div>
-            </div>
+            </article>
           ))}
-        </div>
+        </section>
       )}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+  className = '',
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <div className="mb-2 text-sm font-semibold text-slate-700">{label}</div>
+      {children}
+    </label>
+  );
+}
+
+function InfoRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</div>
+      <div className={`mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700 ${mono ? 'font-mono' : ''}`}>{value}</div>
     </div>
   );
 }

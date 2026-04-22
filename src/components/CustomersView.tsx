@@ -1,182 +1,332 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, Edit, Building2, MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Edit, ExternalLink, Plus, Search, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { apiFetch, getErrorMessage } from '../lib/api';
 
-interface Customer {
+type Customer = {
   id: number;
   name: string;
   country: string;
   contact: string;
-  logistics_preference: string;
-  payment_terms: string;
-  created_at: string;
+  logistics_preference?: string | null;
+  payment_terms?: string | null;
+  order_count: number;
+};
+
+type CustomerForm = {
+  name: string;
+  country: string;
+  contact: string;
+  logisticsPreference: string;
+  paymentTerms: string;
+};
+
+const EMPTY_FORM: CustomerForm = {
+  name: '',
+  country: '',
+  contact: '',
+  logisticsPreference: '',
+  paymentTerms: '',
+};
+
+function countryToFlag(country: string) {
+  const normalized = country.trim().toLowerCase();
+  const dictionary: Record<string, string> = {
+    china: '🇨🇳',
+    中国: '🇨🇳',
+    usa: '🇺🇸',
+    'united states': '🇺🇸',
+    美国: '🇺🇸',
+    canada: '🇨🇦',
+    加拿大: '🇨🇦',
+    germany: '🇩🇪',
+    德国: '🇩🇪',
+    france: '🇫🇷',
+    法国: '🇫🇷',
+    italy: '🇮🇹',
+    意大利: '🇮🇹',
+    spain: '🇪🇸',
+    西班牙: '🇪🇸',
+    mexico: '🇲🇽',
+    墨西哥: '🇲🇽',
+    brazil: '🇧🇷',
+    巴西: '🇧🇷',
+    australia: '🇦🇺',
+    澳大利亚: '🇦🇺',
+    japan: '🇯🇵',
+    日本: '🇯🇵',
+    korea: '🇰🇷',
+    'south korea': '🇰🇷',
+    韩国: '🇰🇷',
+    uk: '🇬🇧',
+    'united kingdom': '🇬🇧',
+    英国: '🇬🇧',
+  };
+  return dictionary[normalized] || '🌍';
 }
 
 export default function CustomersView() {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [query, setQuery] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    country: '',
-    contact: '',
-    logisticsPreference: '',
-    paymentTerms: ''
-  });
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [form, setForm] = useState<CustomerForm>(EMPTY_FORM);
 
-  const fetchCustomers = async () => {
+  const loadCustomers = async () => {
+    setError('');
     try {
-      const res = await fetch('/api/customers');
-      const data = await res.json();
+      const data = await apiFetch<Customer[]>('/api/customers');
       setCustomers(data);
-    } catch (err) {
-      console.error(err);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, '读取客户数据失败'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomers();
+    void loadCustomers();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const countryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set<string>(customers.map((customer) => customer.country).filter((value): value is string => Boolean(value))),
+      ).sort((a, b) => a.localeCompare(b)),
+    [customers],
+  );
+
+  const filteredCustomers = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    return customers.filter((customer) => {
+      const matchesQuery =
+        !keyword ||
+        [customer.name, customer.country, customer.contact, customer.payment_terms || '']
+          .some((value) => value.toLowerCase().includes(keyword));
+      const matchesCountry = !countryFilter || customer.country === countryFilter;
+      return matchesQuery && matchesCountry;
+    });
+  }, [countryFilter, customers, query]);
+
+  const openCreate = () => {
+    setEditingCustomer(null);
+    setForm(EMPTY_FORM);
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const openEdit = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setFormError('');
+    setForm({
+      name: customer.name,
+      country: customer.country,
+      contact: customer.contact,
+      logisticsPreference: customer.logistics_preference || '',
+      paymentTerms: customer.payment_terms || '',
+    });
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setEditingCustomer(null);
+    setForm(EMPTY_FORM);
+    setFormError('');
+    setShowForm(false);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError('');
+
+    const payload = {
+      name: form.name.trim(),
+      country: form.country.trim(),
+      contact: form.contact.trim(),
+      logisticsPreference: form.logisticsPreference.trim(),
+      paymentTerms: form.paymentTerms.trim(),
+    };
+
     try {
-      const res = await fetch('/api/customers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || '保存失败');
+      if (editingCustomer) {
+        await apiFetch(`/api/customers/${editingCustomer.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch('/api/customers', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
       }
-      setShowForm(false);
-      setFormData({ name: '', country: '', contact: '', logisticsPreference: '', paymentTerms: '' });
-      fetchCustomers();
-    } catch (err: any) {
-      alert(err.message || '保存失败，请稍后重试');
-      console.error('Save failed', err);
+      closeForm();
+      await loadCustomers();
+    } catch (requestError) {
+      setFormError(getErrorMessage(requestError, '保存客户失败'));
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('确定要删除此客户吗？相关订单保留，但客户绑定将解除。')) return;
+  const handleDelete = async (customer: Customer) => {
+    if (!window.confirm(`确定删除客户“${customer.name}”吗？`)) {
+      return;
+    }
+
     try {
-      await fetch(`/api/customers/${id}`, { method: 'DELETE' });
-      fetchCustomers();
-    } catch (err) {
-      console.error('Delete failed');
+      await apiFetch(`/api/customers/${customer.id}`, { method: 'DELETE' });
+      await loadCustomers();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, '删除客户失败'));
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">客户关系管理 (CRM)</h2>
-          <p className="text-sm text-slate-500 mt-1">管理收发货客户、合作企业及联系信息</p>
+    <div className="space-y-4">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">客户档案</h2>
+            <p className="mt-1 text-sm text-slate-500">用高密度表格查看客户、国家、条款和订单数量，方便快速筛选和维护。</p>
+          </div>
+          <button
+            onClick={showForm ? closeForm : openCreate}
+            className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {showForm ? '取消' : '新增客户'}
+          </button>
         </div>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center transition-colors shadow-sm"
-        >
-          {showForm ? '取消录入' : <><Plus className="w-4 h-4 mr-2" /> 新增客户</>}
-        </button>
-      </div>
 
-      {showForm && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6 animate-in slide-in-from-top-4 fade-in duration-300">
-          <h3 className="font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">新增合作客户</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">企业/客户名称 *</label>
-              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="如: TechCorp Global" />
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索客户名称、国家、联系方式"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <select
+            value={countryFilter}
+            onChange={(event) => setCountryFilter(event.target.value)}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">全部国家</option>
+            {countryOptions.map((country) => (
+              <option key={country} value={country}>
+                {country}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {error ? <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div> : null}
+
+        {showForm ? (
+          <form onSubmit={handleSubmit} className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="mb-4 text-sm font-semibold text-slate-800">{editingCustomer ? `编辑客户：${editingCustomer.name}` : '新增客户'}</div>
+            {formError ? <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{formError}</div> : null}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="客户名称 *">
+                <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </Field>
+              <Field label="国家 / 地区 *">
+                <input required value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </Field>
+              <Field label="联系方式 *">
+                <input required value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </Field>
+              <Field label="付款条款">
+                <input value={form.paymentTerms} onChange={(event) => setForm({ ...form, paymentTerms: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </Field>
+              <Field label="物流偏好">
+                <input value={form.logisticsPreference} onChange={(event) => setForm({ ...form, logisticsPreference: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </Field>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">国家/地区 *</label>
-              <input required value={formData.country} onChange={e => setFormData({...formData, country: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="如: United States" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">联系信息 (邮箱/电话) *</label>
-              <input required value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="如: john@example.com, +1 555-0100" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">偏好物流 (选填)</label>
-              <div className="relative">
-                <input value={formData.logisticsPreference} onChange={e => setFormData({...formData, logisticsPreference: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="如: DHL优先 或 宁波港走海运" />
-              </div>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-600 mb-1">默认付款条款 (选填)</label>
-              <input value={formData.paymentTerms} onChange={e => setFormData({...formData, paymentTerms: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="如: 30% T/T Advance, 70% against BL copy" />
-            </div>
-            <div className="col-span-2 flex justify-end mt-2">
-              <button type="submit" className="bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors">保存客户档案</button>
+            <div className="mt-4 flex justify-end gap-3">
+              <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">取消</button>
+              <button type="submit" className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">保存客户</button>
             </div>
           </form>
-        </div>
-      )}
+        ) : null}
+      </section>
 
-      {loading ? (
-        <div className="text-center py-10 text-slate-400">正在加载客户数据...</div>
-      ) : customers.length === 0 ? (
-        <div className="text-center py-20 bg-white border border-slate-200 rounded-2xl shadow-sm">
-           <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-           <p className="text-slate-500 font-medium">暂无客户数据，请先新增一个客户吧。</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customers.map(c => (
-            <div key={c.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative group">
-              <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
-                <button onClick={() => handleDelete(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" title="删除"><Trash2 className="w-4 h-4" /></button>
-              </div>
-              
-              <div className="flex items-start mb-4">
-                <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold text-lg mr-3 shrink-0">
-                  {c.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 tracking-tight leading-tight group-hover:text-blue-600 transition-colors cursor-pointer">{c.name}</h3>
-                  <div className="flex items-center text-xs text-slate-500 mt-1">
-                    <MapPin className="w-3 h-3 mr-1" /> {c.country}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-2 mt-4 pt-4 border-t border-slate-100">
-                <div className="flex items-start text-sm">
-                  <Mail className="w-4 h-4 text-slate-400 mr-2 mt-0.5" />
-                  <span className="text-slate-600 break-all">{c.contact}</span>
-                </div>
-                
-                {c.payment_terms && (
-                  <div className="flex items-start text-sm">
-                    <span className="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-medium mr-2 shrink-0">结算</span>
-                    <span className="text-slate-600 text-xs mt-0.5 truncate" title={c.payment_terms}>{c.payment_terms}</span>
-                  </div>
-                )}
-                
-                {c.logistics_preference && (
-                  <div className="flex items-start text-sm mt-1">
-                    <span className="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-medium mr-2 shrink-0">物流</span>
-                    <span className="text-slate-600 text-xs mt-0.5 truncate" title={c.logistics_preference}>{c.logistics_preference}</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-5 text-right w-full">
-                <button className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center justify-end w-full group/link">
-                  查看历史订单 <ExternalLink className="w-3 h-3 ml-1 opacity-0 -translate-x-2 group-hover/link:opacity-100 group-hover/link:translate-x-0 transition-all" />
-                </button>
-              </div>
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        {loading ? (
+          <div className="text-sm text-slate-500">正在读取客户数据...</div>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-3 py-3">国家</th>
+                    <th className="px-3 py-3">客户名称</th>
+                    <th className="px-3 py-3">联系方式</th>
+                    <th className="px-3 py-3">付款条款</th>
+                    <th className="px-3 py-3">物流偏好</th>
+                    <th className="px-3 py-3">订单数</th>
+                    <th className="px-3 py-3 text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {filteredCustomers.length ? (
+                    filteredCustomers.map((customer) => (
+                      <tr key={customer.id} className="align-top">
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2 font-medium text-slate-700">
+                            <span className="text-base">{countryToFlag(customer.country)}</span>
+                            <span>{customer.country}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 font-semibold text-slate-900">{customer.name}</td>
+                        <td className="px-3 py-3 text-slate-600">{customer.contact}</td>
+                        <td className="px-3 py-3 text-slate-600">{customer.payment_terms || '未填写'}</td>
+                        <td className="px-3 py-3 text-slate-600">{customer.logistics_preference || '未填写'}</td>
+                        <td className="px-3 py-3 text-slate-700">{customer.order_count}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => navigate(`/orders?customerId=${customer.id}`)}
+                              className="inline-flex items-center rounded-lg border border-slate-200 px-2.5 py-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => openEdit(customer)} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800">
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => void handleDelete(customer)} className="rounded-lg border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">没有匹配的客户。</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+      </section>
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
+      {children}
+    </label>
   );
 }

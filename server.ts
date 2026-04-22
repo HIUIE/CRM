@@ -1,23 +1,27 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import apiRouter from './server/api.js';
-import { initDb } from './server/db.js';
+import { DB_PATH, initDb } from './server/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 async function startServer() {
   await initDb();
-  console.log('Database initialized.');
+  await fs.mkdir(UPLOADS_DIR, { recursive: true });
+  console.log(`Database initialized at ${DB_PATH}`);
 
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
   app.use(cookieParser());
+  app.use('/uploads', express.static(UPLOADS_DIR));
 
   // API Routes
   app.use('/api', apiRouter);
@@ -37,7 +41,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
