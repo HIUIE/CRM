@@ -1,34 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, Plus, Search, Truck } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
-
-interface LogisticsRecord {
-  id: number;
-  order_id: number;
-  tracking_no: string;
-  carrier: string;
-  packing_details: string;
-  status: 'preparing' | 'shipped' | 'arrived';
-  shipping_date: string | null;
-  segmentType?: 'domestic' | 'international';
-  packageCount?: number | null;
-  volumeCbm?: number | null;
-  grossWeightKg?: number | null;
-  incoterm?: string | null;
-  transportMode?: string | null;
-  vesselVoyage?: string | null;
-  billNo?: string | null;
-  order_display_id?: string;
-  order_status?: string;
-  customer_name?: string;
-  created_at: string;
-}
-
-interface Order {
-  id: number;
-  display_id: string;
-  customer_name: string;
-}
+import type { LogisticsListRecord, OrderOption } from '../types/crm';
 
 type LogisticsFormState = {
   orderId: string;
@@ -50,7 +23,7 @@ const EMPTY_FORM: LogisticsFormState = {
   shippingDate: '',
 };
 
-function getLogisticsLabel(status: LogisticsRecord['status']) {
+function getLogisticsLabel(status: LogisticsListRecord['status']) {
   switch (status) {
     case 'preparing':
       return '备货中';
@@ -64,22 +37,22 @@ function getLogisticsLabel(status: LogisticsRecord['status']) {
 }
 
 export default function LogisticsView() {
-  const [records, setRecords] = useState<LogisticsRecord[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [records, setRecords] = useState<LogisticsListRecord[]>([]);
+  const [orders, setOrders] = useState<OrderOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
   const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<LogisticsRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<LogisticsListRecord | null>(null);
   const [formData, setFormData] = useState<LogisticsFormState>(EMPTY_FORM);
 
   const fetchData = async () => {
     setError('');
     try {
       const [logisticsData, orderData] = await Promise.all([
-        apiFetch<LogisticsRecord[]>('/api/logistics'),
-        apiFetch<Order[]>('/api/orders'),
+        apiFetch<LogisticsListRecord[]>('/api/logistics'),
+        apiFetch<OrderOption[]>('/api/orders'),
       ]);
       setRecords(logisticsData);
       setOrders(orderData);
@@ -119,7 +92,7 @@ export default function LogisticsView() {
     setShowForm(true);
   };
 
-  const openEditForm = (record: LogisticsRecord) => {
+  const openEditForm = (record: LogisticsListRecord) => {
     setEditingRecord(record);
     setFormError('');
     setFormData({
@@ -338,6 +311,7 @@ export default function LogisticsView() {
                 <InfoRow label="承运商" value={record.carrier} />
                 <InfoRow label="运单号" value={record.tracking_no || '暂无'} mono />
                 <InfoRow label="发货日期" value={record.shipping_date || '未填写'} />
+                <InfoRow label="创建人" value={record.createdByName || '系统'} />
                 <InfoRow
                   label={record.segmentType === 'domestic' ? '包装数据' : '国际节点'}
                   value={

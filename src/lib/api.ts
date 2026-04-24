@@ -1,3 +1,5 @@
+import type { ApiErrorPayload } from '../types/api';
+
 export class ApiError extends Error {
   status: number;
 
@@ -37,9 +39,16 @@ export async function apiFetch<T>(input: string, init: RequestInit = {}) {
   }
 
   if (!response.ok) {
+    const payload = (typeof data === 'object' && data ? data : null) as ApiErrorPayload | null;
     const message =
-      typeof data === 'object' && data && 'error' in data && typeof data.error === 'string'
-        ? data.error
+      payload
+        ? typeof payload.error === 'string'
+          ? payload.error
+          : typeof payload.error === 'object' && payload.error && typeof payload.error.message === 'string'
+            ? payload.error.message
+            : typeof payload.message === 'string'
+              ? payload.message
+              : '请求失败'
         : '请求失败';
     throw new ApiError(response.status, message);
   }

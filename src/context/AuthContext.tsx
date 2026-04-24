@@ -1,24 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
-
-interface User {
-  id: number;
-  username: string;
-  role: string;
-  name: string;
-}
+import type { AuthUser } from '../types/auth';
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
-  login: (user: User) => void;
+  login: (user: AuthUser) => void;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loadCurrentUser = async () => {
       try {
-        const data = await apiFetch<{ user: User }>('/api/auth/me');
+        const data = await apiFetch<{ user: AuthUser }>('/api/auth/me');
         if (mounted) {
           setUser(data.user);
         }
@@ -55,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = (userData: User) => {
+  const login = (userData: AuthUser) => {
     setUser(userData);
   };
 

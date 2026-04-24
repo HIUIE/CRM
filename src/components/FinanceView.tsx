@@ -1,44 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, Paperclip, Plus, Search, Trash2 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
-
-interface AttachmentMeta {
-  id: number;
-  fileName: string;
-  url: string;
-}
-
-interface FinanceRecord {
-  id: number;
-  order_id: number;
-  type: 'receipt' | 'payment';
-  amount: number;
-  currency: 'USD' | 'CNY';
-  target: string;
-  status: 'pending' | 'completed';
-  remark: string;
-  payment_category: 'receipt' | 'freight' | 'goods' | 'other';
-  recordCategory?: 'deposit' | 'balance' | 'goods' | 'freight' | 'customs' | 'other';
-  partnerId?: number | null;
-  attachmentCount?: number;
-  attachments?: AttachmentMeta[];
-  order_display_id?: string;
-  customer_name?: string;
-  partner_name?: string | null;
-  created_at: string;
-}
-
-interface Order {
-  id: number;
-  display_id: string;
-  customer_name: string;
-}
-
-interface Partner {
-  id: number;
-  name: string;
-  partner_type: 'factory' | 'forwarder' | 'customs_broker' | 'other';
-}
+import { useAuth } from '../context/AuthContext';
+import type { FinanceListRecord, OrderOption, PartnerOption } from '../types/crm';
 
 type FinanceFormState = {
   orderId: string;
@@ -68,7 +32,7 @@ function formatTotal(amount: number, currency: 'USD' | 'CNY') {
   return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
-function getPaymentCategoryLabel(category: FinanceRecord['recordCategory'] | FinanceRecord['payment_category']) {
+function getPaymentCategoryLabel(category: FinanceListRecord['recordCategory'] | FinanceListRecord['payment_category']) {
   switch (category) {
     case 'deposit':
       return '首付款';
@@ -90,24 +54,25 @@ function getPaymentCategoryLabel(category: FinanceRecord['recordCategory'] | Fin
 }
 
 export default function FinanceView() {
-  const [records, setRecords] = useState<FinanceRecord[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const { user } = useAuth();
+  const [records, setRecords] = useState<FinanceListRecord[]>([]);
+  const [orders, setOrders] = useState<OrderOption[]>([]);
+  const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
   const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<FinanceRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<FinanceListRecord | null>(null);
   const [formData, setFormData] = useState<FinanceFormState>(EMPTY_FORM);
 
   const fetchData = async () => {
     setError('');
     try {
       const [financeData, orderData, partnerData] = await Promise.all([
-        apiFetch<FinanceRecord[]>('/api/finance'),
-        apiFetch<Order[]>('/api/orders'),
-        apiFetch<Partner[]>('/api/partners'),
+        apiFetch<FinanceListRecord[]>('/api/finance'),
+        apiFetch<OrderOption[]>('/api/orders'),
+        apiFetch<PartnerOption[]>('/api/partners'),
       ]);
       setRecords(financeData);
       setOrders(orderData);
@@ -176,7 +141,7 @@ export default function FinanceView() {
     setShowForm(true);
   };
 
-  const openEditForm = (record: FinanceRecord) => {
+  const openEditForm = (record: FinanceListRecord) => {
     setEditingRecord(record);
     setFormError('');
     setFormData({
@@ -237,7 +202,7 @@ export default function FinanceView() {
     }
   };
 
-  const deleteRecord = async (record: FinanceRecord) => {
+  const deleteRecord = async (record: FinanceListRecord) => {
     if (!window.confirm(`确定删除这条${record.type === 'receipt' ? '收款' : '付款'}记录吗？`)) {
       return;
     }
@@ -456,6 +421,7 @@ export default function FinanceView() {
                   <th className="px-4 py-4 font-semibold">金额</th>
                   <th className="px-4 py-4 font-semibold">分类 / 对象</th>
                   <th className="px-4 py-4 font-semibold">状态</th>
+                  <th className="px-4 py-4 font-semibold">创建人</th>
                   <th className="px-4 py-4 font-semibold">操作</th>
                 </tr>
               </thead>
@@ -497,6 +463,7 @@ export default function FinanceView() {
                         {record.status === 'completed' ? '已完成' : '待核销'}
                       </span>
                     </td>
+                    <td className="px-4 py-4 text-xs text-slate-500">{record.createdByName || '系统'}</td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">
                         <button
@@ -506,13 +473,15 @@ export default function FinanceView() {
                           <Edit className="mr-1.5 h-3.5 w-3.5" />
                           编辑
                         </button>
-                        <button
-                          onClick={() => void deleteRecord(record)}
-                          className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                        >
-                          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                          删除
-                        </button>
+                        {user?.role === 'admin' ? (
+                          <button
+                            onClick={() => void deleteRecord(record)}
+                            className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                          >
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                            删除
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

@@ -2,12 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Bot, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
-
-interface AiSettings {
-  model: string;
-  hasApiKey: boolean;
-  baseUrl?: string;
-}
+import type { AiSettings } from '../types/crm';
 
 interface ParseResult {
   customerName: string;
@@ -102,11 +97,11 @@ export default function AIAssistantView() {
           <div>
             <div className="mb-3 inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
               <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              AI Beta
+              AI 助手
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">AI 外贸智能引擎</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900">AI 外贸辅助引擎</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-              这个模块现在作为辅助录入使用。你可以把客户邮件、聊天记录或询盘需求贴进来，先提取结构化信息，再带入订单草稿继续处理。
+              AI 目前只承担两件事：把文本整理成订单草稿，以及辅助识别订单风险。它不会阻塞客户、订单、财务和物流的日常主流程。
             </p>
           </div>
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-indigo-100 bg-indigo-50">

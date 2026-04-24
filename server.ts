@@ -1,49 +1,50 @@
-import express from 'express';
-import { createServer as createViteServer } from 'vite';
-import path from 'path';
-import fs from 'fs/promises';
-import { fileURLToPath } from 'url';
-import cookieParser from 'cookie-parser';
-import apiRouter from './server/api.js';
+import 'dotenv/config';
+import { createApp } from './server/app.js';
 import { DB_PATH, initDb } from './server/db.js';
+import { UPLOADS_DIR } from './server/paths.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+function requireProductionEnv() {
+  if (process.env.NODE_ENV !== 'production') {
+    return;
+  }
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'super-secret-key-for-preview-only') {
+    throw new Error('生产环境必须设置 JWT_SECRET');
+  }
+}
 
 async function startServer() {
+  requireProductionEnv();
   await initDb();
-  await fs.mkdir(UPLOADS_DIR, { recursive: true });
-  console.log(`Database initialized at ${DB_PATH}`);
 
-  const app = express();
+  const app = await createApp();
   const PORT = Number(process.env.PORT) || 3000;
+  const HOST = process.env.HOST || '0.0.0.0';
 
-  app.use(express.json());
-  app.use(cookieParser());
-  app.use('/uploads', express.static(UPLOADS_DIR));
+  const server = app.listen(PORT, HOST, () => {
+    console.log(`Mode: ${process.env.NODE_ENV === 'production' ? 'production' : 'development'}`);
+    console.log(`Database: ${DB_PATH}`);
+    console.log(`Uploads: ${UPLOADS_DIR}`);
+    console.log(`Local: http://localhost:${PORT}`);
+    if (HOST === '0.0.0.0') {
+      console.log(`LAN: http://<this-machine-ip>:${PORT}`);
+    } else {
+      console.log(`Host: http://${HOST}:${PORT}`);
+    }
+  });
 
-  // API Routes
-  app.use('/api', apiRouter);
-
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(__dirname, 'dist');
-    app.use(express.static(distPath));
-    app.use('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use. Stop the existing service or set a different PORT.`);
+    } else if (error.code === 'EPERM') {
+      console.error(`Permission denied while listening on ${HOST}:${PORT}. Try another PORT/HOST or run from a normal terminal.`);
+    } else {
+      console.error(error);
+    }
+    process.exit(1);
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

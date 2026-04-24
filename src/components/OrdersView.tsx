@@ -2,29 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, Plus, Search } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
-
-interface OrderSummary {
-  id: number;
-  display_id: string;
-  customer_id: number;
-  status: string;
-  total_amount: number;
-  product_summary: string;
-  customer_name?: string;
-  customer_country?: string;
-  created_at: string;
-  completed_receipt_usd: number;
-  pending_finance_count: number;
-  latest_logistics_status?: string;
-  latest_tracking_no?: string;
-  latest_activity_at: string;
-}
-
-interface Customer {
-  id: number;
-  name: string;
-  country: string;
-}
+import type { CustomerListItem, OrderSummary } from '../types/crm';
 
 type OrderFormState = {
   customerId: string;
@@ -75,15 +53,27 @@ export default function OrdersView() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderSummary | null>(null);
   const [formData, setFormData] = useState<OrderFormState>(EMPTY_FORM);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
 
   const customerFilter = searchParams.get('customerId') || '';
+
+  // Filter Echo: If customerId is in URL, fill the search box with customer name
+  useEffect(() => {
+    if (customerFilter && customers.length > 0) {
+      const customer = customers.find(c => String(c.id) === customerFilter);
+      if (customer && !q) {
+        updateFilter('q', customer.name);
+      }
+    }
+  }, [customerFilter, customers]);
+
   const createMode = searchParams.get('create') === '1';
   const q = searchParams.get('q') || '';
   const product = searchParams.get('product') || '';
@@ -102,7 +92,7 @@ export default function OrdersView() {
 
     const loadCustomers = async () => {
       try {
-        const data = await apiFetch<Customer[]>('/api/customers');
+        const data = await apiFetch<CustomerListItem[]>('/api/customers');
         if (mounted) {
           setCustomers(data);
         }
@@ -258,6 +248,12 @@ export default function OrdersView() {
     setOrders(data);
   };
 
+  const clearCustomerFilter = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('customerId');
+    setSearchParams(nextParams);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setFormError('');
@@ -284,17 +280,35 @@ export default function OrdersView() {
         });
         closeForm();
         await refreshOrders();
-        navigate(`/orders/${created.id}`);
+        navigate(`/orders/${created.display_id}`);
       }
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, '保存订单失败'));
     }
   };
 
-  const clearCustomerFilter = () => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete('customerId');
-    setSearchParams(nextParams);
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.length === orders.length) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(orders.map((o) => o.id));
+    }
+  };
+
+  const toggleSelectOrder = (id: number) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const setQuickMonth = (key: string, monthCount: number) => {
+    const d = new Date();
+    if (monthCount > 0) {
+      d.setMonth(d.getMonth() - monthCount);
+    }
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    updateFilter(key, `${year}-${month}`);
   };
 
   return (
@@ -305,13 +319,26 @@ export default function OrdersView() {
             <h2 className="text-xl font-bold text-slate-900">订单列表</h2>
             <p className="mt-1 text-sm text-slate-500">先筛选，再进入订单详情工作台处理产品、收付款和发货。</p>
           </div>
-          <button
-            onClick={showForm ? closeForm : openCreateForm}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {showForm ? '取消创建' : '新建订单'}
-          </button>
+          <div className="flex items-center gap-3">
+            {selectedOrderIds.length > 0 && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 border border-amber-200 animate-in fade-in zoom-in duration-200">
+                已选 {selectedOrderIds.length} 项
+                <button 
+                  onClick={() => setSelectedOrderIds([])}
+                  className="ml-2 text-xs underline underline-offset-2 opacity-70 hover:opacity-100"
+                >
+                  取消
+                </button>
+              </div>
+            )}
+            <button
+              onClick={showForm ? closeForm : openCreateForm}
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {showForm ? '取消创建' : '新建订单'}
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -363,20 +390,34 @@ export default function OrdersView() {
             </select>
           </FilterField>
           <FilterField label="下单月份">
-            <input
-              type="month"
-              value={orderMonth}
-              onChange={(event) => updateFilter('orderMonth', event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="space-y-2">
+              <input
+                type="month"
+                value={orderMonth}
+                onChange={(event) => updateFilter('orderMonth', event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                <QuickFilterBtn label="本月" onClick={() => setQuickMonth('orderMonth', 0)} />
+                <QuickFilterBtn label="近3个月" onClick={() => setQuickMonth('orderMonth', 3)} />
+                <QuickFilterBtn label="近半年" onClick={() => setQuickMonth('orderMonth', 6)} />
+              </div>
+            </div>
           </FilterField>
           <FilterField label="发货月份">
-            <input
-              type="month"
-              value={shippingMonth}
-              onChange={(event) => updateFilter('shippingMonth', event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="space-y-2">
+              <input
+                type="month"
+                value={shippingMonth}
+                onChange={(event) => updateFilter('shippingMonth', event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                <QuickFilterBtn label="本月" onClick={() => setQuickMonth('shippingMonth', 0)} />
+                <QuickFilterBtn label="近3个月" onClick={() => setQuickMonth('shippingMonth', 3)} />
+                <QuickFilterBtn label="近半年" onClick={() => setQuickMonth('shippingMonth', 6)} />
+              </div>
+            </div>
           </FilterField>
         </div>
 
@@ -477,13 +518,20 @@ export default function OrdersView() {
             <table className="min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                  <th className="px-4 py-4 font-semibold w-10">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      checked={selectedOrderIds.length === orders.length && orders.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="px-4 py-4 font-semibold">订单号</th>
                   <th className="px-4 py-4 font-semibold">客户 / 国家</th>
                   <th className="px-4 py-4 font-semibold">产品摘要</th>
                   <th className="px-4 py-4 font-semibold">金额</th>
                   <th className="px-4 py-4 font-semibold">收款进度</th>
                   <th className="px-4 py-4 font-semibold">发货状态</th>
-                  <th className="px-4 py-4 font-semibold">最近更新时间</th>
                   <th className="px-4 py-4 font-semibold">操作</th>
                 </tr>
               </thead>
@@ -491,9 +539,17 @@ export default function OrdersView() {
                 {orders.map((order) => (
                   <tr
                     key={order.id}
-                    onClick={() => navigate(`/orders/${order.id}`)}
-                    className="cursor-pointer transition-colors hover:bg-slate-50"
+                    onClick={() => navigate(`/orders/${order.display_id}`)}
+                    className={`cursor-pointer transition-colors hover:bg-slate-50 ${selectedOrderIds.includes(order.id) ? 'bg-blue-50/50' : ''}`}
                   >
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedOrderIds.includes(order.id)}
+                        onChange={() => toggleSelectOrder(order.id)}
+                      />
+                    </td>
                     <td className="px-4 py-4">
                       <div className="font-semibold text-slate-900">{order.display_id}</div>
                       <div className="mt-1">
@@ -523,9 +579,6 @@ export default function OrdersView() {
                     <td className="px-4 py-4">
                       <div className="text-sm font-semibold text-slate-800">{getLogisticsLabel(order.latest_logistics_status)}</div>
                       <div className="mt-1 text-xs text-slate-500">{order.latest_tracking_no || '暂无运单号'}</div>
-                    </td>
-                    <td className="px-4 py-4 text-xs text-slate-500">
-                      {new Date(order.latest_activity_at || order.created_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-4">
                       <button
@@ -564,5 +617,17 @@ function FilterField({
       <div className="mb-2 text-sm font-semibold text-slate-700">{label}</div>
       {children}
     </label>
+  );
+}
+
+function QuickFilterBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900"
+    >
+      {label}
+    </button>
   );
 }

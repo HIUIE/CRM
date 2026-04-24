@@ -5,10 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server.ts",
+    "dev:serve": "node --import tsx server.ts",
+    "start": "NODE_ENV=production node --import tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "smoke:ui": "node --import tsx scripts/smoke-ui.ts",
+    "release:check": "npm run lint && npm test && npm run build && npm run smoke:ui",
+    "backup": "node --import tsx scripts/backup.ts",
+    "seed:demo": "node --import tsx scripts/seed-demo.ts",
+    "fix:sqlite3": "npm rebuild sqlite3"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

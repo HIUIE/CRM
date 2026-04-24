@@ -1,19 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, Plus, Search, Trash2 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
-
-type PartnerType = 'factory' | 'forwarder' | 'customs_broker' | 'other';
-
-type Partner = {
-  id: number;
-  name: string;
-  partner_type: PartnerType;
-  country?: string | null;
-  contact?: string | null;
-  payment_terms?: string | null;
-  remark?: string | null;
-  created_at?: string | null;
-};
+import { useAuth } from '../context/AuthContext';
+import type { PartnerRecord, PartnerType } from '../types/crm';
 
 type PartnerForm = {
   name: string;
@@ -47,19 +36,20 @@ function getPartnerTypeLabel(type: PartnerType) {
 }
 
 export default function PartnersView() {
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const { user } = useAuth();
+  const [partners, setPartners] = useState<PartnerRecord[]>([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
+  const [editingPartner, setEditingPartner] = useState<PartnerRecord | null>(null);
   const [form, setForm] = useState<PartnerForm>(EMPTY_FORM);
 
   const loadPartners = async () => {
     setError('');
     try {
-      const data = await apiFetch<Partner[]>('/api/partners');
+      const data = await apiFetch<PartnerRecord[]>('/api/partners');
       setPartners(data);
     } catch (requestError) {
       setError(getErrorMessage(requestError, '读取伙伴数据失败'));
@@ -95,7 +85,7 @@ export default function PartnersView() {
     setShowForm(true);
   };
 
-  const openEdit = (partner: Partner) => {
+  const openEdit = (partner: PartnerRecord) => {
     setEditingPartner(partner);
     setFormError('');
     setForm({
@@ -148,7 +138,7 @@ export default function PartnersView() {
     }
   };
 
-  const handleDelete = async (partner: Partner) => {
+  const handleDelete = async (partner: PartnerRecord) => {
     if (!window.confirm(`确定删除伙伴“${partner.name}”吗？`)) {
       return;
     }
@@ -243,6 +233,7 @@ export default function PartnersView() {
                     <th className="px-3 py-3">联系方式</th>
                     <th className="px-3 py-3">付款条款</th>
                     <th className="px-3 py-3">备注</th>
+                    <th className="px-3 py-3">创建人</th>
                     <th className="px-3 py-3 text-right">操作</th>
                   </tr>
                 </thead>
@@ -256,21 +247,24 @@ export default function PartnersView() {
                         <td className="px-3 py-3 text-slate-600">{partner.contact || '未填写'}</td>
                         <td className="px-3 py-3 text-slate-600">{partner.payment_terms || '未填写'}</td>
                         <td className="max-w-[260px] px-3 py-3 text-slate-500">{partner.remark || '无'}</td>
+                        <td className="px-3 py-3 text-slate-500">{partner.created_by_name || '系统'}</td>
                         <td className="px-3 py-3">
                           <div className="flex justify-end gap-2">
                             <button onClick={() => openEdit(partner)} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800">
                               <Edit className="h-4 w-4" />
                             </button>
-                            <button onClick={() => void handleDelete(partner)} className="rounded-lg border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {user?.role === 'admin' ? (
+                              <button onClick={() => void handleDelete(partner)} className="rounded-lg border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">还没有匹配的伙伴数据。</td>
+                      <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">还没有匹配的伙伴数据。</td>
                     </tr>
                   )}
                 </tbody>

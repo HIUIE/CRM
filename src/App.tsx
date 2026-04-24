@@ -11,6 +11,7 @@ import DashboardView from './pages/Dashboard';
 import AIAssistantView from './pages/AIAssistant';
 import OrderDetailPage from './pages/OrderDetail';
 import SettingsView from './pages/Settings';
+import HelpCenterPage from './pages/HelpCenter';
 import LoginScreen from './pages/Login';
 import OrdersView from './components/OrdersView';
 import FinanceView from './components/FinanceView';
@@ -31,13 +32,14 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/dashboard" element={<DashboardView />} />
         <Route path="/orders" element={<OrdersView />} />
-        <Route path="/orders/:id" element={<OrderDetailPage />} />
+        <Route path="/orders/:orderNo" element={<OrderDetailPage />} />
         <Route path="/finance" element={<FinanceView />} />
         <Route path="/logistics" element={<LogisticsView />} />
         <Route path="/customers" element={<CustomersView />} />
         <Route path="/partners" element={<PartnersView />} />
         <Route path="/ai" element={<AIAssistantView />} />
-        <Route path="/settings" element={<SettingsView />} />
+        <Route path="/help" element={<HelpCenterPage />} />
+        <Route path="/settings" element={user?.role === 'admin' ? <SettingsView /> : <Navigate to="/dashboard" replace />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" />} />

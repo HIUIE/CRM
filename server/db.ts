@@ -7,14 +7,15 @@ import bcrypt from 'bcryptjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const DB_PATH = path.join(__dirname, '..', 'erp_database_v2.sqlite');
+export const DB_PATH = process.env.CRM_DB_PATH || path.join(__dirname, '..', 'erp_database_v2.sqlite');
 
 export let db: Database;
 
 async function ensureColumn(table: string, column: string, definition: string) {
   const columns = await db.all<{ name: string }[]>(`PRAGMA table_info(${table})`);
   if (!columns.some((item) => item.name === column)) {
-    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    const safeDefinition = definition.replace(/\s+DEFAULT\s+CURRENT_TIMESTAMP/i, '');
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${safeDefinition}`);
   }
 }
 
@@ -27,7 +28,10 @@ async function runMigrations() {
       username TEXT UNIQUE,
       password TEXT,
       role TEXT,
-      name TEXT
+      name TEXT,
+      active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -43,6 +47,7 @@ async function runMigrations() {
       logistics_preference TEXT,
       payment_terms TEXT,
       created_by INTEGER,
+      updated_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -54,7 +59,10 @@ async function runMigrations() {
       contact TEXT,
       payment_terms TEXT,
       remark TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_by INTEGER,
+      updated_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS orders (
@@ -70,6 +78,7 @@ async function runMigrations() {
       freight_amount REAL DEFAULT 0,
       misc_amount REAL DEFAULT 0,
       created_by INTEGER,
+      updated_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(customer_id) REFERENCES customers(id)
     );
@@ -100,6 +109,8 @@ async function runMigrations() {
       currency TEXT,
       payment_category TEXT,
       record_category TEXT,
+      created_by INTEGER,
+      updated_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(order_id) REFERENCES orders(id),
       FOREIGN KEY(partner_id) REFERENCES partners(id)
@@ -124,6 +135,8 @@ async function runMigrations() {
       etd TEXT,
       eta TEXT,
       remark TEXT,
+      created_by INTEGER,
+      updated_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(order_id) REFERENCES orders(id)
     );
@@ -137,6 +150,8 @@ async function runMigrations() {
       declaration_date TEXT,
       release_date TEXT,
       remark TEXT,
+      created_by INTEGER,
+      updated_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
@@ -151,6 +166,8 @@ async function runMigrations() {
       production_status TEXT,
       inspection_status TEXT,
       remark TEXT,
+      created_by INTEGER,
+      updated_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
@@ -175,11 +192,21 @@ async function runMigrations() {
   await ensureColumn('orders', 'key_milestone', 'TEXT');
   await ensureColumn('orders', 'freight_amount', 'REAL DEFAULT 0');
   await ensureColumn('orders', 'misc_amount', 'REAL DEFAULT 0');
+  await ensureColumn('orders', 'updated_by', 'INTEGER');
   await ensureColumn('order_items', 'image_url', 'TEXT');
+  await ensureColumn('users', 'active', 'INTEGER DEFAULT 1');
+  await ensureColumn('users', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
+  await ensureColumn('users', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
+  await ensureColumn('partners', 'created_by', 'INTEGER');
+  await ensureColumn('partners', 'updated_by', 'INTEGER');
+  await ensureColumn('partners', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
+  await ensureColumn('customers', 'updated_by', 'INTEGER');
   await ensureColumn('finance_records', 'partner_id', 'INTEGER');
   await ensureColumn('finance_records', 'currency', 'TEXT');
   await ensureColumn('finance_records', 'payment_category', 'TEXT');
   await ensureColumn('finance_records', 'record_category', 'TEXT');
+  await ensureColumn('finance_records', 'created_by', 'INTEGER');
+  await ensureColumn('finance_records', 'updated_by', 'INTEGER');
   await ensureColumn('logistics_records', 'shipping_date', 'TEXT');
   await ensureColumn('logistics_records', 'segment_type', 'TEXT');
   await ensureColumn('logistics_records', 'package_count', 'REAL');
@@ -192,6 +219,12 @@ async function runMigrations() {
   await ensureColumn('logistics_records', 'etd', 'TEXT');
   await ensureColumn('logistics_records', 'eta', 'TEXT');
   await ensureColumn('logistics_records', 'remark', 'TEXT');
+  await ensureColumn('logistics_records', 'created_by', 'INTEGER');
+  await ensureColumn('logistics_records', 'updated_by', 'INTEGER');
+  await ensureColumn('customs_records', 'created_by', 'INTEGER');
+  await ensureColumn('customs_records', 'updated_by', 'INTEGER');
+  await ensureColumn('production_plans', 'created_by', 'INTEGER');
+  await ensureColumn('production_plans', 'updated_by', 'INTEGER');
 
   await db.run(
     `
@@ -274,6 +307,31 @@ async function runMigrations() {
     `,
   );
 
+  await db.run(
+    `
+      UPDATE users
+      SET active = 1
+      WHERE active IS NULL
+    `,
+  );
+
+  await db.run(
+    `
+      UPDATE users
+      SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP),
+          updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP)
+      WHERE created_at IS NULL OR updated_at IS NULL
+    `,
+  );
+
+  await db.run(
+    `
+      UPDATE partners
+      SET updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP)
+      WHERE updated_at IS NULL
+    `,
+  );
+
   const ordersWithoutDisplayId = await db.all<{ id: number; created_at: string }[]>(
     `SELECT id, created_at FROM orders WHERE display_id IS NULL OR TRIM(display_id) = ''`,
   );
@@ -287,11 +345,17 @@ async function runMigrations() {
 async function seedRootUser() {
   const root = await db.get<{ id: number }>(`SELECT id FROM users WHERE username = ?`, ['root']);
   if (!root) {
-    const hash = await bcrypt.hash('root', 10);
+    const initialPassword = process.env.INITIAL_ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'root');
+    if (!initialPassword) {
+      throw new Error('生产环境首次初始化必须设置 INITIAL_ADMIN_PASSWORD');
+    }
+    const hash = await bcrypt.hash(initialPassword, 10);
     await db.run(
-      `INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, 1)`,
       ['root', hash, 'admin', 'Super Admin'],
     );
+  } else {
+    await db.run(`UPDATE users SET active = 1 WHERE username = 'root'`);
   }
 }
 

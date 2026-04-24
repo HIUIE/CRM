@@ -2,19 +2,15 @@ import React, { useState } from 'react';
 import { Globe, Lock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import type { AuthUser } from '../types/auth';
 
 interface LoginResponse {
-  user: {
-    id: number;
-    username: string;
-    role: string;
-    name: string;
-  };
+  user: AuthUser;
 }
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('root');
-  const [password, setPassword] = useState('root');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
@@ -46,7 +42,7 @@ export default function LoginScreen() {
             <Globe className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">SmartTrade AI CRM</h1>
-          <p className="mt-2 text-sm text-blue-100">先把业务主链跑通的外贸内用工作台</p>
+          <p className="mt-2 text-sm text-blue-100">面向小团队协作的外贸订单与流程工作台</p>
         </div>
 
         <div className="p-8">
@@ -93,8 +89,7 @@ export default function LoginScreen() {
             </button>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-              默认管理员账号：<span className="font-semibold text-slate-700">root</span> /
-              <span className="ml-1 font-semibold text-slate-700">root</span>
+              请输入管理员分配的账号和密码。首次部署默认管理员仅保留在初始化说明中，不在登录页公开展示。
             </div>
           </form>
         </div>

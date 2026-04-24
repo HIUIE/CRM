@@ -2,16 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, ExternalLink, Plus, Search, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
-
-type Customer = {
-  id: number;
-  name: string;
-  country: string;
-  contact: string;
-  logistics_preference?: string | null;
-  payment_terms?: string | null;
-  order_count: number;
-};
+import { useAuth } from '../context/AuthContext';
+import type { CustomerListItem } from '../types/crm';
 
 type CustomerForm = {
   name: string;
@@ -32,55 +24,68 @@ const EMPTY_FORM: CustomerForm = {
 function countryToFlag(country: string) {
   const normalized = country.trim().toLowerCase();
   const dictionary: Record<string, string> = {
-    china: '🇨🇳',
-    中国: '🇨🇳',
-    usa: '🇺🇸',
-    'united states': '🇺🇸',
-    美国: '🇺🇸',
-    canada: '🇨🇦',
-    加拿大: '🇨🇦',
-    germany: '🇩🇪',
-    德国: '🇩🇪',
-    france: '🇫🇷',
-    法国: '🇫🇷',
-    italy: '🇮🇹',
-    意大利: '🇮🇹',
-    spain: '🇪🇸',
-    西班牙: '🇪🇸',
-    mexico: '🇲🇽',
-    墨西哥: '🇲🇽',
-    brazil: '🇧🇷',
-    巴西: '🇧🇷',
-    australia: '🇦🇺',
-    澳大利亚: '🇦🇺',
-    japan: '🇯🇵',
-    日本: '🇯🇵',
-    korea: '🇰🇷',
-    'south korea': '🇰🇷',
-    韩国: '🇰🇷',
-    uk: '🇬🇧',
-    'united kingdom': '🇬🇧',
-    英国: '🇬🇧',
+    china: 'cn',
+    中国: 'cn',
+    usa: 'us',
+    'united states': 'us',
+    美国: 'us',
+    canada: 'ca',
+    加拿大: 'ca',
+    germany: 'de',
+    德国: 'de',
+    france: 'fr',
+    法国: 'fr',
+    italy: 'it',
+    意大利: 'it',
+    spain: 'es',
+    西班牙: 'es',
+    mexico: 'mx',
+    墨西哥: 'mx',
+    brazil: 'br',
+    巴西: 'br',
+    australia: 'au',
+    澳大利亚: 'au',
+    japan: 'jp',
+    日本: 'jp',
+    korea: 'kr',
+    'south korea': 'kr',
+    韩国: 'kr',
+    uk: 'gb',
+    'united kingdom': 'gb',
+    英国: 'gb',
+    vietnam: 'vn',
+    越南: 'vn',
+    thailand: 'th',
+    泰国: 'th',
+    malaysia: 'my',
+    马来西亚: 'my',
+    singapore: 'sg',
+    新加坡: 'sg',
   };
-  return dictionary[normalized] || '🌍';
+  const code = dictionary[normalized];
+  if (code) {
+    return <span className={`fi fi-${code} rounded-sm shadow-sm`} />;
+  }
+  return <span className="fi fi-xx rounded-sm shadow-sm" />;
 }
 
 export default function CustomersView() {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
   const [query, setQuery] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerListItem | null>(null);
   const [form, setForm] = useState<CustomerForm>(EMPTY_FORM);
 
   const loadCustomers = async () => {
     setError('');
     try {
-      const data = await apiFetch<Customer[]>('/api/customers');
+      const data = await apiFetch<CustomerListItem[]>('/api/customers');
       setCustomers(data);
     } catch (requestError) {
       setError(getErrorMessage(requestError, '读取客户数据失败'));
@@ -120,7 +125,7 @@ export default function CustomersView() {
     setShowForm(true);
   };
 
-  const openEdit = (customer: Customer) => {
+  const openEdit = (customer: CustomerListItem) => {
     setEditingCustomer(customer);
     setFormError('');
     setForm({
@@ -171,7 +176,7 @@ export default function CustomersView() {
     }
   };
 
-  const handleDelete = async (customer: Customer) => {
+  const handleDelete = async (customer: CustomerListItem) => {
     if (!window.confirm(`确定删除客户“${customer.name}”吗？`)) {
       return;
     }
@@ -271,45 +276,53 @@ export default function CustomersView() {
                     <th className="px-3 py-3">付款条款</th>
                     <th className="px-3 py-3">物流偏好</th>
                     <th className="px-3 py-3">订单数</th>
+                    <th className="px-3 py-3">创建人</th>
                     <th className="px-3 py-3 text-right">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredCustomers.length ? (
                     filteredCustomers.map((customer) => (
-                      <tr key={customer.id} className="align-top">
+                      <tr
+                        key={customer.id}
+                        onClick={() => navigate(`/orders?customerId=${customer.id}`)}
+                        className="group align-top transition-colors hover:bg-slate-50 cursor-pointer"
+                      >
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2 font-medium text-slate-700">
-                            <span className="text-base">{countryToFlag(customer.country)}</span>
+                            {countryToFlag(customer.country)}
                             <span>{customer.country}</span>
                           </div>
                         </td>
-                        <td className="px-3 py-3 font-semibold text-slate-900">{customer.name}</td>
+                        <td className="px-3 py-3 font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{customer.name}</td>
                         <td className="px-3 py-3 text-slate-600">{customer.contact}</td>
                         <td className="px-3 py-3 text-slate-600">{customer.payment_terms || '未填写'}</td>
                         <td className="px-3 py-3 text-slate-600">{customer.logistics_preference || '未填写'}</td>
                         <td className="px-3 py-3 text-slate-700">{customer.order_count}</td>
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-3 text-slate-500">{customer.created_by_name || '系统'}</td>
+                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => navigate(`/orders?customerId=${customer.id}`)}
-                              className="inline-flex items-center rounded-lg border border-slate-200 px-2.5 py-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+                              className="inline-flex items-center rounded-lg border border-slate-200 px-2.5 py-2 text-slate-500 transition-colors hover:bg-white hover:text-blue-600 hover:border-blue-200"
                             >
                               <ExternalLink className="h-4 w-4" />
                             </button>
-                            <button onClick={() => openEdit(customer)} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800">
+                            <button onClick={() => openEdit(customer)} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-white hover:text-blue-600 hover:border-blue-200">
                               <Edit className="h-4 w-4" />
                             </button>
-                            <button onClick={() => void handleDelete(customer)} className="rounded-lg border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {user?.role === 'admin' ? (
+                              <button onClick={() => void handleDelete(customer)} className="rounded-lg border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">没有匹配的客户。</td>
+                      <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">没有匹配的客户。</td>
                     </tr>
                   )}
                 </tbody>

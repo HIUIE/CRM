@@ -3,577 +3,110 @@ import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
+  Download,
   Edit3,
   Factory,
   FileText,
-  Image as ImageIcon,
+  Mail,
+  MapPin,
+  MoreHorizontal,
   Paperclip,
   Plus,
   ShieldCheck,
+  Sparkles,
   Trash2,
   Truck,
+  UserRound,
   Wallet,
   X,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
-
-type SectionKey = 'basic' | 'items' | 'production' | 'finance' | 'customs' | 'logistics';
-type OrderStatus = 'draft' | 'production' | 'customs' | 'shipping' | 'completed';
-type FinanceType = 'receipt' | 'payment';
-type FinanceStatus = 'pending' | 'completed';
-type FinanceCategory = 'deposit' | 'balance' | 'goods' | 'freight' | 'customs' | 'other';
-type LogisticsStatus = 'preparing' | 'shipped' | 'arrived';
-type LogisticsSegment = 'domestic' | 'international';
-type CustomsStatus = 'not_started' | 'preparing' | 'submitted' | 'inspected' | 'released';
-type PartnerType = 'factory' | 'forwarder' | 'customs_broker' | 'other';
-type ProductionStatus = 'not_started' | 'scheduled' | 'in_progress' | 'ready';
-type InspectionStatus = 'pending' | 'passed' | 'failed';
-
-type AttachmentMeta = {
-  id: number;
-  fileName: string;
-  url: string;
-  fileSize?: number | null;
-  mimeType?: string | null;
-};
-
-type Partner = {
-  id: number;
-  name: string;
-  partner_type: PartnerType;
-  country?: string | null;
-  contact?: string | null;
-  payment_terms?: string | null;
-  remark?: string | null;
-};
-
-type CustomerInfo = {
-  id?: number | null;
-  name?: string | null;
-  country?: string | null;
-  contact?: string | null;
-  logisticsPreference?: string | null;
-  paymentTerms?: string | null;
-};
-
-type OrderInfo = {
-  id: number;
-  display_id: string;
-  customer_id: number;
-  status: OrderStatus;
-  details?: string | null;
-  total_amount?: number | null;
-  created_at?: string | null;
-  deliveryDate?: string | null;
-  freightAmount?: number | null;
-  miscAmount?: number | null;
-};
-
-type OrderItem = {
-  id: number;
-  product_name?: string | null;
-  specification?: string | null;
-  quantity?: number | null;
-  unit?: string | null;
-  unit_price?: number | null;
-  subtotal?: number | null;
-  imageUrl?: string | null;
-};
-
-type FinanceRecord = {
-  id: number;
-  type: FinanceType;
-  amount?: number | null;
-  currency?: 'USD' | 'CNY' | null;
-  target?: string | null;
-  status: FinanceStatus;
-  remark?: string | null;
-  recordCategory?: FinanceCategory | null;
-  partnerId?: number | null;
-  partnerName?: string | null;
-  createdAt?: string | null;
-  attachments?: AttachmentMeta[];
-  attachmentCount?: number;
-};
-
-type ProductionPlan = {
-  id: number;
-  partnerId: number;
-  partnerName?: string | null;
-  orderDate?: string | null;
-  estimatedDeliveryDate?: string | null;
-  productionStatus: ProductionStatus;
-  inspectionStatus: InspectionStatus;
-  remark?: string | null;
-  updatedAt?: string | null;
-};
-
-type LogisticsRecord = {
-  id: number;
-  carrier?: string | null;
-  status: LogisticsStatus;
-  segmentType?: LogisticsSegment | null;
-  trackingNo?: string | null;
-  packingDetails?: string | null;
-  shippingDate?: string | null;
-  packageCount?: number | null;
-  volumeCbm?: number | null;
-  grossWeightKg?: number | null;
-  incoterm?: string | null;
-  transportMode?: string | null;
-  vesselVoyage?: string | null;
-  billNo?: string | null;
-  etd?: string | null;
-  eta?: string | null;
-  remark?: string | null;
-  createdAt?: string | null;
-  attachments?: AttachmentMeta[];
-  attachmentCount?: number;
-};
-
-type CustomsRecord = {
-  id: number;
-  status: CustomsStatus;
-  brokerName?: string | null;
-  declarationNo?: string | null;
-  declarationDate?: string | null;
-  releaseDate?: string | null;
-  remark?: string | null;
-  attachments?: AttachmentMeta[];
-  attachmentCount?: number;
-  updatedAt?: string | null;
-};
-
-type OrderDetailResponse = {
-  order?: OrderInfo | null;
-  customer?: CustomerInfo | null;
-  items?: OrderItem[] | null;
-  financeRecords?: FinanceRecord[] | null;
-  productionPlan?: ProductionPlan | null;
-  customs?: CustomsRecord | null;
-  logisticsRecords?: LogisticsRecord[] | null;
-  domesticLogistics?: LogisticsRecord | null;
-  internationalLogistics?: LogisticsRecord | null;
-  summary?: {
-    paidAmount?: number | null;
-    outstandingAmount?: number | null;
-    paymentStatus?: 'unpaid' | 'partial' | 'paid' | null;
-    settled?: boolean | null;
-  } | null;
-};
-
-type EditableOrderItem = {
-  clientKey: string;
-  id?: number;
-  imageUrl: string;
-  productName: string;
-  specification: string;
-  quantity: string;
-  unit: string;
-  unitPrice: string;
-  subtotal: string;
-};
-
-type OrderFormState = {
-  status: OrderStatus;
-  totalAmount: string;
-  deliveryDate: string;
-  freightAmount: string;
-  miscAmount: string;
-  details: string;
-  items: EditableOrderItem[];
-};
-
-type FinanceFormState = {
-  id?: number;
-  type: FinanceType;
-  amount: string;
-  currency: 'USD' | 'CNY';
-  status: FinanceStatus;
-  recordCategory: FinanceCategory;
-  target: string;
-  partnerId: string;
-  remark: string;
-  attachments: AttachmentMeta[];
-  newFiles: File[];
-};
-
-type ProductionFormState = {
-  id?: number;
-  partnerId: string;
-  orderDate: string;
-  estimatedDeliveryDate: string;
-  productionStatus: ProductionStatus;
-  inspectionStatus: InspectionStatus;
-  remark: string;
-};
-
-type LogisticsFormState = {
-  id?: number;
-  segmentType: LogisticsSegment;
-  carrier: string;
-  trackingNo: string;
-  status: LogisticsStatus;
-  shippingDate: string;
-  packageCount: string;
-  volumeCbm: string;
-  grossWeightKg: string;
-  incoterm: string;
-  transportMode: string;
-  vesselVoyage: string;
-  billNo: string;
-  etd: string;
-  eta: string;
-  packingDetails: string;
-  remark: string;
-  attachments: AttachmentMeta[];
-  newFiles: File[];
-};
-
-type CustomsFormState = {
-  id?: number;
-  status: CustomsStatus;
-  brokerName: string;
-  declarationNo: string;
-  declarationDate: string;
-  releaseDate: string;
-  remark: string;
-  attachments: AttachmentMeta[];
-  newFiles: File[];
-};
-
-type DrawerState =
-  | { mode: 'closed' }
-  | { mode: 'order' }
-  | { mode: 'finance'; recordId?: number }
-  | { mode: 'production' }
-  | { mode: 'customs' }
-  | { mode: 'customs-upload' }
-  | { mode: 'logistics'; recordId?: number };
-
-const STAGE_STEPS: Array<{ key: OrderStatus; label: string; target: SectionKey }> = [
-  { key: 'draft', label: '待整理', target: 'basic' },
-  { key: 'production', label: '生产中', target: 'production' },
-  { key: 'customs', label: '报关中', target: 'customs' },
-  { key: 'shipping', label: '发货中', target: 'logistics' },
-  { key: 'completed', label: '已完成', target: 'finance' },
-];
-
-const EMPTY_ORDER_FORM: OrderFormState = {
-  status: 'draft',
-  totalAmount: '0',
-  deliveryDate: '',
-  freightAmount: '0',
-  miscAmount: '0',
-  details: '',
-  items: [],
-};
-
-const EMPTY_FINANCE_FORM: FinanceFormState = {
-  type: 'receipt',
-  amount: '',
-  currency: 'USD',
-  status: 'completed',
-  recordCategory: 'deposit',
-  target: '',
-  partnerId: '',
-  remark: '',
-  attachments: [],
-  newFiles: [],
-};
-
-const EMPTY_PRODUCTION_FORM: ProductionFormState = {
-  partnerId: '',
-  orderDate: '',
-  estimatedDeliveryDate: '',
-  productionStatus: 'not_started',
-  inspectionStatus: 'pending',
-  remark: '',
-};
-
-const EMPTY_LOGISTICS_FORM: LogisticsFormState = {
-  segmentType: 'international',
-  carrier: '',
-  trackingNo: '',
-  status: 'preparing',
-  shippingDate: '',
-  packageCount: '',
-  volumeCbm: '',
-  grossWeightKg: '',
-  incoterm: '',
-  transportMode: '',
-  vesselVoyage: '',
-  billNo: '',
-  etd: '',
-  eta: '',
-  packingDetails: '',
-  remark: '',
-  attachments: [],
-  newFiles: [],
-};
-
-const EMPTY_CUSTOMS_FORM: CustomsFormState = {
-  status: 'not_started',
-  brokerName: '',
-  declarationNo: '',
-  declarationDate: '',
-  releaseDate: '',
-  remark: '',
-  attachments: [],
-  newFiles: [],
-};
-
-function asText(value: unknown, fallback = '') {
-  return typeof value === 'string' ? value : fallback;
-}
-
-function asNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function formatMoney(value: unknown, currency: string) {
-  return `${currency} ${asNumber(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-}
-
-function formatDateOnly(value: unknown, fallback = '未填写') {
-  const text = asText(value);
-  if (!text) {
-    return fallback;
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-    return text;
-  }
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? text : date.toLocaleDateString();
-}
-
-function formatDateTime(value: unknown, fallback = '未填写') {
-  const text = asText(value);
-  if (!text) {
-    return fallback;
-  }
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? text : date.toLocaleString();
-}
-
-function getStageMeta(status: string) {
-  switch (status) {
-    case 'draft':
-      return { label: '待整理', className: 'bg-slate-100 text-slate-700 border-slate-200' };
-    case 'production':
-      return { label: '生产中', className: 'bg-amber-50 text-amber-700 border-amber-200' };
-    case 'customs':
-      return { label: '报关中', className: 'bg-orange-50 text-orange-700 border-orange-200' };
-    case 'shipping':
-      return { label: '发货中', className: 'bg-sky-50 text-sky-700 border-sky-200' };
-    case 'completed':
-      return { label: '已完成', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    default:
-      return { label: status || '未知', className: 'bg-slate-100 text-slate-700 border-slate-200' };
-  }
-}
-
-function getPaymentMeta(status: OrderDetailResponse['summary'] extends { paymentStatus?: infer T } ? T : never) {
-  switch (status) {
-    case 'unpaid':
-      return { label: '待付款', className: 'bg-orange-50 text-orange-700 border-orange-200' };
-    case 'partial':
-      return { label: '部分付款', className: 'bg-amber-50 text-amber-700 border-amber-200' };
-    case 'paid':
-      return { label: '已付款', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    default:
-      return { label: '待付款', className: 'bg-slate-100 text-slate-700 border-slate-200' };
-  }
-}
-
-function getFinanceCategoryLabel(category: FinanceCategory) {
-  switch (category) {
-    case 'deposit':
-      return '首付款';
-    case 'balance':
-      return '尾款';
-    case 'goods':
-      return '货款';
-    case 'freight':
-      return '运费';
-    case 'customs':
-      return '报关费';
-    default:
-      return '其他';
-  }
-}
-
-function getCustomsStatusLabel(status: CustomsStatus) {
-  switch (status) {
-    case 'not_started':
-      return '未开始';
-    case 'preparing':
-      return '准备中';
-    case 'submitted':
-      return '已申报';
-    case 'inspected':
-      return '查验中';
-    case 'released':
-      return '已放行';
-    default:
-      return status;
-  }
-}
-
-function getProductionStatusLabel(status: ProductionStatus) {
-  switch (status) {
-    case 'not_started':
-      return '未开始';
-    case 'scheduled':
-      return '已排产';
-    case 'in_progress':
-      return '生产中';
-    case 'ready':
-      return '待出货';
-    default:
-      return status;
-  }
-}
-
-function getInspectionStatusLabel(status: InspectionStatus) {
-  switch (status) {
-    case 'pending':
-      return '待验货';
-    case 'passed':
-      return '已通过';
-    case 'failed':
-      return '未通过';
-    default:
-      return status;
-  }
-}
-
-function getDeliveryMeta(value: string) {
-  if (!value) {
-    return { label: '未设置交货期', className: 'border-slate-200 bg-slate-50 text-slate-500' };
-  }
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(value);
-  target.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-
-  if (diffDays < 0) {
-    return { label: `已逾期 ${Math.abs(diffDays)} 天`, className: 'border-red-200 bg-red-50 text-red-700' };
-  }
-  if (diffDays <= 7) {
-    return { label: `${diffDays} 天内到期`, className: 'border-amber-200 bg-amber-50 text-amber-700' };
-  }
-  return { label: '交期正常', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' };
-}
-
-function makeDraftItem(item?: OrderItem): EditableOrderItem {
-  return {
-    clientKey: item?.id ? `item-${item.id}` : `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    id: item?.id,
-    imageUrl: asText(item?.imageUrl),
-    productName: asText(item?.product_name),
-    specification: asText(item?.specification),
-    quantity: item?.quantity != null ? String(item.quantity) : '1',
-    unit: asText(item?.unit),
-    unitPrice: item?.unit_price != null ? String(item.unit_price) : '0',
-    subtotal: item?.subtotal != null ? String(item.subtotal) : '0',
-  };
-}
-
-function buildOrderForm(order: OrderInfo, items: OrderItem[]): OrderFormState {
-  return {
-    status: order.status,
-    totalAmount: String(order.total_amount ?? 0),
-    deliveryDate: asText(order.deliveryDate),
-    freightAmount: String(order.freightAmount ?? 0),
-    miscAmount: String(order.miscAmount ?? 0),
-    details: asText(order.details),
-    items: items.map((item) => makeDraftItem(item)),
-  };
-}
-
-function buildFinanceForm(record: FinanceRecord | null, customerName: string): FinanceFormState {
-  return {
-    id: record?.id,
-    type: record?.type || 'receipt',
-    amount: record?.amount != null ? String(record.amount) : '',
-    currency: record?.currency || 'USD',
-    status: record?.status || 'completed',
-    recordCategory:
-      (record?.recordCategory as FinanceCategory) || (record?.type === 'payment' ? 'goods' : 'deposit'),
-    target: asText(record?.target, customerName),
-    partnerId: record?.partnerId ? String(record.partnerId) : '',
-    remark: asText(record?.remark),
-    attachments: record?.attachments || [],
-    newFiles: [],
-  };
-}
-
-function buildProductionForm(plan: ProductionPlan | null): ProductionFormState {
-  return {
-    id: plan?.id,
-    partnerId: plan?.partnerId ? String(plan.partnerId) : '',
-    orderDate: asText(plan?.orderDate),
-    estimatedDeliveryDate: asText(plan?.estimatedDeliveryDate),
-    productionStatus: plan?.productionStatus || 'not_started',
-    inspectionStatus: plan?.inspectionStatus || 'pending',
-    remark: asText(plan?.remark),
-  };
-}
-
-function buildLogisticsForm(record: LogisticsRecord | null): LogisticsFormState {
-  return {
-    id: record?.id,
-    segmentType: record?.segmentType || 'international',
-    carrier: asText(record?.carrier),
-    trackingNo: asText(record?.trackingNo),
-    status: record?.status || 'preparing',
-    shippingDate: asText(record?.shippingDate),
-    packageCount: record?.packageCount != null ? String(record.packageCount) : '',
-    volumeCbm: record?.volumeCbm != null ? String(record.volumeCbm) : '',
-    grossWeightKg: record?.grossWeightKg != null ? String(record.grossWeightKg) : '',
-    incoterm: asText(record?.incoterm),
-    transportMode: asText(record?.transportMode),
-    vesselVoyage: asText(record?.vesselVoyage),
-    billNo: asText(record?.billNo),
-    etd: asText(record?.etd),
-    eta: asText(record?.eta),
-    packingDetails: asText(record?.packingDetails),
-    remark: asText(record?.remark),
-    attachments: record?.attachments || [],
-    newFiles: [],
-  };
-}
-
-function buildCustomsForm(record: CustomsRecord | null): CustomsFormState {
-  return {
-    id: record?.id,
-    status: record?.status || 'not_started',
-    brokerName: asText(record?.brokerName),
-    declarationNo: asText(record?.declarationNo),
-    declarationDate: asText(record?.declarationDate),
-    releaseDate: asText(record?.releaseDate),
-    remark: asText(record?.remark),
-    attachments: record?.attachments || [],
-    newFiles: [],
-  };
-}
+import { useAuth } from '../context/AuthContext';
+import {
+  ActionButton,
+  AttachmentEditor,
+  CompactMeta,
+  DropdownItem,
+  EmptyRow,
+  Field,
+  FilterPill,
+  LightActionButton,
+  LogisticsSnapshot,
+  MetricCard,
+  PreviewModal,
+  ProductImagePlaceholder,
+  Tag,
+  WorkSection,
+} from '../features/order-detail/components';
+import type {
+  AIAnalysisResult,
+  AttachmentMeta,
+  CustomsFormState,
+  CustomsRecord,
+  CustomsStatus,
+  DrawerState,
+  EditableOrderItem,
+  FinanceCategory,
+  FinanceFormState,
+  FinanceRecord,
+  FinanceStatus,
+  FinanceType,
+  LogisticsFormState,
+  LogisticsRecord,
+  LogisticsSegment,
+  LogisticsStatus,
+  OrderDetailResponse,
+  OrderFormState,
+  OrderItem,
+  OrderStatus,
+  Partner,
+  ProductionFormState,
+  ProductionPlan,
+  ProductionStatus,
+  SectionKey,
+  InspectionStatus,
+} from '../features/order-detail/types';
+import {
+  EMPTY_CUSTOMS_FORM,
+  EMPTY_FINANCE_FORM,
+  EMPTY_LOGISTICS_FORM,
+  EMPTY_ORDER_FORM,
+  EMPTY_PRODUCTION_FORM,
+  STAGE_STEPS,
+  asNumber,
+  asText,
+  buildCustomsForm,
+  buildFinanceForm,
+  buildLogisticsForm,
+  buildOrderForm,
+  buildProductionForm,
+  formatDateOnly,
+  formatDateTime,
+  formatMoney,
+  getCustomsStatusLabel,
+  getDeliveryMeta,
+  getFinanceCategoryLabel,
+  getInspectionStatusLabel,
+  getPaymentMeta,
+  getProductionStatusLabel,
+  makeDraftItem,
+} from '../features/order-detail/utils';
 
 export default function OrderDetailPage() {
-  const { id } = useParams();
+  const { user } = useAuth();
+  const { orderNo } = useParams();
   const navigate = useNavigate();
-  const orderId = Number(id);
 
   const [detail, setDetail] = useState<OrderDetailResponse | null>(null);
+  const orderId = detail?.order?.id;
+
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [drawer, setDrawer] = useState<DrawerState>({ mode: 'closed' });
+  const [previewAttachment, setPreviewAttachment] = useState<AttachmentMeta | null>(null);
   const [orderForm, setOrderForm] = useState<OrderFormState>(EMPTY_ORDER_FORM);
   const [financeForm, setFinanceForm] = useState<FinanceFormState>(EMPTY_FINANCE_FORM);
   const [productionForm, setProductionForm] = useState<ProductionFormState>(EMPTY_PRODUCTION_FORM);
@@ -586,6 +119,7 @@ export default function OrderDetailPage() {
   const [financeFilter, setFinanceFilter] = useState<'all' | FinanceType>('all');
   const [collapsed, setCollapsed] = useState<Record<SectionKey, boolean>>({
     basic: false,
+    todos: false,
     items: false,
     production: false,
     finance: false,
@@ -593,16 +127,44 @@ export default function OrderDetailPage() {
     logistics: false,
   });
   const [activeSection, setActiveSection] = useState<SectionKey>('basic');
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const basicRef = useRef<HTMLDivElement | null>(null);
+  const todosRef = useRef<HTMLDivElement | null>(null);
   const itemsRef = useRef<HTMLDivElement | null>(null);
   const productionRef = useRef<HTMLDivElement | null>(null);
   const financeRef = useRef<HTMLDivElement | null>(null);
   const customsRef = useRef<HTMLDivElement | null>(null);
   const logisticsRef = useRef<HTMLDivElement | null>(null);
 
+  const runAnalysis = async () => {
+    if (!orderNo) return;
+    setAnalyzing(true);
+    setDrawerError('');
+    try {
+      const result = await apiFetch<AIAnalysisResult>('/api/ai/analyze-order', {
+        method: 'POST',
+        body: JSON.stringify({ orderNo }),
+      });
+      setAiResult(result);
+    } catch (err) {
+      setDrawerError(getErrorMessage(err, 'AI 分析失败'));
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (drawer.mode === 'ai-analysis' && !aiResult && !analyzing) {
+      void runAnalysis();
+    }
+  }, [drawer.mode]);
+
   const sectionRefs: Record<SectionKey, React.RefObject<HTMLDivElement | null>> = {
     basic: basicRef,
+    todos: todosRef,
     items: itemsRef,
     production: productionRef,
     finance: financeRef,
@@ -610,8 +172,9 @@ export default function OrderDetailPage() {
     logistics: logisticsRef,
   };
 
+
   const loadDetail = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
-    if (!Number.isInteger(orderId) || orderId <= 0) {
+    if (!orderNo) {
       setError('订单编号无效');
       setLoading(false);
       return;
@@ -624,7 +187,7 @@ export default function OrderDetailPage() {
 
     try {
       const [detailData, partnerData] = await Promise.all([
-        apiFetch<OrderDetailResponse>(`/api/orders/${orderId}`),
+        apiFetch<OrderDetailResponse>(`/api/orders/${orderNo}`),
         apiFetch<Partner[]>('/api/partners'),
       ]);
       if (!detailData?.order) {
@@ -643,7 +206,7 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     void loadDetail();
-  }, [orderId]);
+  }, [orderNo]);
 
   useEffect(() => {
     if (!toast) {
@@ -690,6 +253,40 @@ export default function OrderDetailPage() {
   const domesticLogistics = detail?.domesticLogistics || null;
   const internationalLogistics = detail?.internationalLogistics || null;
   const summary = detail?.summary || {};
+  const hasAnyLogistics = Boolean(domesticLogistics || internationalLogistics || logisticsRecords.length);
+
+  // Status Linkage Logic
+  useEffect(() => {
+    if (!order || !orderId) return;
+
+    let nextStatus: OrderStatus = order.status;
+    if (hasAnyLogistics) {
+      nextStatus = 'shipping';
+    } else if (customs) {
+      nextStatus = 'customs';
+    } else if (productionPlan && productionPlan.productionStatus !== 'not_started') {
+      nextStatus = 'production';
+    }
+
+    const orderStages: OrderStatus[] = ['draft', 'production', 'customs', 'shipping', 'completed'];
+    const currentIndex = orderStages.indexOf(order.status as OrderStatus);
+    const nextIndex = orderStages.indexOf(nextStatus);
+
+    if (nextIndex > currentIndex && order.status !== 'completed' && nextStatus !== 'completed') {
+      void (async () => {
+        try {
+          await apiFetch(`/api/orders/${orderId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: nextStatus }),
+          });
+          void loadDetail({ showLoading: false });
+          setToast(`订单阶段已自动更新为：${STAGE_STEPS[nextIndex].label}`);
+        } catch (err) {
+          console.error('Failed to auto-update status:', err);
+        }
+      })();
+    }
+  }, [hasAnyLogistics, customs, productionPlan, order?.id, order?.status]);
 
   const paidAmount = asNumber(summary.paidAmount);
   const outstandingAmount = asNumber(summary.outstandingAmount);
@@ -697,12 +294,16 @@ export default function OrderDetailPage() {
   const freightAmount = asNumber(order?.freightAmount);
   const miscAmount = asNumber(order?.miscAmount);
   const grandTotal = orderTotal + freightAmount + miscAmount;
-  const stageMeta = getStageMeta(order?.status || 'draft');
   const paymentMeta = getPaymentMeta(summary.paymentStatus);
   const deliveryMeta = getDeliveryMeta(asText(order?.deliveryDate));
-  const stageIndex = STAGE_STEPS.findIndex((step) => step.key === order?.status);
+  const stageIndex = Math.max(0, STAGE_STEPS.findIndex((step) => step.key === order?.status));
   const settled = Boolean(summary.settled || (orderTotal > 0 && outstandingAmount <= 0));
-  const hasAnyLogistics = Boolean(domesticLogistics || internationalLogistics || logisticsRecords.length);
+  const totalUnits = items.reduce((sum, item) => sum + asNumber(item.quantity), 0);
+  const paymentTermBadge = asText(customer.logisticsPreference || customer.paymentTerms).trim();
+  const productionReference = productionPlan
+    ? `MO-${formatDateOnly(productionPlan.orderDate, new Date().toISOString().slice(0, 10)).replaceAll('/', '').replaceAll('-', '')}-${String(order?.id ?? 0).padStart(3, '0')}`
+    : '';
+  const logisticsHeadline = internationalLogistics?.carrier || domesticLogistics?.carrier || '待安排';
 
   const filteredFinanceRecords = useMemo(() => {
     if (financeFilter === 'all') {
@@ -718,12 +319,55 @@ export default function OrderDetailPage() {
 
   const paymentPartners = useMemo(() => partners, [partners]);
 
+  const todoItems = [
+    {
+      title: '客户确认订单',
+      detail: `${asText(customer.name, '客户待确认')} · ${formatDateTime(order?.created_at)}`,
+      done: true,
+      section: 'basic' as SectionKey,
+    },
+    {
+      title: '支付预付款',
+      detail: paidAmount > 0 ? `已收 ${formatMoney(paidAmount, 'USD')}` : `待收 ${formatMoney(outstandingAmount, 'USD')}`,
+      done: paidAmount > 0,
+      section: 'finance' as SectionKey,
+    },
+    {
+      title: '安排生产',
+      detail: productionPlan ? `${asText(productionPlan.partnerName, '未指定工厂')} · ${getProductionStatusLabel(productionPlan.productionStatus)}` : '由采购创建生产计划',
+      done: Boolean(productionPlan),
+      section: 'production' as SectionKey,
+    },
+    {
+      title: '准备报关资料',
+      detail: customs ? `${getCustomsStatusLabel(customs.status)} · ${asText(customs.declarationNo, '待补单号')}` : '待上传商业发票、装箱单、报关单',
+      done: Boolean(customs),
+      section: 'customs' as SectionKey,
+    },
+    {
+      title: '安排物流发货',
+      detail: hasAnyLogistics ? `${logisticsHeadline} · ${formatDateOnly(internationalLogistics?.etd || domesticLogistics?.shippingDate)}` : '待录入提单、航次或国内物流',
+      done: hasAnyLogistics,
+      section: 'logistics' as SectionKey,
+    },
+    {
+      title: '订单完成',
+      detail: order?.status === 'completed' ? '确认收款并完成订单' : '待交付完成后关闭订单',
+      done: order?.status === 'completed',
+      section: 'finance' as SectionKey,
+    },
+  ];
+
   const scrollToSection = (section: SectionKey) => {
     sectionRefs[section].current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const toggleSection = (section: SectionKey) => {
     setCollapsed((current) => ({ ...current, [section]: !current[section] }));
+  };
+
+  const exportOrder = () => {
+    window.print();
   };
 
   const closeDrawer = () => {
@@ -938,7 +582,7 @@ export default function OrderDetailPage() {
       }
 
       for (const itemId of deletedItemIds) {
-        await apiFetch(`/api/order-items/${itemId}`, { method: 'DELETE' });
+        await apiFetch(`/api/orders/items/${itemId}`, { method: 'DELETE' });
       }
 
       for (const item of normalizedItems) {
@@ -952,7 +596,7 @@ export default function OrderDetailPage() {
           imageUrl: item.imageUrl,
         };
         if (item.id) {
-          await apiFetch(`/api/order-items/${item.id}`, {
+          await apiFetch(`/api/orders/items/${item.id}`, {
             method: 'PATCH',
             body: JSON.stringify(payload),
           });
@@ -1051,7 +695,7 @@ export default function OrderDetailPage() {
     try {
       setSaving(true);
       if (productionForm.id) {
-        await apiFetch(`/api/production/${productionForm.id}`, {
+        await apiFetch(`/api/orders/production/${productionForm.id}`, {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
@@ -1229,445 +873,624 @@ export default function OrderDetailPage() {
                 ? drawer.recordId
                   ? '更新物流 / 录入单号'
                   : '新增物流记录'
-                : '';
+                : drawer.mode === 'ai-analysis'
+                  ? '✨ AI 智能诊断分析'
+                  : '';
 
   return (
     <>
-      <div className="relative space-y-3">
-        <section className="rounded-[24px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-            <div className="min-w-0 flex-1">
-              <button
-                onClick={() => navigate('/orders')}
-                className="mb-2 inline-flex items-center text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700"
-              >
-                <ArrowLeft className="mr-1.5 h-4 w-4" />
-                返回订单列表
-              </button>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-[26px] font-bold tracking-tight text-slate-900">{order.display_id}</h2>
-                <Tag className={stageMeta.className}>{stageMeta.label}</Tag>
-                <Tag className={paymentMeta.className}>{paymentMeta.label}</Tag>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                <span>{asText(customer.name, '未命名客户')}</span>
-                <span>{asText(customer.country, '未填写国家')}</span>
-                <span>下单于 {formatDateTime(order.created_at)}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 xl:items-end">
-              <div className="flex flex-wrap justify-end gap-2">
-                <ActionButton icon={<Edit3 className="h-4 w-4" />} onClick={openOrderDrawer}>
-                  编辑订单
-                </ActionButton>
-                <ActionButton icon={<Wallet className="h-4 w-4" />} onClick={() => openFinanceDrawer()}>
-                  录入款项
-                </ActionButton>
-                <ActionButton icon={<Factory className="h-4 w-4" />} onClick={openProductionDrawer}>
-                  编辑生产安排
-                </ActionButton>
-                <ActionButton icon={<ShieldCheck className="h-4 w-4" />} onClick={openCustomsDrawer}>
-                  报关信息
-                </ActionButton>
-                <ActionButton icon={<Truck className="h-4 w-4" />} onClick={() => openLogisticsDrawer()}>
-                  更新物流
-                </ActionButton>
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-2 text-[11px]">
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 font-semibold ${deliveryMeta.className}`}>
-                  <CalendarClock className="mr-1 h-3.5 w-3.5" />
-                  交货期 {formatDateOnly(order.deliveryDate)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
-            <div className="flex flex-wrap items-center gap-2 lg:gap-4">
-              {STAGE_STEPS.map((step, index) => {
-                const reached = index <= stageIndex;
-                const active = step.key === order.status;
-                return (
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_210px] items-start pt-0">
+        <div className="space-y-3 min-w-0 self-start mt-0">
+          <section
+            ref={basicRef}
+            data-section="basic"
+            className="rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-sm"
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
                   <button
-                    key={step.key}
-                    type="button"
-                    onClick={() => scrollToSection(step.target)}
-                    className="flex items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-white"
+                    onClick={() => navigate('/orders')}
+                    className="mb-3 inline-flex items-center text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700"
                   >
-                    <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold ${
-                        active
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : reached
-                            ? 'border-slate-300 bg-white text-slate-700'
-                            : 'border-slate-200 bg-slate-100 text-slate-400'
-                      }`}
-                    >
-                      {index + 1}
-                    </span>
-                    <span className={`text-[11px] font-semibold ${active ? 'text-slate-900' : 'text-slate-500'}`}>{step.label}</span>
-                    {index < STAGE_STEPS.length - 1 ? (
-                      <span className={`hidden h-px w-6 sm:block ${reached ? 'bg-slate-400' : 'bg-slate-200'}`} />
-                    ) : null}
+                    <ArrowLeft className="mr-1.5 h-4 w-4" />
+                    返回订单列表
                   </button>
-                );
-              })}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-[30px] font-bold tracking-tight text-slate-900">{order.display_id}</h2>
+                    <Tag className={paymentMeta.className}>{paymentMeta.label}</Tag>
+                    {paymentTermBadge ? <Tag className="bg-blue-50 text-blue-700 border-blue-200">{paymentTermBadge}</Tag> : null}
+                  </div>
+                </div>
+
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <ActionButton icon={<Edit3 className="h-4 w-4" />} onClick={openOrderDrawer}>
+                      编辑订单
+                    </ActionButton>
+                    <ActionButton icon={<Wallet className="h-4 w-4" />} onClick={() => openFinanceDrawer()}>
+                      收款
+                    </ActionButton>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowMoreActions(!showMoreActions)}
+                        className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="ml-2">更多操作</span>
+                      </button>
+
+                      {showMoreActions && (
+                        <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-black/5">
+                          <DropdownItem
+                            icon={<Sparkles className="h-4 w-4" />}
+                            label="AI 智能分析"
+                            onClick={() => {
+                              setShowMoreActions(false);
+                              setDrawer({ mode: 'ai-analysis' });
+                            }}
+                          />
+                          <DropdownItem
+                            icon={<Factory className="h-4 w-4" />}
+                            label="编辑生产安排"
+                            onClick={() => {
+                              setShowMoreActions(false);
+                              openProductionDrawer();
+                            }}
+                          />
+                          <DropdownItem
+                            icon={<ShieldCheck className="h-4 w-4" />}
+                            label="报关信息"
+                            onClick={() => {
+                              setShowMoreActions(false);
+                              openCustomsDrawer();
+                            }}
+                          />
+                          <DropdownItem
+                            icon={<Truck className="h-4 w-4" />}
+                            label="更新物流"
+                            onClick={() => {
+                              setShowMoreActions(false);
+                              openLogisticsDrawer();
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 border-t border-slate-100 pt-3 text-xs text-slate-500 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                      <UserRound className="h-4 w-4 text-slate-400" />
+                      {asText(customer.name, '未命名客户')}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <span className="inline-flex items-center">
+                        <MapPin className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
+                        {asText(customer.country, '未填写国家')}
+                      </span>
+                      <span className="inline-flex items-center">
+                        <Mail className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
+                        {asText(customer.contact, '未填写联系方式')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="border-slate-100 lg:border-l lg:pl-5">
+                    <div className="font-semibold text-slate-400">下单时间</div>
+                    <div className="mt-2 flex items-center gap-2 font-semibold text-slate-800">
+                      <CalendarClock className="h-4 w-4 text-slate-400" />
+                      {formatDateTime(order.created_at)}
+                    </div>
+                  </div>
+                  <div className="border-slate-100 lg:border-l lg:pl-5">
+                    <div className="font-semibold text-slate-400">业务员</div>
+                    <div className="mt-2 font-semibold text-slate-800">{asText(order.createdByName, '系统管理员')}</div>
+                    <div className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${deliveryMeta.className}`}>
+                      交货期 {deliveryMeta.label}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                <div className="flex flex-wrap items-center gap-2 lg:gap-0">
+                  {STAGE_STEPS.map((step, index) => {
+                    const reached = index <= stageIndex;
+                    const active = step.key === order.status;
+                    return (
+                      <button
+                        key={step.key}
+                        type="button"
+                        onClick={() => scrollToSection(step.target)}
+                        className="flex min-w-[130px] flex-1 items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-slate-50"
+                      >
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${
+                            active
+                              ? 'border-blue-600 bg-blue-600 text-white'
+                              : reached
+                                ? 'border-blue-200 bg-white text-blue-600'
+                                : 'border-slate-200 bg-white text-slate-400'
+                          }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className={`text-sm font-semibold ${active ? 'text-slate-900' : 'text-slate-500'}`}>{step.label}</span>
+                        {index < STAGE_STEPS.length - 1 ? <span className={`hidden h-px flex-1 xl:block ${reached ? 'bg-blue-200' : 'bg-slate-200'}`} /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-3">
+                <MetricCard title="总金额" value={formatMoney(orderTotal, 'USD')} tone="blue" />
+                <MetricCard title="已收金额" value={formatMoney(paidAmount, 'USD')} tone="green" />
+                <MetricCard
+                  title={settled ? '状态' : '待收金额'}
+                  value={settled ? '已结清' : formatMoney(outstandingAmount, 'USD')}
+                  tone="orange"
+                  badge={settled ? '已结清' : undefined}
+                />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="rounded-[24px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="grid gap-3 lg:grid-cols-3">
-            <MiniMetric title="订单总额" value={formatMoney(orderTotal, 'USD')} />
-            <MiniMetric title="已收金额" value={formatMoney(paidAmount, 'USD')} accent="text-emerald-700" />
-            <MiniMetric
-              title={settled ? '状态' : '待收金额'}
-              value={settled ? <Tag className="bg-emerald-50 text-emerald-700 border-emerald-200">已结清</Tag> : formatMoney(outstandingAmount, 'USD')}
-              accent={settled ? '' : 'text-orange-700'}
-            />
-          </div>
-        </section>
+          <section ref={todosRef} data-section="todos" className="rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">订单待办</h3>
+                <p className="mt-1 text-xs text-slate-500">按业务推进顺序提醒当前订单的关键动作。</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {todoItems.map((item) => (
+                <button
+                  key={item.title}
+                  onClick={() => scrollToSection(item.section)}
+                  className="flex w-full items-start gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-slate-50"
+                >
+                  <span
+                    className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      item.done ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-transparent'
+                    }`}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  </span>
+                  <div>
+                    <div className={`text-sm font-semibold ${item.done ? 'text-slate-900' : 'text-slate-600'}`}>{item.title}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.detail}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
 
-        <div className="hidden 2xl:block">
-          <div className="fixed right-6 top-40 z-30 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur">
-            {[
-              ['basic', '基础信息'],
-              ['items', '订单明细'],
-              ['production', '生产安排'],
-              ['finance', '财务'],
-              ['customs', '报关'],
-              ['logistics', '物流'],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => scrollToSection(key as SectionKey)}
-                className={`block w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition-colors ${
-                  activeSection === key ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <WorkSection
-          ref={basicRef}
-          section="basic"
-          title="基础信息"
-          icon={<FileText className="h-4 w-4 text-slate-500" />}
-          collapsed={collapsed.basic}
-          onToggle={() => toggleSection('basic')}
-        >
-          <div className="grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-3">
-            <GridItem label="客户" value={asText(customer.name, '未填写')} />
-            <GridItem label="国家" value={asText(customer.country, '未填写')} />
-            <GridItem label="联系方式" value={asText(customer.contact, '未填写')} />
-            <GridItem label="付款条款" value={asText(customer.paymentTerms, '未填写')} />
-            <GridItem label="物流偏好" value={asText(customer.logisticsPreference, '未填写')} />
-            <GridItem label="交货期" value={formatDateOnly(order.deliveryDate)} />
-            <GridItem label="业务阶段" value={<Tag className={stageMeta.className}>{stageMeta.label}</Tag>} />
-            <GridItem label="付款状态" value={<Tag className={paymentMeta.className}>{paymentMeta.label}</Tag>} />
-          </div>
-        </WorkSection>
-
-        <WorkSection
-          ref={itemsRef}
-          section="items"
-          title="订单明细"
-          icon={<FileText className="h-4 w-4 text-slate-500" />}
-          collapsed={collapsed.items}
-          onToggle={() => toggleSection('items')}
-          action={
-            <LightActionButton onClick={openOrderDrawer}>
-              <Edit3 className="mr-1.5 h-3.5 w-3.5" />
-              编辑订单内容
-            </LightActionButton>
-          }
-        >
-          <div className="overflow-hidden rounded-2xl border border-slate-100">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">图片</th>
-                    <th className="px-3 py-2">产品名称 / 规格</th>
-                    <th className="px-3 py-2">数量</th>
-                    <th className="px-3 py-2">单价</th>
-                    <th className="px-3 py-2 text-right">总价</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {items.length ? (
-                    items.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-3 py-2">
-                          {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={asText(item.product_name)} className="h-10 w-10 rounded-lg object-cover ring-1 ring-slate-200" />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400 ring-1 ring-slate-200">
-                              <ImageIcon className="h-4 w-4" />
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="font-semibold text-slate-900">{asText(item.product_name, '未命名产品')}</div>
-                          <div className="mt-1 text-[11px] text-slate-500">{asText(item.specification, '未填写规格')}</div>
-                        </td>
-                        <td className="px-3 py-2">
-                          {asNumber(item.quantity)} {asText(item.unit)}
-                        </td>
-                        <td className="px-3 py-2">{formatMoney(item.unit_price, 'USD')}</td>
-                        <td className="px-3 py-2 text-right font-semibold text-slate-900">{formatMoney(item.subtotal, 'USD')}</td>
-                      </tr>
-                    ))
-                  ) : (
+          <WorkSection
+            ref={itemsRef}
+            section="items"
+            title="订单明细"
+            icon={<FileText className="h-5 w-5 text-slate-500" />}
+            collapsed={collapsed.items}
+            onToggle={() => toggleSection('items')}
+            action={
+              <LightActionButton onClick={openOrderDrawer}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                添加 / 编辑产品
+              </LightActionButton>
+            }
+          >
+            <div className="overflow-hidden rounded-2xl border border-slate-100">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm text-slate-700">
+                  <thead className="bg-slate-50 text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
                     <tr>
-                      <td colSpan={5} className="px-3 py-3 text-center text-sm text-slate-500">
-                        这个订单还没有产品明细。
+                      <th className="px-4 py-3">商品</th>
+                      <th className="px-4 py-3">规格 / 型号</th>
+                      <th className="px-4 py-3">数量</th>
+                      <th className="px-4 py-3">单价 (USD)</th>
+                      <th className="px-4 py-3 text-right">总价</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {items.length ? (
+                      items.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={asText(item.product_name)} className="h-12 w-12 rounded-xl object-cover ring-1 ring-slate-200" />
+                              ) : (
+                                <ProductImagePlaceholder />
+                              )}
+                              <div className="font-bold text-slate-900 text-base">{asText(item.product_name, '未命名产品')}</div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-slate-600 font-medium">{asText(item.specification, '未填写规格')}</td>
+                          <td className="px-4 py-4 font-semibold">{asNumber(item.quantity)} pcs</td>
+                          <td className="px-4 py-4 font-medium">{asNumber(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-4 text-right font-bold text-slate-900 text-base">{asNumber(item.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center">
+                          <div className="flex flex-col items-center">
+                            <div className="mb-3 text-slate-400">
+                              <FileText className="h-10 w-10 opacity-20" />
+                            </div>
+                            <p className="text-base font-medium text-slate-500">这个订单还没有产品明细。</p>
+                            <button
+                              onClick={openOrderDrawer}
+                              className="mt-4 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition-all"
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              立即添加产品
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot className="bg-slate-50 text-sm font-semibold text-slate-700">
+                    <tr>
+                      <td colSpan={4} className="px-4 py-3 text-right text-slate-500">商品总额</td>
+                      <td className="px-4 py-3 text-right font-bold">{orderTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={4} className="px-4 py-3 text-right text-slate-500">运费</td>
+                      <td className="px-4 py-3 text-right font-bold">{freightAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={4} className="px-4 py-3 text-right text-slate-500">杂费</td>
+                      <td className="px-4 py-3 text-right font-bold">{miscAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={4} className="px-4 py-4 text-right text-slate-900 text-base">订单总额 (USD)</td>
+                      <td className="px-4 py-4 text-right text-lg font-black text-blue-600">{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+            {order.details ? <div className="mt-4 text-sm text-slate-500 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100"><span className="font-bold text-slate-700 mr-2">订单备注：</span>{order.details}</div> : null}
+          </WorkSection>
+          <WorkSection
+            ref={financeRef}
+            section="finance"
+            title="财务流转"
+            icon={<Wallet className="h-4 w-4 text-slate-500" />}
+            collapsed={collapsed.finance}
+            onToggle={() => toggleSection('finance')}
+            action={
+              <div className="flex items-center gap-2">
+                <FilterPill active={financeFilter === 'all'} onClick={() => setFinanceFilter('all')}>全部</FilterPill>
+                <FilterPill active={financeFilter === 'receipt'} onClick={() => setFinanceFilter('receipt')}>收款</FilterPill>
+                <FilterPill active={financeFilter === 'payment'} onClick={() => setFinanceFilter('payment')}>付款</FilterPill>
+                <LightActionButton onClick={() => openFinanceDrawer()}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  录入收款
+                </LightActionButton>
+              </div>
+            }
+          >
+            <div className="overflow-hidden rounded-2xl border border-slate-100">
+              {filteredFinanceRecords.length ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-xs text-slate-700">
+                    <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2">日期</th>
+                        <th className="px-3 py-2">类型</th>
+                        <th className="px-3 py-2">金额 (USD)</th>
+                        <th className="px-3 py-2">支付方式 / 说明</th>
+                        <th className="px-3 py-2">关联单据</th>
+                        <th className="px-3 py-2">操作人</th>
+                        <th className="px-3 py-2 text-right">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {filteredFinanceRecords.map((record) => (
+                        <tr key={record.id}>
+                          <td className="px-3 py-3 text-slate-500">{formatDateTime(record.createdAt)}</td>
+                          <td className="px-3 py-3">
+                            <div className="font-medium text-slate-900">{getFinanceCategoryLabel((record.recordCategory || 'other') as FinanceCategory)}</div>
+                            <div className="mt-1 text-[11px] text-slate-500">{record.type === 'receipt' ? '收款' : '付款'}</div>
+                          </td>
+                          <td className={`px-3 py-3 font-semibold ${record.type === 'receipt' ? 'text-emerald-600' : 'text-orange-500'}`}>
+                            {record.type === 'receipt' ? '+' : '-'}
+                            {asNumber(record.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-3 py-3 text-slate-600">
+                            {record.type === 'payment' ? asText(record.partnerName || record.target, '—') : '银行转账'}
+                          </td>
+                          <td className="px-3 py-3">
+                            {record.attachments?.length ? (
+                              <button
+                                onClick={() => setPreviewAttachment(record.attachments[0])}
+                                className="inline-flex items-center text-blue-600 hover:text-blue-700"
+                              >
+                                <Paperclip className="mr-1 h-3 w-3" />
+                                <span className="max-w-[100px] truncate">{record.attachments[0]?.fileName}</span>
+                              </button>
+                            ) : '—'}
+                          </td>
+                          <td className="px-3 py-3 text-slate-600">{asText(record.createdByName, '系统记录')}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => openFinanceDrawer(record)} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800">
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              {user?.role === 'admin' ? (
+                                <button onClick={() => void deleteFinanceRecord(record)} className="rounded-lg border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-slate-50 text-xs font-semibold">
+                      <tr>
+                        <td colSpan={2} className="px-3 py-2 text-slate-500">已收金额</td>
+                        <td className="px-3 py-2 text-emerald-600">{paidAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                        <td colSpan={2} className="px-3 py-2 text-slate-500">待收金额</td>
+                        <td colSpan={2} className="px-3 py-2 text-orange-500">{outstandingAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <EmptyRow text="还没有财务流水。顶部点击“录入款项”后会直接回写到这里。" />
+              )}
+            </div>
+          </WorkSection>
+
+          <WorkSection
+            ref={productionRef}
+            section="production"
+            title="生产安排"
+            icon={<Factory className="h-4 w-4 text-slate-500" />}
+            collapsed={collapsed.production}
+            onToggle={() => toggleSection('production')}
+            action={
+              <LightActionButton onClick={openProductionDrawer}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                新建生产计划
+              </LightActionButton>
+            }
+          >
+            {productionPlan ? (
+              <div className="overflow-hidden rounded-2xl border border-slate-100">
+                <table className="min-w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">生产计划号</th>
+                      <th className="px-3 py-2">产品</th>
+                      <th className="px-3 py-2">数量</th>
+                      <th className="px-3 py-2">工厂</th>
+                      <th className="px-3 py-2">计划开工</th>
+                      <th className="px-3 py-2">计划完成</th>
+                      <th className="px-3 py-2">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white">
+                    <tr>
+                      <td className="px-3 py-3 font-medium">
+                        <button
+                          onClick={openProductionDrawer}
+                          className="text-blue-600 hover:text-blue-700 hover:underline underline-offset-2 transition-colors font-bold"
+                        >
+                          {productionReference}
+                        </button>
+                      </td>
+                      <td className="px-3 py-3 font-medium text-slate-700">{items.length} 个产品</td>
+
+                      <td className="px-3 py-3">{totalUnits} pcs</td>
+                      <td className="px-3 py-3">{asText(productionPlan.partnerName, '未填写')}</td>
+                      <td className="px-3 py-3">{formatDateOnly(productionPlan.orderDate)}</td>
+                      <td className="px-3 py-3">{formatDateOnly(productionPlan.estimatedDeliveryDate)}</td>
+                      <td className="px-3 py-3">
+                        <Tag className="bg-orange-50 text-orange-700 border-orange-200">{getProductionStatusLabel(productionPlan.productionStatus)}</Tag>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-                <tfoot className="bg-slate-50 text-xs font-semibold text-slate-700">
-                  <tr>
-                    <td colSpan={3} className="px-3 py-2">费用汇总</td>
-                    <td className="px-3 py-2">运费</td>
-                    <td className="px-3 py-2 text-right">{formatMoney(freightAmount, 'USD')}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3} className="px-3 py-2" />
-                    <td className="px-3 py-2">杂费</td>
-                    <td className="px-3 py-2 text-right">{formatMoney(miscAmount, 'USD')}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3} className="px-3 py-2 text-slate-500">订单说明：{asText(order.details, '暂无备注')}</td>
-                    <td className="px-3 py-2 text-slate-900">总计金额</td>
-                    <td className="px-3 py-2 text-right text-slate-900">{formatMoney(grandTotal, 'USD')}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        </WorkSection>
-
-        <WorkSection
-          ref={productionRef}
-          section="production"
-          title="生产安排"
-          icon={<Factory className="h-4 w-4 text-slate-500" />}
-          collapsed={collapsed.production}
-          onToggle={() => toggleSection('production')}
-          action={
-            <LightActionButton onClick={openProductionDrawer}>
-              <Edit3 className="mr-1.5 h-3.5 w-3.5" />
-              编辑生产安排
-            </LightActionButton>
-          }
-        >
-          {productionPlan ? (
-            <div className="grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-3">
-              <GridItem label="代工厂 / 供应商" value={asText(productionPlan.partnerName, '未填写')} />
-              <GridItem label="下单日期" value={formatDateOnly(productionPlan.orderDate)} />
-              <GridItem label="预计交期" value={formatDateOnly(productionPlan.estimatedDeliveryDate)} />
-              <GridItem label="生产状态" value={getProductionStatusLabel(productionPlan.productionStatus)} />
-              <GridItem label="验货状态" value={getInspectionStatusLabel(productionPlan.inspectionStatus)} />
-              <GridItem label="备注" value={asText(productionPlan.remark, '无')} />
-            </div>
-          ) : (
-            <EmptyRow text="还没有生产安排，点击右上角补充工厂、排产和验货状态。" />
-          )}
-        </WorkSection>
-
-        <WorkSection
-          ref={financeRef}
-          section="finance"
-          title="财务流转"
-          icon={<Wallet className="h-4 w-4 text-slate-500" />}
-          collapsed={collapsed.finance}
-          onToggle={() => toggleSection('finance')}
-          action={
-            <div className="flex items-center gap-2">
-              <FilterPill active={financeFilter === 'all'} onClick={() => setFinanceFilter('all')}>全部</FilterPill>
-              <FilterPill active={financeFilter === 'receipt'} onClick={() => setFinanceFilter('receipt')}>收款</FilterPill>
-              <FilterPill active={financeFilter === 'payment'} onClick={() => setFinanceFilter('payment')}>付款</FilterPill>
-              <LightActionButton onClick={() => openFinanceDrawer()}>
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                录入款项
-              </LightActionButton>
-            </div>
-          }
-        >
-          <div className="overflow-hidden rounded-2xl border border-slate-100">
-            {filteredFinanceRecords.length ? (
-              <div className="divide-y divide-slate-100 bg-white">
-                {filteredFinanceRecords.map((record) => (
-                  <div key={record.id} className="px-3 py-2 text-xs">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`font-semibold ${record.type === 'receipt' ? 'text-emerald-700' : 'text-rose-700'}`}>
-                            {record.type === 'receipt' ? '+' : '-'} {formatMoney(record.amount, asText(record.currency, 'USD'))}
-                          </span>
-                          <Tag className={record.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
-                            {record.status === 'completed' ? '已完成' : '待核销'}
-                          </Tag>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                            {getFinanceCategoryLabel((record.recordCategory || 'other') as FinanceCategory)}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
-                          <span>{record.type === 'payment' ? `收款方：${asText(record.partnerName || record.target, '未填写')}` : `付款客户：${asText(record.target, '未填写')}`}</span>
-                          <span>{formatDateTime(record.createdAt)}</span>
-                          <span>{asText(record.remark, '无备注')}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
-                          <Paperclip className="mr-1 h-3 w-3" />
-                          {record.attachmentCount || record.attachments?.length || 0}
-                        </span>
-                        <button onClick={() => openFinanceDrawer(record)} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800">
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => void deleteFinanceRecord(record)} className="rounded-lg border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    {record.attachments?.length ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {record.attachments.map((attachment) => (
-                          <a key={attachment.id} href={attachment.url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-full bg-slate-50 px-2 py-1 text-[11px] font-medium text-blue-600 hover:text-blue-700">
-                            <Paperclip className="mr-1 h-3 w-3" />
-                            {attachment.fileName}
-                          </a>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <EmptyRow text="还没有财务流水。顶部点击“录入款项”后会直接回写到这里。" />
+              <EmptyRow text="还没有生产安排，点击右上角补充工厂、排产和验货状态。" />
             )}
-          </div>
-        </WorkSection>
+          </WorkSection>
 
-        <WorkSection
-          ref={customsRef}
-          section="customs"
-          title="报关信息"
-          icon={<ShieldCheck className="h-4 w-4 text-slate-500" />}
-          collapsed={collapsed.customs}
-          onToggle={() => toggleSection('customs')}
-          action={
-            <div className="flex items-center gap-2">
-              <LightActionButton onClick={openCustomsDrawer}>
-                <Edit3 className="mr-1.5 h-3.5 w-3.5" />
-                编辑报关信息
-              </LightActionButton>
-              <LightActionButton onClick={openCustomsUploadDrawer}>
+          <WorkSection
+            ref={customsRef}
+            section="customs"
+            title="报关信息"
+            icon={<ShieldCheck className="h-4 w-4 text-slate-500" />}
+            collapsed={collapsed.customs}
+            onToggle={() => toggleSection('customs')}
+            action={
+              <div className="flex items-center gap-2">
+                <LightActionButton onClick={openCustomsDrawer}>
+                  <Edit3 className="mr-1.5 h-3.5 w-3.5" />
+                  编辑报关信息
+                </LightActionButton>
+                <LightActionButton onClick={openCustomsUploadDrawer}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  上传放行通知 / 报关单
+                </LightActionButton>
+              </div>
+            }
+          >
+            {customs ? (
+              <div className="space-y-3">
+                <div className="grid gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-3">
+                  <CompactMeta label="贸易方式" value={asText(customer.logisticsPreference, '一般贸易')} />
+                  <CompactMeta label="报关状态" value={getCustomsStatusLabel(customs.status)} />
+                  <CompactMeta label="HS Code" value={asText(customs.declarationNo, '7318.15')} />
+                  <CompactMeta label="商业发票" value={customs.attachments?.length ? '已上传' : '未上传'} />
+                  <CompactMeta label="报关单号" value={asText(customs.declarationNo, '—')} />
+                  <CompactMeta label="放行日期" value={formatDateOnly(customs.releaseDate, '—')} />
+                  <CompactMeta label="申报日期" value={formatDateOnly(customs.declarationDate, '—')} />
+                  <CompactMeta label="报关行" value={asText(customs.brokerName, '—')} />
+                  <CompactMeta label="备注" value={asText(customs.remark, '—')} />
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <div className="mb-2 text-xs font-semibold text-slate-700">报关附件</div>
+                  {customs.attachments?.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {customs.attachments.map((attachment) => (
+                        <button
+                          key={attachment.id}
+                          onClick={() => setPreviewAttachment(attachment)}
+                          className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-medium text-blue-600 ring-1 ring-slate-200 hover:text-blue-700"
+                        >
+                          <Paperclip className="mr-1 h-3 w-3" />
+                          {attachment.fileName}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500">还没有报关附件。</div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <EmptyRow text="还没有报关信息，先录入基础报关状态，后续单据可以在这里继续追加上传。" />
+            )}
+          </WorkSection>
+
+          <WorkSection
+            ref={logisticsRef}
+            section="logistics"
+            title="物流信息"
+            icon={<Truck className="h-4 w-4 text-slate-500" />}
+            collapsed={collapsed.logistics}
+            onToggle={() => toggleSection('logistics')}
+            action={hasAnyLogistics ? (
+              <LightActionButton onClick={() => openLogisticsDrawer()}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                上传放行通知 / 报关单
+                更新物流 / 录入单号
               </LightActionButton>
-            </div>
-          }
-        >
-          {customs ? (
-            <div className="space-y-3">
-              <div className="grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-3">
-                <GridItem label="报关状态" value={getCustomsStatusLabel(customs.status)} />
-                <GridItem label="报关行" value={asText(customs.brokerName, '未填写')} />
-                <GridItem label="报关单号" value={asText(customs.declarationNo, '未填写')} />
-                <GridItem label="申报日期" value={formatDateOnly(customs.declarationDate)} />
-                <GridItem label="放行日期" value={formatDateOnly(customs.releaseDate)} />
-                <GridItem label="备注" value={asText(customs.remark, '无')} />
+            ) : undefined}
+          >
+            {!hasAnyLogistics ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+                <div className="text-sm font-semibold text-slate-700">暂无物流信息</div>
+                <div className="mt-1 text-xs text-slate-500">录入国内或国际物流后，这里会显示最新快照。</div>
+                <button
+                  onClick={() => openLogisticsDrawer()}
+                  className="mt-4 inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-black"
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  新增物流记录
+                </button>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                <div className="mb-2 text-xs font-semibold text-slate-700">报关附件</div>
-                {customs.attachments?.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {customs.attachments.map((attachment) => (
-                      <a key={attachment.id} href={attachment.url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-medium text-blue-600 ring-1 ring-slate-200 hover:text-blue-700">
-                        <Paperclip className="mr-1 h-3 w-3" />
-                        {attachment.fileName}
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-500">还没有报关附件。</div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <EmptyRow text="还没有报关信息，先录入基础报关状态，后续单据可以在这里继续追加上传。" />
-          )}
-        </WorkSection>
+            ) : (
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="space-y-3">
+                  {domesticLogistics ? (
+                    <LogisticsSnapshot
+                      title="国内物流"
+                      record={domesticLogistics}
+                      fields={[
+                        ['物流方式', asText(domesticLogistics.carrier, '汽运')],
+                        ['运单状态', domesticLogistics.status === 'arrived' ? '已到港' : '未发货'],
+                        ['单号', asText(domesticLogistics.trackingNo, '—')],
+                        ['承运人', asText(domesticLogistics.carrier, '—')],
+                        ['起运时间', formatDateOnly(domesticLogistics.shippingDate, '—')],
+                        ['总重量(KG)', domesticLogistics.grossWeightKg != null ? String(domesticLogistics.grossWeightKg) : '—'],
+                      ]}
+                      onEdit={() => openLogisticsDrawer(domesticLogistics)}
+                      onPreview={setPreviewAttachment}
+                      />
+                      ) : null}
+                      {internationalLogistics ? (
+                      <LogisticsSnapshot
+                      title="国际物流"
+                      record={internationalLogistics}
+                      fields={[
+                        ['运输方式', asText(internationalLogistics.transportMode, '海运')],
+                        ['贸易条款', asText(internationalLogistics.incoterm, '—')],
+                        ['承运人 / 船公司', asText(internationalLogistics.carrier, '—')],
+                        ['提单号', asText(internationalLogistics.billNo || internationalLogistics.trackingNo, '—')],
+                        ['预计开港', formatDateOnly(internationalLogistics.etd, '—')],
+                        ['预计到港', formatDateOnly(internationalLogistics.eta, '—')],
+                      ]}
+                      onEdit={() => openLogisticsDrawer(internationalLogistics)}
+                      onPreview={setPreviewAttachment}
+                      />
+                      ) : null}
 
-        <WorkSection
-          ref={logisticsRef}
-          section="logistics"
-          title="物流信息"
-          icon={<Truck className="h-4 w-4 text-slate-500" />}
-          collapsed={collapsed.logistics}
-          onToggle={() => toggleSection('logistics')}
-          action={hasAnyLogistics ? (
-            <LightActionButton onClick={() => openLogisticsDrawer()}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              更新物流 / 录入单号
-            </LightActionButton>
-          ) : undefined}
-        >
-          {!hasAnyLogistics ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
-              <div className="text-sm font-semibold text-slate-700">暂无物流信息</div>
-              <div className="mt-1 text-xs text-slate-500">录入国内或国际物流后，这里会显示最新快照。</div>
-              <button
-                onClick={() => openLogisticsDrawer()}
-                className="mt-4 inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-black"
+                </div>
+                <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-center">
+                  <div className="text-5xl text-blue-200">•</div>
+                  <div className="mt-3 text-sm font-semibold text-slate-700">暂未支持地图轨迹</div>
+                  <div className="mt-2 max-w-[220px] text-xs leading-5 text-slate-500">实际到货后可在地图上查看运输航线，这里先保留结构化物流信息。</div>
+                </div>
+              </div>
+            )}
+          </WorkSection>
+        </div>
+
+        <aside className="hidden xl:block sticky top-0 space-y-3 self-start mt-0">
+          <section className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <div className="text-sm font-bold text-slate-900">页面导航</div>
+            <div className="mt-4 space-y-1.5">
+              {[
+                { id: 'overview', section: 'basic' as SectionKey, label: '订单概览' },
+                { id: 'todo', section: 'todos' as SectionKey, label: '订单待办' },
+                { id: 'items', section: 'items' as SectionKey, label: '订单明细' },
+                { id: 'finance', section: 'finance' as SectionKey, label: '财务流水' },
+                { id: 'production', section: 'production' as SectionKey, label: '生产安排' },
+                { id: 'customs', section: 'customs' as SectionKey, label: '报关信息' },
+                { id: 'logistics', section: 'logistics' as SectionKey, label: '物流信息' },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.section)}
+                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-colors ${
+                    activeSection === item.section ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${activeSection === item.section ? 'bg-blue-600' : 'bg-slate-300'}`} />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">快捷操作</div>
+            <div className="mt-3 space-y-2">
+              <button 
+                onClick={() => setDrawer({ mode: 'ai-analysis' })}
+                className="flex w-full items-center gap-2 rounded-xl bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
               >
-                <Plus className="mr-1.5 h-4 w-4" />
-                新增物流记录
+                <Sparkles className="h-3.5 w-3.5" />
+                AI 智能诊断
+              </button>
+              <button 
+                onClick={exportOrder}
+                className="flex w-full items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100"
+              >
+                <Download className="h-3.5 w-3.5 text-slate-400" />
+                导出 PDF
               </button>
             </div>
-          ) : (
-            <div className="grid gap-3 xl:grid-cols-2">
-              {domesticLogistics ? (
-                <LogisticsSnapshot
-                  title="国内物流"
-                  record={domesticLogistics}
-                  fields={[
-                    ['物流公司', asText(domesticLogistics.carrier, '未填写')],
-                    ['单号', asText(domesticLogistics.trackingNo, '未填写')],
-                    ['发货时间', formatDateOnly(domesticLogistics.shippingDate)],
-                    ['包装件数', domesticLogistics.packageCount != null ? String(domesticLogistics.packageCount) : '未填写'],
-                    ['总体积(CBM)', domesticLogistics.volumeCbm != null ? String(domesticLogistics.volumeCbm) : '未填写'],
-                    ['总重量(KG)', domesticLogistics.grossWeightKg != null ? String(domesticLogistics.grossWeightKg) : '未填写'],
-                  ]}
-                  onEdit={() => openLogisticsDrawer(domesticLogistics)}
-                />
-              ) : null}
-              {internationalLogistics ? (
-                <LogisticsSnapshot
-                  title="国际物流"
-                  record={internationalLogistics}
-                  fields={[
-                    ['贸易条款', asText(internationalLogistics.incoterm, '未填写')],
-                    ['运输方式', asText(internationalLogistics.transportMode, '未填写')],
-                    ['承运人 / 船公司', asText(internationalLogistics.carrier, '未填写')],
-                    ['船名航次 / 航班号', asText(internationalLogistics.vesselVoyage, '未填写')],
-                    ['提单号', asText(internationalLogistics.billNo || internationalLogistics.trackingNo, '未填写')],
-                    ['ETD / ETA', `${formatDateOnly(internationalLogistics.etd)} / ${formatDateOnly(internationalLogistics.eta)}`],
-                  ]}
-                  onEdit={() => openLogisticsDrawer(internationalLogistics)}
-                />
-              ) : null}
-            </div>
-          )}
-        </WorkSection>
+          </div>
+        </aside>
       </div>
+
+      {previewAttachment && (
+        <PreviewModal 
+          attachment={previewAttachment} 
+          onClose={() => setPreviewAttachment(null)} 
+        />
+      )}
 
       {toast ? (
         <div className="fixed bottom-6 right-6 z-50 inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg">
@@ -1691,25 +1514,121 @@ export default function OrderDetailPage() {
             </div>
 
             <form
-              onSubmit={
-                drawer.mode === 'order'
-                  ? handleSaveOrder
-                  : drawer.mode === 'finance'
-                    ? handleSaveFinance
-                    : drawer.mode === 'production'
-                      ? handleSaveProduction
-                      : drawer.mode === 'customs'
-                        ? handleSaveCustoms
-                        : drawer.mode === 'customs-upload'
-                          ? handleUploadCustomsAttachments
-                          : handleSaveLogistics
-              }
+              onSubmit={(event) => {
+                if (drawer.mode === 'ai-analysis') {
+                  event.preventDefault();
+                  return;
+                }
+                if (drawer.mode === 'order') handleSaveOrder(event);
+                else if (drawer.mode === 'finance') handleSaveFinance(event);
+                else if (drawer.mode === 'production') handleSaveProduction(event);
+                else if (drawer.mode === 'customs') handleSaveCustoms(event);
+                else if (drawer.mode === 'customs-upload') handleUploadCustomsAttachments(event);
+                else handleSaveLogistics(event);
+              }}
               className="flex min-h-0 flex-1 flex-col"
             >
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
                 {drawerError ? <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{drawerError}</div> : null}
 
+                {drawer.mode === 'ai-analysis' ? (
+                  <div className="space-y-6">
+                    {analyzing ? (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                          <span className="text-sm font-medium text-slate-600">AI 正在深度诊断订单数据...</span>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="h-32 w-full animate-pulse rounded-2xl bg-slate-100" />
+                          <div className="h-32 w-full animate-pulse rounded-2xl bg-slate-100" />
+                          <div className="h-32 w-full animate-pulse rounded-2xl bg-slate-100" />
+                        </div>
+                      </div>
+                    ) : aiResult ? (
+
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="flex items-center justify-between rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900">健康度评分</h3>
+                            <p className="mt-1 text-xs text-slate-500">基于支付、生产、物流多维度评估</p>
+                          </div>
+                          <div className={`text-4xl font-black ${aiResult.score >= 80 ? 'text-emerald-600' : aiResult.score >= 60 ? 'text-amber-500' : 'text-rose-600'}`}>
+                            {aiResult.score}
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-600">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            AI 核心诊断总结
+                          </div>
+                          <div className="mt-2 text-sm font-medium leading-relaxed text-blue-900">{aiResult.summary}</div>
+                        </div>
+
+                        <section>
+                          <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                              <X className="h-3 w-3" />
+                            </span>
+                            潜在风险预警
+                          </div>
+                          <div className="space-y-3">
+                            {aiResult.risks.map((risk, i) => (
+                              <div key={i} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+                                <div className="flex items-start gap-3">
+                                  <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${risk.level === 'high' ? 'bg-rose-500 animate-pulse' : 'bg-amber-400'}`} />
+                                  <div className="text-sm leading-relaxed text-slate-700 font-medium">{risk.content}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+
+                        <section>
+                          <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                              <CheckCircle2 className="h-3 w-3" />
+                            </span>
+                            专业执行建议
+                          </div>
+                          <div className="space-y-3">
+                            {aiResult.suggestions.map((suggestion, i) => (
+                              <div key={i} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+                                <div className="flex items-start gap-3">
+                                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-black text-emerald-600 border border-emerald-100">
+                                    {i + 1}
+                                  </div>
+                                  <div className="text-sm leading-relaxed text-slate-700 font-medium">{suggestion.content}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                        
+                        <div className="pt-4 text-center">
+                          <button 
+                            type="button"
+                            onClick={runAnalysis}
+                            className="text-xs font-semibold text-slate-400 hover:text-blue-600 transition-colors"
+                          >
+                            重新分析诊断
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-20 text-center">
+                        <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                          <Sparkles className="h-6 w-6" />
+                        </div>
+                        <p className="mt-4 text-sm text-slate-500">点击按钮开始 AI 深度诊断分析</p>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
                 {drawer.mode === 'order' ? (
+
                   <div className="space-y-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <Field label="业务阶段">
@@ -2041,16 +1960,19 @@ export default function OrderDetailPage() {
                 ) : null}
               </div>
 
-              <div className="border-t border-slate-200 bg-white px-5 py-4">
-                <div className="flex items-center justify-end gap-3">
-                  <button type="button" onClick={closeDrawer} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
-                    取消
-                  </button>
-                  <button type="submit" disabled={saving} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400">
-                    {saving ? '保存中...' : drawer.mode === 'customs-upload' ? '上传附件' : '确认保存'}
-                  </button>
+              {drawer.mode !== 'ai-analysis' && (
+                <div className="border-t border-slate-200 bg-white px-5 py-4">
+                  <div className="flex items-center justify-end gap-3">
+                    <button type="button" onClick={closeDrawer} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                      取消
+                    </button>
+                    <button type="submit" disabled={saving} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400">
+                      {saving ? '保存中...' : drawer.mode === 'customs-upload' ? '上传附件' : '确认保存'}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
             </form>
           </div>
         </div>
@@ -2058,204 +1980,3 @@ export default function OrderDetailPage() {
     </>
   );
 }
-
-const ActionButton = ({
-  children,
-  icon,
-  onClick,
-}: {
-  children: React.ReactNode;
-  icon: React.ReactNode;
-  onClick: () => void;
-}) => (
-  <button type="button" onClick={onClick} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-black">
-    {icon}
-    {children}
-  </button>
-);
-
-const LightActionButton = ({ children, onClick }: { children: React.ReactNode; onClick: () => void }) => (
-  <button type="button" onClick={onClick} className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
-    {children}
-  </button>
-);
-
-const MiniMetric = ({
-  title,
-  value,
-  accent = 'text-slate-900',
-}: {
-  title: string;
-  value: React.ReactNode;
-  accent?: string;
-}) => (
-  <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
-    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{title}</div>
-    <div className={`mt-1 text-lg font-bold tracking-tight ${accent}`}>{value}</div>
-  </div>
-);
-
-const Tag = ({ children, className }: { children: React.ReactNode; className: string }) => (
-  <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${className}`}>
-    {children}
-  </span>
-);
-
-const GridItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div>
-    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">{label}</div>
-    <div className="mt-1 text-sm font-medium text-slate-900">{value}</div>
-  </div>
-);
-
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
-    {children}
-  </label>
-);
-
-const EmptyRow = ({ text }: { text: string }) => (
-  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{text}</div>
-);
-
-const FilterPill = ({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) => (
-  <button type="button" onClick={onClick} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-    {children}
-  </button>
-);
-
-const AttachmentEditor = ({
-  title,
-  attachments,
-  newFiles,
-  onFilesSelected,
-  onRemoveExisting,
-  onRemovePending,
-}: {
-  title: string;
-  attachments: AttachmentMeta[];
-  newFiles: File[];
-  onFilesSelected: (files: File[]) => void;
-  onRemoveExisting: (attachmentId: number) => void;
-  onRemovePending: (index: number) => void;
-}) => (
-  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-    <div className="text-sm font-semibold text-slate-800">{title}</div>
-    <label className="mt-3 flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-500 transition-colors hover:border-blue-300 hover:text-blue-600">
-      <Paperclip className="mr-2 h-4 w-4" />
-      选择附件
-      <input type="file" multiple className="hidden" onChange={(event) => onFilesSelected(Array.from(event.target.files || []))} />
-    </label>
-
-    {attachments.length ? (
-      <div className="mt-3 space-y-2">
-        {attachments.map((attachment) => (
-          <div key={attachment.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
-            <a href={attachment.url} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center font-medium text-blue-600 hover:text-blue-700">
-              <Paperclip className="mr-2 h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{attachment.fileName}</span>
-            </a>
-            <button type="button" onClick={() => onRemoveExisting(attachment.id)} className="text-slate-400 transition-colors hover:text-red-600">
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
-    ) : null}
-
-    {newFiles.length ? (
-      <div className="mt-3 space-y-2">
-        {newFiles.map((file, index) => (
-          <div key={`${file.name}-${index}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
-            <span className="truncate">{file.name}</span>
-            <button type="button" onClick={() => onRemovePending(index)} className="text-slate-400 transition-colors hover:text-red-600">
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
-    ) : null}
-  </div>
-);
-
-const WorkSection = React.forwardRef<
-  HTMLDivElement,
-  {
-    section: SectionKey;
-    title: string;
-    icon: React.ReactNode;
-    collapsed: boolean;
-    onToggle: () => void;
-    action?: React.ReactNode;
-    children: React.ReactNode;
-  }
->(({ section, title, icon, collapsed, onToggle, action, children }, ref) => (
-  <section ref={ref} data-section={section} className="rounded-[24px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className="text-sm font-bold text-slate-900">{title}</h3>
-      </div>
-      <div className="flex items-center gap-2">
-        {action}
-        <button onClick={onToggle} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
-          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
-    {!collapsed ? children : null}
-  </section>
-));
-
-WorkSection.displayName = 'WorkSection';
-
-const LogisticsSnapshot = ({
-  title,
-  record,
-  fields,
-  onEdit,
-}: {
-  title: string;
-  record: LogisticsRecord;
-  fields: Array<[string, string]>;
-  onEdit: () => void;
-}) => (
-  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <div>
-        <div className="text-sm font-semibold text-slate-900">{title}</div>
-        <div className="mt-1 text-[11px] text-slate-500">最近更新于 {formatDateTime(record.createdAt)}</div>
-      </div>
-      <LightActionButton onClick={onEdit}>
-        <Edit3 className="mr-1.5 h-3.5 w-3.5" />
-        编辑
-      </LightActionButton>
-    </div>
-    <div className="grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2">
-      {fields.map(([label, value]) => (
-        <div key={label}>
-          <GridItem label={label} value={value} />
-        </div>
-      ))}
-    </div>
-    {record.attachments?.length ? (
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {record.attachments.map((attachment) => (
-          <a key={attachment.id} href={attachment.url} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-medium text-blue-600 ring-1 ring-slate-200 hover:text-blue-700">
-            <Paperclip className="mr-1 h-3 w-3" />
-            {attachment.fileName}
-          </a>
-        ))}
-      </div>
-    ) : null}
-  </div>
-);
