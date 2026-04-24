@@ -100,7 +100,7 @@ export default function MainLayout() {
           </div>
         </aside>
 
-        <main className="flex min-h-screen flex-1 flex-col overflow-hidden">
+        <main className="flex min-h-screen flex-1 flex-col">
           {!isOrderDetail && (
             <header className="mb-3 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-6 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div>

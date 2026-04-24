@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createApp } from './server/app.js';
 import { DB_PATH, initDb } from './server/db.js';
+import { assertStorageOutsideStaticRoots } from './server/lib/security.js';
 import { UPLOADS_DIR } from './server/paths.js';
 
 function requireProductionEnv() {
@@ -10,6 +11,7 @@ function requireProductionEnv() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'super-secret-key-for-preview-only') {
     throw new Error('生产环境必须设置 JWT_SECRET');
   }
+  assertStorageOutsideStaticRoots(DB_PATH, UPLOADS_DIR);
 }
 
 async function startServer() {

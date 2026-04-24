@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, CheckCircle2, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus } from 'lucide-react';
-import { apiFetch, getErrorMessage } from '../lib/api';
+import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus } from 'lucide-react';
+import { apiDownload, apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { FilterPill } from '../features/order-detail/components';
 import type { UserRole } from '../types/auth';
@@ -20,7 +20,7 @@ const EMPTY_USER_FORM: UserFormState = {
   password: '',
 };
 
-type SettingsTab = 'general' | 'interface' | 'ai';
+type SettingsTab = 'general' | 'export' | 'interface' | 'ai';
 
 export default function SettingsView() {
   const { user } = useAuth();
@@ -40,6 +40,7 @@ export default function SettingsView() {
   const [savedDocument, setSavedDocument] = useState(false);
   const [userMessage, setUserMessage] = useState('');
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   const isAdmin = user?.role === 'admin';
 
@@ -193,6 +194,20 @@ export default function SettingsView() {
     }
   };
 
+  const exportData = async () => {
+    setError('');
+    setUserMessage('');
+    setExporting(true);
+    try {
+      await apiDownload('/api/settings/export?format=customer-archive');
+      setUserMessage('客户订单归档导出已开始下载');
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, '导出数据失败'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return <div className="rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">正在读取系统设置...</div>;
   }
@@ -209,6 +224,7 @@ export default function SettingsView() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex bg-white p-1 rounded-2xl border border-slate-200 w-fit">
          <button onClick={() => setActiveTab('general')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-primary-navy text-white shadow-md' : 'text-secondary-slate hover:bg-slate-50'}`}><Settings size={16} /> 常规配置</button>
+         <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'export' ? 'bg-primary-navy text-white shadow-md' : 'text-secondary-slate hover:bg-slate-50'}`}><Download size={16} /> 数据导出</button>
          <button onClick={() => setActiveTab('interface')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'interface' ? 'bg-primary-navy text-white shadow-md' : 'text-secondary-slate hover:bg-slate-50'}`}><Layout size={16} /> 团队管理</button>
          <button onClick={() => setActiveTab('ai')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'ai' ? 'bg-primary-navy text-white shadow-md' : 'text-secondary-slate hover:bg-slate-50'}`}><BrainCircuit size={16} /> AI 配置</button>
       </div>
@@ -227,7 +243,7 @@ export default function SettingsView() {
               <p className="mt-1 text-sm text-slate-500 font-medium">控制未来新建订单的默认前缀。</p>
             </div>
             <div className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1.5 text-xs font-bold text-slate-600">
-              预览：{(orderNumberPrefix || 'ORD-') + new Date().getFullYear() + '-000123'}
+              预览：{'CQBX-' + new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + String(new Date().getDate()).padStart(2, '0') + '01'}
             </div>
           </div>
 
@@ -241,11 +257,54 @@ export default function SettingsView() {
               />
             </Field>
             <button
+              type="button"
               onClick={saveDocumentSettings}
               className="inline-flex items-center rounded-xl bg-primary-navy px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-slate-800 shadow-md"
             >
               {savedDocument ? <><CheckCircle2 className="mr-2 h-4 w-4" />已保存</> : '保存编码规则'}
             </button>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'export' && (
+        <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+          <div className="mb-8 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="flex items-center text-lg font-bold text-primary-navy">
+                <Download className="mr-2 h-5 w-5 text-primary-navy" />
+                客户订单归档导出
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 font-medium">按客户分目录、按订单分子目录导出，并带出订单附件、图片和明细文件。</p>
+            </div>
+            <div className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1.5 text-xs font-bold text-slate-600">
+              结构：客户 / 订单 / 附件
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div className="space-y-3">
+                <div className="text-sm font-bold text-primary-navy">客户维度归档导出</div>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  导出包会按客户建立目录，客户目录下再按订单建立子目录。每个订单中会包含订单摘要、
+                  商品明细、财务流水、物流、报关、生产、装箱数据，以及对应的图片和业务附件原文件。
+                </p>
+                <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+                  仅管理员可操作
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void exportData()}
+                disabled={exporting}
+                className="inline-flex items-center justify-center rounded-xl bg-primary-navy px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-slate-800 shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? '正在导出...' : '导出客户订单归档'}
+              </button>
+            </div>
           </div>
         </section>
       )}

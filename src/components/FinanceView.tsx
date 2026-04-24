@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, Paperclip, Plus, Search, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Chip } from '../features/order-detail/components';
@@ -47,19 +48,28 @@ function getPaymentCategoryLabel(category: string | undefined) {
 
 export default function FinanceView() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [records, setRecords] = useState<FinanceListRecord[]>([]);
   const [orders, setOrders] = useState<OrderOption[]>([]);
   const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
-  const [query, setQuery] = useState('');
-  const [timeRange, setTimeRange] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinanceListRecord | null>(null);
   const [formData, setFormData] = useState<FinanceFormState>(EMPTY_FORM);
 
+  const query = searchParams.get('q') || '';
+  const timeRange = searchParams.get('timeRange') || 'all';
+
+  const updateParam = (key: string, val: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set(key, val); else next.delete(key);
+    setSearchParams(next);
+  };
+
   const fetchData = async () => {
+    setLoading(true);
     setError('');
     try {
       const [financeData, orderData, partnerData] = await Promise.all([
@@ -163,7 +173,7 @@ export default function FinanceView() {
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateParam('q', event.target.value)}
               placeholder="搜索订单、客户、对象或分类..."
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy transition-all outline-none"
             />
@@ -188,7 +198,7 @@ export default function FinanceView() {
            ].map(chip => (
              <button
                key={chip.key}
-               onClick={() => setTimeRange(chip.key)}
+               onClick={() => updateParam('timeRange', chip.key)}
                className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy text-white shadow-sm' : 'bg-slate-50 text-secondary-slate hover:bg-slate-100'}`}
              >
                {chip.label}

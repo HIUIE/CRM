@@ -3,17 +3,28 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs/promises';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import apiRouter from './api.js';
+import { blockSensitivePaths } from './lib/security.js';
 import { PROJECT_ROOT, UPLOADS_DIR } from './paths.js';
 
 export async function createApp() {
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
 
   const app = express();
+  app.disable('x-powered-by');
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
+  app.use(blockSensitivePaths);
   app.use(express.json());
   app.use(cookieParser());
-  app.use('/uploads', express.static(UPLOADS_DIR));
   app.use('/api', apiRouter);
+
+  if (process.env.NODE_ENV === 'test') {
+    return app;
+  }
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

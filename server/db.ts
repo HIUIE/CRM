@@ -183,6 +183,19 @@ async function runMigrations() {
       FOREIGN KEY(plan_id) REFERENCES production_plans(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS packing_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      package_count REAL,
+      package_size TEXT,
+      gross_weight REAL,
+      net_weight REAL,
+      attachment_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY(attachment_id) REFERENCES attachments(id) ON DELETE SET NULL
+    );
+
     CREATE TABLE IF NOT EXISTS attachments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       entity_type TEXT,
@@ -234,6 +247,7 @@ async function runMigrations() {
   await ensureColumn('customs_records', 'updated_by', 'INTEGER');
   await ensureColumn('production_plans', 'created_by', 'INTEGER');
   await ensureColumn('production_plans', 'updated_by', 'INTEGER');
+  await ensureColumn('packing_records', 'attachment_id', 'INTEGER');
 
   await db.run(
     `

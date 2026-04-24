@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAdmin, requireAuth } from '../lib/auth.js';
 import { handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
+import { buildLegacyExportZip, getExportFileName, streamCustomerArchiveZip } from '../services/export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
 
 export function createSettingsRouter() {
@@ -57,6 +58,35 @@ export function createSettingsRouter() {
       res.json({ success: true, orderNumberPrefix: prefix });
     } catch (error) {
       return handleRouteError(res, error, '保存单据编码规则失败');
+    }
+  });
+
+  router.get('/export', requireAdmin, async (req, res) => {
+    const format = readString(req.query.format) || 'customer-archive';
+    if (!['customer-archive', 'zip-csv'].includes(format)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_EXPORT_FORMAT',
+          message: '仅支持 customer-archive 或 zip-csv 导出格式',
+        },
+      });
+    }
+
+    try {
+      const fileName = getExportFileName(format as 'customer-archive' | 'zip-csv');
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+      if (format === 'zip-csv') {
+        const zipBuffer = await buildLegacyExportZip();
+        res.setHeader('Content-Length', String(zipBuffer.length));
+        res.end(zipBuffer);
+        return;
+      }
+
+      await streamCustomerArchiveZip(res);
+    } catch (error) {
+      return handleRouteError(res, error, '导出数据失败');
     }
   });
 

@@ -67,6 +67,7 @@ export const EMPTY_PRODUCTION_FORM: ProductionFormState = {
 
 export const EMPTY_LOGISTICS_FORM: LogisticsFormState = {
   segmentType: 'international',
+  freightForwarder: '',
   carrier: '',
   trackingNo: '',
   status: 'preparing',
@@ -154,6 +155,7 @@ export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFor
       imageUrl: asText(it.imageUrl || it.image_url),
       productName: it.product_name,
       specification: asText(it.specification),
+      hsCode: asText(it.hsCode || it.hs_code),
       quantity: String(it.quantity),
       unit: asText(it.unit, 'pcs'),
       unitPrice: String(it.unit_price),
@@ -194,6 +196,7 @@ export function buildLogisticsForm(record: LogisticsRecord | null): LogisticsFor
   return {
     id: record?.id,
     segmentType: record?.segmentType || 'international',
+    freightForwarder: asText(record?.freightForwarder),
     carrier: asText(record?.carrier),
     trackingNo: asText(record?.trackingNo),
     status: record?.status || 'preparing',

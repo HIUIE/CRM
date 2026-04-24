@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, ExternalLink, Plus, Search, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Chip } from '../features/order-detail/components';
@@ -40,18 +40,27 @@ function countryToFlag(country: string) {
 export default function CustomersView() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
-  const [query, setQuery] = useState('');
-  const [countryFilter, setCountryFilter] = useState('');
-  const [timeRange, setTimeRange] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<CustomerListItem | null>(null);
   const [form, setForm] = useState<CustomerForm>(EMPTY_FORM);
 
+  const query = searchParams.get('q') || '';
+  const countryFilter = searchParams.get('country') || '';
+  const timeRange = searchParams.get('timeRange') || 'all';
+
+  const updateParam = (key: string, val: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set(key, val); else next.delete(key);
+    setSearchParams(next);
+  };
+
   const loadCustomers = async () => {
+    setLoading(true);
     setError('');
     try {
       const data = await apiFetch<CustomerListItem[]>(`/api/customers?timeRange=${timeRange}`);
@@ -166,14 +175,14 @@ export default function CustomersView() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateParam('q', event.target.value)}
               placeholder="搜索客户名称、渠道、意向产品..."
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm focus:border-primary-navy transition-colors outline-none"
             />
           </div>
           <select
             value={countryFilter}
-            onChange={(event) => setCountryFilter(event.target.value)}
+            onChange={(event) => updateParam('country', event.target.value)}
             className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm focus:border-primary-navy transition-colors outline-none appearance-none"
           >
             <option value="">全部国家</option>
@@ -203,7 +212,7 @@ export default function CustomersView() {
            ].map(chip => (
              <button
                key={chip.key}
-               onClick={() => setTimeRange(chip.key)}
+               onClick={() => updateParam('timeRange', chip.key)}
                className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy text-white shadow-sm' : 'bg-slate-50 text-secondary-slate hover:bg-slate-100'}`}
              >
                {chip.label}

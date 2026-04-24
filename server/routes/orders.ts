@@ -202,13 +202,39 @@ export function createOrdersRouter() {
     }
 
     try {
-      const prefix = await getOrderNumberPrefix();
+      await db.run('BEGIN TRANSACTION');
+
+      // Generate date-based serial number
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const datePart = `${month}${day}`;
+      const prefix = 'CQBX';
+      const pattern = `${prefix}-${year}-${datePart}%`;
+
+      const lastOrder = await db.get<{ display_id: string }>(
+        `SELECT display_id FROM orders WHERE display_id LIKE ? ORDER BY display_id DESC LIMIT 1`,
+        [pattern]
+      );
+
+      let nextSerial = 1;
+      if (lastOrder && lastOrder.display_id) {
+        const lastSerialStr = lastOrder.display_id.slice(-2);
+        const lastSerial = parseInt(lastSerialStr, 10);
+        if (!isNaN(lastSerial)) {
+          nextSerial = lastSerial + 1;
+        }
+      }
+      const displayId = `${prefix}-${year}-${datePart}${String(nextSerial).padStart(2, '0')}`;
+
       const created = await db.run(
         `
-          INSERT INTO orders (customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by)
-          VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by)
+          VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
+          displayId,
           result.payload.customerId,
           result.payload.details,
           result.payload.totalAmount,
@@ -222,10 +248,10 @@ export function createOrdersRouter() {
       );
 
       const orderId = created.lastID as number;
-      const displayId = `${prefix}${new Date().getFullYear()}-${String(orderId).padStart(6, '0')}`;
-      await db.run(`UPDATE orders SET display_id = ? WHERE id = ?`, [displayId, orderId]);
+      await db.run('COMMIT');
       res.status(201).json({ id: orderId, display_id: displayId });
     } catch (error) {
+      await db.run('ROLLBACK');
       return handleRouteError(res, error, '创建订单失败');
     }
   });
@@ -242,14 +268,16 @@ export function createOrdersRouter() {
     }
 
     try {
+      await db.run('BEGIN TRANSACTION');
       const updated = await db.run(
         `
           UPDATE orders
-          SET customer_id = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, updated_by = ?
+          SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, updated_by = ?
           WHERE id = ?
         `,
         [
           result.payload.customerId,
+          result.payload.status,
           result.payload.details,
           result.payload.totalAmount,
           result.payload.productSummary,
@@ -260,11 +288,37 @@ export function createOrdersRouter() {
           orderId,
         ],
       );
+
       if (!updated.changes) {
+        await db.run('ROLLBACK');
         return fail(res, 404, '订单不存在', 'ORDER_NOT_FOUND');
       }
+
+      // Sync items
+      const deletedIds = (req.body.deletedItemIds || []) as number[];
+      if (deletedIds.length > 0) {
+        await db.run(`DELETE FROM order_items WHERE id IN (${deletedIds.map(() => '?').join(',')})`, deletedIds);
+      }
+
+      const items = (req.body.items || []) as any[];
+      for (const item of items) {
+        if (item.id) {
+          await db.run(
+            `UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ? WHERE id = ?`,
+            [item.productName, item.specification, item.hsCode, Number(item.quantity), item.unit, Number(item.unitPrice), Number(item.subtotal), item.imageUrl, item.id]
+          );
+        } else {
+          await db.run(
+            `INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [orderId, item.productName, item.specification, item.hsCode, Number(item.quantity), item.unit, Number(item.unitPrice), Number(item.subtotal), item.imageUrl]
+          );
+        }
+      }
+
+      await db.run('COMMIT');
       res.json({ success: true });
     } catch (error) {
+      await db.run('ROLLBACK');
       return handleRouteError(res, error, '更新订单失败');
     }
   });
@@ -305,13 +359,14 @@ export function createOrdersRouter() {
     try {
       const created = await db.run(
         `
-          INSERT INTO order_items (order_id, product_name, specification, quantity, unit, unit_price, subtotal, image_url)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           result.payload.orderId,
           result.payload.productName,
           result.payload.specification,
+          result.payload.hsCode,
           result.payload.quantity,
           result.payload.unit,
           result.payload.unitPrice,
@@ -346,12 +401,13 @@ export function createOrdersRouter() {
       await db.run(
         `
           UPDATE order_items
-          SET product_name = ?, specification = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ?
+          SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ?
           WHERE id = ?
         `,
         [
           result.payload.productName,
           result.payload.specification,
+          result.payload.hsCode,
           result.payload.quantity,
           result.payload.unit,
           result.payload.unitPrice,

@@ -1,5 +1,6 @@
 import type { Currency, FinanceType, PaymentCategory } from '../domain.js';
 import { db } from '../db.js';
+import { buildAttachmentUrl, getStoredNameFromRecord } from '../lib/files.js';
 import { normalizeOrderStatus } from '../lib/values.js';
 import { getAttachmentsByEntity } from './attachments.js';
 
@@ -68,7 +69,13 @@ export async function buildOrderDetail(idOrNo: number | string) {
     `, [orderId]);
 
   const packingRecords = await db.all<Record<string, unknown>[]>(
-    `SELECT * FROM packing_records WHERE order_id = ? ORDER BY id ASC`,
+    `
+      SELECT pr.*, a.stored_name, a.file_path
+      FROM packing_records pr
+      LEFT JOIN attachments a ON a.id = pr.attachment_id
+      WHERE pr.order_id = ?
+      ORDER BY pr.id ASC
+    `,
     [orderId],
   );
 
@@ -187,6 +194,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     },
     items: items.map((item) => ({
       ...item,
+      hsCode: item.hs_code || null,
       imageUrl: item.image_url || null,
     })),
     financeRecords: financeRecords.map((record) => ({
@@ -224,6 +232,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     logisticsRecords: logisticsRecords.map((record) => ({
       ...record,
       segmentType: record.segment_type || 'international',
+      freightForwarder: record.freight_forwarder || null,
       trackingNo: record.tracking_no,
       packingDetails: record.packing_details,
       shippingDate: record.shipping_date,
@@ -256,17 +265,20 @@ export async function buildOrderDetail(idOrNo: number | string) {
           createdByName: customs.created_by_name || null,
           attachments: customsAttachments.get(Number(customs.id)) || [],
           attachmentCount: (customsAttachments.get(Number(customs.id)) || []).length,
-          }
-          : null,
-          packingRecords: packingRecords.map(r => ({
-            id: r.id,
-            packageCount: String(r.package_count || ''),
-            packageSize: String(r.package_size || ''),
-            grossWeight: String(r.gross_weight || ''),
-            netWeight: String(r.net_weight || ''),
-            attachmentId: r.attachment_id,
-            imageUrl: r.attachment_id ? `/api/attachments/download-direct/${r.attachment_id}` : null,
-          })),          domesticLogistics: domesticLogisticsRecord ? {
+        }
+      : null,
+    packingRecords: packingRecords.map((record) => ({
+      id: record.id,
+      packageCount: String(record.package_count || ''),
+      packageSize: String(record.package_size || ''),
+      grossWeight: String(record.gross_weight || ''),
+      netWeight: String(record.net_weight || ''),
+      attachmentId: record.attachment_id,
+      imageUrl: record.attachment_id
+        ? buildAttachmentUrl(Number(record.attachment_id), getStoredNameFromRecord(record.stored_name, record.file_path))
+        : null,
+    })),
+    domesticLogistics: domesticLogisticsRecord ? {
           ...domesticLogisticsRecord,
           segmentType: domesticLogisticsRecord.segment_type || 'domestic',
           trackingNo: domesticLogisticsRecord.tracking_no,

@@ -1,11 +1,7 @@
 import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { db } from '../db.js';
 import type { AttachmentEntityType } from '../domain.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { buildAttachmentUrl, getStoredNameFromRecord, resolveAttachmentAbsolutePath } from '../lib/files.js';
 
 export async function getAttachmentsByEntity(entityType: AttachmentEntityType, entityIds: number[]) {
   if (!entityIds.length) {
@@ -15,7 +11,7 @@ export async function getAttachmentsByEntity(entityType: AttachmentEntityType, e
   const placeholders = entityIds.map(() => '?').join(', ');
   const rows = await db.all<Record<string, unknown>[]>(
     `
-      SELECT id, entity_type, entity_id, file_name, mime_type, file_size, file_path, created_at
+      SELECT id, entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, created_at
       FROM attachments
       WHERE entity_type = ? AND entity_id IN (${placeholders})
       ORDER BY datetime(created_at) DESC, id DESC
@@ -34,10 +30,11 @@ export async function getAttachmentsByEntity(entityType: AttachmentEntityType, e
       entityType: row.entity_type,
       entityId: row.entity_id,
       fileName: row.file_name,
+      storedName: getStoredNameFromRecord(row.stored_name, row.file_path),
       mimeType: row.mime_type,
       fileSize: row.file_size,
       filePath: row.file_path,
-      url: row.file_path ? `/${String(row.file_path).replace(/^\/+/, '')}` : '',
+      url: buildAttachmentUrl(Number(row.id), getStoredNameFromRecord(row.stored_name, row.file_path)),
       createdAt: row.created_at,
     });
   }
@@ -69,7 +66,10 @@ export async function deleteAttachmentRows(entityType: AttachmentEntityType, ent
 
   for (const attachment of attachments) {
     if (attachment.file_path) {
-      const fullPath = path.join(__dirname, '..', '..', attachment.file_path);
+      const fullPath = resolveAttachmentAbsolutePath(attachment.file_path);
+      if (!fullPath) {
+        continue;
+      }
       try {
         await fs.unlink(fullPath);
       } catch (_error) {

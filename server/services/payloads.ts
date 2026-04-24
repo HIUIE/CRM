@@ -6,6 +6,7 @@ import {
   INSPECTION_STATUSES,
   LOGISTICS_SEGMENTS,
   LOGISTICS_STATUSES,
+  ORDER_STATUSES,
   PARTNER_TYPES,
   PAYMENT_CATEGORIES,
   PRODUCTION_STATUSES,
@@ -17,6 +18,7 @@ import {
   type InspectionStatus,
   type LogisticsSegment,
   type LogisticsStatus,
+  type OrderStatus,
   type PartnerType,
   type PaymentCategory,
   type ProductionStatus,
@@ -106,6 +108,7 @@ export async function readProductionPayload(body: Record<string, unknown>, order
 
 export async function readOrderPayload(body: Record<string, unknown>) {
   const customerId = readNumber(body.customerId);
+  const status = readString(body.status);
   const productSummary = readString(body.productSummary);
   const details = readString(body.details);
   const totalAmount = readNumber(body.totalAmount);
@@ -139,6 +142,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
   return {
     payload: {
       customerId,
+      status: (status as OrderStatus) || 'draft',
       productSummary,
       details,
       totalAmount,
@@ -152,6 +156,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
 export async function readOrderItemPayload(body: Record<string, unknown>, orderId: number) {
   const productName = readString(body.productName);
   const specification = readString(body.specification);
+  const hsCode = readString(body.hsCode);
   const unit = readString(body.unit);
   const quantity = readNumber(body.quantity);
   const unitPrice = readNumber(body.unitPrice);
@@ -180,6 +185,7 @@ export async function readOrderItemPayload(body: Record<string, unknown>, orderI
       orderId,
       productName,
       specification,
+      hsCode,
       quantity,
       unit,
       unitPrice,
@@ -277,6 +283,7 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
   const orderId = readNumber(body.orderId);
   const trackingNo = readString(body.trackingNo);
   const carrier = readString(body.carrier);
+  const freightForwarder = readString(body.freightForwarder);
   const packingDetails = readString(body.packingDetails);
   const status = readString(body.status);
   const shippingDate = readString(body.shippingDate);
@@ -326,6 +333,7 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
       orderId,
       trackingNo,
       carrier,
+      freightForwarder,
       packingDetails,
       status: status as LogisticsStatus,
       shippingDate,

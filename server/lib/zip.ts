@@ -1,0 +1,239 @@
+import { Buffer } from 'node:buffer';
+import fs from 'node:fs';
+import { once } from 'node:events';
+
+type ZipEntry = {
+  name: string;
+  data: Buffer;
+};
+
+type ZipSink = {
+  write: (chunk: Buffer) => boolean | void;
+  end?: (chunk?: Buffer) => void;
+  once?: (event: string, listener: () => void) => void;
+};
+
+type ZipDirectoryEntry = {
+  name: string;
+  checksum: number;
+  size: number;
+  offset: number;
+  dosTime: number;
+  dosDate: number;
+};
+
+const CRC32_TABLE = new Uint32Array(256).map((_, index) => {
+  let value = index;
+  for (let i = 0; i < 8; i += 1) {
+    value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+  }
+  return value >>> 0;
+});
+
+function updateCrc32(crc: number, buffer: Buffer) {
+  for (const value of buffer) {
+    crc = CRC32_TABLE[(crc ^ value) & 0xff] ^ (crc >>> 8);
+  }
+  return crc >>> 0;
+}
+
+function crc32(buffer: Buffer) {
+  let crc = 0xffffffff;
+  crc = updateCrc32(crc, buffer);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function toDosDateTime(input: Date) {
+  const year = Math.max(input.getFullYear(), 1980);
+  const dosTime = ((input.getHours() & 0x1f) << 11) | ((input.getMinutes() & 0x3f) << 5) | Math.floor(input.getSeconds() / 2);
+  const dosDate = (((year - 1980) & 0x7f) << 9) | (((input.getMonth() + 1) & 0x0f) << 5) | (input.getDate() & 0x1f);
+  return { dosTime, dosDate };
+}
+
+function buildLocalHeader(nameBuffer: Buffer, checksum: number, size: number, dosTime: number, dosDate: number) {
+  const localHeader = Buffer.alloc(30);
+  localHeader.writeUInt32LE(0x04034b50, 0);
+  localHeader.writeUInt16LE(20, 4);
+  localHeader.writeUInt16LE(0x0800, 6);
+  localHeader.writeUInt16LE(0, 8);
+  localHeader.writeUInt16LE(dosTime, 10);
+  localHeader.writeUInt16LE(dosDate, 12);
+  localHeader.writeUInt32LE(checksum, 14);
+  localHeader.writeUInt32LE(size, 18);
+  localHeader.writeUInt32LE(size, 22);
+  localHeader.writeUInt16LE(nameBuffer.length, 26);
+  localHeader.writeUInt16LE(0, 28);
+  return localHeader;
+}
+
+function buildCentralHeader(entry: ZipDirectoryEntry, nameBuffer: Buffer) {
+  const centralHeader = Buffer.alloc(46);
+  centralHeader.writeUInt32LE(0x02014b50, 0);
+  centralHeader.writeUInt16LE(20, 4);
+  centralHeader.writeUInt16LE(20, 6);
+  centralHeader.writeUInt16LE(0x0800, 8);
+  centralHeader.writeUInt16LE(0, 10);
+  centralHeader.writeUInt16LE(entry.dosTime, 12);
+  centralHeader.writeUInt16LE(entry.dosDate, 14);
+  centralHeader.writeUInt32LE(entry.checksum, 16);
+  centralHeader.writeUInt32LE(entry.size, 20);
+  centralHeader.writeUInt32LE(entry.size, 24);
+  centralHeader.writeUInt16LE(nameBuffer.length, 28);
+  centralHeader.writeUInt16LE(0, 30);
+  centralHeader.writeUInt16LE(0, 32);
+  centralHeader.writeUInt16LE(0, 34);
+  centralHeader.writeUInt16LE(0, 36);
+  centralHeader.writeUInt32LE(0, 38);
+  centralHeader.writeUInt32LE(entry.offset, 42);
+  return centralHeader;
+}
+
+async function getFileChecksumAndSize(filePath: string) {
+  let crc = 0xffffffff;
+  let size = 0;
+
+  for await (const chunk of fs.createReadStream(filePath)) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    crc = updateCrc32(crc, buffer);
+    size += buffer.length;
+  }
+
+  return {
+    checksum: (crc ^ 0xffffffff) >>> 0,
+    size,
+  };
+}
+
+export function createZipBuffer(entries: ZipEntry[]) {
+  const now = new Date();
+  const { dosTime, dosDate } = toDosDateTime(now);
+  const localParts: Buffer[] = [];
+  const centralParts: Buffer[] = [];
+  let offset = 0;
+
+  for (const entry of entries) {
+    const nameBuffer = Buffer.from(entry.name, 'utf8');
+    const dataBuffer = Buffer.isBuffer(entry.data) ? entry.data : Buffer.from(entry.data);
+    const checksum = crc32(dataBuffer);
+    const localHeader = buildLocalHeader(nameBuffer, checksum, dataBuffer.length, dosTime, dosDate);
+    const centralHeader = buildCentralHeader(
+      {
+        name: entry.name,
+        checksum,
+        size: dataBuffer.length,
+        offset,
+        dosTime,
+        dosDate,
+      },
+      nameBuffer,
+    );
+
+    localParts.push(localHeader, nameBuffer, dataBuffer);
+    centralParts.push(centralHeader, nameBuffer);
+    offset += localHeader.length + nameBuffer.length + dataBuffer.length;
+  }
+
+  const centralDirectorySize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const endRecord = Buffer.alloc(22);
+  endRecord.writeUInt32LE(0x06054b50, 0);
+  endRecord.writeUInt16LE(0, 4);
+  endRecord.writeUInt16LE(0, 6);
+  endRecord.writeUInt16LE(entries.length, 8);
+  endRecord.writeUInt16LE(entries.length, 10);
+  endRecord.writeUInt32LE(centralDirectorySize, 12);
+  endRecord.writeUInt32LE(offset, 16);
+  endRecord.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localParts, ...centralParts, endRecord]);
+}
+
+export class ZipStreamWriter {
+  private entries: ZipDirectoryEntry[] = [];
+  private offset = 0;
+
+  constructor(private sink: ZipSink) {}
+
+  private async writeChunk(chunk: Buffer) {
+    const result = this.sink.write(chunk);
+    this.offset += chunk.length;
+    if (result === false && typeof this.sink.once === 'function') {
+      await once(this.sink as any, 'drain');
+    }
+  }
+
+  private async addEntry(name: string, checksum: number, size: number, writeData: () => Promise<void>, modifiedAt = new Date()) {
+    const { dosTime, dosDate } = toDosDateTime(modifiedAt);
+    const nameBuffer = Buffer.from(name, 'utf8');
+    const entryOffset = this.offset;
+
+    await this.writeChunk(buildLocalHeader(nameBuffer, checksum, size, dosTime, dosDate));
+    await this.writeChunk(nameBuffer);
+    await writeData();
+
+    this.entries.push({
+      name,
+      checksum,
+      size,
+      offset: entryOffset,
+      dosTime,
+      dosDate,
+    });
+  }
+
+  async addBuffer(name: string, data: Buffer, modifiedAt = new Date()) {
+    const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    await this.addEntry(
+      name,
+      crc32(buffer),
+      buffer.length,
+      async () => {
+        await this.writeChunk(buffer);
+      },
+      modifiedAt,
+    );
+  }
+
+  async addText(name: string, content: string, modifiedAt = new Date()) {
+    await this.addBuffer(name, Buffer.from(content, 'utf8'), modifiedAt);
+  }
+
+  async addFile(name: string, filePath: string, modifiedAt = new Date()) {
+    const { checksum, size } = await getFileChecksumAndSize(filePath);
+    await this.addEntry(
+      name,
+      checksum,
+      size,
+      async () => {
+        for await (const chunk of fs.createReadStream(filePath)) {
+          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          await this.writeChunk(buffer);
+        }
+      },
+      modifiedAt,
+    );
+  }
+
+  async finalize() {
+    const centralParts: Buffer[] = [];
+    for (const entry of this.entries) {
+      const nameBuffer = Buffer.from(entry.name, 'utf8');
+      centralParts.push(buildCentralHeader(entry, nameBuffer), nameBuffer);
+    }
+
+    const centralDirectorySize = centralParts.reduce((sum, part) => sum + part.length, 0);
+    for (const part of centralParts) {
+      await this.writeChunk(part);
+    }
+
+    const endRecord = Buffer.alloc(22);
+    endRecord.writeUInt32LE(0x06054b50, 0);
+    endRecord.writeUInt16LE(0, 4);
+    endRecord.writeUInt16LE(0, 6);
+    endRecord.writeUInt16LE(this.entries.length, 8);
+    endRecord.writeUInt16LE(this.entries.length, 10);
+    endRecord.writeUInt32LE(centralDirectorySize, 12);
+    endRecord.writeUInt32LE(this.offset, 16);
+    endRecord.writeUInt16LE(0, 20);
+    this.sink.end?.(endRecord);
+  }
+}

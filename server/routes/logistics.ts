@@ -4,16 +4,13 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { fileURLToPath } from 'url';
 import { db } from '../db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
+import { UPLOADS_DIR } from '../paths.js';
 import { bindAttachmentsToEntity, getAttachmentsByEntity } from '../services/attachments.js';
 import { readLogisticsPayload } from '../services/payloads.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -90,16 +87,17 @@ export function createLogisticsRouter() {
       const created = await db.run(
         `
           INSERT INTO logistics_records (
-            order_id, tracking_no, carrier, packing_details, status, shipping_date, segment_type,
+            order_id, tracking_no, carrier, freight_forwarder, packing_details, status, shipping_date, segment_type,
             package_count, volume_cbm, gross_weight_kg, incoterm, transport_mode, vessel_voyage, bill_no, etd, eta,
             recipient_address, package_size, remark, created_by, updated_by
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           result.payload.orderId,
           result.payload.trackingNo,
           result.payload.carrier,
+          result.payload.freightForwarder,
           result.payload.packingDetails,
           result.payload.status,
           result.payload.shippingDate || null,
@@ -142,7 +140,7 @@ export function createLogisticsRouter() {
       const updated = await db.run(
         `
           UPDATE logistics_records
-          SET order_id = ?, tracking_no = ?, carrier = ?, packing_details = ?, status = ?, shipping_date = ?, segment_type = ?,
+          SET order_id = ?, tracking_no = ?, carrier = ?, freight_forwarder = ?, packing_details = ?, status = ?, shipping_date = ?, segment_type = ?,
               package_count = ?, volume_cbm = ?, gross_weight_kg = ?, incoterm = ?, transport_mode = ?, vessel_voyage = ?, bill_no = ?, etd = ?, eta = ?,
               recipient_address = ?, package_size = ?, remark = ?, updated_by = ?
           WHERE id = ?
@@ -151,6 +149,7 @@ export function createLogisticsRouter() {
           result.payload.orderId,
           result.payload.trackingNo,
           result.payload.carrier,
+          result.payload.freightForwarder,
           result.payload.packingDetails,
           result.payload.status,
           result.payload.shippingDate || null,
@@ -221,13 +220,14 @@ export function createLogisticsRouter() {
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `,
-          [null, null, file.originalname, file.filename, file.mimetype, file.size, `uploads/${file.filename}`],
+          [null, null, file.originalname, file.filename, file.mimetype, file.size, file.filename],
         );
         uploaded.push({
           id: result.lastID,
           fileName: file.originalname,
-          filePath: `uploads/${file.filename}`,
-          url: `/uploads/${file.filename}`,
+          filePath: file.filename,
+          storedName: file.filename,
+          url: buildAttachmentUrl(result.lastID as number, file.filename),
           mimeType: file.mimetype,
           fileSize: file.size,
         });
@@ -249,11 +249,13 @@ export function createLogisticsRouter() {
       if (!existing) {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
       }
-      const fullPath = path.join(UPLOADS_DIR, path.basename(existing.file_path || ''));
-      try {
-        await fs.unlink(fullPath);
-      } catch (_error) {
-        // ignore missing physical file
+      const fullPath = resolveAttachmentAbsolutePath(existing.file_path);
+      if (fullPath) {
+        try {
+          await fs.unlink(fullPath);
+        } catch (_error) {
+          // ignore missing physical file
+        }
       }
       await db.run(`DELETE FROM attachments WHERE id = ?`, [attachmentId]);
       res.json({ success: true });

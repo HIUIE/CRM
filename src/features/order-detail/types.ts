@@ -58,6 +58,8 @@ export type OrderItem = {
   id: number;
   product_name: string;
   specification?: string | null;
+  hs_code?: string | null;
+  hsCode?: string | null;
   quantity: number;
   unit?: string | null;
   unit_price: number;
@@ -124,6 +126,7 @@ export type ProductionPlan = {
 export type LogisticsRecord = {
   id: number;
   segmentType: LogisticsSegment;
+  freightForwarder?: string | null;
   carrier: string;
   trackingNo: string;
   status: LogisticsStatus;
@@ -198,6 +201,7 @@ export type EditableOrderItem = {
   imageUrl: string;
   productName: string;
   specification: string;
+  hsCode: string;
   quantity: string;
   unit: string;
   unitPrice: string;
@@ -251,6 +255,7 @@ export type ProductionLogFormState = {
 export type LogisticsFormState = {
   id?: number;
   segmentType: LogisticsSegment;
+  freightForwarder: string;
   carrier: string;
   trackingNo: string;
   status: LogisticsStatus;

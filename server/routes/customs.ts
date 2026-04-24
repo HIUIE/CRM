@@ -4,16 +4,13 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { fileURLToPath } from 'url';
 import { db } from '../db.js';
 import type { AuthedRequest } from '../lib/auth.js';
+import { buildAttachmentUrl } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
+import { UPLOADS_DIR } from '../paths.js';
 import { bindAttachmentsToEntity, getAttachmentsByEntity } from '../services/attachments.js';
 import { readCustomsPayload } from '../services/payloads.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -174,13 +171,14 @@ export function createCustomsRouter() {
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `,
-          ['customs', customsId, originalName, file.filename, file.mimetype, file.size, `uploads/${file.filename}`],
+          ['customs', customsId, originalName, file.filename, file.mimetype, file.size, file.filename],
         );
         uploaded.push({
           id: result.lastID,
           fileName: originalName,
-          filePath: `uploads/${file.filename}`,
-          url: `/uploads/${file.filename}`,
+          filePath: file.filename,
+          storedName: file.filename,
+          url: buildAttachmentUrl(result.lastID as number, file.filename),
           mimeType: file.mimetype,
           fileSize: file.size,
         });
