@@ -18,6 +18,8 @@ import type {
   ProductionFormState,
   ProductionPlan,
   ProductionStatus,
+  ProductionLog,
+  ProductionLogFormState,
   SectionKey,
 } from './types';
 
@@ -25,12 +27,14 @@ export const STAGE_STEPS: Array<{ key: OrderStatus; label: string; target: Secti
   { key: 'draft', label: '待受理', target: 'basic' },
   { key: 'production', label: '生产中', target: 'production' },
   { key: 'customs', label: '报关中', target: 'customs' },
-  { key: 'shipping', label: '运输中', target: 'logistics' },
-  { key: 'completed', label: '已完成', target: 'finance' },
+  { key: 'shipping', label: '发运中', target: 'logistics' },
+  { key: 'completed', label: '已结清', target: 'finance' },
 ];
 
 export const EMPTY_ORDER_FORM: OrderFormState = {
   status: 'draft',
+  customerId: '',
+  productSummary: '',
   totalAmount: '0',
   deliveryDate: '',
   freightAmount: '0',
@@ -67,16 +71,14 @@ export const EMPTY_LOGISTICS_FORM: LogisticsFormState = {
   trackingNo: '',
   status: 'preparing',
   shippingDate: '',
-  packageCount: '',
-  volumeCbm: '',
-  grossWeightKg: '',
   incoterm: '',
-  transportMode: '',
+  transportMode: 'sea',
   vesselVoyage: '',
   billNo: '',
   etd: '',
   eta: '',
   packingDetails: '',
+  recipientAddress: '',
   remark: '',
   attachments: [],
   newFiles: [],
@@ -88,178 +90,75 @@ export const EMPTY_CUSTOMS_FORM: CustomsFormState = {
   declarationNo: '',
   declarationDate: '',
   releaseDate: '',
+  tradeMode: '一般贸易',
   remark: '',
   attachments: [],
   newFiles: [],
 };
 
-export function asText(value: unknown, fallback = '') {
-  return typeof value === 'string' ? value : fallback;
+export function asNumber(val: any): number {
+  if (val === null || val === undefined || val === '') return 0;
+  const n = Number(val);
+  return isNaN(n) ? 0 : n;
 }
 
-export function asNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+export function asText(val: any, fallback = ''): string {
+  if (val === null || val === undefined) return fallback;
+  return String(val);
 }
 
-export function formatMoney(value: unknown, currency: string) {
-  return `${currency} ${asNumber(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+export function formatDateTime(val: any): string {
+  if (!val) return '-';
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  return d.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
-export function formatDateOnly(value: unknown, fallback = '未填写') {
-  const text = asText(value);
-  if (!text) {
-    return fallback;
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-    return text;
-  }
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? text : date.toLocaleDateString();
+export function formatDateOnly(val: any, fallback = '-'): string {
+  if (!val) return fallback;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val).split('T')[0];
+  return d.toISOString().split('T')[0];
 }
 
-export function formatDateTime(value: unknown, fallback = '未填写') {
-  const text = asText(value);
-  if (!text) {
-    return fallback;
-  }
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? text : date.toLocaleString();
-}
-
-export function getStageMeta(status: string) {
+export function getProductionStatusLabel(status: ProductionStatus): string {
   switch (status) {
-    case 'draft':
-      return { label: '待受理', className: 'bg-slate-100 text-slate-700 border-slate-200' };
-    case 'production':
-      return { label: '生产中', className: 'bg-amber-50 text-amber-700 border-amber-200' };
-    case 'customs':
-      return { label: '报关中', className: 'bg-orange-50 text-orange-700 border-orange-200' };
-    case 'shipping':
-      return { label: '运输中', className: 'bg-sky-50 text-sky-700 border-sky-200' };
-    case 'completed':
-      return { label: '已完成', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    default:
-      return { label: status || '未知', className: 'bg-slate-100 text-slate-700 border-slate-200' };
+    case 'not_started': return '待产';
+    case 'scheduled': return '已排产';
+    case 'in_progress': return '生产中';
+    case 'ready': return '已完工';
+    default: return status;
   }
 }
 
-export function getPaymentMeta(status: OrderDetailResponse['summary'] extends { paymentStatus?: infer T } ? T : never) {
-  switch (status) {
-    case 'unpaid':
-      return { label: '待收款', className: 'bg-orange-50 text-orange-700 border-orange-200' };
-    case 'partial':
-      return { label: '部分收款', className: 'bg-amber-50 text-amber-700 border-amber-200' };
-    case 'paid':
-      return { label: '已收款', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    default:
-      return { label: '待收款', className: 'bg-slate-100 text-slate-700 border-slate-200' };
-  }
-}
-
-export function getFinanceCategoryLabel(category: FinanceCategory) {
-  switch (category) {
-    case 'deposit':
-      return '首付款';
-    case 'balance':
-      return '尾款';
-    case 'goods':
-      return '货款';
-    case 'freight':
-      return '运费';
-    case 'customs':
-      return '报关费';
-    default:
-      return '其他';
-  }
-}
-
-export function getCustomsStatusLabel(status: CustomsStatus) {
-  switch (status) {
-    case 'not_started':
-      return '未开始';
-    case 'preparing':
-      return '准备中';
-    case 'submitted':
-      return '已申报';
-    case 'inspected':
-      return '查验中';
-    case 'released':
-      return '已放行';
-    default:
-      return status;
-  }
-}
-
-export function getProductionStatusLabel(status: ProductionStatus) {
-  switch (status) {
-    case 'not_started':
-      return '未开始';
-    case 'scheduled':
-      return '已排产';
-    case 'in_progress':
-      return '生产中';
-    case 'ready':
-      return '待出货';
-    default:
-      return status;
-  }
-}
-
-export function getInspectionStatusLabel(status: InspectionStatus) {
-  switch (status) {
-    case 'pending':
-      return '待验货';
-    case 'passed':
-      return '已通过';
-    case 'failed':
-      return '未通过';
-    default:
-      return status;
-  }
-}
-
-export function getDeliveryMeta(value: string) {
-  if (!value) {
-    return { label: '未设置交货期', className: 'border-slate-200 bg-slate-50 text-slate-500' };
-  }
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(value);
-  target.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-
-  if (diffDays < 0) {
-    return { label: `已逾期 ${Math.abs(diffDays)} 天`, className: 'border-red-200 bg-red-50 text-red-700' };
-  }
-  if (diffDays <= 7) {
-    return { label: `${diffDays} 天内到期`, className: 'border-amber-200 bg-amber-50 text-amber-700' };
-  }
-  return { label: '交期正常', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' };
-}
-
-export function makeDraftItem(item?: OrderItem): EditableOrderItem {
+export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFormState {
   return {
-    clientKey: item?.id ? `item-${item.id}` : `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    id: item?.id,
-    imageUrl: asText(item?.imageUrl),
-    productName: asText(item?.product_name),
-    specification: asText(item?.specification),
-    quantity: item?.quantity != null ? String(item.quantity) : '1',
-    unit: asText(item?.unit),
-    unitPrice: item?.unit_price != null ? String(item.unit_price) : '0',
-    subtotal: item?.subtotal != null ? String(item.subtotal) : '0',
-  };
-}
-
-export function buildOrderForm(order: OrderInfo, items: OrderItem[]): OrderFormState {
-  return {
+    id: order.id,
     status: order.status,
-    totalAmount: String(order.total_amount ?? 0),
+    customerId: String(order.customer_id),
+    productSummary: asText(order.product_summary),
+    totalAmount: String(order.total_amount),
     deliveryDate: asText(order.deliveryDate),
-    freightAmount: String(order.freightAmount ?? 0),
-    miscAmount: String(order.miscAmount ?? 0),
+    freightAmount: String(order.freightAmount || 0),
+    miscAmount: String(order.miscAmount || 0),
     details: asText(order.details),
-    items: items.map((item) => makeDraftItem(item)),
+    items: items.map((it) => ({
+      clientKey: Math.random().toString(36).slice(2),
+      id: it.id,
+      imageUrl: asText(it.imageUrl || it.image_url),
+      productName: it.product_name,
+      specification: asText(it.specification),
+      quantity: String(it.quantity),
+      unit: asText(it.unit, 'pcs'),
+      unitPrice: String(it.unit_price),
+      subtotal: String(it.subtotal),
+    })),
   };
 }
 
@@ -267,14 +166,13 @@ export function buildFinanceForm(record: FinanceRecord | null, customerName: str
   return {
     id: record?.id,
     type: record?.type || 'receipt',
-    amount: record?.amount != null ? String(record.amount) : '',
+    amount: record ? String(record.amount) : '',
     currency: record?.currency || 'USD',
     status: record?.status || 'completed',
-    recordCategory:
-      (record?.recordCategory as FinanceCategory) || (record?.type === 'payment' ? 'goods' : 'deposit'),
-    target: asText(record?.target, customerName),
+    recordCategory: (record?.recordCategory as any) || (record?.type === 'payment' ? 'goods' : 'deposit'),
+    target: record?.target || (record?.type === 'receipt' ? customerName : ''),
     partnerId: record?.partnerId ? String(record.partnerId) : '',
-    remark: asText(record?.remark),
+    remark: record?.remark || '',
     attachments: record?.attachments || [],
     newFiles: [],
   };
@@ -300,16 +198,14 @@ export function buildLogisticsForm(record: LogisticsRecord | null): LogisticsFor
     trackingNo: asText(record?.trackingNo),
     status: record?.status || 'preparing',
     shippingDate: asText(record?.shippingDate),
-    packageCount: record?.packageCount != null ? String(record.packageCount) : '',
-    volumeCbm: record?.volumeCbm != null ? String(record.volumeCbm) : '',
-    grossWeightKg: record?.grossWeightKg != null ? String(record.grossWeightKg) : '',
     incoterm: asText(record?.incoterm),
-    transportMode: asText(record?.transportMode),
+    transportMode: asText(record?.transportMode, 'sea'),
     vesselVoyage: asText(record?.vesselVoyage),
     billNo: asText(record?.billNo),
     etd: asText(record?.etd),
     eta: asText(record?.eta),
     packingDetails: asText(record?.packingDetails),
+    recipientAddress: asText(record?.recipientAddress),
     remark: asText(record?.remark),
     attachments: record?.attachments || [],
     newFiles: [],
@@ -324,8 +220,18 @@ export function buildCustomsForm(record: CustomsRecord | null): CustomsFormState
     declarationNo: asText(record?.declarationNo),
     declarationDate: asText(record?.declarationDate),
     releaseDate: asText(record?.releaseDate),
+    tradeMode: asText(record?.tradeMode, '一般贸易'),
     remark: asText(record?.remark),
     attachments: record?.attachments || [],
+    newFiles: [],
+  };
+}
+
+export function buildProductionLogForm(log: Partial<ProductionLog> | null): ProductionLogFormState {
+  return {
+    logDate: asText(log?.logDate || new Date().toISOString().split('T')[0]),
+    content: asText(log?.content),
+    attachments: log?.attachments || [],
     newFiles: [],
   };
 }

@@ -84,8 +84,8 @@ export function createCustomsRouter() {
       }
       const created = await db.run(
         `
-          INSERT INTO customs_records (order_id, status, broker_name, declaration_no, declaration_date, release_date, remark, created_by, updated_by, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          INSERT INTO customs_records (order_id, status, broker_name, declaration_no, declaration_date, release_date, trade_mode, remark, created_by, updated_by, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         `,
         [
           result.payload.orderId,
@@ -94,6 +94,7 @@ export function createCustomsRouter() {
           result.payload.declarationNo,
           result.payload.declarationDate || null,
           result.payload.releaseDate || null,
+          result.payload.tradeMode,
           result.payload.remark,
           req.user?.id || null,
           req.user?.id || null,
@@ -126,7 +127,7 @@ export function createCustomsRouter() {
       await db.run(
         `
           UPDATE customs_records
-          SET status = ?, broker_name = ?, declaration_no = ?, declaration_date = ?, release_date = ?, remark = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+          SET status = ?, broker_name = ?, declaration_no = ?, declaration_date = ?, release_date = ?, trade_mode = ?, remark = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `,
         [
@@ -135,6 +136,7 @@ export function createCustomsRouter() {
           result.payload.declarationNo,
           result.payload.declarationDate || null,
           result.payload.releaseDate || null,
+          result.payload.tradeMode,
           result.payload.remark,
           req.user?.id || null,
           customsId,

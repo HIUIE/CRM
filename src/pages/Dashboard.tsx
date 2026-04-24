@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet, Clock } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import { Chip } from '../features/order-detail/components';
 
 interface FinanceRecord {
   id: number;
@@ -8,7 +9,7 @@ interface FinanceRecord {
   customer_name?: string;
   type: 'receipt' | 'payment';
   amount: number;
-  currency: 'USD' | 'CNY';
+  currency: string;
   status: 'pending' | 'completed';
   created_at: string;
 }
@@ -31,8 +32,8 @@ interface DashboardData {
     completedOrders: number;
   };
   financeSummary: {
-    receipt?: Partial<Record<'USD' | 'CNY', number>>;
-    payment?: Partial<Record<'USD' | 'CNY', number>>;
+    receipt?: Record<string, number>;
+    payment?: Record<string, number>;
   };
   pendingFinanceCount: number;
   pendingLogisticsCount: number;
@@ -40,20 +41,16 @@ interface DashboardData {
   recentLogistics: LogisticsRecord[];
 }
 
-function formatAmount(amount: number, currency: 'USD' | 'CNY') {
+function formatAmount(amount: number, currency: string) {
   return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 function getLogisticsLabel(status: LogisticsRecord['status']) {
   switch (status) {
-    case 'preparing':
-      return '备货中';
-    case 'shipped':
-      return '运输中';
-    case 'arrived':
-      return '已到货';
-    default:
-      return status;
+    case 'preparing': return '备货中';
+    case 'shipped': return '运输中';
+    case 'arrived': return '已到货';
+    default: return status;
   }
 }
 
@@ -64,109 +61,66 @@ export default function DashboardView() {
 
   useEffect(() => {
     let mounted = true;
-
     const loadDashboard = async () => {
       try {
         const nextData = await apiFetch<DashboardData>('/api/dashboard');
-        if (mounted) {
-          setData(nextData);
-        }
+        if (mounted) setData(nextData);
       } catch (requestError) {
-        if (mounted) {
-          setError(getErrorMessage(requestError, '读取控制台数据失败'));
-        }
+        if (mounted) setError(getErrorMessage(requestError, '读取控制台数据失败'));
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
-
     loadDashboard();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  if (loading) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">正在汇总业务数据...</div>;
-  }
-
-  if (error || !data) {
-    return (
-      <div className="rounded-3xl border border-red-100 bg-white p-8 text-sm text-red-600 shadow-sm">
-        {error || '暂时无法读取控制台数据'}
-      </div>
-    );
-  }
+  if (loading) return <div className="p-8 text-sm text-slate-500 animate-pulse">汇总业务数据中...</div>;
+  if (error || !data) return <div className="p-8 text-sm text-red-600 bg-red-50 rounded-3xl m-4">{error || '无法读取控制台数据'}</div>;
 
   const receiptUsd = data.financeSummary.receipt?.USD || 0;
+  const receiptCny = data.financeSummary.receipt?.CNY || 0;
+  const paymentUsd = data.financeSummary.payment?.USD || 0;
   const paymentCny = data.financeSummary.payment?.CNY || 0;
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="订单总数"
-          value={String(data.overview.totalOrders)}
-          description={`进行中 ${data.overview.activeOrders} 单，已完成 ${data.overview.completedOrders} 单`}
-          icon={<FileText className="h-4 w-4 text-blue-600" />}
-        />
-        <StatCard
-          title="已完成收款"
-          value={formatAmount(receiptUsd, 'USD')}
-          description={`待核销流水 ${data.pendingFinanceCount} 笔`}
-          icon={<ArrowDownRight className="h-4 w-4 text-green-600" />}
-        />
-        <StatCard
-          title="已完成付款"
-          value={formatAmount(paymentCny, 'CNY')}
-          description="按已登记的付款流水汇总"
-          icon={<ArrowUpRight className="h-4 w-4 text-red-500" />}
-        />
-        <StatCard
-          title="物流待跟进"
-          value={String(data.pendingLogisticsCount)}
-          description={`草稿订单 ${data.overview.draftOrders} 单`}
-          icon={<Truck className="h-4 w-4 text-amber-600" />}
-        />
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <StatCard title="订单总数" value={String(data.overview.totalOrders)} description={`进行中 ${data.overview.activeOrders}`} icon={<FileText size={16} className="text-primary-navy" />} />
+        <StatCard title="已收 USD" value={formatAmount(receiptUsd, 'USD')} description={`CNY 已收: ${receiptCny.toLocaleString()}`} icon={<ArrowDownRight size={16} className="text-success" />} />
+        <StatCard title="已付 USD" value={formatAmount(paymentUsd, 'USD')} description={`CNY 已付: ${paymentCny.toLocaleString()}`} icon={<ArrowUpRight size={16} className="text-error" />} />
+        <StatCard title="待处理财务" value={`${data.pendingFinanceCount} 笔`} description="等待核销确认" icon={<Clock size={16} className="text-warning" />} />
+        <StatCard title="待跟进物流" value={`${data.pendingLogisticsCount} 笔`} description="运输中的订单" icon={<Truck size={16} className="text-info" />} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr,0.9fr]">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+      <div className="grid gap-4 xl:grid-cols-[1fr,1fr]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">最近财务流水</h2>
-              <p className="text-sm text-slate-500">这里展示系统中最新登记的收付款记录。</p>
+              <h2 className="text-[15px] font-bold text-slate-900 uppercase tracking-tight">最近财务流水</h2>
+              <p className="text-[11px] text-slate-400 font-medium uppercase mt-0.5">LATEST FINANCIAL ACTIVITIES</p>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-              {data.recentFinance.length} 条
-            </div>
+            <button className="text-[11px] font-bold text-primary-navy hover:underline">查看全部</button>
           </div>
 
           <div className="space-y-3">
             {data.recentFinance.length ? (
               data.recentFinance.map((record) => (
-                <div key={record.id} className="flex items-start justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-800">
-                      {record.order_display_id || '未关联订单'} · {record.customer_name || '未命名客户'}
+                <div key={record.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-primary-navy/10 transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${record.type === 'receipt' ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}>
+                       {record.type === 'receipt' ? <ArrowDownRight size={18} /> : <ArrowUpRight size={18} />}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {record.type === 'receipt' ? '收款' : '付款'} · {new Date(record.created_at).toLocaleString()}
+                    <div>
+                      <div className="text-[13px] font-bold text-primary-navy uppercase">{record.order_display_id || 'MISC'} · {record.customer_name}</div>
+                      <div className="text-[11px] text-slate-400 font-medium mt-0.5">{new Date(record.created_at).toLocaleDateString()}</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div
-                      className={`text-sm font-bold ${
-                        record.type === 'receipt' ? 'text-green-600' : 'text-red-500'
-                      }`}
-                    >
-                      {formatAmount(record.amount, record.currency)}
+                    <div className={`text-[14px] font-bold data-field ${record.type === 'receipt' ? 'text-tertiary-sage' : 'text-error'}`}>
+                      {record.type === 'receipt' ? '+' : '-'}{record.currency} {record.amount.toLocaleString()}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {record.status === 'completed' ? '已完成' : '待核销'}
-                    </div>
+                    <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">{record.status === 'completed' ? '已核销' : '待处理'}</div>
                   </div>
                 </div>
               ))
@@ -176,43 +130,31 @@ export default function DashboardView() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">最近物流状态</h2>
-              <p className="text-sm text-slate-500">按最新录入的物流记录展示当前运输进度。</p>
+              <h2 className="text-[15px] font-bold text-slate-900 uppercase tracking-tight">最近物流状态</h2>
+              <p className="text-[11px] text-slate-400 font-medium uppercase mt-0.5">REAL-TIME TRACKING SNAPSHOT</p>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-              {data.recentLogistics.length} 条
-            </div>
+            <button className="text-[11px] font-bold text-primary-navy hover:underline">查看全部</button>
           </div>
 
           <div className="space-y-3">
             {data.recentLogistics.length ? (
               data.recentLogistics.map((record) => (
-                <div key={record.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <div key={record.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-primary-navy/10 transition-all group">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-800">
-                        {record.order_display_id || '未关联订单'} · {record.customer_name || '未命名客户'}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {record.carrier} · {record.tracking_no || '暂无运单号'}
-                      </div>
+                    <div className="flex items-center gap-4">
+                       <div className="h-10 w-10 rounded-full bg-info/10 text-info flex items-center justify-center"><Truck size={18} /></div>
+                       <div>
+                         <div className="text-[13px] font-bold text-primary-navy uppercase">{record.order_display_id || 'MISC'} · {record.customer_name}</div>
+                         <div className="text-[11px] text-slate-400 font-bold uppercase mt-0.5">{record.carrier} · {record.tracking_no}</div>
+                       </div>
                     </div>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        record.status === 'arrived'
-                          ? 'bg-green-50 text-green-700'
-                          : record.status === 'shipped'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-amber-50 text-amber-700'
-                      }`}
-                    >
+                    <Chip tone={record.status === 'arrived' ? 'success' : record.status === 'shipped' ? 'info' : 'warning'}>
                       {getLogisticsLabel(record.status)}
-                    </span>
+                    </Chip>
                   </div>
-                  <div className="mt-2 text-xs text-slate-400">{new Date(record.created_at).toLocaleString()}</div>
                 </div>
               ))
             ) : (
@@ -222,47 +164,40 @@ export default function DashboardView() {
         </section>
       </div>
 
-      <section className="rounded-3xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm">
-        <div className="mb-3 flex items-center">
-          <Wallet className="mr-2 h-4 w-4 text-blue-300" />
-          <h2 className="text-lg font-bold">当前阶段聚焦</h2>
+      <section className="rounded-3xl bg-primary-navy p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 h-64 w-64 bg-white/5 rounded-full blur-3xl -translate-y-32 translate-x-32" />
+        <div className="relative z-10">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center"><Wallet size={18} /></div>
+            <h2 className="text-lg font-bold uppercase tracking-tight">业务主链当前聚焦</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-slate-300 max-w-2xl font-medium">
+            现在的目标是确保客户、订单、财务、物流这条核心业务主链的稳定可用。我们将持续优化数据密度与录入效率，为您的日常外贸作业提供最直观、最可靠的支撑。
+          </p>
         </div>
-        <p className="text-sm leading-6 text-slate-300">
-          现在的目标不是把所有高级功能都堆进来，而是把客户、订单、财务、物流这条主链跑通并稳定可用。AI 和高级分析会继续保留，但不会阻塞日常业务录入。
-        </p>
       </section>
     </div>
   );
 }
 
-function StatCard({
-  title,
-  value,
-  description,
-  icon,
-}: {
-  title: string;
-  value: string;
-  description: string;
-  icon: React.ReactNode;
-}) {
+function StatCard({ title, value, description, icon }: { title: string; value: string; description: string; icon: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-        {icon}
-        <span className="ml-2">{title}</span>
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:border-primary-navy/20 transition-all group">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="h-8 w-8 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-primary-navy/5 transition-colors">{icon}</div>
+        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{title}</div>
       </div>
-      <div className="text-2xl font-bold tracking-tight text-slate-900">{value}</div>
-      <p className="mt-2 text-sm text-slate-500">{description}</p>
+      <div className="text-xl font-bold tracking-tight text-primary-navy data-field">{value}</div>
+      <p className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{description}</p>
     </div>
   );
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
-      <div className="text-sm font-semibold text-slate-700">{title}</div>
-      <div className="mt-1 text-sm text-slate-500">{description}</div>
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
+      <div className="text-sm font-bold text-primary-navy uppercase tracking-widest">{title}</div>
+      <div className="mt-1 text-[11px] font-medium text-slate-400">{description}</div>
     </div>
   );
 }

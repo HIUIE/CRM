@@ -34,6 +34,7 @@ export type OrderInfo = {
   customer_id: number;
   status: OrderStatus;
   details?: string | null;
+  quick_notes?: string | null;
   product_summary?: string | null;
   total_amount: number;
   deliveryDate?: string | null;
@@ -65,12 +66,23 @@ export type OrderItem = {
   imageUrl?: string | null;
 };
 
+export type PackingRecord = {
+  clientKey?: string;
+  id?: number;
+  packageCount: string;
+  packageSize: string;
+  grossWeight: string;
+  netWeight: string;
+  attachmentId?: number | null;
+  imageUrl?: string | null;
+};
+
 export type FinanceRecord = {
   id: number;
   type: FinanceType;
   recordCategory?: string | null;
   amount: number;
-  currency: 'USD' | 'CNY';
+  currency: string;
   status: FinanceStatus;
   target?: string | null;
   remark?: string | null;
@@ -80,6 +92,16 @@ export type FinanceRecord = {
   attachments?: AttachmentMeta[];
   attachmentCount?: number;
   createdByName?: string | null;
+};
+
+export type ProductionLog = {
+  id: number;
+  planId: number;
+  content: string;
+  logDate?: string | null;
+  createdByName: string;
+  createdAt: string;
+  attachments?: AttachmentMeta[];
 };
 
 export type ProductionPlan = {
@@ -96,6 +118,7 @@ export type ProductionPlan = {
   remark?: string | null;
   updatedAt?: string | null;
   createdByName?: string | null;
+  logs?: ProductionLog[];
 };
 
 export type LogisticsRecord = {
@@ -115,6 +138,8 @@ export type LogisticsRecord = {
   billNo?: string | null;
   etd?: string | null;
   eta?: string | null;
+  recipientAddress?: string | null;
+  packageSize?: string | null;
   remark?: string | null;
   createdAt?: string | null;
   attachments?: AttachmentMeta[];
@@ -129,6 +154,7 @@ export type CustomsRecord = {
   declarationNo?: string | null;
   declarationDate?: string | null;
   releaseDate?: string | null;
+  tradeMode?: string | null;
   remark?: string | null;
   attachments?: AttachmentMeta[];
   attachmentCount?: number;
@@ -146,6 +172,7 @@ export type OrderDetailResponse = {
   logisticsRecords?: LogisticsRecord[] | null;
   domesticLogistics?: LogisticsRecord | null;
   internationalLogistics?: LogisticsRecord | null;
+  packingRecords?: PackingRecord[] | null;
   summary?: {
     receiptsByCurrency: Record<string, number>;
     paymentsByCurrency: Record<string, number>;
@@ -176,11 +203,14 @@ export type EditableOrderItem = {
   unitPrice: string;
   subtotal: string;
 };
-
 export type OrderFormState = {
+  id?: number;
   status: OrderStatus;
+  customerId: string;
+  productSummary: string;
   totalAmount: string;
   deliveryDate: string;
+
   freightAmount: string;
   miscAmount: string;
   details: string;
@@ -191,7 +221,7 @@ export type FinanceFormState = {
   id?: number;
   type: FinanceType;
   amount: string;
-  currency: 'USD' | 'CNY';
+  currency: string;
   status: FinanceStatus;
   recordCategory: FinanceCategory;
   target: string;
@@ -211,6 +241,13 @@ export type ProductionFormState = {
   remark: string;
 };
 
+export type ProductionLogFormState = {
+  logDate: string;
+  content: string;
+  attachments: AttachmentMeta[];
+  newFiles: File[];
+};
+
 export type LogisticsFormState = {
   id?: number;
   segmentType: LogisticsSegment;
@@ -218,9 +255,6 @@ export type LogisticsFormState = {
   trackingNo: string;
   status: LogisticsStatus;
   shippingDate: string;
-  packageCount: string;
-  volumeCbm: string;
-  grossWeightKg: string;
   incoterm: string;
   transportMode: string;
   vesselVoyage: string;
@@ -228,9 +262,14 @@ export type LogisticsFormState = {
   etd: string;
   eta: string;
   packingDetails: string;
+  recipientAddress: string;
   remark: string;
   attachments: AttachmentMeta[];
   newFiles: File[];
+};
+
+export type PackingFormState = {
+  items: PackingRecord[];
 };
 
 export type CustomsFormState = {
@@ -240,6 +279,7 @@ export type CustomsFormState = {
   declarationNo: string;
   declarationDate: string;
   releaseDate: string;
+  tradeMode: string;
   remark: string;
   attachments: AttachmentMeta[];
   newFiles: File[];
@@ -253,6 +293,8 @@ export type DrawerState =
   | { mode: 'customs' }
   | { mode: 'customs-upload' }
   | { mode: 'logistics'; recordId?: number }
+  | { mode: 'packing' }
+  | { mode: 'production-log' }
   | { mode: 'ai-analysis' };
 
 export type AIAnalysisResult = {

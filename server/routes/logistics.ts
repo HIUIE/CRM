@@ -91,9 +91,10 @@ export function createLogisticsRouter() {
         `
           INSERT INTO logistics_records (
             order_id, tracking_no, carrier, packing_details, status, shipping_date, segment_type,
-            package_count, volume_cbm, gross_weight_kg, incoterm, transport_mode, vessel_voyage, bill_no, etd, eta, remark, created_by, updated_by
+            package_count, volume_cbm, gross_weight_kg, incoterm, transport_mode, vessel_voyage, bill_no, etd, eta,
+            recipient_address, package_size, remark, created_by, updated_by
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           result.payload.orderId,
@@ -112,6 +113,8 @@ export function createLogisticsRouter() {
           result.payload.billNo,
           result.payload.etd || null,
           result.payload.eta || null,
+          result.payload.recipientAddress,
+          result.payload.packageSize,
           result.payload.remark,
           req.user?.id || null,
           req.user?.id || null,
@@ -140,7 +143,8 @@ export function createLogisticsRouter() {
         `
           UPDATE logistics_records
           SET order_id = ?, tracking_no = ?, carrier = ?, packing_details = ?, status = ?, shipping_date = ?, segment_type = ?,
-              package_count = ?, volume_cbm = ?, gross_weight_kg = ?, incoterm = ?, transport_mode = ?, vessel_voyage = ?, bill_no = ?, etd = ?, eta = ?, remark = ?, updated_by = ?
+              package_count = ?, volume_cbm = ?, gross_weight_kg = ?, incoterm = ?, transport_mode = ?, vessel_voyage = ?, bill_no = ?, etd = ?, eta = ?,
+              recipient_address = ?, package_size = ?, remark = ?, updated_by = ?
           WHERE id = ?
         `,
         [
@@ -160,6 +164,8 @@ export function createLogisticsRouter() {
           result.payload.billNo,
           result.payload.etd || null,
           result.payload.eta || null,
+          result.payload.recipientAddress,
+          result.payload.packageSize,
           result.payload.remark,
           req.user?.id || null,
           recordId,

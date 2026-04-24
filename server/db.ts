@@ -174,6 +174,15 @@ async function runMigrations() {
       FOREIGN KEY(partner_id) REFERENCES partners(id)
     );
 
+    CREATE TABLE IF NOT EXISTS production_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(plan_id) REFERENCES production_plans(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS attachments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       entity_type TEXT,

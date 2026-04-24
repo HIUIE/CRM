@@ -7,7 +7,26 @@ import { readString } from '../lib/values.js';
 export function createCustomersRouter() {
   const router = Router();
 
-  router.get('/', async (_req, res) => {
+  router.get('/', async (req, res) => {
+    const timeRange = readString(req.query.timeRange);
+    let timeFilter = '';
+    const params: unknown[] = [];
+
+    if (timeRange && timeRange !== 'all') {
+      let interval = '';
+      switch (timeRange) {
+        case 'week': interval = '-7 days'; break;
+        case 'month': interval = '-1 month'; break; case 'last_month': interval = '-2 month'; break;
+        case '3months': interval = '-3 months'; break;
+        case '6months': interval = '-6 months'; break;
+        case 'year': interval = '-1 year'; break;
+      }
+      if (interval) {
+        timeFilter = `WHERE c.created_at >= datetime('now', ?)`;
+        params.push(interval);
+      }
+    }
+
     try {
       const customers = await db.all(`
         SELECT
@@ -17,9 +36,10 @@ export function createCustomersRouter() {
         FROM customers c
         LEFT JOIN orders o ON o.customer_id = c.id
         LEFT JOIN users u ON u.id = c.created_by
+        ${timeFilter}
         GROUP BY c.id
         ORDER BY datetime(c.created_at) DESC, c.id DESC
-      `);
+      `, params);
       res.json(customers);
     } catch (error) {
       return handleRouteError(res, error, '读取客户数据失败');
@@ -30,8 +50,8 @@ export function createCustomersRouter() {
     const name = readString(req.body?.name);
     const country = readString(req.body?.country);
     const contact = readString(req.body?.contact);
-    const logisticsPreference = readString(req.body?.logisticsPreference);
-    const paymentTerms = readString(req.body?.paymentTerms);
+    const sourceChannel = readString(req.body?.sourceChannel);
+    const intentProducts = readString(req.body?.intentProducts);
 
     if (!name || !country || !contact) {
       return fail(res, 400, '请完整填写客户名称、国家和联系信息', 'INVALID_CUSTOMER_PAYLOAD');
@@ -40,10 +60,10 @@ export function createCustomersRouter() {
     try {
       const result = await db.run(
         `
-          INSERT INTO customers (name, country, contact, logistics_preference, payment_terms, created_by, updated_by)
+          INSERT INTO customers (name, country, contact, source_channel, intent_products, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
-        [name, country, contact, logisticsPreference, paymentTerms, req.user?.id || null, req.user?.id || null],
+        [name, country, contact, sourceChannel, intentProducts, req.user?.id || null, req.user?.id || null],
       );
       res.status(201).json({ id: result.lastID });
     } catch (error) {
@@ -56,8 +76,8 @@ export function createCustomersRouter() {
     const name = readString(req.body?.name);
     const country = readString(req.body?.country);
     const contact = readString(req.body?.contact);
-    const logisticsPreference = readString(req.body?.logisticsPreference);
-    const paymentTerms = readString(req.body?.paymentTerms);
+    const sourceChannel = readString(req.body?.sourceChannel);
+    const intentProducts = readString(req.body?.intentProducts);
 
     if (!Number.isInteger(customerId) || customerId <= 0) {
       return fail(res, 400, '客户编号无效', 'INVALID_CUSTOMER_ID');
@@ -70,10 +90,10 @@ export function createCustomersRouter() {
       const result = await db.run(
         `
           UPDATE customers
-          SET name = ?, country = ?, contact = ?, logistics_preference = ?, payment_terms = ?, updated_by = ?
+          SET name = ?, country = ?, contact = ?, source_channel = ?, intent_products = ?, updated_by = ?
           WHERE id = ?
         `,
-        [name, country, contact, logisticsPreference, paymentTerms, req.user?.id || null, customerId],
+        [name, country, contact, sourceChannel, intentProducts, req.user?.id || null, customerId],
       );
       if (!result.changes) {
         return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');

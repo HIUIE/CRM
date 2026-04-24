@@ -65,7 +65,12 @@ export async function buildOrderDetail(idOrNo: number | string) {
       l.shipping_date DESC,
       datetime(l.created_at) DESC,
       id DESC
-  `, [orderId]);
+    `, [orderId]);
+
+  const packingRecords = await db.all<Record<string, unknown>[]>(
+    `SELECT * FROM packing_records WHERE order_id = ? ORDER BY id ASC`,
+    [orderId],
+  );
 
   const customs = await db.get<Record<string, unknown>>(
     `
@@ -98,24 +103,39 @@ export async function buildOrderDetail(idOrNo: number | string) {
     [orderId],
   );
 
-  const summaryRows = await db.all<{ type: FinanceType; currency: Currency; payment_category: PaymentCategory; total: number }[]>(`
+  let productionLogs: Record<string, unknown>[] = [];
+  if (productionPlan) {
+    productionLogs = await db.all(
+      `
+        SELECT pl.*, u.name as created_by_name
+        FROM production_logs pl
+        LEFT JOIN users u ON u.id = pl.created_by
+        WHERE pl.plan_id = ?
+        ORDER BY datetime(pl.created_at) DESC
+      `,
+      [productionPlan.id],
+    );
+  }
+
+  const summaryRows = await db.all<{ type: FinanceType; currency: string; payment_category: PaymentCategory; total: number }[]>(`
     SELECT type, currency, payment_category, COALESCE(SUM(amount), 0) AS total
     FROM finance_records
     WHERE order_id = ? AND status = 'completed'
     GROUP BY type, currency, payment_category
   `, [orderId]);
 
-  const receiptsByCurrency: Record<Currency, number> = { USD: 0, CNY: 0 };
-  const paymentsByCurrency: Record<Currency, number> = { USD: 0, CNY: 0 };
-  const freightByCurrency: Record<Currency, number> = { USD: 0, CNY: 0 };
+  const receiptsByCurrency: Record<string, number> = {};
+  const paymentsByCurrency: Record<string, number> = {};
+  const freightByCurrency: Record<string, number> = {};
 
   for (const row of summaryRows) {
+    const cur = row.currency || 'USD';
     if (row.type === 'receipt') {
-      receiptsByCurrency[row.currency] += row.total;
+      receiptsByCurrency[cur] = (receiptsByCurrency[cur] || 0) + row.total;
     } else {
-      paymentsByCurrency[row.currency] += row.total;
+      paymentsByCurrency[cur] = (paymentsByCurrency[cur] || 0) + row.total;
       if (row.payment_category === 'freight') {
-        freightByCurrency[row.currency] += row.total;
+        freightByCurrency[cur] = (freightByCurrency[cur] || 0) + row.total;
       }
     }
   }
@@ -133,19 +153,20 @@ export async function buildOrderDetail(idOrNo: number | string) {
     domesticLogisticsRecord ||
     null;
   const orderAmount = Number(order.total_amount) || 0;
-  const receiptTotal = receiptsByCurrency.USD;
+  const receiptTotal = receiptsByCurrency.USD || 0;
   const paymentStatus =
     receiptTotal <= 0
       ? 'unpaid'
       : receiptTotal >= orderAmount && orderAmount > 0
         ? 'paid'
         : 'partial';
-  const outstandingAmount = Math.max(orderAmount - receiptsByCurrency.USD, 0);
+  const outstandingAmount = Math.max(orderAmount - receiptTotal, 0);
   const settled = outstandingAmount <= 0 && orderAmount > 0;
 
   const financeAttachments = await getAttachmentsByEntity('finance', financeRecords.map((record) => Number(record.id)));
   const logisticsAttachments = await getAttachmentsByEntity('logistics', logisticsRecords.map((record) => Number(record.id)));
   const customsAttachments = customs ? await getAttachmentsByEntity('customs', [Number(customs.id)]) : new Map<number, Record<string, unknown>[]>();
+  const productionLogAttachments = productionPlan ? await getAttachmentsByEntity('production_log', productionLogs.map(l => Number(l.id))) : new Map<number, Record<string, unknown>[]>();
 
   return {
     order: {
@@ -192,6 +213,12 @@ export async function buildOrderDetail(idOrNo: number | string) {
           inspectionStatus: productionPlan.inspection_status,
           updatedAt: productionPlan.updated_at,
           createdByName: productionPlan.created_by_name || null,
+          logs: productionLogs.map(l => ({
+            ...l,
+            logDate: l.log_date,
+            createdByName: l.created_by_name,
+            attachments: productionLogAttachments.get(Number(l.id)) || []
+          }))
         }
       : null,
     logisticsRecords: logisticsRecords.map((record) => ({
@@ -208,6 +235,8 @@ export async function buildOrderDetail(idOrNo: number | string) {
       billNo: record.bill_no,
       etd: record.etd,
       eta: record.eta,
+      recipientAddress: record.recipient_address,
+      packageSize: record.package_size,
       remark: record.remark,
       createdAt: record.created_at,
       createdByName: record.created_by_name || null,
@@ -221,15 +250,23 @@ export async function buildOrderDetail(idOrNo: number | string) {
           declarationNo: customs.declaration_no,
           declarationDate: customs.declaration_date,
           releaseDate: customs.release_date,
+          tradeMode: customs.trade_mode,
           createdAt: customs.created_at,
           updatedAt: customs.updated_at,
           createdByName: customs.created_by_name || null,
           attachments: customsAttachments.get(Number(customs.id)) || [],
           attachmentCount: (customsAttachments.get(Number(customs.id)) || []).length,
-        }
-      : null,
-    domesticLogistics: domesticLogisticsRecord
-      ? {
+          }
+          : null,
+          packingRecords: packingRecords.map(r => ({
+            id: r.id,
+            packageCount: String(r.package_count || ''),
+            packageSize: String(r.package_size || ''),
+            grossWeight: String(r.gross_weight || ''),
+            netWeight: String(r.net_weight || ''),
+            attachmentId: r.attachment_id,
+            imageUrl: r.attachment_id ? `/api/attachments/download-direct/${r.attachment_id}` : null,
+          })),          domesticLogistics: domesticLogisticsRecord ? {
           ...domesticLogisticsRecord,
           segmentType: domesticLogisticsRecord.segment_type || 'domestic',
           trackingNo: domesticLogisticsRecord.tracking_no,

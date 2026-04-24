@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Edit, Plus, Search } from 'lucide-react';
+import { Edit, Plus, Search, Calendar, Package } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import { Chip } from '../features/order-detail/components';
 import type { CustomerListItem, OrderSummary } from '../types/crm';
 
 type OrderFormState = {
@@ -20,37 +21,17 @@ const EMPTY_FORM: OrderFormState = {
 
 function getOrderStatusMeta(status: string) {
   switch (status) {
-    case 'draft':
-      return { label: '草稿', className: 'bg-slate-100 text-slate-700' };
-    case 'production':
-      return { label: '生产中', className: 'bg-amber-50 text-amber-700' };
-    case 'customs':
-      return { label: '报关中', className: 'bg-orange-50 text-orange-700' };
-    case 'shipping':
-      return { label: '发货中', className: 'bg-sky-50 text-sky-700' };
-    case 'completed':
-      return { label: '已完成', className: 'bg-emerald-50 text-emerald-700' };
-    default:
-      return { label: status, className: 'bg-slate-100 text-slate-700' };
-  }
-}
-
-function getLogisticsLabel(status?: string) {
-  switch (status) {
-    case 'preparing':
-      return '备货中';
-    case 'shipped':
-      return '运输中';
-    case 'arrived':
-      return '已到货';
-    default:
-      return '未登记';
+    case 'draft': return { label: '待受理', tone: 'neutral' as const };
+    case 'production': return { label: '生产中', tone: 'warning' as const };
+    case 'customs': return { label: '报关中', tone: 'warning' as const };
+    case 'shipping': return { label: '发货中', tone: 'info' as const };
+    case 'completed': return { label: '已完成', tone: 'success' as const };
+    default: return { label: status, tone: 'neutral' as const };
   }
 }
 
 export default function OrdersView() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
@@ -60,574 +41,226 @@ export default function OrdersView() {
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderSummary | null>(null);
   const [formData, setFormData] = useState<OrderFormState>(EMPTY_FORM);
-  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [timeRange, setTimeRange] = useState(searchParams.get('timeRange') || 'all');
 
-  const customerFilter = searchParams.get('customerId') || '';
-
-  // Filter Echo: If customerId is in URL, fill the search box with customer name
-  useEffect(() => {
-    if (customerFilter && customers.length > 0) {
-      const customer = customers.find(c => String(c.id) === customerFilter);
-      if (customer && !q) {
-        updateFilter('q', customer.name);
-      }
-    }
-  }, [customerFilter, customers]);
-
-  const createMode = searchParams.get('create') === '1';
   const q = searchParams.get('q') || '';
-  const product = searchParams.get('product') || '';
-  const country = searchParams.get('country') || '';
   const status = searchParams.get('status') || '';
-  const orderMonth = searchParams.get('orderMonth') || '';
-  const shippingMonth = searchParams.get('shippingMonth') || '';
-  const draftFromAi = (
-    location.state as {
-      orderDraft?: { customerName?: string; details?: string; totalAmount?: number; productSummary?: string };
-    } | null
-  )?.orderDraft;
+  const customerId = searchParams.get('customerId') || '';
 
-  useEffect(() => {
-    let mounted = true;
-
-    const loadCustomers = async () => {
-      try {
-        const data = await apiFetch<CustomerListItem[]>('/api/customers');
-        if (mounted) {
-          setCustomers(data);
-        }
-      } catch (_error) {
-        if (mounted) {
-          setCustomers([]);
-        }
-      }
-    };
-
-    void loadCustomers();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const params = new URLSearchParams();
-    if (q) {
-      params.set('q', q);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [orderData, customerData] = await Promise.all([
+        apiFetch<OrderSummary[]>(`/api/orders?${searchParams.toString()}`),
+        apiFetch<CustomerListItem[]>('/api/customers'),
+      ]);
+      setOrders(orderData);
+      setCustomers(customerData);
+    } catch (err) {
+      setError(getErrorMessage(err, '读取数据失败'));
+    } finally {
+      setLoading(false);
     }
-    if (product) {
-      params.set('product', product);
-    }
-    if (country) {
-      params.set('country', country);
-    }
-    if (status) {
-      params.set('status', status);
-    }
-    if (orderMonth) {
-      params.set('orderMonth', orderMonth);
-    }
-    if (shippingMonth) {
-      params.set('shippingMonth', shippingMonth);
-    }
-    if (customerFilter) {
-      params.set('customerId', customerFilter);
-    }
-
-    const fetchOrders = async () => {
-      setLoading(true);
-      setError('');
-
-      try {
-        const url = params.toString() ? `/api/orders?${params.toString()}` : '/api/orders';
-        const data = await apiFetch<OrderSummary[]>(url);
-        if (mounted) {
-          setOrders(data);
-        }
-      } catch (requestError) {
-        if (mounted) {
-          setError(getErrorMessage(requestError, '读取订单数据失败'));
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void fetchOrders();
-    return () => {
-      mounted = false;
-    };
-  }, [q, product, country, status, orderMonth, shippingMonth, customerFilter]);
-
-  useEffect(() => {
-    if (!createMode) {
-      return;
-    }
-
-    setEditingOrder(null);
-    setShowForm(true);
-    setFormError('');
-
-    if (draftFromAi) {
-      const matchedCustomer = customers.find((customerItem) => customerItem.name === draftFromAi.customerName);
-      const fallbackSummary = draftFromAi.productSummary || draftFromAi.details?.split('\n')[0] || '';
-      setFormData({
-        customerId: matchedCustomer ? String(matchedCustomer.id) : '',
-        productSummary: fallbackSummary,
-        details: draftFromAi.details || '',
-        totalAmount: String(draftFromAi.totalAmount ?? 0),
-      });
-    }
-  }, [createMode, draftFromAi, customers]);
-
-  const availableCountries = useMemo(() => {
-    return Array.from(new Set(customers.map((customerItem) => customerItem.country).filter(Boolean))).sort();
-  }, [customers]);
-
-  const updateFilter = (key: string, value: string) => {
-    const nextParams = new URLSearchParams(searchParams);
-    if (value) {
-      nextParams.set(key, value);
-    } else {
-      nextParams.delete(key);
-    }
-    setSearchParams(nextParams);
   };
 
-  const clearCreateMode = () => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete('create');
-    setSearchParams(nextParams);
+  useEffect(() => {
+    void loadData();
+  }, [searchParams]);
+
+  const updateFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value); else next.delete(key);
+    setSearchParams(next);
+  };
+
+  const handleTimeRangeChange = (range: string) => {
+    setTimeRange(range);
+    updateFilter('timeRange', range);
   };
 
   const openCreateForm = () => {
     setEditingOrder(null);
-    setFormError('');
     setFormData(EMPTY_FORM);
     setShowForm(true);
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('create', '1');
-    setSearchParams(nextParams);
   };
 
   const openEditForm = (order: OrderSummary) => {
     setEditingOrder(order);
-    setFormError('');
     setFormData({
       customerId: String(order.customer_id),
       productSummary: order.product_summary || '',
       details: '',
-      totalAmount: String(order.total_amount ?? 0),
+      totalAmount: String(order.total_amount || 0),
     });
     setShowForm(true);
   };
 
   const closeForm = () => {
     setEditingOrder(null);
-    setFormError('');
-    setFormData(EMPTY_FORM);
     setShowForm(false);
-    clearCreateMode();
   };
 
-  const refreshOrders = async () => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    if (product) params.set('product', product);
-    if (country) params.set('country', country);
-    if (status) params.set('status', status);
-    if (orderMonth) params.set('orderMonth', orderMonth);
-    if (shippingMonth) params.set('shippingMonth', shippingMonth);
-    if (customerFilter) params.set('customerId', customerFilter);
-
-    const url = params.toString() ? `/api/orders?${params.toString()}` : '/api/orders';
-    const data = await apiFetch<OrderSummary[]>(url);
-    setOrders(data);
-  };
-
-  const clearCustomerFilter = () => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete('customerId');
-    setSearchParams(nextParams);
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setFormError('');
-
-    const payload = {
-      customerId: Number(formData.customerId),
-      productSummary: formData.productSummary.trim(),
-      details: formData.details.trim(),
-      totalAmount: Number(formData.totalAmount),
-    };
-
+    const payload = { ...formData, customerId: Number(formData.customerId), totalAmount: Number(formData.totalAmount) };
     try {
-      if (editingOrder) {
-        await apiFetch(`/api/orders/${editingOrder.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
-        closeForm();
-        await refreshOrders();
-      } else {
-        const created = await apiFetch<{ id: number; display_id: string }>('/api/orders', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        closeForm();
-        await refreshOrders();
+      if (editingOrder) await apiFetch(`/api/orders/${editingOrder.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      else {
+        const created = await apiFetch<{ display_id: string }>('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
         navigate(`/orders/${created.display_id}`);
       }
-    } catch (requestError) {
-      setFormError(getErrorMessage(requestError, '保存订单失败'));
+      closeForm();
+      await loadData();
+    } catch (err) {
+      setFormError(getErrorMessage(err, '保存失败'));
     }
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedOrderIds.length === orders.length) {
-      setSelectedOrderIds([]);
-    } else {
-      setSelectedOrderIds(orders.map((o) => o.id));
-    }
-  };
-
-  const toggleSelectOrder = (id: number) => {
-    setSelectedOrderIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const setQuickMonth = (key: string, monthCount: number) => {
-    const d = new Date();
-    if (monthCount > 0) {
-      d.setMonth(d.getMonth() - monthCount);
-    }
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    updateFilter(key, `${year}-${month}`);
   };
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">订单列表</h2>
-            <p className="mt-1 text-sm text-slate-500">先筛选，再进入订单详情工作台处理产品、收付款和发货。</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {selectedOrderIds.length > 0 && (
-              <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 border border-amber-200 animate-in fade-in zoom-in duration-200">
-                已选 {selectedOrderIds.length} 项
-                <button 
-                  onClick={() => setSelectedOrderIds([])}
-                  className="ml-2 text-xs underline underline-offset-2 opacity-70 hover:opacity-100"
-                >
-                  取消
-                </button>
-              </div>
-            )}
-            <button
-              onClick={showForm ? closeForm : openCreateForm}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {showForm ? '取消创建' : '新建订单'}
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <FilterField label="关键词">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={q}
-                onChange={(event) => updateFilter('q', event.target.value)}
-                placeholder="订单号 / 客户 / 内容"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </FilterField>
-          <FilterField label="产品关键词">
+    <div className="space-y-4">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_160px]">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
-              value={product}
-              onChange={(event) => updateFilter('product', event.target.value)}
-              placeholder="产品名 / 规格"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={q}
+              onChange={e => updateFilter('q', e.target.value)}
+              placeholder="搜索订单号、产品、客户名称..."
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy transition-all outline-none"
             />
-          </FilterField>
-          <FilterField label="国家">
-            <select
-              value={country}
-              onChange={(event) => updateFilter('country', event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部国家</option>
-              {availableCountries.map((countryItem) => (
-                <option key={countryItem} value={countryItem}>
-                  {countryItem}
-                </option>
-              ))}
-            </select>
-          </FilterField>
-          <FilterField label="订单状态">
-            <select
-              value={status}
-              onChange={(event) => updateFilter('status', event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部状态</option>
-              <option value="draft">草稿</option>
-              <option value="production">生产中</option>
-              <option value="customs">报关中</option>
-              <option value="shipping">发货中</option>
-              <option value="completed">已完成</option>
-            </select>
-          </FilterField>
-          <FilterField label="下单月份">
-            <div className="space-y-2">
-              <input
-                type="month"
-                value={orderMonth}
-                onChange={(event) => updateFilter('orderMonth', event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <div className="flex flex-wrap gap-1.5">
-                <QuickFilterBtn label="本月" onClick={() => setQuickMonth('orderMonth', 0)} />
-                <QuickFilterBtn label="近3个月" onClick={() => setQuickMonth('orderMonth', 3)} />
-                <QuickFilterBtn label="近半年" onClick={() => setQuickMonth('orderMonth', 6)} />
-              </div>
-            </div>
-          </FilterField>
-          <FilterField label="发货月份">
-            <div className="space-y-2">
-              <input
-                type="month"
-                value={shippingMonth}
-                onChange={(event) => updateFilter('shippingMonth', event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <div className="flex flex-wrap gap-1.5">
-                <QuickFilterBtn label="本月" onClick={() => setQuickMonth('shippingMonth', 0)} />
-                <QuickFilterBtn label="近3个月" onClick={() => setQuickMonth('shippingMonth', 3)} />
-                <QuickFilterBtn label="近半年" onClick={() => setQuickMonth('shippingMonth', 6)} />
-              </div>
-            </div>
-          </FilterField>
+          </div>
+          <select
+            value={status}
+            onChange={e => updateFilter('status', e.target.value)}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:border-primary-navy outline-none appearance-none cursor-pointer"
+          >
+            <option value="">全部状态</option>
+            <option value="draft">待受理</option>
+            <option value="production">生产中</option>
+            <option value="customs">报关中</option>
+            <option value="shipping">发货中</option>
+            <option value="completed">已完成</option>
+          </select>
+          <button onClick={openCreateForm} className="inline-flex items-center justify-center rounded-2xl bg-primary-navy px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 shadow-md">
+            <Plus className="mr-2 h-4 w-4" />
+            新建订单
+          </button>
         </div>
 
-        {customerFilter ? (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-            当前按客户筛选订单
-            <button onClick={clearCustomerFilter} className="font-semibold underline underline-offset-2">
-              清除筛选
-            </button>
-          </div>
-        ) : null}
+        <div className="mt-4 flex flex-wrap gap-2">
+           {[
+             { key: 'week', label: '近一周' },
+             { key: 'month', label: '本月' },
+             { key: 'last_month', label: '上月' },
+             { key: '3months', label: '近3个月' },
+             { key: '6months', label: '半年' },
+             { key: 'year', label: '近1年' },
+             { key: 'all', label: '全部' }
+           ].map(chip => (
+             <button
+               key={chip.key}
+               onClick={() => handleTimeRangeChange(chip.key)}
+               className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy text-white shadow-sm' : 'bg-slate-50 text-secondary-slate hover:bg-slate-100'}`}
+             >
+               {chip.label}
+             </button>
+           ))}
+        </div>
 
-        {error ? (
-          <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
-        ) : null}
-
-        {showForm ? (
-          <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-            <div className="mb-4 text-sm font-semibold text-slate-700">
-              {editingOrder ? `编辑订单：${editingOrder.display_id}` : '新建订单'}
-            </div>
-            {formError ? (
-              <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {formError}
-              </div>
-            ) : null}
-            <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-              <FilterField label="客户 *">
-                <select
-                  required
-                  value={formData.customerId}
-                  onChange={(event) => setFormData({ ...formData, customerId: event.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">请选择客户</option>
-                  {customers.map((customerItem) => (
-                    <option key={customerItem.id} value={customerItem.id}>
-                      {customerItem.name}
-                    </option>
-                  ))}
+        {showForm && (
+          <form onSubmit={handleSubmit} className="mt-6 rounded-3xl border border-slate-100 bg-slate-50 p-6">
+            <div className="mb-6 text-[11px] font-bold text-primary-navy uppercase tracking-widest">{editingOrder ? '编辑订单基本信息' : '创建新订单'}</div>
+            {formError && <div className="mb-4 text-sm text-error bg-error/5 p-3 rounded-lg border border-error/10">{formError}</div>}
+            <div className="grid gap-6 md:grid-cols-2">
+              <Field label="关联客户 *">
+                <select required value={formData.customerId} onChange={e=>setFormData({...formData, customerId:e.target.value})} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary-navy outline-none appearance-none cursor-pointer">
+                  <option value="">选择客户...</option>
+                  {customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-              </FilterField>
-              <FilterField label="订单金额 (USD) *">
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.totalAmount}
-                  onChange={(event) => setFormData({ ...formData, totalAmount: event.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </FilterField>
-              <FilterField label="产品摘要" className="md:col-span-2">
-                <input
-                  value={formData.productSummary}
-                  onChange={(event) => setFormData({ ...formData, productSummary: event.target.value })}
-                  placeholder="例如：不锈钢保温杯 / 500ml / 礼盒装"
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </FilterField>
-              <FilterField label="订单说明 / 备注" className="md:col-span-2">
-                <textarea
-                  value={formData.details}
-                  onChange={(event) => setFormData({ ...formData, details: event.target.value })}
-                  className="h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </FilterField>
-              <div className="md:col-span-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black"
-                >
-                  {editingOrder ? '保存修改' : '创建并进入详情'}
-                </button>
+              </Field>
+              <Field label="订单总额 (USD) *">
+                <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary-navy outline-none" />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="产品摘要 *">
+                  <input required value={formData.productSummary} onChange={e=>setFormData({...formData, productSummary:e.target.value})} placeholder="例如：太阳能板 A-Type 500pcs..." className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary-navy outline-none" />
+                </Field>
               </div>
-            </form>
-          </div>
-        ) : null}
+            </div>
+            <div className="mt-8 flex justify-end gap-3">
+              <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">取消</button>
+              <button type="submit" className="rounded-xl bg-primary-navy px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 shadow-md">确认并进入详情</button>
+            </div>
+          </form>
+        )}
       </section>
 
-      {loading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">正在加载订单列表...</div>
-      ) : orders.length === 0 ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm font-medium text-slate-500">当前没有匹配的订单记录。</p>
-        </div>
-      ) : (
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-4 font-semibold w-10">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      checked={selectedOrderIds.length === orders.length && orders.length > 0}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  <th className="px-4 py-4 font-semibold">订单号</th>
-                  <th className="px-4 py-4 font-semibold">客户 / 国家</th>
-                  <th className="px-4 py-4 font-semibold">产品摘要</th>
-                  <th className="px-4 py-4 font-semibold">金额</th>
-                  <th className="px-4 py-4 font-semibold">收款进度</th>
-                  <th className="px-4 py-4 font-semibold">发货状态</th>
-                  <th className="px-4 py-4 font-semibold">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {orders.map((order) => (
-                  <tr
-                    key={order.id}
-                    onClick={() => navigate(`/orders/${order.display_id}`)}
-                    className={`cursor-pointer transition-colors hover:bg-slate-50 ${selectedOrderIds.includes(order.id) ? 'bg-blue-50/50' : ''}`}
-                  >
-                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                      <input 
-                        type="checkbox" 
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        checked={selectedOrderIds.includes(order.id)}
-                        onChange={() => toggleSelectOrder(order.id)}
-                      />
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="font-semibold text-slate-900">{order.display_id}</div>
-                      <div className="mt-1">
-                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getOrderStatusMeta(order.status).className}`}>
-                          {getOrderStatusMeta(order.status).label}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="font-medium text-slate-800">{order.customer_name || '未命名客户'}</div>
-                      <div className="mt-1 text-xs text-slate-500">{order.customer_country || '未填写国家'}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="max-w-[260px] truncate text-sm text-slate-700" title={order.product_summary}>
-                        {order.product_summary || '暂无产品摘要'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 font-semibold text-slate-900">
-                      USD {order.total_amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm font-semibold text-green-700">
-                        已收 USD {order.completed_receipt_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">待核销 {order.pending_finance_count} 笔</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm font-semibold text-slate-800">{getLogisticsLabel(order.latest_logistics_status)}</div>
-                      <div className="mt-1 text-xs text-slate-500">{order.latest_tracking_no || '暂无运单号'}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditForm(order);
-                        }}
-                        className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                      >
-                        <Edit className="mr-1.5 h-3.5 w-3.5" />
-                        编辑
-                      </button>
-                    </td>
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        {loading ? <div className="p-8 text-sm text-slate-400">读取订单列表中...</div> : (
+          <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <tr>
+                    <th className="px-4 py-4">订单号 / 日期</th>
+                    <th className="px-4 py-4">客户 / 国家</th>
+                    <th className="px-4 py-4">产品摘要</th>
+                    <th className="px-4 py-4">金额</th>
+                    <th className="px-4 py-4">收款进度</th>
+                    <th className="px-4 py-4 text-right">操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {orders.length ? orders.map(o => {
+                    const meta = getOrderStatusMeta(o.status);
+                    return (
+                      <tr key={o.id} onClick={() => navigate(`/orders/${o.display_id}`)} className="group align-middle hover:bg-slate-50 transition-colors cursor-pointer">
+                        <td className="px-4 py-4">
+                           <div className="font-bold text-primary-navy uppercase">{o.display_id}</div>
+                           <div className="text-[10px] text-slate-400 mt-1 font-bold">{formatDateOnly(o.created_at)}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                           <div className="font-bold text-primary-navy uppercase tracking-tight">{o.customer_name}</div>
+                           <div className="text-[11px] text-slate-400 mt-1 uppercase font-medium">{o.customer_country}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                           <div className="flex items-center gap-2 mb-1"><Chip tone={meta.tone}>{meta.label}</Chip></div>
+                           <div className="text-slate-600 font-medium truncate max-w-[200px]">{o.product_summary}</div>
+                        </td>
+                        <td className="px-4 py-4 font-bold text-primary-navy data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
+                        <td className="px-4 py-4">
+                           <div className="text-tertiary-sage font-bold">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
+                           <div className="text-[11px] text-slate-400 font-bold uppercase mt-1">核销中: {o.pending_finance_count} 笔</div>
+                        </td>
+                        <td className="px-4 py-4" onClick={e=>e.stopPropagation()}>
+                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                              <button onClick={()=>openEditForm(o)} className="p-2 text-secondary-slate hover:bg-white hover:text-primary-navy hover:border-slate-300 rounded-lg border border-transparent transition-all"><Edit size={14} /></button>
+                           </div>
+                        </td>
+                      </tr>
+                    );
+                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-medium">暂无订单记录。</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }
 
-function FilterField({
-  label,
-  children,
-  className = '',
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className={`block ${className}`}>
-      <div className="mb-2 text-sm font-semibold text-slate-700">{label}</div>
+    <label className="block">
+      <span className="mb-2 block text-xs font-bold text-primary-navy uppercase tracking-widest opacity-70">{label}</span>
       {children}
     </label>
   );
 }
 
-function QuickFilterBtn({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900"
-    >
-      {label}
-    </button>
-  );
+function formatDateOnly(v: string) {
+  if (!v) return '-';
+  return v.split(' ')[0];
 }

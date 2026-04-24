@@ -26,7 +26,7 @@ export default function HelpCenterPage() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <HelpCard
-          icon={<LayoutTemplate className="h-5 w-5 text-blue-600" />}
+          icon={<LayoutTemplate className="h-5 w-5 text-primary-navy" />}
           title="日常操作主入口"
           items={[
             '客户档案：先建客户，再从订单页创建订单。',
@@ -35,7 +35,7 @@ export default function HelpCenterPage() {
           ]}
         />
         <HelpCard
-          icon={<BookOpenText className="h-5 w-5 text-blue-600" />}
+          icon={<BookOpenText className="h-5 w-5 text-primary-navy" />}
           title="推荐使用流程"
           items={[
             '1. 管理员创建客户与合作伙伴。',
@@ -44,7 +44,7 @@ export default function HelpCenterPage() {
           ]}
         />
         <HelpCard
-          icon={<HardDriveDownload className="h-5 w-5 text-blue-600" />}
+          icon={<HardDriveDownload className="h-5 w-5 text-primary-navy" />}
           title="局域网部署与备份"
           items={[
             '数据库默认使用项目内的 SQLite 文件，可通过 CRM_DB_PATH 指向固定路径。',
@@ -53,7 +53,7 @@ export default function HelpCenterPage() {
           ]}
         />
         <HelpCard
-          icon={<ShieldCheck className="h-5 w-5 text-blue-600" />}
+          icon={<ShieldCheck className="h-5 w-5 text-primary-navy" />}
           title="权限说明"
           items={[
             'admin：管理系统设置、AI 配置、团队账号和关键删除动作。',
@@ -70,7 +70,7 @@ function HelpCard({ icon, title, items }: { icon: React.ReactNode; title: string
   return (
     <section className="rounded-[24px] border border-slate-200 bg-white px-5 py-5 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50">{icon}</div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50">{icon}</div>
         <h3 className="text-base font-bold text-slate-900">{title}</h3>
       </div>
       <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">

@@ -28,8 +28,8 @@ export type CustomerListItem = {
   name: string;
   country: string;
   contact: string;
-  logistics_preference?: string | null;
-  payment_terms?: string | null;
+  source_channel?: string | null;
+  intent_products?: string | null;
   order_count: number;
   created_by_name?: string | null;
 };
@@ -40,6 +40,9 @@ export type PartnerRecord = {
   partner_type: PartnerType;
   country?: string | null;
   contact?: string | null;
+  contact_person?: string | null;
+  address?: string | null;
+  rating?: number;
   payment_terms?: string | null;
   remark?: string | null;
   created_at?: string | null;
@@ -87,7 +90,7 @@ export type FinanceListRecord = {
   order_id: number;
   type: FinanceType;
   amount: number;
-  currency: 'USD' | 'CNY';
+  currency: string;
   target: string;
   status: FinanceStatus;
   remark: string;

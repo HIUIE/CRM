@@ -31,6 +31,9 @@ export async function readPartnerPayload(body: Record<string, unknown>) {
   const partnerType = readString(body.partnerType);
   const country = readString(body.country);
   const contact = readString(body.contact);
+  const contactPerson = readString(body.contactPerson);
+  const address = readString(body.address);
+  const rating = readNumber(body.rating);
   const paymentTerms = readString(body.paymentTerms);
   const remark = readString(body.remark);
 
@@ -47,6 +50,9 @@ export async function readPartnerPayload(body: Record<string, unknown>) {
       partnerType: partnerType as PartnerType,
       country,
       contact,
+      contactPerson,
+      address,
+      rating,
       paymentTerms,
       remark,
     },
@@ -208,8 +214,8 @@ export async function readFinancePayload(body: Record<string, unknown>) {
   if (!Number.isFinite(amount) || amount <= 0) {
     return { error: '金额必须大于 0' };
   }
-  if (!isOneOf(currency, CURRENCIES)) {
-    return { error: '币种仅支持 USD 或 CNY' };
+  if (!currency) {
+    return { error: '请填写币种' };
   }
   if (!isOneOf(status, FINANCE_STATUSES)) {
     return { error: '财务状态不正确' };
@@ -333,6 +339,8 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
       billNo,
       etd: etd || '',
       eta: eta || '',
+      recipientAddress: readString(body.recipientAddress),
+      packageSize: readString(body.packageSize),
       remark,
       attachmentIds,
     },
@@ -346,6 +354,7 @@ export async function readCustomsPayload(body: Record<string, unknown>) {
   const declarationNo = readString(body.declarationNo);
   const declarationDate = readOptionalDate(body.declarationDate);
   const releaseDate = readOptionalDate(body.releaseDate);
+  const tradeMode = readString(body.tradeMode);
   const remark = readString(body.remark);
   const attachmentIds = readAttachmentIds(body.attachmentIds);
 
@@ -370,7 +379,29 @@ export async function readCustomsPayload(body: Record<string, unknown>) {
       declarationNo,
       declarationDate: declarationDate || '',
       releaseDate: releaseDate || '',
+      tradeMode,
       remark,
+      attachmentIds,
+    },
+  };
+}
+
+export async function readProductionLogPayload(body: Record<string, unknown>) {
+  const content = readString(body.content);
+  const logDate = readOptionalDate(body.logDate);
+  const attachmentIds = readAttachmentIds(body.attachmentIds);
+
+  if (!content) {
+    return { error: '请填写进度描述' };
+  }
+  if (logDate === '__invalid__') {
+    return { error: '日期格式不正确' };
+  }
+
+  return {
+    payload: {
+      content,
+      logDate: logDate || '',
       attachmentIds,
     },
   };

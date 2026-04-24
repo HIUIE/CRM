@@ -4,11 +4,31 @@ import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows, getAttachmentsByEntity } from '../services/attachments.js';
 import { readFinancePayload } from '../services/payloads.js';
+import { readString } from '../lib/values.js';
 
 export function createFinanceRouter() {
   const router = Router();
 
-  router.get('/', async (_req, res) => {
+  router.get('/', async (req, res) => {
+    const timeRange = readString(req.query.timeRange);
+    let timeFilter = '';
+    const params: unknown[] = [];
+
+    if (timeRange && timeRange !== 'all') {
+      let interval = '';
+      switch (timeRange) {
+        case 'week': interval = '-7 days'; break;
+        case 'month': interval = '-1 month'; break; case 'last_month': interval = '-2 month'; break;
+        case '3months': interval = '-3 months'; break;
+        case '6months': interval = '-6 months'; break;
+        case 'year': interval = '-1 year'; break;
+      }
+      if (interval) {
+        timeFilter = `WHERE f.created_at >= datetime('now', ?)`;
+        params.push(interval);
+      }
+    }
+
     try {
       const records = await db.all<Record<string, unknown>[]>(`
         SELECT
@@ -22,8 +42,9 @@ export function createFinanceRouter() {
         LEFT JOIN orders o ON f.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
         LEFT JOIN users u ON u.id = f.created_by
+        ${timeFilter}
         ORDER BY datetime(f.created_at) DESC, f.id DESC
-      `);
+      `, params);
       const attachments = await getAttachmentsByEntity('finance', records.map((record) => Number(record.id)));
       res.json(
         records.map((record) => ({

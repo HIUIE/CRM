@@ -15,12 +15,15 @@ const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 const upload = multer({
   storage: multer.diskStorage({
-    destination: async (_req, _file, callback) => {
+    destination: async (req, _file, callback) => {
+      const customerId = req.body.customerId || 'general';
+      const orderId = req.body.orderId || 'misc';
+      const targetDir = path.join(UPLOADS_DIR, `customer_${customerId}`, `order_${orderId}`);
       try {
-        await fs.mkdir(UPLOADS_DIR, { recursive: true });
-        callback(null, UPLOADS_DIR);
+        await fs.mkdir(targetDir, { recursive: true });
+        callback(null, targetDir);
       } catch (error) {
-        callback(error as Error, UPLOADS_DIR);
+        callback(error as Error, targetDir);
       }
     },
     filename: (_req, file, callback) => {
@@ -39,6 +42,9 @@ export function createAttachmentsRouter() {
 
   router.post('/', upload.array('files', 6), async (req, res) => {
     const files = (req.files as Express.Multer.File[]) || [];
+    const customerId = req.body.customerId || 'general';
+    const orderId = req.body.orderId || 'misc';
+
     if (!files.length) {
       return fail(res, 400, '请至少上传一个附件', 'INVALID_ATTACHMENTS');
     }
@@ -47,18 +53,19 @@ export function createAttachmentsRouter() {
       const uploaded = [];
       for (const file of files) {
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        const relativePath = `uploads/customer_${customerId}/order_${orderId}/${file.filename}`;
         const result = await db.run(
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `,
-          [null, null, originalName, file.filename, file.mimetype, file.size, `uploads/${file.filename}`],
+          [null, null, originalName, file.filename, file.mimetype, file.size, relativePath],
         );
         uploaded.push({
           id: result.lastID,
           fileName: originalName,
-          filePath: `uploads/${file.filename}`,
-          url: `/uploads/${file.filename}`,
+          filePath: relativePath,
+          url: `/${relativePath}`,
           mimeType: file.mimetype,
           fileSize: file.size,
         });
@@ -69,7 +76,23 @@ export function createAttachmentsRouter() {
     }
   });
 
-  router.delete('/:id', requireAdmin, async (req, res) => {
+  router.get('/download-direct/:id', async (req, res) => {
+    const attachmentId = Number(req.params.id);
+    try {
+      const attachment = await db.get<{ file_path: string; mime_type: string }>(
+        `SELECT file_path, mime_type FROM attachments WHERE id = ?`,
+        [attachmentId]
+      );
+      if (!attachment || !attachment.file_path) return res.status(404).end();
+      const fullPath = path.join(__dirname, '..', '..', attachment.file_path);
+      res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
+      res.sendFile(fullPath);
+    } catch (error) {
+      res.status(500).end();
+    }
+  });
+
+  router.delete('/:id', async (req, res) => {
     const attachmentId = Number(req.params.id);
     if (!Number.isInteger(attachmentId) || attachmentId <= 0) {
       return fail(res, 400, '附件编号无效', 'INVALID_ATTACHMENT_ID');

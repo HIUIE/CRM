@@ -6,8 +6,9 @@ import { fail, handleRouteError } from '../lib/http.js';
 import { isOneOf, monthFromDateInput, normalizeOrderStatus, readString } from '../lib/values.js';
 import { ensurePartnerExists, syncOrderProductSummary } from '../services/entities.js';
 import { buildOrderDetail } from '../services/order-detail.js';
-import { readOrderItemPayload, readOrderPayload, readProductionPayload } from '../services/payloads.js';
+import { readOrderItemPayload, readOrderPayload, readProductionPayload, readProductionLogPayload } from '../services/payloads.js';
 import { getOrderNumberPrefix } from '../services/settings.js';
+import { bindAttachmentsToEntity } from '../services/attachments.js';
 
 export function createOrdersRouter() {
   const router = Router();
@@ -20,9 +21,25 @@ export function createOrdersRouter() {
     const customerId = readString(req.query.customerId);
     const orderMonth = monthFromDateInput(readString(req.query.orderMonth));
     const shippingMonth = monthFromDateInput(readString(req.query.shippingMonth));
+    const timeRange = readString(req.query.timeRange);
 
     const where: string[] = [];
     const params: unknown[] = [];
+
+    if (timeRange && timeRange !== 'all') {
+      let interval = '';
+      switch (timeRange) {
+        case 'week': interval = '-7 days'; break;
+        case 'month': interval = '-1 month'; break; case 'last_month': interval = '-2 month'; break;
+        case '3months': interval = '-3 months'; break;
+        case '6months': interval = '-6 months'; break;
+        case 'year': interval = '-1 year'; break;
+      }
+      if (interval) {
+        where.push(`o.created_at >= datetime('now', ?)`);
+        params.push(interval);
+      }
+    }
 
     if (customerId) {
       where.push(`o.customer_id = ?`);
@@ -390,22 +407,81 @@ export function createOrdersRouter() {
         `,
         [orderId],
       );
-      res.json(
-        record
-          ? {
-              ...record,
-              partnerId: record.partner_id,
-              partnerName: record.partner_name,
-              orderDate: record.order_date,
-              estimatedDeliveryDate: record.estimated_delivery_date,
-              productionStatus: record.production_status,
-              inspectionStatus: record.inspection_status,
-              updatedAt: record.updated_at,
-            }
-          : null,
+      if (!record) return res.json(null);
+
+      const logs = await db.all(
+        `
+          SELECT pl.*, u.name as created_by_name
+          FROM production_logs pl
+          LEFT JOIN users u ON u.id = pl.created_by
+          WHERE pl.plan_id = ?
+          ORDER BY pl.created_at DESC
+        `,
+        [record.id],
       );
+
+      res.json({
+        ...record,
+        partnerId: record.partner_id,
+        partnerName: record.partner_name,
+        orderDate: record.order_date,
+        estimatedDeliveryDate: record.estimated_delivery_date,
+        productionStatus: record.production_status,
+        inspectionStatus: record.inspection_status,
+        updatedAt: record.updated_at,
+        logs: logs.map(l => ({
+          ...l,
+          createdByName: l.created_by_name
+        }))
+      });
     } catch (error) {
       return handleRouteError(res, error, '读取生产安排失败');
+    }
+  });
+
+  router.post('/production/:id/logs', async (req: AuthedRequest, res) => {
+    const planId = Number(req.params.id);
+    const result = await readProductionLogPayload(req.body || {});
+    if ('error' in result) return fail(res, 400, result.error);
+
+    try {
+      const created = await db.run(
+        `INSERT INTO production_logs (plan_id, content, log_date, created_by) VALUES (?, ?, ?, ?)`,
+        [planId, result.payload.content, result.payload.logDate || null, req.user?.id || null]
+      );
+      await bindAttachmentsToEntity('production_log', created.lastID as number, result.payload.attachmentIds);
+      res.status(201).json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '添加进度记录失败');
+    }
+  });
+
+  router.patch('/:id/packing', async (req: AuthedRequest, res) => {
+    const orderId = Number(req.params.id);
+    const items = req.body.items || [];
+
+    try {
+      await db.run(`DELETE FROM packing_records WHERE order_id = ?`, [orderId]);
+      for (const item of items) {
+        await db.run(
+          `INSERT INTO packing_records (order_id, package_count, package_size, gross_weight, net_weight, attachment_id) VALUES (?, ?, ?, ?, ?, ?)`,
+          [orderId, Number(item.packageCount), item.packageSize, item.grossWeight, item.netWeight, item.attachmentId || null]
+        );
+      }
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '更新装箱数据失败');
+    }
+  });
+
+  router.patch('/:id/quick-notes', async (req: AuthedRequest, res) => {
+    const orderId = Number(req.params.id);
+    const content = req.body.content;
+    try {
+      await db.run(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [content, orderId]);
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '更新备注失败');
     }
   });
 

@@ -81,11 +81,25 @@ async function ensureOrder(customerId: number, partnerId: number, userId: number
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [orderId, partnerId, '2026-04-23', '2026-05-01', 'in_progress', 'pending', '演示生产计划', userId, userId],
   );
-  await db.run(
+  const customsResult = await db.run(
     `INSERT INTO customs_records (order_id, status, broker_name, declaration_no, declaration_date, remark, created_by, updated_by)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [orderId, 'preparing', 'Demo Broker', 'DEC-DEMO-01', '2026-04-26', '演示报关信息', userId, userId],
   );
+  const customsId = customsResult.lastID as number;
+
+  // Add mock attachments for customs
+  await db.run(
+    `INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ['customs', customsId, '商业发票_2026.pdf', 'inv_2026.pdf', 'application/pdf', 1024 * 450, '/uploads/inv_demo.pdf']
+  );
+  await db.run(
+    `INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ['customs', customsId, '装箱单_PL003.pdf', 'pl_003.pdf', 'application/pdf', 1024 * 120, '/uploads/pl_demo.pdf']
+  );
+
   await db.run(
     `INSERT INTO logistics_records (order_id, tracking_no, carrier, packing_details, status, shipping_date, segment_type, created_by, updated_by, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

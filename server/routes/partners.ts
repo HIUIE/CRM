@@ -32,14 +32,17 @@ export function createPartnersRouter() {
     try {
       const created = await db.run(
         `
-          INSERT INTO partners (name, partner_type, country, contact, payment_terms, remark, created_by, updated_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO partners (name, partner_type, country, contact, contact_person, address, rating, payment_terms, remark, created_by, updated_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           result.payload.name,
           result.payload.partnerType,
           result.payload.country,
           result.payload.contact,
+          result.payload.contactPerson,
+          result.payload.address,
+          result.payload.rating,
           result.payload.paymentTerms,
           result.payload.remark,
           req.user?.id || null,
@@ -67,7 +70,7 @@ export function createPartnersRouter() {
       const updated = await db.run(
         `
           UPDATE partners
-          SET name = ?, partner_type = ?, country = ?, contact = ?, payment_terms = ?, remark = ?, updated_by = ?
+          SET name = ?, partner_type = ?, country = ?, contact = ?, contact_person = ?, address = ?, rating = ?, payment_terms = ?, remark = ?, updated_by = ?
           WHERE id = ?
         `,
         [
@@ -75,6 +78,9 @@ export function createPartnersRouter() {
           result.payload.partnerType,
           result.payload.country,
           result.payload.contact,
+          result.payload.contactPerson,
+          result.payload.address,
+          result.payload.rating,
           result.payload.paymentTerms,
           result.payload.remark,
           req.user?.id || null,
