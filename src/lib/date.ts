@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+
 export type StandardTimeRange = 'today' | 'week' | 'month' | '3months' | '6months' | 'year' | 'all';
 
 export const TIME_RANGES: { key: StandardTimeRange; label: string }[] = [
@@ -11,27 +13,27 @@ export const TIME_RANGES: { key: StandardTimeRange; label: string }[] = [
 ];
 
 export function getRangeDates(range: StandardTimeRange) {
-  const end = new Date();
-  const start = new Date();
+  const end = dayjs();
+  let start = dayjs();
   
   switch (range) {
     case 'today':
-      start.setHours(0, 0, 0, 0);
+      start = end.startOf('day');
       break;
     case 'week':
-      start.setDate(end.getDate() - 7);
+      start = end.subtract(7, 'day');
       break;
     case 'month':
-      start.setMonth(end.getMonth() - 1);
+      start = end.subtract(1, 'month');
       break;
     case '3months':
-      start.setMonth(end.getMonth() - 3);
+      start = end.subtract(3, 'month');
       break;
     case '6months':
-      start.setMonth(end.getMonth() - 6);
+      start = end.subtract(6, 'month');
       break;
     case 'year':
-      start.setFullYear(end.getFullYear() - 1);
+      start = end.subtract(1, 'year');
       break;
     case 'all':
       return { start: null, end: null };

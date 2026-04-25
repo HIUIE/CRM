@@ -20,9 +20,14 @@ import {
   ChevronDown,
   History,
   Printer,
+  CheckCircle2,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CommandPalette } from '../ui/CommandPalette';
+import { NotificationDrawer } from '../ui/NotificationDrawer';
+import { Drawer } from '../ui/Drawer';
+import { apiFetch } from '../../lib/api';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -36,6 +41,23 @@ export default function MainLayout() {
   });
 
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const data = await apiFetch<{ count: number }>('/api/notifications/unread-count');
+        setUnreadCount(data.count);
+      } catch (e) {}
+    };
+    if (user) {
+      fetchUnread();
+      const timer = setInterval(fetchUnread, 30000); // Check every 30s
+      return () => clearInterval(timer);
+    }
+  }, [user]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -49,7 +71,9 @@ export default function MainLayout() {
   }, [isDark]);
 
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
-  const isDetailPage = /^\/orders\/[^/]+$/.test(location.pathname) || /^\/customers\/detail\/[^/]+$/.test(location.pathname) || location.pathname === '/audit';
+  // Standardize detail page recognition to hide global header
+  const isDetailPage = /^\/(orders|customers|tasks|audit)\/detail\/[^/]+$/.test(location.pathname) || 
+                       /^\/(audit|tasks)$/.test(location.pathname);
 
   const getHeaderInfo = () => {
     switch (activeTab) {
@@ -59,6 +83,7 @@ export default function MainLayout() {
       case 'partners': return { title: '合作伙伴', subtitle: '管理供应商与物流伙伴，优化供应链协同。', actionLabel: '新增伙伴', actionPath: '/partners?create=1' };
       case 'finance': return { title: '财务流水', subtitle: '监控收支状态，保障业务资金链安全。', actionLabel: '录入收支', actionPath: '/finance?create=1' };
       case 'logistics': return { title: '物流打包', subtitle: '追踪货运状态，确保交付流程准时合规。', actionLabel: '创建物流', actionPath: '/logistics?create=1' };
+      case 'tasks': return { title: '团队协同', subtitle: '跨部门高效协作，确保任务不落地。', actionLabel: '指派任务', actionPath: '/tasks?create=1' };
       case 'ai': return { title: 'AI 向导', subtitle: '利用智能化引擎，挖掘数据背后的增长机会。', actionLabel: '发起咨询', actionPath: '/ai' };
       case 'settings': return { title: '系统配置', subtitle: '定制化业务规则，管理团队协作权限。', actionLabel: '保存配置', actionPath: '#' };
       case 'help': return { title: '帮助中心', subtitle: '获取系统操作指南，解决业务流程疑惑。', actionLabel: '联系支持', actionPath: '#' };
@@ -80,6 +105,26 @@ export default function MainLayout() {
   return (
     <div className="h-screen w-screen bg-background dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300 overflow-hidden">
       <div className="flex h-full w-full gap-2 p-2 items-stretch">
+        <NotificationDrawer isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+        <Drawer 
+          isOpen={showFilters} 
+          onClose={() => setShowFilters(false)} 
+          title="高级筛选面板"
+          footer={<button onClick={() => setShowFilters(false)} className="w-full rounded-xl bg-primary-navy py-3 text-sm font-bold text-white uppercase tracking-widest">确认筛选</button>}
+        >
+          <div className="space-y-8 py-4">
+             <div className="p-4 bg-slate-50 dark:bg-navy-950 rounded-xl border border-dashed border-slate-300 dark:border-navy-800 text-center">
+                <Filter size={32} className="mx-auto mb-4 text-slate-300" />
+                <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">此处为全站多维筛选容器。<br/>根据当前页面模块，自动注入不同的筛选器逻辑。</p>
+             </div>
+             
+             <div className="space-y-4 opacity-50 pointer-events-none">
+                <div className="h-10 bg-slate-100 dark:bg-navy-800 rounded-lg animate-pulse" />
+                <div className="h-10 bg-slate-100 dark:bg-navy-800 rounded-lg animate-pulse" />
+                <div className="h-24 bg-slate-100 dark:bg-navy-800 rounded-lg animate-pulse" />
+             </div>
+          </div>
+        </Drawer>
         <aside className="h-full w-[190px] shrink-0 flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-5 shadow-sm transition-colors z-[100]">
           <div className="mb-8 flex items-center gap-3 px-1 shrink-0">
             <img src="/logo.png" alt="SmartTrade AI CRM" className="h-9 w-9 rounded-lg object-contain" />
@@ -95,6 +140,7 @@ export default function MainLayout() {
               <NavItem icon={<PackageSearch size={18} />} label="客户" path="/customers" currentPath={location.pathname} />
               <NavItem icon={<Building2 size={18} />} label="伙伴" path="/partners" currentPath={location.pathname} />
               <NavItem icon={<FileText size={18} />} label="订单" path="/orders" currentPath={location.pathname} />
+              <NavItem icon={<CheckCircle2 size={18} />} label="任务" path="/tasks" currentPath={location.pathname} />
               <NavItem icon={<DollarSign size={18} />} label="财务" path="/finance" currentPath={location.pathname} />
               <NavItem icon={<Truck size={18} />} label="物流" path="/logistics" currentPath={location.pathname} />
               <div className="mx-2 my-4 border-t border-slate-100 dark:border-navy-800" />
@@ -182,13 +228,29 @@ export default function MainLayout() {
               </div>
               <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-colors shadow-sm text-[11px] font-bold"
+                  onClick={() => setShowNotifications(true)}
+                  className="relative p-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-colors shadow-sm"
+                >
+                  <Bell size={16} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-navy-900 animate-in zoom-in duration-300">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <div className="w-[1px] h-6 bg-slate-200 dark:bg-navy-800 mx-1"></div>
+                <button 
+                  onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true }))}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-all shadow-sm text-[11px] font-bold"
                 >
                   <Search size={14} />
                   <span className="hidden sm:inline">全局搜索 <kbd className="font-sans border rounded px-1 ml-1 opacity-70">⌘K</kbd></span>
                 </button>
-                <button className="p-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-colors shadow-sm" title="高级筛选">
+                <button 
+                  onClick={() => setShowFilters(true)}
+                  className="p-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-all shadow-sm" 
+                  title="高级筛选"
+                >
                   <Filter size={16} />
                 </button>
                 

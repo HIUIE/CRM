@@ -25,6 +25,7 @@ export interface ManagedUser extends AuthUser {
 
 export type CustomerListItem = {
   id: number;
+  display_id?: string | null;
   name: string;
   country: string;
   contact: string;

@@ -2,14 +2,14 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { USER_ROLES } from '../domain.js';
-import { requireAdmin } from '../lib/auth.js';
+import { requireAdmin, requireAuth } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { isOneOf, readString } from '../lib/values.js';
 
 export function createUsersRouter() {
   const router = Router();
 
-  router.get('/', requireAdmin, async (_req, res) => {
+  router.get('/', requireAuth, async (_req, res) => {
     try {
       const users = await db.all(`
         SELECT id, username, role, name, active, created_at

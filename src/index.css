@@ -124,6 +124,24 @@ h1, h2, h3, h4, .headline {
   .btn-transition {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* Motion Design System (Round 44) */
+  .transition-micro {
+    transition: all 0.15s ease-in-out;
+  }
+  
+  .transition-modal {
+    transition: opacity 0.2s, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .transition-drawer {
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+
+  /* Dark mode input focus fix */
+  .dark input:focus, .dark textarea:focus {
+    background-color: var(--color-navy-800) !important;
+  }
 }
 
 /* --- View Transitions API 增强版 --- */

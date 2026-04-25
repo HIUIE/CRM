@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import type {
   AttachmentMeta,
   CustomsFormState,
@@ -110,22 +111,16 @@ export function asText(val: any, fallback = ''): string {
 
 export function formatDateTime(val: any): string {
   if (!val) return '-';
-  const d = new Date(val);
-  if (isNaN(d.getTime())) return String(val);
-  return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const d = dayjs(val);
+  if (!d.isValid()) return String(val);
+  return d.format('YYYY-MM-DD HH:mm');
 }
 
 export function formatDateOnly(val: any, fallback = '-'): string {
   if (!val) return fallback;
-  const d = new Date(val);
-  if (isNaN(d.getTime())) return String(val).split('T')[0];
-  return d.toISOString().split('T')[0];
+  const d = dayjs(val);
+  if (!d.isValid()) return String(val).split('T')[0];
+  return d.format('YYYY-MM-DD');
 }
 
 export function getProductionStatusLabel(status: ProductionStatus): string {

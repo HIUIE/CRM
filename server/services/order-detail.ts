@@ -24,10 +24,10 @@ export async function buildOrderDetail(idOrNo: number | string) {
     FROM orders o
     LEFT JOIN customers c ON c.id = o.customer_id
     LEFT JOIN users cu ON cu.id = o.created_by
-    WHERE ${isId ? 'o.id' : 'o.display_id'} = ?
+    WHERE ${isId ? 'o.id' : 'LOWER(o.display_id)'} = ?
   `;
 
-  const order = await db.get<Record<string, unknown>>(sql, [idOrNo]);
+  const order = await db.get<Record<string, unknown>>(sql, [isId ? idOrNo : String(idOrNo).toLowerCase()]);
   if (!order) {
     return null;
   }

@@ -8,7 +8,7 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import MainLayout from './components/layout/MainLayout';
 
-// --- Static Imports for ALL pages ---
+// --- Static Imports for ALL pages to rule out lazy-load issues ---
 import DashboardView from './pages/Dashboard';
 import AIAssistantView from './pages/AIAssistant';
 import OrderDetailPage from './pages/OrderDetail';
@@ -22,6 +22,8 @@ import CustomersView from './components/CustomersView';
 import CustomerDetailPage from './pages/CustomerDetail';
 import AuditLogsPage from './pages/AuditLogs';
 import PartnersView from './components/PartnersView';
+import TasksView from './pages/Tasks';
+import VersionGuard from './components/VersionGuard';
 
 // --- Loading Placeholder ---
 function PageLoader() {
@@ -48,6 +50,7 @@ export default function App() {
 
   return (
     <Suspense fallback={<PageLoader />}>
+      <VersionGuard />
       <Routes>
         <Route path="/login" element={!user ? <LoginScreen /> : <Navigate to="/" />} />
         
@@ -58,6 +61,7 @@ export default function App() {
           <Route path="/orders/:orderNo" element={<OrderDetailPage />} />
           <Route path="/finance" element={<FinanceView />} />
           <Route path="/logistics" element={<LogisticsView />} />
+          <Route path="/tasks" element={<TasksView />} />
           <Route path="/customers" element={<CustomersView />} />
           <Route path="/customers/:id" element={<CustomerRedirect />} />
           <Route path="/customers/detail/:id" element={<CustomerDetailPage />} />

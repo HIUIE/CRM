@@ -33,11 +33,13 @@ import {
   Copy,
   Check,
   Package,
-  BadgeDollarSign
+  BadgeDollarSign,
+  DollarSign
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { apiFetch, apiUpload, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { Tooltip } from '../components/ui/Tooltip';
 import {
   ActionButton,
   AttachmentEditor,
@@ -60,6 +62,7 @@ import {
   HistoryTimeline,
   Toast
 } from '../features/order-detail/components';
+import { TaskDrawer } from '../components/ui/TaskDrawer';
 import type {
   AIAnalysisResult,
   AttachmentMeta,
@@ -155,6 +158,7 @@ export default function OrderDetailPage() {
   const [activeSection, setActiveSection] = useState<SectionKey>('basic');
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [showTaskDrawer, setShowTaskDrawer] = useState(false);
   const [quickNotes, setQuickNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -586,13 +590,7 @@ export default function OrderDetailPage() {
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest leading-none">
-                    <button onClick={() => {
-                      if (document.startViewTransition) {
-                        document.startViewTransition(() => navigate('/orders'));
-                      } else {
-                        navigate('/orders');
-                      }
-                    }} className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单列表</button>
+                    <Link to="/orders" className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单管理</Link>
                     <ChevronRight size={12} className="opacity-30" />
                     <span 
                       className="text-primary-navy dark:text-tertiary-sage data-field"
@@ -613,18 +611,72 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
-                   <ActionButton onClick={openOrderDrawer} icon={<Edit3 size={14} />}>编辑订单</ActionButton>
-                   <LightActionButton onClick={() => openFinanceDrawer()} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 录入收支</LightActionButton>
-                   <LightActionButton onClick={openProductionDrawer}><Factory size={14} className="mr-1 opacity-70" /> 同步生产</LightActionButton>
-                   <LightActionButton onClick={openCustomsDrawer}><ShieldCheck size={14} className="mr-1 opacity-70" /> 更新报关</LightActionButton>
-                   <LightActionButton onClick={() => openLogisticsDrawer()}><Plus size={14} className="mr-1 opacity-70" /> 新建物流</LightActionButton>
+                   {/* Primary Action */}
+                   <Tooltip text="订单已结清，清单不可修改。" disabled={order.status !== 'completed'}>
+                     <button 
+                       disabled={order.status === 'completed'}
+                       onClick={openOrderDrawer} 
+                       className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-5 py-2 text-[11px] font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
+                     >
+                       <Edit3 size={14} /> 编辑清单
+                     </button>
+                   </Tooltip>
+
+                   {/* Secondary Actions */}
+                   <button 
+                     onClick={() => openFinanceDrawer()} 
+                     className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+                   >
+                     <DollarSign size={14} className="text-emerald-500" /> 录入收支
+                   </button>
+
+                   <Tooltip 
+                     text="需先确认清单并核销定金收据后解锁生产同步。" 
+                     disabled={items.length > 0 && financeRecords.some(r => r.type === 'receipt' && r.recordCategory === 'deposit' && r.status === 'completed')}
+                   >
+                     <button 
+                       disabled={!(items.length > 0 && financeRecords.some(r => r.type === 'receipt' && r.recordCategory === 'deposit' && r.status === 'completed'))}
+                       onClick={openProductionDrawer} 
+                       className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                     >
+                       <Factory size={14} className="text-amber-500" /> 同步生产
+                     </button>
+                   </Tooltip>
+
+                   <Tooltip 
+                     text="需先完成装箱单录入或至少有一条发运记录后开启报关。" 
+                     disabled={hasAnyLogistics || packingRecords.length > 0}
+                   >
+                     <button 
+                       disabled={!(hasAnyLogistics || packingRecords.length > 0)}
+                       onClick={openCustomsDrawer} 
+                       className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                     >
+                       <ShieldCheck size={14} className="text-blue-500" /> 更新报关
+                     </button>
+                   </Tooltip>
+
+                   <Tooltip 
+                     text="需待生产环节进入‘进行中’或‘已完工’状态后方可安排发运。" 
+                     disabled={productionPlan?.productionStatus === 'ready' || productionPlan?.productionStatus === 'in_progress'}
+                   >
+                     <button 
+                       disabled={!(productionPlan?.productionStatus === 'ready' || productionPlan?.productionStatus === 'in_progress')}
+                       onClick={() => openLogisticsDrawer()} 
+                       className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                     >
+                       <Truck size={14} className="text-slate-400" /> 创建物流
+                     </button>
+                   </Tooltip>
                    
-                   {/* 高危按钮物理隔离 */}
-                   <div className="h-6 w-px bg-slate-200 dark:bg-navy-800 mx-2 hidden sm:block" />
+                   <div className="h-6 w-px bg-slate-100 dark:bg-navy-800 mx-4 hidden sm:block" />
                    {user?.role === 'admin' && (
-                     <LightActionButton onClick={() => { setDeleteConfirmId(''); setIsDeleteModalOpen(true); }} className="!text-red-500 !border-red-200 hover:!bg-red-50 dark:!border-red-900/30 dark:hover:!bg-red-900/20">
-                        <Trash size={14} className="mr-1" /> 删除订单
-                     </LightActionButton>
+                     <button 
+                       onClick={() => { setDeleteConfirmId(''); setIsDeleteModalOpen(true); }} 
+                       className="ml-2 flex items-center gap-2 rounded-lg border border-red-100 dark:border-red-900/30 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all uppercase tracking-widest shadow-sm"
+                     >
+                        <Trash size={14} /> 删除订单
+                     </button>
                    )}
                 </div>
               </div>
@@ -814,6 +866,11 @@ export default function OrderDetailPage() {
                 ))}
               </div>}
           </DocumentBoard>
+
+          {/* Related Tasks Section */}
+          <DocumentBoard title="关联协同任务" action={<LightActionButton onClick={() => setShowTaskDrawer(true)} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 指派任务</LightActionButton>}>
+             <EmptyStateBoard title="暂无关联任务" description="您可以为该订单指派特定的内部协同任务。" icon={CheckCircle2} actionLabel="+ 发起第一项任务" onAction={() => setShowTaskDrawer(true)} />
+          </DocumentBoard>
         </div>
 
         {/* Right Nav Rail */}
@@ -852,6 +909,14 @@ export default function OrderDetailPage() {
       </div>
 
       {previewAttachment && <PreviewModal attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
+      <TaskDrawer
+        isOpen={showTaskDrawer}
+        onClose={() => setShowTaskDrawer(false)}
+        onSuccess={() => loadDetail({ showLoading: false })}
+        entityType="ORDER"
+        entityId={String(order?.id)}
+        entityName={order?.display_id}
+      />
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
 
       {/* Danger Modal: 订单删除二次确认 */}

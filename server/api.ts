@@ -14,8 +14,12 @@ import { createPartnersRouter } from './routes/partners.js';
 import { createSettingsRouter } from './routes/settings.js';
 import { createUsersRouter } from './routes/users.js';
 import { createAuditRouter } from './routes/audit.js';
+import { createTasksRouter } from './routes/tasks.js';
+import { createNotificationsRouter } from './routes/notifications.js';
 
 const router = Router();
+
+const SERVER_START_TIME = Date.now();
 
 router.get('/health', (_req, res) => {
   res.json({
@@ -23,6 +27,7 @@ router.get('/health', (_req, res) => {
     database: 'sqlite',
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     timestamp: new Date().toISOString(),
+    startupTime: SERVER_START_TIME,
   });
 });
 
@@ -32,6 +37,8 @@ router.use('/dashboard', createDashboardRouter());
 router.use('/settings', createSettingsRouter());
 router.use('/audit', createAuditRouter());
 router.use('/users', createUsersRouter());
+router.use('/tasks', createTasksRouter());
+router.use('/notifications', createNotificationsRouter());
 router.use('/customers', createCustomersRouter());
 router.use('/partners', createPartnersRouter());
 router.use('/orders', createOrdersRouter());

@@ -108,7 +108,7 @@ export default function DashboardView() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {data.todos.length > 0 ? data.todos.map((todo) => (
-                <div key={todo.id} onClick={() => navigate(`/orders/${todo.order_display_id}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
+                <div key={todo.id} onClick={() => navigate(`/orders/${String(todo.order_display_id).toLowerCase()}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
                   <div className="flex items-center gap-4">
                     <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${todo.urgency === 'high' ? 'bg-red-50 dark:bg-red-900/20 text-error' : todo.urgency === 'medium' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500'}`}>
                        {todo.urgency === 'high' ? <ArrowUpRight size={18} /> : <FileText size={18} />}
@@ -145,7 +145,7 @@ export default function DashboardView() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-0 custom-scrollbar">
               {data.activities.length > 0 ? data.activities.map((activity, i) => (
-                <div key={i} onClick={() => navigate(`/orders/${activity.order_display_id}`)} className="flex items-center justify-between cursor-pointer group py-4 border-b border-slate-100 dark:border-navy-800 last:border-0 hover:bg-slate-50 dark:hover:bg-navy-950/50 px-4 -mx-4 rounded-lg transition-colors">
+                <div key={i} onClick={() => navigate(`/orders/${String(activity.order_display_id).toLowerCase()}`)} className="flex items-center justify-between cursor-pointer group py-4 border-b border-slate-100 dark:border-navy-800 last:border-0 hover:bg-slate-50 dark:hover:bg-navy-950/50 px-4 -mx-4 rounded-lg transition-colors">
                   <div className="flex items-start gap-4">
                     <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${activity.type === 'finance' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' : activity.type === 'logistics' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' : activity.type === 'customs' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-slate-100 dark:bg-navy-800 text-slate-500'}`}>
                       {activity.type === 'finance' ? <ArrowDownRight size={14} /> : activity.type === 'logistics' ? <Truck size={14} /> : activity.type === 'customs' ? <FileText size={14} /> : <ArrowUpRight size={14} />}

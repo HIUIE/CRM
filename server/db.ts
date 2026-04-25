@@ -245,9 +245,55 @@ async function runMigrations() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(customer_id) REFERENCES customers(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      assignee_id INTEGER NOT NULL,
+      due_date TEXT NOT NULL,
+      priority TEXT DEFAULT 'P2', -- P0, P1, P2
+      status TEXT DEFAULT 'todo', -- todo, in_progress, done
+      entity_type TEXT, -- ORDER, CUSTOMER
+      entity_id TEXT,
+      description TEXT,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(assignee_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT,
+      link TEXT,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS task_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS task_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      attachment_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY(attachment_id) REFERENCES attachments(id) ON DELETE CASCADE
+    );
   `);
 
-  await ensureColumn('orders', 'product_summary', 'TEXT');
+  await ensureColumn('tasks', 'comment_count', 'INTEGER DEFAULT 0');
+  await ensureColumn('tasks', 'attachment_count', 'INTEGER DEFAULT 0');
   await ensureColumn('orders', 'delivery_date', 'TEXT');
   await ensureColumn('orders', 'key_milestone', 'TEXT');
   await ensureColumn('orders', 'freight_amount', 'REAL DEFAULT 0');

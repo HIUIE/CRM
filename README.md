@@ -282,6 +282,36 @@ BACKUP_DIR=/absolute/path/to/backups npm run backup
 - `scripts/backup.ts`
 - `scripts/smoke-ui.ts`
 
+## 系统维护与更新指南 (Maintenance & Updates)
+
+本系统内置了前端热更新探测机制，确保在服务端版本升级时，所有在线客户端都能即时感知并引导用户刷新。
+
+### 1. 管理员：如何发布更新 (For Admin/Developer)
+当您需要将新功能或修复发布给客户时，请在服务器执行以下标准操作：
+
+```bash
+# 1. 拉取最新代码
+git pull
+
+# 2. 重新编译前端静态资源 (必须执行)
+npm run build
+
+# 3. 重启后端服务进程 (以触发版本指纹变更)
+# 如果使用 pm2:
+pm2 restart all
+# 如果直接运行脚本:
+npm start
+```
+
+### 2. 业务员：如何应用更新 (For End-Users)
+系统采用 **“静默探测 + 交互刷新”** 的策略，避免强制刷新导致正在填写的表单数据丢失：
+
+- **探测机制**：客户端每隔 60 秒会在后台自动比对服务器的“启动指纹”。
+- **更新提醒**：若发现服务器已发版，系统右下角会弹出蓝色通知卡片，提示“系统已升级”。
+- **操作方式**：点击卡片上的 **[一键刷新并应用]** 按钮，系统将自动重载并运行最新版本。
+
+---
+
 ## 🤖 For AI Agents
 
 If you are an AI assistant working on this repository, please refer to **[AI_CONTEXT.md](./AI_CONTEXT.md)** for a deep dive into the architectural patterns, database schema, identity masking logic, and technical constraints of this project. It will help you understand the "Source of Truth" and the premium minimalist design language used throughout the application.

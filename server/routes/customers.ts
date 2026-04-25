@@ -1,15 +1,20 @@
 import { Router } from 'express';
-import { randomUUID } from 'crypto';
 import { db } from '../db.js';
-import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 import { logAction } from '../lib/audit.js';
 
+function generateCustomerDisplayId() {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const hash = Math.random().toString(36).slice(2, 8);
+  return `cust-${date}-${hash}`;
+}
+
 export function createCustomersRouter() {
   const router = Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/', requireAuth, async (req, res) => {
     const q = readString(req.query.q);
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
@@ -50,24 +55,22 @@ export function createCustomersRouter() {
     }
   });
 
-  // GET customer by display_id or numeric id
-  router.get('/:id', async (req, res) => {
-    const rawId = req.params.id;
-    const isDisplayId = rawId.startsWith('CUST-');
-
+  router.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
+    const customerIdOrDisplay = req.params.id;
+    
     try {
       const customer = await db.get(`
         SELECT c.*, u.name AS created_by_name
         FROM customers c
         LEFT JOIN users u ON u.id = c.created_by
-        WHERE ${isDisplayId ? 'c.display_id = ?' : 'c.id = ?'}
-      `, [isDisplayId ? rawId : Number(rawId)]);
+        WHERE c.id = ? OR LOWER(c.display_id) = LOWER(?)
+      `, [customerIdOrDisplay, customerIdOrDisplay]);
 
       if (!customer) {
         return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
       }
 
-      const customerId = customer.id;
+      const actualId = customer.id;
 
       const orders = await db.all(`
         SELECT 
@@ -76,7 +79,7 @@ export function createCustomersRouter() {
         FROM orders
         WHERE customer_id = ?
         ORDER BY created_at DESC
-      `, [customerId]);
+      `, [actualId]);
 
       const finance_records = await db.all(`
         SELECT
@@ -86,9 +89,17 @@ export function createCustomersRouter() {
         LEFT JOIN orders o ON o.id = f.order_id
         WHERE o.customer_id = ?
         ORDER BY f.created_at DESC
-      `, [customerId]);
+      `, [actualId]);
 
-      const activities = await db.all(`
+      const followups = await db.all(`
+        SELECT f.*, u.name as created_by_name
+        FROM customer_followups f
+        LEFT JOIN users u ON f.created_by = u.id
+        WHERE f.customer_id = ?
+        ORDER BY f.created_at DESC
+      `, [actualId]);
+
+      const system_activities = await db.all(`
         SELECT 'finance' as type, f.id, o.display_id as order_display_id, 
           CASE WHEN f.type = 'receipt' THEN '收款完成' ELSE '付款完成' END as title,
           '' as desc, f.created_at,
@@ -117,30 +128,26 @@ export function createCustomersRouter() {
         FROM orders o
         WHERE o.customer_id = ?
         ORDER BY 6 DESC
-        LIMIT 10
-      `, [customerId, customerId, customerId, customerId]);
+        LIMIT 20
+      `, [actualId, actualId, actualId, actualId]);
+      
+      const tasks = await db.all(`
+        SELECT t.*, u.name as assignee_name
+        FROM tasks t
+        JOIN users u ON t.assignee_id = u.id
+        WHERE t.entity_type = 'CUSTOMER' AND t.entity_id = ?
+        ORDER BY t.due_date ASC
+      `, [actualId]);
 
-      const contacts = await db.all(`
-        SELECT id, name, title, email, contact, is_primary
-        FROM customer_contacts
-        WHERE customer_id = ?
-        ORDER BY is_primary DESC, created_at ASC
-      `, [customerId]);
+      const contacts = await db.all(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId]);
 
-      const followups = await db.all(`
-        SELECT id, content, channel, created_by_name, created_at
-        FROM customer_followups
-        WHERE customer_id = ?
-        ORDER BY created_at DESC
-      `, [customerId]);
-
-      res.json({ ...customer, orders, finance_records, activities, contacts, followups });
+      res.json({ ...customer, orders, finance_records, system_activities, followups, contacts, tasks });
     } catch (error) {
       return handleRouteError(res, error, '读取客户详情失败');
     }
   });
 
-  router.post('/', async (req: AuthedRequest, res) => {
+  router.post('/', requireAuth, async (req: AuthedRequest, res) => {
     const name = readString(req.body?.name);
     const country = readString(req.body?.country);
     const contact = readString(req.body?.contact);
@@ -152,16 +159,16 @@ export function createCustomersRouter() {
     }
 
     try {
+      const displayId = generateCustomerDisplayId();
       const result = await db.run(
-        `INSERT INTO customers (name, country, contact, source_channel, intent_products, created_by, updated_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [name, country, contact, sourceChannel, intentProducts, req.user?.id || null, req.user?.id || null],
+        `
+          INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, created_by, updated_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [displayId, name, country, contact, sourceChannel, intentProducts, req.user?.id || null, req.user?.id || null],
       );
 
-      const customerId = result.lastID as number;
-      const year = new Date().getFullYear();
-      const displayId = `CUST-${year}-${String(customerId).padStart(6, '0')}`;
-      await db.run(`UPDATE customers SET display_id = ? WHERE id = ?`, [displayId, customerId]);
+      const customerId = result.lastID;
 
       await logAction({
         userId: req.user?.id || null,
@@ -169,7 +176,7 @@ export function createCustomersRouter() {
         action: 'CREATE',
         entityType: 'CUSTOMER',
         entityId: customerId,
-        newValue: { name, country, contact, sourceChannel, intentProducts }
+        newValue: { name, country, contact, sourceChannel, intentProducts, display_id: displayId }
       });
 
       res.status(201).json({ id: customerId, displayId });
@@ -178,9 +185,29 @@ export function createCustomersRouter() {
     }
   });
 
-  router.patch('/:id', async (req: AuthedRequest, res) => {
-    const rawId = req.params.id;
-    const isDisplayId = rawId.startsWith('CUST-');
+  router.post('/:id/followups', requireAuth, async (req: AuthedRequest, res) => {
+    const customerId = req.params.id;
+    const content = readString(req.body?.content);
+
+    if (!content) return fail(res, 400, '请输入跟进内容');
+
+    try {
+      const customer = await db.get(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      if (!customer) return fail(res, 404, '客户不存在');
+
+      await db.run(
+        `INSERT INTO customer_followups (customer_id, content, created_by, created_by_name) VALUES (?, ?, ?, ?)`,
+        [customer.id, content, req.user?.id, req.user?.name]
+      );
+
+      res.status(201).json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '保存跟进记录失败');
+    }
+  });
+
+  router.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
+    const customerId = req.params.id;
     const name = readString(req.body?.name);
     const country = readString(req.body?.country);
     const contact = readString(req.body?.contact);
@@ -192,15 +219,16 @@ export function createCustomersRouter() {
     }
 
     try {
-      const existing = await db.get<{ id: number }>(`SELECT id FROM customers WHERE ${isDisplayId ? 'display_id = ?' : 'id = ?'}`, [isDisplayId ? rawId : Number(rawId)]);
-      if (!existing) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
-      const customerId = existing.id;
-
-      const oldVal = await db.get(`SELECT * FROM customers WHERE id = ?`, [customerId]);
+      const oldVal = await db.get(`SELECT * FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      if (!oldVal) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
 
       await db.run(
-        `UPDATE customers SET name = ?, country = ?, contact = ?, source_channel = ?, intent_products = ?, updated_by = ? WHERE id = ?`,
-        [name, country, contact, sourceChannel, intentProducts, req.user?.id || null, customerId],
+        `
+          UPDATE customers
+          SET name = ?, country = ?, contact = ?, source_channel = ?, intent_products = ?, updated_by = ?
+          WHERE id = ?
+        `,
+        [name, country, contact, sourceChannel, intentProducts, req.user?.id || null, oldVal.id],
       );
 
       await logAction({
@@ -208,7 +236,7 @@ export function createCustomersRouter() {
         userName: req.user?.name || null,
         action: 'UPDATE',
         entityType: 'CUSTOMER',
-        entityId: customerId,
+        entityId: oldVal.id,
         oldValue: oldVal,
         newValue: { name, country, contact, sourceChannel, intentProducts }
       });
@@ -219,23 +247,22 @@ export function createCustomersRouter() {
     }
   });
 
-  router.delete('/:id', requireAdmin, async (req, res) => {
-    const rawId = req.params.id;
-    const isDisplayId = rawId.startsWith('CUST-');
-
+  router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
+    const customerId = req.params.id;
     try {
-      const existing = await db.get<{ id: number }>(`SELECT id FROM customers WHERE ${isDisplayId ? 'display_id = ?' : 'id = ?'}`, [isDisplayId ? rawId : Number(rawId)]);
-      if (!existing) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
-      const customerId = existing.id;
+      const customer = await db.get(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      if (!customer) return fail(res, 404, '客户不存在');
 
-      const linkedOrders = await db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM orders WHERE customer_id = ?`, [customerId]);
+      const linkedOrders = await db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM orders WHERE customer_id = ?`, [customer.id]);
       if ((linkedOrders?.count || 0) > 0) {
         return fail(res, 409, '该客户下仍有关联订单，不能删除', 'CUSTOMER_HAS_ORDERS');
       }
 
-      const oldVal = await db.get(`SELECT * FROM customers WHERE id = ?`, [customerId]);
-      const result = await db.run(`DELETE FROM customers WHERE id = ?`, [customerId]);
-      if (!result.changes) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
+      const oldVal = await db.get(`SELECT * FROM customers WHERE id = ?`, [customer.id]);
+      const result = await db.run(`DELETE FROM customers WHERE id = ?`, [customer.id]);
+      if (!result.changes) {
+        return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
+      }
 
       if (oldVal) {
         await logAction({
@@ -243,7 +270,7 @@ export function createCustomersRouter() {
           userName: (req as any).user?.name || null,
           action: 'DELETE',
           entityType: 'CUSTOMER',
-          entityId: customerId,
+          entityId: customer.id,
           oldValue: oldVal
         });
       }
@@ -251,137 +278,6 @@ export function createCustomersRouter() {
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '删除客户失败');
-    }
-  });
-
-  // --- Contacts sub-resource ---
-
-  router.get('/:customerId/contacts', async (req, res) => {
-    const rawId = req.params.customerId;
-    const isDisplayId = rawId.startsWith('CUST-');
-    try {
-      const customer = await db.get<{ id: number }>(`SELECT id FROM customers WHERE ${isDisplayId ? 'display_id = ?' : 'id = ?'}`, [isDisplayId ? rawId : Number(rawId)]);
-      if (!customer) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
-      const contacts = await db.all(`SELECT * FROM customer_contacts WHERE customer_id = ? ORDER BY is_primary DESC, created_at ASC`, [customer.id]);
-      res.json(contacts);
-    } catch (error) {
-      return handleRouteError(res, error, '读取联系人失败');
-    }
-  });
-
-  router.post('/:customerId/contacts', async (req: AuthedRequest, res) => {
-    const rawId = req.params.customerId;
-    const isDisplayId = rawId.startsWith('CUST-');
-    const name = readString(req.body?.name);
-    const title = readString(req.body?.title);
-    const email = readString(req.body?.email);
-    const contact = readString(req.body?.contact);
-    const isPrimary = req.body?.isPrimary ? 1 : 0;
-
-    if (!name) return fail(res, 400, '姓名不能为空', 'INVALID_CONTACT_PAYLOAD');
-
-    try {
-      const customer = await db.get<{ id: number }>(`SELECT id FROM customers WHERE ${isDisplayId ? 'display_id = ?' : 'id = ?'}`, [isDisplayId ? rawId : Number(rawId)]);
-      if (!customer) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
-
-      if (isPrimary) {
-        await db.run(`UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ?`, [customer.id]);
-      }
-
-      const result = await db.run(
-        `INSERT INTO customer_contacts (customer_id, name, title, email, contact, is_primary) VALUES (?, ?, ?, ?, ?, ?)`,
-        [customer.id, name, title, email, contact, isPrimary]
-      );
-      res.status(201).json({ id: result.lastID });
-    } catch (error) {
-      return handleRouteError(res, error, '添加联系人失败');
-    }
-  });
-
-  router.patch('/:customerId/contacts/:contactId', async (req: AuthedRequest, res) => {
-    const contactId = Number(req.params.contactId);
-    const rawCustomerId = req.params.customerId;
-    const isDisplayId = rawCustomerId.startsWith('CUST-');
-    const name = readString(req.body?.name);
-    const title = readString(req.body?.title);
-    const email = readString(req.body?.email);
-    const contact = readString(req.body?.contact);
-    const isPrimary = req.body?.isPrimary ? 1 : 0;
-
-    if (!name) return fail(res, 400, '姓名不能为空', 'INVALID_CONTACT_PAYLOAD');
-
-    try {
-      const customer = await db.get<{ id: number }>(`SELECT id FROM customers WHERE ${isDisplayId ? 'display_id = ?' : 'id = ?'}`, [isDisplayId ? rawCustomerId : Number(rawCustomerId)]);
-      if (!customer) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
-
-      if (isPrimary) {
-        await db.run(`UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ?`, [customer.id]);
-      }
-
-      await db.run(
-        `UPDATE customer_contacts SET name = ?, title = ?, email = ?, contact = ?, is_primary = ? WHERE id = ? AND customer_id = ?`,
-        [name, title, email, contact, isPrimary, contactId, customer.id]
-      );
-      res.json({ success: true });
-    } catch (error) {
-      return handleRouteError(res, error, '更新联系人失败');
-    }
-  });
-
-  router.delete('/:customerId/contacts/:contactId', async (req, res) => {
-    const contactId = Number(req.params.contactId);
-    try {
-      await db.run(`DELETE FROM customer_contacts WHERE id = ?`, [contactId]);
-      res.json({ success: true });
-    } catch (error) {
-      return handleRouteError(res, error, '删除联系人失败');
-    }
-  });
-
-  // --- Follow-ups sub-resource ---
-
-  router.get('/:customerId/followups', async (req, res) => {
-    const rawId = req.params.customerId;
-    const isDisplayId = rawId.startsWith('CUST-');
-    try {
-      const customer = await db.get<{ id: number }>(`SELECT id FROM customers WHERE ${isDisplayId ? 'display_id = ?' : 'id = ?'}`, [isDisplayId ? rawId : Number(rawId)]);
-      if (!customer) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
-      const followups = await db.all(`SELECT * FROM customer_followups WHERE customer_id = ? ORDER BY created_at DESC`, [customer.id]);
-      res.json(followups);
-    } catch (error) {
-      return handleRouteError(res, error, '读取跟进记录失败');
-    }
-  });
-
-  router.post('/:customerId/followups', async (req: AuthedRequest, res) => {
-    const rawId = req.params.customerId;
-    const isDisplayId = rawId.startsWith('CUST-');
-    const content = readString(req.body?.content);
-    const channel = readString(req.body?.channel) || 'other';
-
-    if (!content) return fail(res, 400, '跟进内容不能为空', 'INVALID_FOLLOWUP_PAYLOAD');
-
-    try {
-      const customer = await db.get<{ id: number }>(`SELECT id FROM customers WHERE ${isDisplayId ? 'display_id = ?' : 'id = ?'}`, [isDisplayId ? rawId : Number(rawId)]);
-      if (!customer) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
-
-      const result = await db.run(
-        `INSERT INTO customer_followups (customer_id, content, channel, created_by, created_by_name) VALUES (?, ?, ?, ?, ?)`,
-        [customer.id, content, channel, req.user?.id || null, req.user?.name || null]
-      );
-      res.status(201).json({ id: result.lastID });
-    } catch (error) {
-      return handleRouteError(res, error, '添加跟进记录失败');
-    }
-  });
-
-  router.delete('/:customerId/followups/:followupId', requireAdmin, async (req, res) => {
-    const followupId = Number(req.params.followupId);
-    try {
-      await db.run(`DELETE FROM customer_followups WHERE id = ?`, [followupId]);
-      res.json({ success: true });
-    } catch (error) {
-      return handleRouteError(res, error, '删除跟进记录失败');
     }
   });
 

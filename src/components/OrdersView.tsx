@@ -277,10 +277,11 @@ export default function OrdersView() {
                     const meta = getOrderStatusMeta(o.status);
                     return (
                       <tr key={o.id} onClick={() => {
+                        const target = `/orders/${String(o.display_id).toLowerCase()}`;
                         if ((document as any).startViewTransition) {
-                          (document as any).startViewTransition(() => navigate(`/orders/${o.display_id}`));
+                          (document as any).startViewTransition(() => navigate(target));
                         } else {
-                          navigate(`/orders/${o.display_id}`);
+                          navigate(target);
                         }
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                         <td className="px-4 py-5 text-left">

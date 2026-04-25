@@ -1,16 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, Search, X, AlertCircle } from 'lucide-react';
 import { COUNTRIES, type Country } from '../../lib/countries';
 
 interface CountrySelectProps {
   value: string;
   onChange: (value: string) => void;
-  required?: boolean;
+  error?: string;
   placeholder?: string;
   className?: string;
 }
 
-export default function CountrySelect({ value, onChange, required, placeholder = '搜索或选择国家/地区...', className = '' }: CountrySelectProps) {
+export default function CountrySelect({ value, onChange, error, placeholder = '搜索或选择国家/地区...', className = '' }: CountrySelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,7 +27,8 @@ export default function CountrySelect({ value, onChange, required, placeholder =
     ? COUNTRIES.filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.nameZh.includes(search) ||
-        c.code.toLowerCase().includes(search.toLowerCase())
+        c.code.toLowerCase().includes(search.toLowerCase()) ||
+        c.pinyin.toLowerCase().includes(search.toLowerCase())
       )
     : COUNTRIES;
 
@@ -66,12 +67,14 @@ export default function CountrySelect({ value, onChange, required, placeholder =
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className={`w-full flex items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm transition-colors outline-none cursor-pointer
-          ${open
-            ? 'border-primary-navy dark:border-tertiary-sage ring-1 ring-primary-navy/20 dark:ring-tertiary-sage/20'
-            : 'border-slate-200 dark:border-navy-800 hover:border-slate-300 dark:hover:border-navy-700'
+        className={`w-full flex items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm transition-all outline-none cursor-pointer
+          ${error 
+            ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' 
+            : open
+              ? 'border-primary-navy dark:border-tertiary-sage ring-1 ring-primary-navy/20 dark:ring-tertiary-sage/20'
+              : 'border-slate-200 dark:border-navy-800 hover:border-slate-300 dark:hover:border-navy-700'
           }
-          bg-white dark:bg-navy-900 text-primary-navy dark:text-white`}
+          bg-white dark:bg-navy-900 text-primary-navy dark:text-white shadow-sm`}
       >
         <span className={`flex-1 text-left truncate ${!selectedCountry && !value ? 'text-slate-400 dark:text-slate-500' : ''}`}>
           {value ? displayValue : placeholder}
@@ -85,13 +88,17 @@ export default function CountrySelect({ value, onChange, required, placeholder =
               <X size={12} />
             </span>
           )}
-          <ChevronDown size={14} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+          {error ? (
+            <AlertCircle size={14} className="text-red-500" />
+          ) : (
+            <ChevronDown size={14} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+          )}
         </div>
       </button>
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-full mt-1.5 left-0 right-0 z-50 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-xl overflow-hidden">
+        <div className="absolute top-full mt-1.5 left-0 right-0 z-[110] rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Search bar */}
           <div className="p-2 border-b border-slate-100 dark:border-navy-800">
             <div className="relative">
@@ -101,47 +108,42 @@ export default function CountrySelect({ value, onChange, required, placeholder =
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="搜索国家..."
-                className="w-full pl-8 pr-3 py-2 text-[13px] bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 outline-none text-primary-navy dark:text-white placeholder:text-slate-400"
+                placeholder="搜索国家或拼音首字母..."
+                className="w-full pl-8 pr-3 py-2 text-[13px] bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 outline-none text-primary-navy dark:text-white placeholder:text-slate-400 focus:border-primary-navy/30 dark:focus:border-tertiary-sage/30"
               />
             </div>
           </div>
 
           {/* Options list */}
-          <div className="max-h-52 overflow-y-auto">
+          <div className="max-h-64 overflow-y-auto custom-scrollbar">
             {filtered.length === 0 ? (
-              <div className="py-6 text-center text-[12px] text-slate-400 font-medium">未找到匹配国家</div>
+              <div className="py-8 text-center text-[12px] text-slate-400 font-medium">未找到匹配国家</div>
             ) : (
               filtered.map(country => (
                 <button
                   key={country.code}
                   type="button"
                   onClick={() => handleSelect(country)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] transition-colors
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] transition-colors
                     ${selectedCountry?.code === country.code
                       ? 'bg-primary-navy/5 dark:bg-tertiary-sage/10 text-primary-navy dark:text-tertiary-sage font-bold'
                       : 'hover:bg-slate-50 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-300'
-                    }`}
+                    }
+                    border-b border-slate-50 last:border-0 dark:border-navy-800/50`}
                 >
-                  <span className="text-base w-6 shrink-0 text-center">{country.flag}</span>
-                  <span className="font-medium">{country.nameZh}</span>
-                  <span className="text-slate-400 dark:text-slate-500 text-[11px] ml-auto shrink-0">{country.name}</span>
+                  <span className="text-lg w-7 shrink-0 text-center drop-shadow-sm">{country.flag}</span>
+                  <div className="flex flex-col">
+                    <span className="font-semibold leading-tight">{country.nameZh}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">{country.name}</span>
+                  </div>
+                  {selectedCountry?.code === country.code && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-navy dark:bg-tertiary-sage" />
+                  )}
                 </button>
               ))
             )}
           </div>
         </div>
-      )}
-
-      {/* Hidden input for required validation */}
-      {required && (
-        <input
-          tabIndex={-1}
-          required
-          value={value}
-          onChange={() => {}}
-          style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', top: 0, left: 0, pointerEvents: 'none' }}
-        />
       )}
     </div>
   );
