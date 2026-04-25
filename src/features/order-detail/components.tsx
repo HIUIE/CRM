@@ -33,7 +33,9 @@ import type {
   ProductionLog, 
   LogisticsRecord,
   LogisticsStatus,
-  PackingRecord
+  PackingRecord,
+  ProductionStatus,
+  InspectionStatus
 } from './types';
 import { formatDateOnly, formatDateTime, getProductionStatusLabel, getInspectionStatusLabel } from './utils';
 
@@ -474,7 +476,7 @@ export function StatusFileRow({
   return (
     <div className="flex items-center justify-between group py-3.5 px-5 rounded-lg border border-transparent hover:bg-slate-50 dark:hover:bg-navy-800 hover:border-slate-200 dark:hover:border-navy-700 transition-all">
       <div className="flex items-center gap-4 min-w-0 flex-1">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded border-2 transition-all ${status === 'uploaded' ? 'bg-white dark:bg-navy-900 text-tertiary-sage border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-slate-200 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
+        <div className={`flex h-11 w-11 aspect-square shrink-0 items-center justify-center rounded border-2 transition-all ${status === 'uploaded' ? 'bg-white dark:bg-navy-900 text-tertiary-sage border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-slate-200 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
           {fileName ? getFileIcon(fileName, 20) : <FileCode size={20} />}
         </div>
         <div className="min-w-0">
@@ -566,11 +568,11 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
   return (
     <div className="mt-8 space-y-5 px-1">
       <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[2px] mb-6 flex items-center gap-3"><div className="h-px w-10 bg-slate-300 dark:bg-navy-800" /> 生产进度时间轴</div>
-      <div className="relative space-y-4 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[1px] before:bg-slate-200 dark:before:bg-navy-800">
+      <div className="relative space-y-4 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-200 dark:before:bg-navy-800">
         {logs.map((log) => (
           <div key={log.id} className="relative pl-12 group">
-            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-white dark:bg-navy-900 border-2 border-slate-200 dark:border-navy-800 flex items-center justify-center shadow-sm z-10 transition-all group-hover:border-primary-navy dark:group-hover:border-tertiary-sage group-hover:scale-110">
-               <Clock size={14} className="text-slate-400 dark:text-slate-500 group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors" />
+            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-white dark:bg-navy-900 border-4 border-primary-navy dark:border-tertiary-sage flex items-center justify-center shadow-sm z-10 transition-all group-hover:scale-110">
+               <div className="h-2 w-2 rounded-full bg-white dark:bg-navy-900" />
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-md group-hover:shadow-lg transition-all border-l-[6px] border-l-primary-navy/10 dark:border-l-tertiary-sage/10 group-hover:border-l-primary-navy dark:group-hover:border-l-tertiary-sage">
               <div className="flex items-center justify-between mb-3">
@@ -607,3 +609,4 @@ function getFileIcon(fileName: string, size = 16) {
   if (ext === 'pdf') return <FileText size={size} />;
   return <Paperclip size={size} />;
 }
+

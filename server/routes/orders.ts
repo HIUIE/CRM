@@ -5,7 +5,6 @@ import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows } from '../services/attachments.js';
 import { buildOrderDetail } from '../services/order-detail.js';
 import {
-  readOrderAnalysisPayload,
   readOrderItemPayload,
   readOrderPayload,
   readProductionLogPayload,
