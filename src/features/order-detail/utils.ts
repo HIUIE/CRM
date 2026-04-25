@@ -138,6 +138,15 @@ export function getProductionStatusLabel(status: ProductionStatus): string {
   }
 }
 
+export function getInspectionStatusLabel(status: InspectionStatus): string {
+  switch (status) {
+    case 'pending': return '待质检';
+    case 'passed': return '质检通过';
+    case 'failed': return '质检异常';
+    default: return status;
+  }
+}
+
 export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFormState {
   return {
     id: order.id,

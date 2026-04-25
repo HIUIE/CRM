@@ -305,13 +305,35 @@ export function createOrdersRouter() {
   });
 
   router.patch('/production/:id', async (req: AuthedRequest, res) => {
-    const result = await readProductionPayload(req.body || {}, 0);
+    const productionId = Number(req.params.id);
     try {
-      await db.run(`UPDATE production_plans SET partner_id = ?, order_date = ?, estimated_delivery_date = ?, production_status = ?, inspection_status = ?, remark = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [result.payload.partnerId, result.payload.orderDate || null, result.payload.estimatedDeliveryDate || null, result.payload.productionStatus, result.payload.inspectionStatus, result.payload.remark, req.user?.id || null, req.params.id]);
+      const existing = await db.get<{ order_id: number }>(
+        `SELECT order_id FROM production_plans WHERE id = ?`,
+        [productionId]
+      );
+      if (!existing) {
+        return fail(res, 404, '排产计划不存在');
+      }
+
+      const result = await readProductionPayload(req.body || {}, existing.order_id);
+      if ('error' in result) return fail(res, 400, result.error);
+
+      await db.run(
+        `UPDATE production_plans SET partner_id = ?, order_date = ?, estimated_delivery_date = ?, production_status = ?, inspection_status = ?, remark = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [
+          result.payload.partnerId,
+          result.payload.orderDate || null,
+          result.payload.estimatedDeliveryDate || null,
+          result.payload.productionStatus,
+          result.payload.inspectionStatus,
+          result.payload.remark,
+          req.user?.id || null,
+          productionId
+        ]
+      );
       res.json({ success: true });
     } catch (error) {
-      return handleRouteError(res, error, '更新失败');
+      return handleRouteError(res, error, '更新排产计划失败');
     }
   });
 

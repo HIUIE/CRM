@@ -125,3 +125,46 @@ h1, h2, h3, h4, .headline {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
+
+/* --- View Transitions API 增强版 --- */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.5s; /* 延长时长以增加体感 */
+}
+
+/* 进场动画：整体向上滑入并淡入 */
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 退场动画：整体变淡并轻微缩小 */
+@keyframes fade-out-zoom {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+::view-transition-old(root) {
+  animation: 0.2s ease-in both fade-out-zoom;
+}
+
+::view-transition-new(root) {
+  animation: 0.5s cubic-bezier(0.16, 1, 0.3, 1) both slide-up-fade;
+}
+
+/* 订单号飞跃效果保持默认，但确保名称唯一 */
+::view-transition-group(order-id) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}

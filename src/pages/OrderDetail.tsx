@@ -163,6 +163,9 @@ export default function OrderDetailPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
 
+  // 滚动进度
+  const [scrollPercent, setScrollPercent] = useState(0);
+
   const copyOrderId = () => {
     if (!order) return;
     navigator.clipboard.writeText(order.display_id);
@@ -244,6 +247,12 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     const handleScroll = () => {
+      // 计算滚动百分比
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      setScrollPercent(scrolled);
+
       const scrollPos = window.scrollY + 120;
       for (const [key, ref] of Object.entries(sectionRefs)) {
         if (ref.current && scrollPos >= ref.current.offsetTop && scrollPos < ref.current.offsetTop + ref.current.offsetHeight) {
@@ -347,7 +356,12 @@ export default function OrderDetailPage() {
     try {
       const payload = { ...orderForm, customerId: Number(orderForm.customerId), totalAmount: Number(orderForm.totalAmount), freightAmount: Number(orderForm.freightAmount), miscAmount: Number(orderForm.miscAmount), deletedItemIds };
       await apiFetch(`/api/orders/${order?.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-      showToast('同步成功'); closeDrawer(); await loadDetail({ showLoading: false });
+      showToast('同步成功'); closeDrawer(); 
+      if (document.startViewTransition) {
+        document.startViewTransition(() => loadDetail({ showLoading: false }));
+      } else {
+        await loadDetail({ showLoading: false });
+      }
     } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); } finally { setSaving(false); }
   };
 
@@ -367,18 +381,74 @@ export default function OrderDetailPage() {
       const payload = { ...financeForm, orderId: Number(order?.id), amount: Number(financeForm.amount), partnerId: Number(financeForm.partnerId) || null, attachmentIds: [...financeForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
       const url = financeForm.id ? `/api/finance/${financeForm.id}` : `/api/finance`;
       await apiFetch(url, { method: financeForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      showToast('同步成功'); closeDrawer(); await loadDetail({ showLoading: false });
+      showToast('同步成功'); closeDrawer(); 
+      if (document.startViewTransition) {
+        document.startViewTransition(() => loadDetail({ showLoading: false }));
+      } else {
+        await loadDetail({ showLoading: false });
+      }
     } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); setIsUploading(false); } finally { setSaving(false); }
   };
 
   const handleSaveProduction = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     try {
-      const payload = { ...productionForm, orderId: Number(order?.id), partnerId: Number(productionForm.partnerId) };
+      const payload = {
+        partnerId: productionForm.partnerId ? Number(productionForm.partnerId) : null,
+        orderDate: productionForm.orderDate,
+        estimatedDeliveryDate: productionForm.estimatedDeliveryDate,
+        productionStatus: productionForm.productionStatus,
+        inspectionStatus: productionForm.inspectionStatus,
+        remark: productionForm.remark,
+        orderId: Number(order?.id), 
+      };
       const url = productionForm.id ? `/api/orders/production/${productionForm.id}` : `/api/orders/${order?.id}/production`;
       await apiFetch(url, { method: productionForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      showToast('同步成功'); closeDrawer(); await loadDetail({ showLoading: false });
+      showToast('同步成功'); closeDrawer(); 
+      if (document.startViewTransition) {
+        document.startViewTransition(() => loadDetail({ showLoading: false }));
+      } else {
+        await loadDetail({ showLoading: false });
+      }
     } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); } finally { setSaving(false); }
+  };
+
+  const handleUpdateProductionStatus = async (status: ProductionStatus) => {
+    if (!productionPlan) return;
+    setSaving(true);
+    try {
+      const payload = {
+        partnerId: productionPlan.partnerId,
+        orderDate: productionPlan.orderDate,
+        estimatedDeliveryDate: productionPlan.estimatedDeliveryDate,
+        productionStatus: status,
+        inspectionStatus: productionPlan.inspectionStatus,
+        remark: productionPlan.remark,
+        orderId: Number(order?.id),
+      };
+      await apiFetch(`/api/orders/production/${productionPlan.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      showToast('生产状态已更新');
+      await loadDetail({ showLoading: false });
+    } catch (err) { alert(getErrorMessage(err)); } finally { setSaving(false); }
+  };
+
+  const handleUpdateInspectionStatus = async (status: InspectionStatus) => {
+    if (!productionPlan) return;
+    setSaving(true);
+    try {
+      const payload = {
+        partnerId: productionPlan.partnerId,
+        orderDate: productionPlan.orderDate,
+        estimatedDeliveryDate: productionPlan.estimatedDeliveryDate,
+        productionStatus: productionPlan.productionStatus,
+        inspectionStatus: status,
+        remark: productionPlan.remark,
+        orderId: Number(order?.id),
+      };
+      await apiFetch(`/api/orders/production/${productionPlan.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      showToast('质检状态已更新');
+      await loadDetail({ showLoading: false });
+    } catch (err) { alert(getErrorMessage(err)); } finally { setSaving(false); }
   };
 
   const handleSaveProductionLog = async (e: React.FormEvent) => {
@@ -396,7 +466,12 @@ export default function OrderDetailPage() {
       }
       const payload = { ...productionLogForm, attachmentIds: [...productionLogForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
       await apiFetch(`/api/orders/production/${productionPlan?.id}/logs`, { method: 'POST', body: JSON.stringify(payload) });
-      showToast('进度已记录'); closeDrawer(); await loadDetail({ showLoading: false });
+      showToast('进度已记录'); closeDrawer(); 
+      if (document.startViewTransition) {
+        document.startViewTransition(() => loadDetail({ showLoading: false }));
+      } else {
+        await loadDetail({ showLoading: false });
+      }
     } catch (err) { setDrawerError(getErrorMessage(err, '提交失败')); setIsUploading(false); } finally { setSaving(false); }
   };
 
@@ -416,7 +491,12 @@ export default function OrderDetailPage() {
       const payload = { ...customsForm, orderId: Number(order?.id), attachmentIds: [...customsForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
       const url = customsForm.id ? `/api/customs/${customsForm.id}` : `/api/orders/${order?.id}/customs`;
       await apiFetch(url, { method: customsForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      showToast('同步成功'); closeDrawer(); await loadDetail({ showLoading: false });
+      showToast('同步成功'); closeDrawer(); 
+      if (document.startViewTransition) {
+        document.startViewTransition(() => loadDetail({ showLoading: false }));
+      } else {
+        await loadDetail({ showLoading: false });
+      }
     } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); setIsUploading(false); } finally { setSaving(false); }
   };
 
@@ -436,7 +516,12 @@ export default function OrderDetailPage() {
       const payload = { ...logisticsForm, orderId: Number(order?.id), freightForwarder: logisticsForm.freightForwarder, attachmentIds: [...logisticsForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
       const url = logisticsForm.id ? `/api/logistics/${logisticsForm.id}` : `/api/logistics`;
       await apiFetch(url, { method: logisticsForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      showToast('同步成功'); closeDrawer(); await loadDetail({ showLoading: false });
+      showToast('同步成功'); closeDrawer(); 
+      if (document.startViewTransition) {
+        document.startViewTransition(() => loadDetail({ showLoading: false }));
+      } else {
+        await loadDetail({ showLoading: false });
+      }
     } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); setIsUploading(false); } finally { setSaving(false); }
   };
 
@@ -444,7 +529,12 @@ export default function OrderDetailPage() {
     e.preventDefault(); setSaving(true);
     try {
       await apiFetch(`/api/orders/${order?.id}/packing`, { method: 'PATCH', body: JSON.stringify(packingForm) });
-      showToast('装箱数据已更新'); closeDrawer(); await loadDetail({ showLoading: false });
+      showToast('装箱数据已更新'); closeDrawer(); 
+      if (document.startViewTransition) {
+        document.startViewTransition(() => loadDetail({ showLoading: false }));
+      } else {
+        await loadDetail({ showLoading: false });
+      }
     } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); } finally { setSaving(false); }
   };
 
@@ -492,6 +582,11 @@ export default function OrderDetailPage() {
 
   return (
     <>
+      {/* 页面顶部滚动进度条 */}
+      <div className="fixed top-0 left-0 h-1 bg-tertiary-sage/30 z-[200] w-full pointer-events-none">
+        <div className="h-full bg-tertiary-sage transition-all duration-300 ease-out" style={{ width: `${scrollPercent}%` }} />
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_200px] items-start pt-0">
         <div className="space-y-4 min-w-0 pt-0">
           {/* header Section */}
@@ -500,9 +595,20 @@ export default function OrderDetailPage() {
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest leading-none">
-                    <button onClick={() => navigate('/orders')} className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单列表</button>
+                    <button onClick={() => {
+                      if (document.startViewTransition) {
+                        document.startViewTransition(() => navigate('/orders'));
+                      } else {
+                        navigate('/orders');
+                      }
+                    }} className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单列表</button>
                     <ChevronRight size={12} className="opacity-30" />
-                    <span className="text-primary-navy dark:text-tertiary-sage data-field">{order.display_id}</span>
+                    <span 
+                      className="text-primary-navy dark:text-tertiary-sage data-field"
+                      style={{ viewTransitionName: 'order-id' }}
+                    >
+                      {order.display_id}
+                    </span>
                   </div>
                   <h1 className="text-2xl font-bold text-primary-navy dark:text-white tracking-tight truncate mb-4">{asText(customer.name, '未命名客户')}</h1>
                   <div className="flex flex-wrap gap-4 text-[11px] font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest">
@@ -518,9 +624,9 @@ export default function OrderDetailPage() {
                    <LightActionButton onClick={() => openLogisticsDrawer()}><Plus size={14} className="mr-1 opacity-70" /> 新建物流</LightActionButton>
                    
                    {/* 高危按钮物理隔离 */}
-                   <div className="h-6 w-px bg-slate-200 dark:bg-navy-800 mx-1 hidden sm:block" />
+                   <div className="h-6 w-px bg-slate-200 dark:bg-navy-800 mx-2 hidden sm:block" />
                    {user?.role === 'admin' && (
-                     <LightActionButton onClick={() => { setDeleteConfirmId(''); setIsDeleteModalOpen(true); }} className="!text-red-500 !border-red-200 hover:!bg-red-50 dark:!border-red-900/30 dark:hover:!bg-red-900/20 ml-auto">
+                     <LightActionButton onClick={() => { setDeleteConfirmId(''); setIsDeleteModalOpen(true); }} className="!text-red-500 !border-red-200 hover:!bg-red-50 dark:!border-red-900/30 dark:hover:!bg-red-900/20">
                         <Trash size={14} className="mr-1" /> 删除订单
                      </LightActionButton>
                    )}
@@ -541,7 +647,7 @@ export default function OrderDetailPage() {
           </header>
 
           {/* Manifest Table */}
-          <WorkSection ref={sectionRefs.items} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed.items} onToggle={() => toggleSection('items')} action={<LightActionButton onClick={openOrderDrawer} className="!text-[10px] !px-3"><Plus size={12} className="mr-1" /> 编辑清单</LightActionButton>}>
+          <WorkSection ref={sectionRefs.items} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed.items} onToggle={() => toggleSection('items')} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!text-[10px] !px-3"><Plus size={12} className="mr-1" /> 编辑清单</LightActionButton> : null}>
             {items.length ? (
               <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
                 <table className="min-w-full text-left text-xs font-medium">
@@ -565,50 +671,69 @@ export default function OrderDetailPage() {
                 </table>
               </div>
             ) : (
-              <EmptyStateBoard title="暂无商品明细" description="请通过右上方“编辑订单”按钮，初始化本单的货物清单数据。" icon={Package} />
+              <EmptyStateBoard title="暂无商品明细" description="尚未录入任何货物信息。请立即初始化本单的货物清单数据，以便后续核算。" icon={Package} actionLabel="+ 初始化货物清单" onAction={openOrderDrawer} />
             )}
           </WorkSection>
 
           {/* Finance Section */}
-          <DocumentBoard ref={sectionRefs.finance} title="财务信息" action={<div className="flex items-center gap-3"><div className="flex bg-white dark:bg-navy-800 p-0.5 rounded border border-slate-200 dark:border-navy-700"><FilterPill active={financeFilter==='all'} onClick={()=>setFinanceFilter('all')}>全部</FilterPill><FilterPill active={financeFilter==='receipt'} onClick={()=>setFinanceFilter('receipt')}>收款</FilterPill><FilterPill active={financeFilter==='payment'} onClick={()=>setFinanceFilter('payment')}>付款</FilterPill></div><LightActionButton onClick={() => openFinanceDrawer()} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 录入收支</LightActionButton></div>}>
-            <FinanceDashboard totalAmount={grandTotal} records={filteredFinanceRecords} receiptsByCurrency={summary.receiptsByCurrency} onPreview={setPreviewAttachment} onEdit={openFinanceDrawer} onDelete={(r) => { if(confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>loadDetail({showLoading:false})) }} />
+          <DocumentBoard ref={sectionRefs.finance} title="财务信息" action={financeRecords.length ? <div className="flex items-center gap-3"><div className="flex bg-white dark:bg-navy-800 p-0.5 rounded border border-slate-200 dark:border-navy-700"><FilterPill active={financeFilter==='all'} onClick={()=>setFinanceFilter('all')}>全部</FilterPill><FilterPill active={financeFilter==='receipt'} onClick={()=>setFinanceFilter('receipt')}>收款</FilterPill><FilterPill active={financeFilter==='payment'} onClick={()=>setFinanceFilter('payment')}>付款</FilterPill></div><LightActionButton onClick={() => openFinanceDrawer()} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 录入收支</LightActionButton></div> : null}>
+            {financeRecords.length ? (
+               <FinanceDashboard totalAmount={grandTotal} records={filteredFinanceRecords} receiptsByCurrency={summary.receiptsByCurrency} onPreview={setPreviewAttachment} onEdit={openFinanceDrawer} onDelete={(r) => { if(confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>loadDetail({showLoading:false})) }} />
+            ) : (
+               <EmptyStateBoard title="暂无账务往来" description="该订单目前尚无收付款记录。请及时登记预付、尾款或运费流水。" icon={Wallet} actionLabel="+ 登记第一笔收支" onAction={() => openFinanceDrawer()} />
+            )}
           </DocumentBoard>
 
           {/* Production Section */}
-          <DocumentBoard ref={sectionRefs.production} title="生产信息">
-            <ProductionDashboard plan={productionPlan} onEditLink={openProductionDrawer} onUploadPlan={openProductionDrawer} onAddLog={() => openProductionLogDrawer()} />
+          <DocumentBoard ref={sectionRefs.production} title="生产信息" action={productionPlan ? <LightActionButton onClick={openProductionDrawer} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 更新排产</LightActionButton> : null}>
+            {productionPlan ? (
+               <ProductionDashboard 
+                 plan={productionPlan} 
+                 onEditLink={openProductionDrawer} 
+                 onUploadPlan={openProductionDrawer} 
+                 onAddLog={() => openProductionLogDrawer()} 
+                 onUpdateStatus={handleUpdateProductionStatus}
+                 onUpdateInspection={handleUpdateInspectionStatus}
+               />
+            ) : (
+               <EmptyStateBoard title="暂无排产计划" description="目前该订单尚未关联任何制造工厂。请指派供应商并录入预计交期。" icon={Factory} actionLabel="+ 录入排产单" onAction={openProductionDrawer} />
+            )}
           </DocumentBoard>
 
           {/* Customs Section */}
-          <DocumentBoard ref={sectionRefs.customs} title="报关信息" action={<LightActionButton onClick={openCustomsDrawer}><ShieldCheck size={14} className="mr-1 opacity-70" /> 更新报关资料</LightActionButton>}>
-            <div className="grid gap-8 lg:grid-cols-[240px_1fr] p-1">
-              <div className="space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
-                <GridItem label="报关单号" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
-                <GridItem label="贸易方式" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
-                <GridItem label="报关日期" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
-                <GridItem label="预计出口" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-2">
-                  <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest opacity-70">官方凭证电子仓库</div>
-                  <button onClick={openCustomsDrawer} className="text-[10px] font-bold text-primary-navy dark:text-tertiary-sage hover:underline">追加文件 +</button>
+          <DocumentBoard ref={sectionRefs.customs} title="报关信息" action={customs ? <LightActionButton onClick={openCustomsDrawer} className="!py-1.5 !px-3 !text-[11px]"><ShieldCheck size={14} className="mr-1 opacity-70" /> 更新报关</LightActionButton> : null}>
+            {customs ? (
+              <div className="grid gap-8 lg:grid-cols-[240px_1fr] p-1">
+                <div className="space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
+                  <GridItem label="报关单号" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
+                  <GridItem label="贸易方式" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
+                  <GridItem label="报关日期" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
+                  <GridItem label="预计出口" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
                 </div>
-                <div className="space-y-1">
-                  {customs?.attachments?.length ? customs.attachments.map(att => (
-                    <div key={att.id} className="flex items-center justify-between group">
-                       <div className="flex-1 min-w-0"><StatusFileRow label={att.fileName.split('.')[0]} status="uploaded" fileName={att.fileName} onPreview={() => setPreviewAttachment(att)} /></div>
-                       {user?.role === 'admin' && <button onClick={() => handleDeleteAttachment(att.id)} className="p-2 text-slate-300 dark:text-slate-600 hover:text-error opacity-0 group-hover:opacity-100 transition-all"><Trash size={16} /></button>}
-                    </div>
-                  )) : (
-                    <EmptyStateBoard title="暂无报关凭证" description="目前尚未上传报关单、发票等官方存档文件。" icon={ShieldCheck} />
-                  )}
+                <div className="min-w-0">
+                  <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-2">
+                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest opacity-70">官方凭证电子仓库</div>
+                    <button onClick={openCustomsDrawer} className="text-[10px] font-bold text-primary-navy dark:text-tertiary-sage hover:underline">追加文件 +</button>
+                  </div>
+                  <div className="space-y-1">
+                    {customs?.attachments?.length ? customs.attachments.map(att => (
+                      <div key={att.id} className="flex items-center justify-between group">
+                         <div className="flex-1 min-w-0"><StatusFileRow label={att.fileName.split('.')[0]} status="uploaded" fileName={att.fileName} onPreview={() => setPreviewAttachment(att)} /></div>
+                         {user?.role === 'admin' && <button onClick={() => handleDeleteAttachment(att.id)} className="p-2 text-slate-300 dark:text-slate-600 hover:text-error opacity-0 group-hover:opacity-100 transition-all"><Trash size={16} /></button>}
+                      </div>
+                    )) : (
+                      <div className="py-12 text-center bg-slate-50/50 dark:bg-navy-950/30 rounded border border-dashed border-slate-200 dark:border-navy-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest">暂无报关凭证存档</div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+               <EmptyStateBoard title="暂无报关信息" description="货物发出前，请点击此处预录入海关单号与贸易方式。" icon={ShieldCheck} actionLabel="+ 初始化报关资料" onAction={openCustomsDrawer} />
+            )}
           </DocumentBoard>
 
           {/* Packing Section */}
-          <DocumentBoard ref={sectionRefs.packing} title="装箱明细" action={<LightActionButton onClick={openPackingDrawer}><Box size={14} className="mr-1 opacity-70" /> 更新装箱单</LightActionButton>}>
+          <DocumentBoard ref={sectionRefs.packing} title="装箱明细" action={packingRecords.length ? <LightActionButton onClick={openPackingDrawer} className="!py-1.5 !px-3 !text-[11px]"><Box size={14} className="mr-1 opacity-70" /> 更新装箱</LightActionButton> : null}>
             {packingRecords.length ? (
                <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900">
                   <table className="min-w-full text-left text-[12px]">
@@ -629,7 +754,7 @@ export default function OrderDetailPage() {
                            <td className="px-5 py-3">{r.packageSize}</td>
                            <td className="px-5 py-3">{r.grossWeight} / {r.netWeight}</td>
                            <td className="px-5 py-3 text-right">
-                              <div className="inline-flex h-9 w-9 rounded border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && setPreviewAttachment({ id: -1, fileName: `序号 ${i+1} 装箱实拍`, url: r.imageUrl })}>
+                              <div className="inline-flex h-9 w-9 rounded border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && setPreviewAttachment({ id: -1, fileName: `序号 ${i+1} 装箱实拍.jpg`, url: r.imageUrl })}>
                                  {r.imageUrl ? <img src={r.imageUrl} className="h-full w-full object-cover" /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
                               </div>
                            </td>
@@ -639,18 +764,18 @@ export default function OrderDetailPage() {
                   </table>
                </div>
             ) : (
-              <EmptyStateBoard title="暂无装箱明细" description="点击右上角“更新装箱单”即可按箱号录入规格、重量并上传箱体实拍。" icon={Box} />
+              <EmptyStateBoard title="暂无装箱数据" description="尚未录入物理包装参数。请点击此处维护各组箱体的尺寸与重量。" icon={Box} actionLabel="+ 初始化装箱单" onAction={openPackingDrawer} />
             )}
           </DocumentBoard>
 
           {/* Logistics Section */}
-          <DocumentBoard ref={sectionRefs.logistics} title="运输轨迹" action={<LightActionButton onClick={() => openLogisticsDrawer()}><Plus size={14} className="mr-1 opacity-70" /> 录入运单</LightActionButton>}>
+          <DocumentBoard ref={sectionRefs.logistics} title="运输轨迹" action={logisticsRecords.length ? <LightActionButton onClick={() => openLogisticsDrawer()} className="!py-1.5 !px-3 !text-[11px]"><Plus size={14} className="mr-1 opacity-70" /> 录入运单</LightActionButton> : null}>
             {!hasAnyLogistics ? <EmptyStateBoard title="等待货件发运" description="当前订单尚未关联物流记录，请在发货后及时同步单号。" actionLabel="录入物流单号" onAction={() => openLogisticsDrawer()} icon={Truck} /> :
               <div className="grid gap-5 md:grid-cols-2">
                 {logisticsRecords.map((l: any) => (
                   <div key={l.id} className="p-6 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 transition-all group relative shadow-sm hover:shadow-md">
                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
-                       <button onClick={() => openLogisticsDrawer(l)} className="p-2 bg-white dark:bg-navy-800 rounded-md border border-slate-200 dark:border-navy-700 text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm"><Edit3 size={16} /></button>
+                       <button onClick={() => openLogisticsDrawer(l)} className="p-2 bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 rounded-md text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm"><Edit3 size={16} /></button>
                     </div>
                     <div className="flex items-center justify-between mb-4">
                        <Chip tone="neutral">{l.segmentType === 'domestic' ? '国内运输' : '国际运输'}</Chip>
@@ -924,7 +1049,7 @@ export default function OrderDetailPage() {
                   </div>
                   <div className="grid gap-12 sm:grid-cols-2">
                     <Field label="账务核销状态"><select value={financeForm.status} onChange={e=>setFinanceForm({...financeForm, status:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="completed">已核销同步 (Closed)</option><option value="pending">待处理流水 (Pending)</option></select></Field>
-                    <Field label="款项所属分类"><select value={financeForm.recordCategory} onChange={e=>setFinanceForm({...financeForm, recordCategory:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="deposit">预付定金</option><option value="balance">最后尾款</option><option value="goods">主营货款</option><option value="freight">国际运费</option><option value="customs">报关税费</option><option value="other">杂项其他</option></select></Field>
+                    <Field label="款项所属分类"><select value={financeForm.recordCategory} onChange={e=>setFinanceForm({...financeForm, recordCategory:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="deposit">预付定金</option><option value="balance">尾款</option><option value="goods">货款</option><option value="freight">运费</option><option value="customs">报关费</option><option value="other">杂项其他</option></select></Field>
                   </div>
                   <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="银行水单或支付凭证存档" attachments={financeForm.attachments} newFiles={financeForm.newFiles} onFilesSelected={fs=>setFinanceForm({...financeForm, newFiles:[...financeForm.newFiles,...fs]})} onRemoveExisting={id=>setFinanceForm({...financeForm, attachments:financeForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setFinanceForm({...financeForm, newFiles:financeForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
                 </div>

@@ -271,9 +271,20 @@ export default function OrdersView() {
                   {orders.length ? orders.map(o => {
                     const meta = getOrderStatusMeta(o.status);
                     return (
-                      <tr key={o.id} onClick={() => navigate(`/orders/${o.display_id}`)} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
+                      <tr key={o.id} onClick={() => {
+                        if (document.startViewTransition) {
+                          document.startViewTransition(() => navigate(`/orders/${o.display_id}`));
+                        } else {
+                          navigate(`/orders/${o.display_id}`);
+                        }
+                      }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                         <td className="px-4 py-5">
-                           <div className="font-bold text-primary-navy dark:text-tertiary-sage uppercase data-field">{o.display_id}</div>
+                           <div 
+                             className="font-bold text-primary-navy dark:text-tertiary-sage uppercase data-field"
+                             style={{ viewTransitionName: 'order-id' }}
+                           >
+                             {o.display_id}
+                           </div>
                            <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1.5 font-bold data-field">{formatDateOnly(o.created_at)}</div>
                         </td>
                         <td className="px-4 py-5">

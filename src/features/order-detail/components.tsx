@@ -35,7 +35,7 @@ import type {
   LogisticsStatus,
   PackingRecord
 } from './types';
-import { formatDateOnly, formatDateTime, getProductionStatusLabel } from './utils';
+import { formatDateOnly, formatDateTime, getProductionStatusLabel, getInspectionStatusLabel } from './utils';
 
 // --- Atomic Components ---
 
@@ -264,7 +264,21 @@ export function FinanceDashboard({
   );
 }
 
-export function ProductionDashboard({ plan, onEditLink, onUploadPlan, onAddLog }: { plan: ProductionPlan | null; onEditLink: () => void; onUploadPlan: () => void; onAddLog: () => void }) {
+export function ProductionDashboard({ 
+  plan, 
+  onEditLink, 
+  onUploadPlan, 
+  onAddLog,
+  onUpdateStatus,
+  onUpdateInspection
+}: { 
+  plan: ProductionPlan | null; 
+  onEditLink: () => void; 
+  onUploadPlan: () => void; 
+  onAddLog: () => void;
+  onUpdateStatus?: (status: ProductionStatus) => void;
+  onUpdateInspection?: (status: InspectionStatus) => void;
+}) {
   const status = plan?.productionStatus || 'not_started';
   const percentage = status === 'ready' ? 100 : status === 'in_progress' ? 60 : status === 'scheduled' ? 20 : 0;
   
@@ -297,12 +311,42 @@ export function ProductionDashboard({ plan, onEditLink, onUploadPlan, onAddLog }
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 bg-slate-50 dark:bg-navy-950/50 p-5 rounded-lg border border-slate-100 dark:border-navy-800">
           <GridItem label="生产工厂" value={<span className="uppercase truncate block text-slate-700 dark:text-slate-200 font-extrabold">{plan?.partnerName || '待指派'}</span>} />
           <GridItem label="下单日期" value={<span className="data-field text-slate-700 dark:text-slate-300">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
-          <GridItem label="当前节点" value={<Chip tone={status === 'ready' ? 'success' : 'warning'}>{status === 'ready' ? '已完工' : '生产中'}</Chip>} />
+          <GridItem label="当前节点" value={
+            <div className="relative inline-block">
+               <select 
+                 value={status} 
+                 onChange={e => onUpdateStatus?.(e.target.value as ProductionStatus)}
+                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+               >
+                 <option value="not_started">待产</option>
+                 <option value="scheduled">已排产</option>
+                 <option value="in_progress">生产中</option>
+                 <option value="ready">已完工</option>
+               </select>
+               <Chip tone={status === 'ready' ? 'success' : 'warning'}>
+                 <span className="flex items-center gap-1">
+                   {getProductionStatusLabel(status)}
+                   <ChevronDown size={10} className="opacity-50" />
+                 </span>
+               </Chip>
+            </div>
+          } />
           <GridItem label="质检状态" value={
-            <button onClick={onEditLink} className="flex items-center gap-1.5 text-info dark:text-blue-400 font-bold uppercase hover:underline">
-               <span>质检通过</span>
-               <ChevronDown size={12} />
-            </button>
+            <div className="relative inline-block">
+               <select 
+                 value={plan?.inspectionStatus || 'pending'} 
+                 onChange={e => onUpdateInspection?.(e.target.value as InspectionStatus)}
+                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+               >
+                 <option value="pending">待质检</option>
+                 <option value="passed">质检通过</option>
+                 <option value="failed">质检异常</option>
+               </select>
+               <button className="flex items-center gap-1.5 text-info dark:text-blue-400 font-bold uppercase hover:underline">
+                  <span>{getInspectionStatusLabel(plan?.inspectionStatus || 'pending')}</span>
+                  <ChevronDown size={12} />
+               </button>
+            </div>
           } />
         </div>
       </div>

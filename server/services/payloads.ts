@@ -317,9 +317,6 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
   const segmentType = isOneOf(segmentTypeInput, LOGISTICS_SEGMENTS)
     ? (segmentTypeInput as LogisticsSegment)
     : 'international';
-  if (!packingDetails && segmentType !== 'domestic') {
-    return { error: '请填写装箱或包装明细' };
-  }
   if (shippingDate && !/^\d{4}-\d{2}-\d{2}$/.test(shippingDate)) {
     return { error: '发货日期格式不正确' };
   }
