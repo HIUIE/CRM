@@ -180,7 +180,7 @@ async function getRootUser() {
 }
 
 function getAuthCookie(user: { id: number; username: string; role: 'admin' | 'staff' }) {
-  return `token=${authModule.signAuthToken(user)}`;
+  return `token=${authModule.signAuthToken({ ...user, name: 'Test' })}`;
 }
 
 before(async () => {
@@ -220,7 +220,7 @@ test('requireAuth accepts active users and rejects disabled users', async () => 
   );
   const userId = created.lastID as number;
 
-  const token = authModule.signAuthToken({ id: userId, username: 'staff-a', role: 'staff' });
+  const token = authModule.signAuthToken({ id: userId, username: 'staff-a', role: 'staff', name: 'Staff A' });
   const req: any = { cookies: { token } };
   const res = new MockResponse();
   let nextCalled = false;

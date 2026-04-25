@@ -47,9 +47,10 @@ export function createOrdersRouter() {
 
   router.get('/', async (req, res) => {
     const customerId = Number(req.query.customerId);
-    const timeRange = readString(req.query.timeRange);
     const status = readString(req.query.status);
     const q = readString(req.query.q);
+    const startDate = readString(req.query.start_date);
+    const endDate = readString(req.query.end_date);
 
     let sql = `
       SELECT 
@@ -82,22 +83,14 @@ export function createOrdersRouter() {
       params.push(p, p, p);
     }
 
-    if (timeRange && timeRange !== 'all') {
-      let interval = '';
-      switch (timeRange) {
-        case 'week': interval = '-7 days'; break;
-        case 'month': interval = '-1 month'; break;
-        case 'last_month': interval = '-2 month'; break;
-        case '3months': interval = '-3 months'; break;
-        case '6months': interval = '-6 months'; break;
-        case 'year': interval = '-1 year'; break;
-      }
-      if (interval) {
-        sql += ` AND o.created_at >= datetime('now', ?)`;
-        params.push(interval);
-      }
+    if (startDate) {
+      sql += ` AND o.created_at >= ?`;
+      params.push(startDate);
     }
-
+    if (endDate) {
+      sql += ` AND o.created_at <= ?`;
+      params.push(endDate);
+    }
     sql += ` ORDER BY datetime(o.created_at) DESC, o.id DESC`;
 
     try {

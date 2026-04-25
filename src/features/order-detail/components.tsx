@@ -103,6 +103,17 @@ export const FilterPill = ({ children, active, onClick }: { children: React.Reac
   </button>
 );
 
+export const Toast = ({ message, onClose }: { message: string; onClose: () => void }) => (
+  <div 
+    onClick={onClose}
+    className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[200] flex cursor-pointer items-center rounded-lg bg-slate-900 dark:bg-navy-800 px-8 py-4 text-[13px] font-bold text-white shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-8 uppercase tracking-widest border border-white/10 dark:border-navy-700 hover:scale-105 transition-transform"
+  >
+    <CheckCircle2 size={20} className="mr-4 text-emerald-400" />
+    {message}
+    <X size={14} className="ml-6 opacity-40 hover:opacity-100 transition-opacity" />
+  </div>
+);
+
 // --- Content Boards ---
 
 export const WorkSection = React.forwardRef<
@@ -365,10 +376,17 @@ export const ProductImagePlaceholder = () => (
 );
 
 export function EmptyStateBoard({ title, description, actionLabel, onAction, icon: Icon = Truck }: { title: string; description: string; actionLabel?: string; onAction?: () => void; icon?: any }) {
+  const renderIcon = () => {
+    if (!Icon) return null;
+    if (React.isValidElement(Icon)) return Icon;
+    const IconComp = Icon;
+    return <IconComp size={28} className="text-slate-200 dark:text-navy-800" />;
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-navy-950/30 rounded-xl border border-dashed border-slate-300 dark:border-navy-800 shadow-inner transition-colors">
       <div className="h-14 w-14 rounded-full bg-white dark:bg-navy-900 flex items-center justify-center mb-5 shadow-sm border border-slate-100 dark:border-navy-800">
-        <Icon size={28} className="text-slate-200 dark:text-navy-800" />
+        {renderIcon()}
       </div>
       <h4 className="text-[14px] font-bold text-primary-navy dark:text-white uppercase tracking-tight mb-1.5">{title}</h4>
       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest max-w-[280px] text-center leading-relaxed">

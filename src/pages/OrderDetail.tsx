@@ -57,7 +57,8 @@ import {
   RemarkBoard,
   EmptyStateBoard,
   GridItem,
-  HistoryTimeline
+  HistoryTimeline,
+  Toast
 } from '../features/order-detail/components';
 import type {
   AIAnalysisResult,
@@ -269,19 +270,7 @@ export default function OrderDetailPage() {
   const showToast = (msg: string) => {
     setToast(msg);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    if (msg) {
-      toastTimerRef.current = setTimeout(() => setToast(''), 3000);
-    }
-  };
-
-  const handleToastMouseEnter = () => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-  };
-
-  const handleToastMouseLeave = () => {
-    if (toast) {
-      toastTimerRef.current = setTimeout(() => setToast(''), 1500);
-    }
+    toastTimerRef.current = setTimeout(() => setToast(''), 3000);
   };
 
   const saveQuickNotes = async (val: string) => {
@@ -612,7 +601,12 @@ export default function OrderDetailPage() {
                       {order.display_id}
                     </span>
                   </div>
-                  <h1 className="text-2xl font-bold text-primary-navy dark:text-white tracking-tight truncate mb-4">{asText(customer.name, '未命名客户')}</h1>
+                  <h1 
+                    className="text-2xl font-bold text-primary-navy dark:text-white tracking-tight truncate mb-4 hover:text-blue-600 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/customers/${customer.display_id}`)}
+                  >
+                    {asText(customer.name, '未命名客户')}
+                  </h1>
                   <div className="flex flex-wrap gap-4 text-[11px] font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest">
                     <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tertiary-sage" />{asText(customer.country)}</span>
                     <span className="flex items-center gap-1.5"><Mail size={12} className="text-info dark:text-blue-400" />{asText(customer.contact)}</span>
@@ -858,18 +852,7 @@ export default function OrderDetailPage() {
       </div>
 
       {previewAttachment && <PreviewModal attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
-      {toast && (
-        <div 
-          onMouseEnter={handleToastMouseEnter}
-          onMouseLeave={handleToastMouseLeave}
-          onClick={() => setToast('')}
-          className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[200] flex cursor-pointer items-center rounded-lg bg-slate-900 dark:bg-navy-800 px-8 py-4 text-[13px] font-bold text-white shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-8 uppercase tracking-widest border border-white/10 dark:border-navy-700 hover:scale-105 transition-transform"
-        >
-          <CheckCircle2 size={20} className="mr-4 text-emerald-400" />
-          {toast}
-          <X size={14} className="ml-6 opacity-40 hover:opacity-100 transition-opacity" />
-        </div>
-      )}
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
 
       {/* Danger Modal: 订单删除二次确认 */}
       {isDeleteModalOpen && (

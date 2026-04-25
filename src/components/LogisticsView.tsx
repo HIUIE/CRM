@@ -1,8 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Package, Search, Truck, MapPin, Calendar, Clock, ChevronRight, Box } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Package, Search, Truck, MapPin, Calendar, Clock, ChevronRight, Box, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
-import { Chip } from '../features/order-detail/components';
+import { Chip, Toast } from '../features/order-detail/components';
+import { Pagination } from './ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
+import { Drawer } from './ui/Drawer';
+import { Combobox } from './ui/Combobox';
+import { TIME_RANGES, getRangeDates } from '../lib/date';
+import type { OrderOption } from '../types/crm';
 
 interface LogisticsSummary {
   id: number;
@@ -18,6 +24,26 @@ interface LogisticsSummary {
   package_count?: number;
 }
 
+type LogisticsFormState = {
+  orderId: string;
+  carrier: string;
+  trackingNo: string;
+  shippingDate: string;
+  packageCount: string;
+  segmentType: 'domestic' | 'international';
+  recipientAddress: string;
+};
+
+const EMPTY_FORM: LogisticsFormState = {
+  orderId: '',
+  carrier: '',
+  trackingNo: '',
+  shippingDate: '',
+  packageCount: '',
+  segmentType: 'international',
+  recipientAddress: '',
+};
+
 function getStatusLabel(status: LogisticsSummary['status']) {
   switch (status) {
     case 'preparing': return '待起运';
@@ -31,37 +57,126 @@ export default function LogisticsView() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [records, setRecords] = useState<LogisticsSummary[]>([]);
+  const [orders, setOrders] = useState<OrderOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState<LogisticsFormState>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<LogisticsFormState>(EMPTY_FORM);
+  const [formError, setFormError] = useState('');
+  const [toast, setToast] = useState('');
+
+  const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
   const q = searchParams.get('q') || '';
   const status = searchParams.get('status') || '';
+  const timeRange = searchParams.get('timeRange') || 'all';
 
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(searchParams);
     if (val) next.set(key, val); else next.delete(key);
+
+    if (key === 'timeRange') {
+      const dates = getRangeDates(val as any);
+      if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
+      if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
+    }
+
     setSearchParams(next);
   };
 
+  const loadLogistics = async () => {
+    setLoading(true);
+    try {
+      const [data, orderData] = await Promise.all([
+        apiFetch<LogisticsSummary[]>(`/api/logistics?${searchParams.toString()}`),
+        apiFetch<OrderOption[]>('/api/orders')
+      ]);
+      setRecords(data);
+      setOrders(orderData);
+    } catch (err) {
+      setError(getErrorMessage(err, '读取物流列表失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadLogistics = async () => {
-      setLoading(true);
-      try {
-        const data = await apiFetch<LogisticsSummary[]>(`/api/logistics?${searchParams.toString()}`);
-        setRecords(data);
-      } catch (err) {
-        setError(getErrorMessage(err, '读取物流列表失败'));
-      } finally {
-        setLoading(false);
-      }
-    };
     loadLogistics();
   }, [searchParams]);
 
+  useEffect(() => {
+    if (searchParams.get('create') === '1') {
+      openCreateForm();
+      updateParam('create', '');
+    }
+  }, [searchParams]);
+
+  const filteredRecords = useMemo(() => {
+    const keyword = q.trim().toLowerCase();
+    return records.filter((r) =>
+      [r.order_display_id, r.customer_name, r.tracking_no, r.carrier, r.recipient_address || '']
+        .some((val) => val.toLowerCase().includes(keyword))
+    );
+  }, [records, q]);
+
+  const {
+    currentPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    currentItems,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredRecords);
+
+  const openCreateForm = () => {
+    setFormData(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setFormData(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setFormError('');
+    setShowForm(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    const payload = {
+      orderId: Number(formData.orderId),
+      carrier: formData.carrier.trim(),
+      trackingNo: formData.trackingNo.trim(),
+      shippingDate: formData.shippingDate || null,
+      packageCount: Number(formData.packageCount) || null,
+      segmentType: formData.segmentType,
+      recipientAddress: formData.recipientAddress.trim(),
+    };
+    try {
+      await apiFetch('/api/logistics', { method: 'POST', body: JSON.stringify(payload) });
+      setToast('创建物流成功');
+      setTimeout(() => setToast(''), 3000);
+      closeForm();
+      await loadLogistics();
+    } catch (err) {
+      setFormError(getErrorMessage(err, '创建物流失败'));
+    }
+  };
+
+  // Automatically find recipient address when order is selected
+  const selectedOrder = useMemo(() => {
+    if (!formData.orderId) return null;
+    return orders.find(o => String(o.id) === formData.orderId);
+  }, [formData.orderId, orders]);
+
   return (
-    <div className="space-y-4">
-      <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px]">
+    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_160px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
@@ -80,79 +195,193 @@ export default function LogisticsView() {
                <option value="">全部状态</option>
                <option value="preparing">待起运</option>
                <option value="shipped">运输中</option>
-               <option value="arrived">已送达</option>
+               <option value="arrived">已妥投</option>
              </select>
           </div>
+          <button
+            onClick={openCreateForm}
+            className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            创建物流
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+           {TIME_RANGES.map(chip => (
+             <button
+               key={chip.key}
+               onClick={() => updateParam('timeRange', chip.key)}
+               className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
+             >
+               {chip.label}
+             </button>
+           ))}
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="flex-1 min-h-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col overflow-hidden">
         {loading ? (
-          <div className="col-span-full py-12 text-center text-slate-400 dark:text-slate-500 font-bold animate-pulse uppercase tracking-widest">正在同步物流状态...</div>
-        ) : records.length ? (
-          records.map((r) => (
-            <div
-              key={r.id}
-              onClick={() => navigate(`/orders/${r.order_display_id}`)}
-              className="group relative overflow-hidden rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-all hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-md cursor-pointer"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <Chip tone={r.segment_type === 'domestic' ? 'neutral' : 'info'}>
-                  {r.segment_type === 'domestic' ? '国内段' : '国际段'}
-                </Chip>
-                <div className="flex items-center gap-1.5 text-tertiary-sage dark:text-emerald-400 font-bold text-[10px] uppercase tracking-wider">
-                  <div className={`h-1.5 w-1.5 rounded-full ${r.status === 'arrived' ? 'bg-success' : 'bg-tertiary-sage dark:bg-emerald-400 animate-pulse'}`} />
-                  {getStatusLabel(r.status)}
-                </div>
-              </div>
-
-              <div className="mb-6">
-                 <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">关联订单</div>
-                 <div className="flex items-center justify-between">
-                    <span className="text-[15px] font-bold text-primary-navy dark:text-white uppercase data-field">{r.order_display_id}</span>
-                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate max-w-[150px]">{r.customer_name}</span>
-                 </div>
-              </div>
-
-              <div className="mb-6 space-y-3 rounded-2xl bg-slate-50 dark:bg-navy-950/50 p-4 border border-slate-100 dark:border-navy-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Truck size={14} className="text-slate-400 dark:text-slate-500" />
-                    <span className="text-[13px] font-bold text-primary-navy dark:text-white uppercase">{r.carrier}</span>
-                  </div>
-                  <span className="text-[12px] font-bold text-white bg-slate-900 dark:bg-navy-800 px-2 py-0.5 rounded-[4px] data-field shadow-sm">{r.tracking_no}</span>
-                </div>
-                {r.recipient_address && (
-                  <div className="flex items-start gap-2 pt-2 border-t border-slate-100 dark:border-navy-800/50">
-                    <MapPin size={14} className="mt-0.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed truncate" title={r.recipient_address}>{r.recipient_address}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={12} />
-                  <span>发货: {r.shipping_date || '待定'}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Box size={12} />
-                  <span>{r.package_count || 0} 箱</span>
-                </div>
-              </div>
-
-              <div className="absolute bottom-6 right-6 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100">
-                <ChevronRight size={20} className="text-primary-navy dark:text-tertiary-sage" />
-              </div>
-            </div>
-          ))
+          <div className="text-sm text-slate-500 dark:text-slate-400 p-8 text-center animate-pulse">正在同步物流状态...</div>
         ) : (
-          <div className="col-span-full py-20 text-center bg-slate-50 dark:bg-navy-950/30 rounded-3xl border border-dashed border-slate-200 dark:border-navy-800">
-            <Package size={48} className="mx-auto mb-4 text-slate-200 dark:text-navy-800" />
-            <div className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">未找到匹配的物流记录</div>
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+              <table className="min-w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                  <tr>
+                    <th className="px-4 py-4 text-left">关联订单</th>
+                    <th className="px-4 py-4 text-left">承运商 / 单号</th>
+                    <th className="px-4 py-4 text-left">目的地</th>
+                    <th className="px-4 py-4 text-center">发货日期 / 箱数</th>
+                    <th className="px-4 py-4 text-center">状态</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
+                  {currentItems.length ? currentItems.map((r) => (
+                    <tr
+                      key={r.id}
+                      onClick={() => {
+                        if ((document as any).startViewTransition) {
+                          (document as any).startViewTransition(() => navigate(`/orders/${r.order_display_id}`));
+                        } else {
+                          navigate(`/orders/${r.order_display_id}`);
+                        }
+                      }}
+                      className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
+                    >
+                      <td className="px-4 py-4 text-left">
+                        <div className="font-bold text-primary-navy dark:text-white uppercase data-field">{r.order_display_id || '—'}</div>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold mt-1 max-w-[150px] truncate">{r.customer_name || '—'}</div>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Truck size={14} className="text-slate-400 dark:text-slate-500" />
+                          <span className="font-bold text-primary-navy dark:text-white uppercase">{r.carrier || '—'}</span>
+                        </div>
+                        <div className="text-[12px] font-bold text-slate-700 dark:text-slate-300 data-field">{r.tracking_no || '—'}</div>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <div className="flex items-center gap-2 mb-1">
+                           <Chip tone={r.segment_type === 'domestic' ? 'neutral' : 'info'}>
+                             {r.segment_type === 'domestic' ? '国内段' : '国际段'}
+                           </Chip>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[200px]" title={r.recipient_address}>
+                          {r.recipient_address || '—'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="text-[11px] font-bold text-primary-navy dark:text-white data-field mb-1">{r.shipping_date || '待定'}</div>
+                        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{r.package_count || 0} 箱</div>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                         <div className="flex items-center justify-center gap-1.5 text-tertiary-sage dark:text-emerald-400 font-bold text-[11px] uppercase tracking-wider">
+                           <div className={`h-1.5 w-1.5 rounded-full ${r.status === 'arrived' ? 'bg-success' : r.status === 'shipped' ? 'bg-tertiary-sage dark:bg-emerald-400 animate-pulse' : 'bg-slate-300 dark:bg-navy-700'}`} />
+                           {getStatusLabel(r.status)}
+                         </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-12 text-center text-slate-400 font-medium uppercase tracking-widest">
+                        未找到匹配的物流记录
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="shrink-0">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
           </div>
         )}
-      </div>
+      </section>
+
+      <Drawer
+        isOpen={showForm}
+        onClose={closeForm}
+        title="创建物流单"
+        isDirty={isFormDirty}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">保存物流</button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {formError && <div className="rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div>}
+          <div className="space-y-6">
+            <Field label="关联订单 *">
+              <Combobox
+                value={formData.orderId}
+                onChange={val => setFormData({ ...formData, orderId: String(val) })}
+                onSearch={async (q) => {
+                  const data = await apiFetch<OrderOption[]>(`/api/orders?q=${encodeURIComponent(q)}`);
+                  return data.slice(0, 20).map(o => ({ value: o.id, label: o.display_id, subLabel: o.customer_name }));
+                }}
+                placeholder="搜索并选择订单..."
+              />
+            </Field>
+
+            {selectedOrder && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                <div className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">自动带出：收货方 / 地址</div>
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {selectedOrder.customer_name}<br/>
+                  <span className="text-xs">{selectedOrder.customer_country}</span>
+                </div>
+              </div>
+            )}
+
+            <Field label="段落类型 *">
+              <select value={formData.segmentType} onChange={e=>setFormData({...formData, segmentType:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
+                <option value="international">国际段</option>
+                <option value="domestic">国内段</option>
+              </select>
+            </Field>
+
+            <Field label="承运商 / 快递公司 *">
+              <input required value={formData.carrier} onChange={e=>setFormData({...formData, carrier:e.target.value})} placeholder="例如：DHL, FedEx..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+            </Field>
+            <Field label="追踪单号 *">
+              <input required value={formData.trackingNo} onChange={e=>setFormData({...formData, trackingNo:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white data-field font-bold" />
+            </Field>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="发货日期">
+                <input type="date" value={formData.shippingDate} onChange={e=>setFormData({...formData, shippingDate:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+              </Field>
+              <Field label="包裹箱数">
+                <input type="number" min="1" value={formData.packageCount} onChange={e=>setFormData({...formData, packageCount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white data-field" />
+              </Field>
+            </div>
+
+            <Field label="详细目的地址">
+               <textarea value={formData.recipientAddress} onChange={e=>setFormData({...formData, recipientAddress:e.target.value})} placeholder="选填，补充详细收货地址..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
+            </Field>
+          </div>
+          <button type="submit" className="hidden">Submit</button>
+        </form>
+      </Drawer>
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
+      {children}
+    </label>
   );
 }

@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Edit, Paperclip, Plus, Search, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
+import { Edit, Plus, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Chip } from '../features/order-detail/components';
-import type { FinanceListRecord, OrderOption, PartnerOption } from '../types/crm';
+import { Chip, Toast } from '../features/order-detail/components';
+import { Drawer } from './ui/Drawer';
+import { Pagination } from './ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
+import { Combobox } from './ui/Combobox';
+import { TIME_RANGES, getRangeDates } from '../lib/date';
+import type { FinanceListRecord, OrderOption, PartnerOption, PartnerRecord } from '../types/crm';
 
 type FinanceFormState = {
   orderId: string;
@@ -31,7 +36,7 @@ const EMPTY_FORM: FinanceFormState = {
 };
 
 function formatTotal(amount: number, currency: string) {
-  return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function getPaymentCategoryLabel(category: string | undefined) {
@@ -48,6 +53,7 @@ function getPaymentCategoryLabel(category: string | undefined) {
 
 export default function FinanceView() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [records, setRecords] = useState<FinanceListRecord[]>([]);
   const [orders, setOrders] = useState<OrderOption[]>([]);
@@ -58,13 +64,25 @@ export default function FinanceView() {
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinanceListRecord | null>(null);
   const [formData, setFormData] = useState<FinanceFormState>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<FinanceFormState>(EMPTY_FORM);
+  const [toast, setToast] = useState('');
+
+  const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
   const query = searchParams.get('q') || '';
   const timeRange = searchParams.get('timeRange') || 'all';
+  const paramCustomerId = searchParams.get('customerId') || '';
 
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(searchParams);
     if (val) next.set(key, val); else next.delete(key);
+
+    if (key === 'timeRange') {
+      const dates = getRangeDates(val as any);
+      if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
+      if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
+    }
+
     setSearchParams(next);
   };
 
@@ -73,7 +91,7 @@ export default function FinanceView() {
     setError('');
     try {
       const [financeData, orderData, partnerData] = await Promise.all([
-        apiFetch<FinanceListRecord[]>(`/api/finance?timeRange=${timeRange}`),
+        apiFetch<FinanceListRecord[]>(`/api/finance?${searchParams.toString()}`),
         apiFetch<OrderOption[]>('/api/orders'),
         apiFetch<PartnerOption[]>('/api/partners'),
       ]);
@@ -89,7 +107,7 @@ export default function FinanceView() {
 
   useEffect(() => {
     void fetchData();
-  }, [timeRange]);
+  }, [searchParams]);
 
   const filteredRecords = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -98,6 +116,23 @@ export default function FinanceView() {
         .some((value) => value.toLowerCase().includes(keyword)),
     );
   }, [records, query]);
+
+  const {
+    currentPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    currentItems,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredRecords);
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') {
+      openCreateForm();
+      updateParam('create', '');
+    }
+  }, [searchParams]);
 
   const totals = useMemo(() => {
     const res: { receipt: Record<string, number>; payment: Record<string, number>; pending: number } = { receipt: {}, payment: {}, pending: 0 };
@@ -113,6 +148,7 @@ export default function FinanceView() {
   const openCreateForm = () => {
     setEditingRecord(null);
     setFormData(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
     setFormError('');
     setShowForm(true);
   };
@@ -120,7 +156,7 @@ export default function FinanceView() {
   const openEditForm = (record: FinanceListRecord) => {
     setEditingRecord(record);
     setFormError('');
-    setFormData({
+    const newForm = {
       orderId: String(record.order_id),
       type: record.type,
       amount: String(record.amount),
@@ -130,13 +166,16 @@ export default function FinanceView() {
       status: record.status,
       recordCategory: (record.recordCategory as any) || (record.type === 'payment' ? 'goods' : 'deposit'),
       remark: record.remark || '',
-    });
+    };
+    setFormData(newForm);
+    setInitialForm(newForm);
     setShowForm(true);
   };
 
   const closeForm = () => {
     setEditingRecord(null);
     setFormData(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
     setFormError('');
     setShowForm(false);
   };
@@ -146,8 +185,14 @@ export default function FinanceView() {
     setFormError('');
     const payload = { ...formData, orderId: Number(formData.orderId), amount: Number(formData.amount), partnerId: formData.partnerId ? Number(formData.partnerId) : null };
     try {
-      if (editingRecord) await apiFetch(`/api/finance/${editingRecord.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-      else await apiFetch('/api/finance', { method: 'POST', body: JSON.stringify(payload) });
+      if (editingRecord) {
+        await apiFetch(`/api/finance/${editingRecord.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+        setToast('流水已更新');
+      } else {
+        await apiFetch('/api/finance', { method: 'POST', body: JSON.stringify(payload) });
+        setToast('流水登记成功');
+      }
+      setTimeout(() => setToast(''), 3000);
       closeForm();
       await fetchData();
     } catch (requestError) {
@@ -166,8 +211,8 @@ export default function FinanceView() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
+    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -179,23 +224,16 @@ export default function FinanceView() {
             />
           </div>
           <button
-            onClick={showForm ? closeForm : openCreateForm}
+            onClick={openCreateForm}
             className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md"
           >
             <Plus className="mr-2 h-4 w-4" />
-            {showForm ? '取消' : '登记流水'}
+            登记流水
           </button>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-           {[
-             { key: 'week', label: '本周' },
-             { key: 'month', label: '本月' },
-             { key: '3months', label: '近3个月' },
-             { key: '6months', label: '近半年' },
-             { key: 'year', label: '近1年' },
-             { key: 'all', label: '全部' }
-           ].map(chip => (
+           {TIME_RANGES.map(chip => (
              <button
                key={chip.key}
                onClick={() => updateParam('timeRange', chip.key)}
@@ -209,8 +247,8 @@ export default function FinanceView() {
         {error ? <div className="mt-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
 
         <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
-           <StatCard title="USD 收款" value={totals.receipt.USD || 0} icon={<ArrowDownLeft className="text-success" size={16} />} currency="USD" />
-           <StatCard title="CNY 收款" value={totals.receipt.CNY || 0} icon={<ArrowDownLeft className="text-success" size={16} />} currency="CNY" />
+           <StatCard title="USD 收款" value={totals.receipt.USD || 0} icon={<ArrowDownLeft className="text-emerald-500" size={16} />} currency="USD" />
+           <StatCard title="CNY 收款" value={totals.receipt.CNY || 0} icon={<ArrowDownLeft className="text-emerald-500" size={16} />} currency="CNY" />
            <StatCard title="USD 付款" value={totals.payment.USD || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="USD" />
            <StatCard title="CNY 付款" value={totals.payment.CNY || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="CNY" />
            <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-2xl border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors">
@@ -218,100 +256,65 @@ export default function FinanceView() {
                 <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">待核销</div>
                 <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{totals.pending} 笔</div>
               </div>
-              <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center text-warning"><Clock size={16} /></div>
+              <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500"><Clock size={16} /></div>
            </div>
         </div>
-
-        {showForm ? (
-          <form onSubmit={handleSubmit} className="mt-6 rounded-3xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 shadow-inner">
-            <div className="mb-6 text-[11px] font-bold text-primary-navy dark:text-white uppercase tracking-widest">{editingRecord ? '编辑财务流水' : '新增财务流水'}</div>
-            {formError ? <div className="mb-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Field label="关联订单 *">
-                <select required value={formData.orderId} onChange={(e) => setFormData({ ...formData, orderId: e.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
-                  <option value="">选择订单...</option>
-                  {orders.map(o => <option key={o.id} value={o.id}>{o.display_id} · {o.customer_name}</option>)}
-                </select>
-              </Field>
-              <Field label="流水类型 *">
-                <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as any })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
-                  <option value="receipt">收款 (In)</option>
-                  <option value="payment">付款 (Out)</option>
-                </select>
-              </Field>
-              <div className="flex gap-4">
-                 <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
-                 <div className="flex-1"><Field label="金额 *"><input type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" /></Field></div>
-              </div>
-              <Field label="款项用途"><select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
-                 <option value="deposit">首付款 / 定金</option>
-                 <option value="balance">尾款</option>
-                 <option value="goods">货款</option>
-                 <option value="freight">运费</option>
-                 <option value="customs">报关费</option>
-                 <option value="other">其他</option>
-              </select></Field>
-              <Field label="核销状态"><select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select></Field>
-              <Field label="对象/对方名称"><input value={formData.target} onChange={e=>setFormData({...formData, target:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" /></Field>
-              <div className="md:col-span-2 lg:col-span-3">
-                 <Field label="备注"><input value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" /></Field>
-              </div>
-            </div>
-            <div className="mt-8 flex justify-end gap-3">
-              <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-              <button type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">保存流水</button>
-            </div>
-          </form>
-        ) : null}
       </section>
 
-      <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
-        {loading ? <div className="p-8 text-sm text-slate-500 dark:text-slate-400 font-bold animate-pulse">读取流水中...</div> : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-navy-800">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+      <section className="flex-1 min-h-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col overflow-hidden">
+        {loading ? <div className="p-8 text-sm text-slate-500 dark:text-slate-400 font-bold animate-pulse text-center">读取流水中...</div> : (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+              <table className="min-w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
-                    <th className="px-4 py-4">日期 / 订单</th>
-                    <th className="px-4 py-4">类型 / 分类</th>
-                    <th className="px-4 py-4">金额</th>
-                    <th className="px-4 py-4">对象</th>
-                    <th className="px-4 py-4">状态</th>
-                    <th className="px-4 py-4 text-right">操作</th>
+                    <th className="px-4 py-4 text-left">日期 / 订单</th>
+                    <th className="px-4 py-4 text-center">类型 / 分类</th>
+                    <th className="px-4 py-4 text-right">金额</th>
+                    <th className="px-4 py-4 text-left">对象</th>
+                    <th className="px-4 py-4 text-center">状态</th>
+                    <th className="px-4 py-4 text-center">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
-                  {filteredRecords.length ? filteredRecords.map((r) => (
-                    <tr key={r.id} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
-                      <td className="px-4 py-4">
+                  {currentItems.length ? currentItems.map((r) => (
+                    <tr key={r.id} onClick={() => {
+                        if (r.order_display_id) {
+                          if ((document as any).startViewTransition) {
+                            (document as any).startViewTransition(() => navigate(`/orders/${r.order_display_id}`));
+                          } else {
+                            navigate(`/orders/${r.order_display_id}`);
+                          }
+                        }
+                      }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
+                      <td className="px-4 py-4 text-left">
                          <div className="font-bold text-primary-navy dark:text-white data-field">{formatDateOnly(r.created_at)}</div>
-                         <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase">{r.order_display_id || 'MISC'}</div>
+                         <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase hover:text-primary-navy transition-colors">{r.order_display_id || 'MISC'}</div>
                       </td>
-                      <td className="px-4 py-4">
-                         <div className="flex items-center gap-2 mb-1"><Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip></div>
+                      <td className="px-4 py-4 text-center">
+                         <div className="flex items-center justify-center gap-2 mb-1"><Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip></div>
                          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">{getPaymentCategoryLabel(r.recordCategory || r.payment_category)}</div>
                       </td>
-                      <td className={`px-4 py-4 font-bold data-field text-[15px] ${r.type === 'receipt' ? 'text-tertiary-sage' : 'text-error'}`}>
-                         {r.type === 'receipt' ? '+' : '-'}{r.currency} {Number(r.amount).toLocaleString()}
+                      <td className={`px-4 py-4 text-right font-bold data-field text-[14px] ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
+                         {r.type === 'receipt' ? '+' : '-'}{r.currency} {Number(r.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-4">
-                         <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight">{r.partner_name || r.target || '未填写'}</div>
-                         <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[150px]">{r.remark || '无备注'}</div>
+                      <td className="px-4 py-4 text-left">
+                         <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={r.partner_name || r.target}>{r.partner_name || r.target || '—'}</div>
+                         <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[150px]">{r.remark || '—'}</div>
                       </td>
-                      <td className="px-4 py-4"><Chip tone={r.status === 'completed' ? 'neutral' : 'warning'}>{r.status === 'completed' ? '已核销' : '待处理'}</Chip></td>
-                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-2">
-                           <button onClick={() => openEditForm(r)} className="p-2 text-secondary-slate dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent transition-all"><Edit size={14} /></button>
+                      <td className="px-4 py-4 text-center"><Chip tone={r.status === 'completed' ? 'neutral' : 'warning'}>{r.status === 'completed' ? '已核销' : '待处理'}</Chip></td>
+                      <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                           <button onClick={() => openEditForm(r)} className="p-2 text-secondary-slate dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
                            {user?.role === 'admin' && (
                              <button 
                                onClick={() => {
                                  const reason = window.prompt('请输入作废/删除此笔流水的财务原因：');
                                  if (reason) {
-                                   console.log(`[Finance Audit] User ${user.name} deleting record ${r.id} for reason: ${reason}`);
                                    void deleteRecord(r);
                                  }
                                }} 
-                               className="p-2 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 rounded-lg border border-transparent transition-all"
+                               className="p-2 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 rounded-lg border border-transparent shadow-sm transition-all"
                              >
                                <Trash2 size={14} />
                              </button>
@@ -319,13 +322,92 @@ export default function FinanceView() {
                         </div>
                       </td>
                     </tr>
-                  )) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-medium uppercase tracking-widest">暂无流水记录。</td></tr>}
+                  )) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest">暂无流水记录。</td></tr>}
                 </tbody>
               </table>
+            </div>
+            <div className="shrink-0">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             </div>
           </div>
         )}
       </section>
+
+      <Drawer
+        isOpen={showForm}
+        onClose={closeForm}
+        title={editingRecord ? '编辑财务流水' : '新增财务流水'}
+        isDirty={isFormDirty}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">保存流水</button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {formError ? <div className="rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
+          <div className="space-y-6">
+            <Field label="关联订单 *">
+              <Combobox
+                value={formData.orderId}
+                onChange={val => setFormData({ ...formData, orderId: String(val) })}
+                onSearch={async (q) => {
+                  const data = await apiFetch<OrderOption[]>(`/api/orders?q=${encodeURIComponent(q)}&customerId=${paramCustomerId}`);
+                  return data.slice(0, 20).map(o => ({ value: o.id, label: o.display_id, subLabel: o.customer_name }));
+                }}
+                placeholder="搜索并选择订单..."
+              />
+            </Field>
+            <Field label="流水类型 *">
+              <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as any })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+                <option value="receipt">收款 (In)</option>
+                <option value="payment">付款 (Out)</option>
+              </select>
+            </Field>
+            <div className="flex gap-4">
+                <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
+                <div className="flex-1"><Field label="金额 *"><input required type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field" /></Field></div>
+            </div>
+            <Field label="款项用途">
+              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+                <option value="deposit">首付款 / 定金</option>
+                <option value="balance">尾款</option>
+                <option value="goods">货款</option>
+                <option value="freight">运费</option>
+                <option value="customs">报关费</option>
+                <option value="other">其他</option>
+            </select></Field>
+            <Field label="核销状态">
+              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
+            </Field>
+            <Field label="对方/合作伙伴">
+              <Combobox
+                value={formData.partnerId}
+                onChange={val => setFormData({ ...formData, partnerId: String(val) })}
+                onSearch={async (q) => {
+                  const data = await apiFetch<PartnerRecord[]>(`/api/partners?q=${encodeURIComponent(q)}`);
+                  return data.slice(0, 20).map(p => ({ value: p.id, label: p.name, subLabel: p.partner_type }));
+                }}
+                placeholder="搜索并选择合作伙伴..."
+              />
+            </Field>
+            <Field label="备注">
+              <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言或打款参考号..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
+            </Field>
+          </div>
+          <button type="submit" className="hidden">Submit</button>
+        </form>
+      </Drawer>
+
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }
@@ -352,6 +434,6 @@ function Field({ label, children, className = '' }: { label: string; children: R
 }
 
 function formatDateOnly(v: string) {
-  if (!v) return '-';
+  if (!v) return '—';
   return v.split(' ')[0];
 }

@@ -5,28 +5,31 @@ import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows, getAttachmentsByEntity } from '../services/attachments.js';
 import { readFinancePayload } from '../services/payloads.js';
 import { readString } from '../lib/values.js';
+import { logAction } from '../lib/audit.js';
 
 export function createFinanceRouter() {
   const router = Router();
 
   router.get('/', async (req, res) => {
-    const timeRange = readString(req.query.timeRange);
-    let timeFilter = '';
+    const q = readString(req.query.q);
+    const startDate = readString(req.query.start_date);
+    const endDate = readString(req.query.end_date);
+
+    let whereSql = 'WHERE 1=1';
     const params: unknown[] = [];
 
-    if (timeRange && timeRange !== 'all') {
-      let interval = '';
-      switch (timeRange) {
-        case 'week': interval = '-7 days'; break;
-        case 'month': interval = '-1 month'; break; case 'last_month': interval = '-2 month'; break;
-        case '3months': interval = '-3 months'; break;
-        case '6months': interval = '-6 months'; break;
-        case 'year': interval = '-1 year'; break;
-      }
-      if (interval) {
-        timeFilter = `WHERE f.created_at >= datetime('now', ?)`;
-        params.push(interval);
-      }
+    if (q) {
+      whereSql += ` AND (o.display_id LIKE ? OR c.name LIKE ? OR p.name LIKE ? OR f.target LIKE ? OR f.remark LIKE ?)`;
+      const p = `%${q}%`;
+      params.push(p, p, p, p, p);
+    }
+    if (startDate) {
+      whereSql += ` AND f.created_at >= ?`;
+      params.push(startDate);
+    }
+    if (endDate) {
+      whereSql += ` AND f.created_at <= ?`;
+      params.push(endDate);
     }
 
     try {
@@ -42,7 +45,7 @@ export function createFinanceRouter() {
         LEFT JOIN orders o ON f.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
         LEFT JOIN users u ON u.id = f.created_by
-        ${timeFilter}
+        ${whereSql}
         ORDER BY datetime(f.created_at) DESC, f.id DESC
       `, params);
       const attachments = await getAttachmentsByEntity('finance', records.map((record) => Number(record.id)));
@@ -90,6 +93,16 @@ export function createFinanceRouter() {
         ],
       );
       await bindAttachmentsToEntity('finance', created.lastID as number, result.payload.attachmentIds);
+
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'CREATE',
+        entityType: 'FINANCE',
+        entityId: created.lastID,
+        newValue: result.payload
+      });
+
       res.status(201).json({ id: created.lastID });
     } catch (error) {
       return handleRouteError(res, error, '保存财务数据失败');

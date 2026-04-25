@@ -38,7 +38,7 @@ export function createAuthRouter() {
         return fail(res, 401, '无效的用户名或密码', 'INVALID_CREDENTIALS');
       }
 
-      const token = signAuthToken({ id: user.id, role: user.role, username: user.username });
+      const token = signAuthToken({ id: user.id, role: user.role, username: user.username, name: user.name });
       res.cookie('token', token, getCookieOptions());
       res.json({
         user: {

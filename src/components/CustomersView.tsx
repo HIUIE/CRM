@@ -3,7 +3,11 @@ import { Edit, ExternalLink, Plus, Search, Trash2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Chip } from '../features/order-detail/components';
+import { Chip, Toast } from '../features/order-detail/components';
+import { Drawer } from './ui/Drawer';
+import { Pagination } from './ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
+import { TIME_RANGES, getRangeDates } from '../lib/date';
 import type { CustomerListItem } from '../types/crm';
 
 type CustomerForm = {
@@ -48,6 +52,10 @@ export default function CustomersView() {
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<CustomerListItem | null>(null);
   const [form, setForm] = useState<CustomerForm>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<CustomerForm>(EMPTY_FORM);
+  const [toast, setToast] = useState('');
+
+  const isFormDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   const query = searchParams.get('q') || '';
   const countryFilter = searchParams.get('country') || '';
@@ -56,6 +64,13 @@ export default function CustomersView() {
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(searchParams);
     if (val) next.set(key, val); else next.delete(key);
+
+    if (key === 'timeRange') {
+      const dates = getRangeDates(val as any);
+      if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
+      if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
+    }
+
     setSearchParams(next);
   };
 
@@ -63,7 +78,7 @@ export default function CustomersView() {
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch<CustomerListItem[]>(`/api/customers?timeRange=${timeRange}`);
+      const data = await apiFetch<CustomerListItem[]>(`/api/customers?${searchParams.toString()}`);
       setCustomers(data);
     } catch (requestError) {
       setError(getErrorMessage(requestError, '读取客户数据失败'));
@@ -74,7 +89,7 @@ export default function CustomersView() {
 
   useEffect(() => {
     void loadCustomers();
-  }, [timeRange]);
+  }, [searchParams]);
 
   const countryOptions = useMemo(
     () =>
@@ -96,9 +111,28 @@ export default function CustomersView() {
     });
   }, [countryFilter, customers, query]);
 
+  const {
+    currentPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    currentItems,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredCustomers);
+
+  // Read create flag from URL to open drawer
+  useEffect(() => {
+    if (searchParams.get('create') === '1') {
+      openCreate();
+      updateParam('create', '');
+    }
+  }, [searchParams]);
+
   const openCreate = () => {
     setEditingCustomer(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
     setFormError('');
     setShowForm(true);
   };
@@ -106,19 +140,22 @@ export default function CustomersView() {
   const openEdit = (customer: CustomerListItem) => {
     setEditingCustomer(customer);
     setFormError('');
-    setForm({
+    const newForm = {
       name: customer.name,
       country: customer.country,
       contact: customer.contact,
       sourceChannel: customer.source_channel || '',
       intentProducts: customer.intent_products || '',
-    });
+    };
+    setForm(newForm);
+    setInitialForm(newForm);
     setShowForm(true);
   };
 
   const closeForm = () => {
     setEditingCustomer(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
     setFormError('');
     setShowForm(false);
   };
@@ -141,14 +178,27 @@ export default function CustomersView() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
+        setToast('客户资料已更新');
+        setTimeout(() => setToast(''), 3000);
+        closeForm();
+        await loadCustomers();
       } else {
-        await apiFetch('/api/customers', {
+        const result = await apiFetch<{ id: number, displayId: string }>('/api/customers', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
+        setToast('客户建档成功');
+        closeForm();
+        setTimeout(() => {
+          setToast('');
+          const navigateToDetail = () => navigate(`/customers/detail/${result.displayId || result.id}`);
+          if ((document as any).startViewTransition) {
+            (document as any).startViewTransition(navigateToDetail);
+          } else {
+            navigateToDetail();
+          }
+        }, 1000);
       }
-      closeForm();
-      await loadCustomers();
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, '保存客户失败'));
     }
@@ -168,15 +218,15 @@ export default function CustomersView() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
+    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_160px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               value={query}
               onChange={(event) => updateParam('q', event.target.value)}
-              placeholder="搜索客户名称、渠道、意向产品..."
+              placeholder="搜索客户名称、渠道..."
               className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-9 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white"
             />
           </div>
@@ -195,23 +245,16 @@ export default function CustomersView() {
              </select>
           </div>
           <button
-            onClick={showForm ? closeForm : openCreate}
+            onClick={openCreate}
             className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md"
           >
             <Plus className="mr-2 h-4 w-4" />
-            {showForm ? '取消' : '新增客户'}
+            新增客户
           </button>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-           {[
-             { key: 'week', label: '本周' },
-             { key: 'month', label: '本月' },
-             { key: '3months', label: '近3个月' },
-             { key: '6months', label: '近半年' },
-             { key: 'year', label: '近1年' },
-             { key: 'all', label: '全部' }
-           ].map(chip => (
+           {TIME_RANGES.map(chip => (
              <button
                key={chip.key}
                onClick={() => updateParam('timeRange', chip.key)}
@@ -223,90 +266,52 @@ export default function CustomersView() {
         </div>
 
         {error ? <div className="mt-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
-
-        {showForm ? (
-          <form onSubmit={handleSubmit} className="mt-5 rounded-3xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6">
-            <div className="mb-6 text-[11px] font-bold text-primary-navy dark:text-white uppercase tracking-widest">{editingCustomer ? `编辑客户档案：${editingCustomer.name}` : '新增客户档案'}</div>
-            {formError ? <div className="mb-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
-            <div className="grid gap-6 md:grid-cols-2">
-              <Field label="客户名称 *">
-                <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
-              </Field>
-              <Field label="国家 / 地区 *">
-                <input required value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
-              </Field>
-              <Field label="联系方式 *">
-                <input required value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
-              </Field>
-              <Field label="客户来源渠道">
-                <select value={form.sourceChannel} onChange={(event) => setForm({ ...form, sourceChannel: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
-                   <option value="">请选择来源...</option>
-                   <option value="阿里巴巴国际站">阿里巴巴国际站</option>
-                   <option value="官网">官网</option>
-                   <option value="展会">展会</option>
-                   <option value="转介绍">转介绍</option>
-                   <option value="开发信">开发信</option>
-                   <option value="其他">其他</option>
-                </select>
-              </Field>
-              <div className="md:col-span-2">
-                <Field label="意向产品类型">
-                  <textarea value={form.intentProducts} onChange={(event) => setForm({ ...form, intentProducts: event.target.value })} placeholder="例如：太阳能板、逆变器等..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" rows={3} />
-                </Field>
-              </div>
-            </div>
-            <div className="mt-8 flex justify-end gap-3">
-              <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-              <button type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">保存客户</button>
-            </div>
-          </form>
-        ) : null}
       </section>
 
-      <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+      <section className="flex-1 min-h-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col overflow-hidden">
         {loading ? (
-          <div className="text-sm text-slate-500 dark:text-slate-400 p-8">正在读取客户数据...</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400 p-8 text-center animate-pulse">正在读取客户数据...</div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-navy-800">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+              <table className="min-w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
-                    <th className="px-4 py-4">国家</th>
-                    <th className="px-4 py-4">客户名称</th>
-                    <th className="px-4 py-4">来源渠道</th>
-                    <th className="px-4 py-4">联系方式</th>
-                    <th className="px-4 py-4">订单数</th>
-                    <th className="px-4 py-4">创建人</th>
-                    <th className="px-4 py-4 text-right">操作</th>
+                    <th className="px-4 py-4 text-left">国家</th>
+                    <th className="px-4 py-4 text-left">客户名称</th>
+                    <th className="px-4 py-4 text-center">来源渠道</th>
+                    <th className="px-4 py-4 text-left">联系方式</th>
+                    <th className="px-4 py-4 text-right">订单数</th>
+                    <th className="px-4 py-4 text-center">创建人</th>
+                    <th className="px-4 py-4 text-center">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
-                  {filteredCustomers.length ? (
-                    filteredCustomers.map((customer) => (
+                  {currentItems.length ? (
+                    currentItems.map((customer) => (
                       <tr
                         key={customer.id}
-                        onClick={() => navigate(`/orders?customerId=${customer.id}`)}
+                        onClick={() => navigate(`/customers/detail/${customer.display_id || customer.id}`)}
                         className="group align-middle transition-colors hover:bg-slate-50 dark:hover:bg-navy-800 cursor-pointer"
                       >
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-4 text-left">
                           <div className="flex items-center gap-2 font-bold text-primary-navy dark:text-white">
                             {countryToFlag(customer.country)}
-                            <span>{customer.country}</span>
+                            <span>{customer.country || '—'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-4 font-bold text-primary-navy dark:text-white group-hover:text-blue-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{customer.name}</td>
-                        <td className="px-4 py-4"><Chip tone="neutral">{customer.source_channel || '未知'}</Chip></td>
-                        <td className="px-4 py-4 text-slate-600 dark:text-slate-400 font-medium">{customer.contact}</td>
-                        <td className="px-4 py-4 text-slate-700 dark:text-slate-300 font-bold">{customer.order_count}</td>
-                        <td className="px-4 py-4 text-slate-500 dark:text-slate-500 text-[11px] font-bold uppercase">{customer.created_by_name || '系统'}</td>
-                        <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex justify-end gap-2">
-                            <button onClick={() => openEdit(customer)} className="rounded-lg border border-slate-200 dark:border-navy-700 p-2 text-secondary-slate dark:text-slate-400 transition-all hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600">
+                        <td className="px-4 py-4 text-left font-bold text-primary-navy dark:text-white group-hover:text-blue-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-tight truncate max-w-[200px]" title={customer.name}>{customer.name || '—'}</td>
+                        <td className="px-4 py-4 text-center">{customer.source_channel ? <Chip tone="neutral">{customer.source_channel}</Chip> : '—'}</td>
+                        <td className="px-4 py-4 text-left text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px]" title={customer.contact}>{customer.contact || '—'}</td>
+                        <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-300 font-bold data-field">{customer.order_count || '—'}</td>
+                        <td className="px-4 py-4 text-center text-slate-500 dark:text-slate-500 text-[11px] font-bold uppercase">{customer.created_by_name || '系统'}</td>
+                        <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onClick={() => openEdit(customer)} className="rounded-lg border border-transparent p-2 text-secondary-slate dark:text-slate-400 transition-all hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 shadow-sm">
                               <Edit className="h-4 w-4" />
                             </button>
                             {user?.role === 'admin' ? (
-                              <button onClick={() => void handleDelete(customer)} className="rounded-lg border border-slate-200 dark:border-navy-700 p-2 text-slate-300 dark:text-slate-600 transition-all hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800">
+                              <button onClick={() => void handleDelete(customer)} className="rounded-lg border border-transparent p-2 text-slate-300 dark:text-slate-600 transition-all hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 shadow-sm">
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             ) : null}
@@ -322,9 +327,64 @@ export default function CustomersView() {
                 </tbody>
               </table>
             </div>
+            <div className="shrink-0">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
           </div>
         )}
       </section>
+
+      <Drawer
+        isOpen={showForm}
+        onClose={closeForm}
+        title={editingCustomer ? `编辑客户档案：${editingCustomer.name}` : '新增客户档案'}
+        isDirty={isFormDirty}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">保存客户</button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {formError ? <div className="rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
+          <div className="space-y-6">
+            <Field label="客户名称 *">
+              <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+            </Field>
+            <Field label="国家 / 地区 *">
+              <input required value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+            </Field>
+            <Field label="联系方式">
+              <input value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+            </Field>
+            <Field label="客户来源渠道">
+              <select value={form.sourceChannel} onChange={(event) => setForm({ ...form, sourceChannel: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
+                  <option value="">请选择来源...</option>
+                  <option value="阿里巴巴国际站">阿里巴巴国际站</option>
+                  <option value="官网">官网</option>
+                  <option value="展会">展会</option>
+                  <option value="转介绍">转介绍</option>
+                  <option value="开发信">开发信</option>
+                  <option value="其他">其他</option>
+              </select>
+            </Field>
+            <Field label="意向产品类型">
+              <textarea value={form.intentProducts} onChange={(event) => setForm({ ...form, intentProducts: event.target.value })} placeholder="例如：太阳能板、逆变器等..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[100px] resize-y" rows={3} />
+            </Field>
+          </div>
+          <button type="submit" className="hidden">Submit</button>
+        </form>
+      </Drawer>
+
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }

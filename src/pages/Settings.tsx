@@ -209,12 +209,12 @@ export default function SettingsView() {
   };
 
   if (loading) {
-    return <div className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 text-sm text-slate-500 dark:text-slate-400 shadow-sm transition-colors animate-pulse">正在读取系统设置...</div>;
+    return <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 text-sm text-slate-500 dark:text-slate-400 shadow-sm transition-colors animate-pulse">正在读取系统设置...</div>;
   }
 
   if (!isAdmin) {
     return (
-      <div className="rounded-3xl border border-amber-200 dark:border-amber-900/30 bg-white dark:bg-navy-900 p-8 text-sm text-amber-700 dark:text-amber-400 shadow-sm transition-colors">
+      <div className="rounded-lg border border-amber-200 dark:border-amber-900/30 bg-white dark:bg-navy-900 p-8 text-sm text-amber-700 dark:text-amber-400 shadow-sm transition-colors">
         当前账号可以使用业务模块，但只有管理员可以查看和修改系统设置、编号规则与团队账号。
       </div>
     );
@@ -233,7 +233,7 @@ export default function SettingsView() {
       {userMessage ? <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400 animate-in fade-in">{userMessage}</div> : null}
 
       {activeTab === 'general' && (
-        <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
+        <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
           <div className="mb-8 flex items-center justify-between gap-3">
             <div>
               <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
@@ -268,7 +268,7 @@ export default function SettingsView() {
       )}
 
       {activeTab === 'export' && (
-        <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
+        <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
           <div className="mb-8 flex items-center justify-between gap-3">
             <div>
               <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
@@ -282,7 +282,7 @@ export default function SettingsView() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+          <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div className="space-y-3">
                 <div className="text-sm font-bold text-primary-navy dark:text-white">客户维度归档导出</div>
@@ -310,7 +310,7 @@ export default function SettingsView() {
       )}
 
       {activeTab === 'ai' && (
-        <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
+        <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
           <div className="mb-8 flex items-center justify-between gap-3">
             <div>
               <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
@@ -370,7 +370,7 @@ export default function SettingsView() {
       )}
 
       {activeTab === 'interface' && (
-        <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
+        <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
           <div className="mb-8 flex items-center justify-between gap-3">
             <div>
               <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">

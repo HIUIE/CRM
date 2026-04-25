@@ -47,6 +47,7 @@ export type OrderInfo = {
 
 export type CustomerInfo = {
   id: number;
+  display_id: string;
   name: string;
   country?: string | null;
   contact?: string | null;

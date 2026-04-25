@@ -11,6 +11,7 @@ import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
 import { bindAttachmentsToEntity, getAttachmentsByEntity, deleteAttachmentRows } from '../services/attachments.js';
 import { readLogisticsPayload } from '../services/payloads.js';
+import { readString } from '../lib/values.js';
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -35,8 +36,33 @@ const upload = multer({
 
 export function createLogisticsRouter() {
   const router = Router();
+router.get('/', async (req, res) => {
+  const q = readString(req.query.q);
+  const status = readString(req.query.status);
+  const startDate = readString(req.query.start_date);
+  const endDate = readString(req.query.end_date);
 
-  router.get('/', async (_req, res) => {
+  let whereSql = 'WHERE 1=1';
+  const params: any[] = [];
+
+  if (q) {
+    whereSql += ` AND (o.display_id LIKE ? OR l.carrier LIKE ? OR l.tracking_no LIKE ? OR c.name LIKE ?)`;
+    const p = `%${q}%`;
+    params.push(p, p, p, p);
+  }
+  if (status) {
+    whereSql += ` AND l.status = ?`;
+    params.push(status);
+  }
+  if (startDate) {
+    whereSql += ` AND l.created_at >= ?`;
+    params.push(startDate);
+  }
+  if (endDate) {
+    whereSql += ` AND l.created_at <= ?`;
+    params.push(endDate);
+  }
+
     try {
       const records = await db.all<Record<string, unknown>[]>(`
         SELECT
@@ -49,13 +75,13 @@ export function createLogisticsRouter() {
         LEFT JOIN orders o ON l.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
         LEFT JOIN users u ON u.id = l.created_by
-        ORDER BY
+        ${whereSql}
+        ORDER BY 
           CASE WHEN l.segment_type = 'domestic' THEN 0 ELSE 1 END ASC,
           CASE WHEN l.shipping_date IS NULL OR l.shipping_date = '' THEN 1 ELSE 0 END ASC,
           l.shipping_date DESC,
-          datetime(l.created_at) DESC,
-          l.id DESC
-      `);
+          datetime(l.created_at) DESC
+      `, params);
       const attachments = await getAttachmentsByEntity('logistics', records.map((record) => Number(record.id)));
       res.json(
         records.map((record) => ({

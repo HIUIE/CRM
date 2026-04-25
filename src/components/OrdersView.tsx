@@ -1,9 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Edit, Plus, Search, Calendar, Package, Trash2, AlertTriangle, X, Copy, Check, Hash } from 'lucide-react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Edit, Plus, Search, Trash2, AlertTriangle, Copy, Check, Hash } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Chip } from '../features/order-detail/components';
+import { Drawer } from './ui/Drawer';
+import { Pagination } from './ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
+import { Combobox } from './ui/Combobox';
+import { TIME_RANGES, getRangeDates } from '../lib/date';
 import type { CustomerListItem, OrderSummary } from '../types/crm';
 
 type OrderFormState = {
@@ -45,6 +50,9 @@ export default function OrdersView() {
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderSummary | null>(null);
   const [formData, setFormData] = useState<OrderFormState>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<OrderFormState>(EMPTY_FORM);
+
+  const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
   // 删除确认状态
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -60,6 +68,13 @@ export default function OrdersView() {
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(searchParams);
     if (val) next.set(key, val); else next.delete(key);
+
+    if (key === 'timeRange') {
+      const dates = getRangeDates(val as any);
+      if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
+      if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
+    }
+
     setSearchParams(next);
   };
 
@@ -83,15 +98,39 @@ export default function OrdersView() {
     void loadData();
   }, [searchParams]);
 
+  const {
+    currentPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    currentItems,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(orders);
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') {
+      openCreateForm();
+      updateParam('create', '');
+    }
+  }, [searchParams]);
+
   const openCreateForm = async () => {
     setEditingOrder(null);
     setFormError('');
-    // 默认预填逻辑：从后端请求下一个建议单号
     try {
       const { nextId } = await apiFetch<{ nextId: string }>('/api/orders/next-display-id');
-      setFormData({ ...EMPTY_FORM, displayId: nextId });
+      const paramCustomerId = searchParams.get('customerId');
+      const newForm = { 
+        ...EMPTY_FORM, 
+        displayId: nextId, 
+        customerId: paramCustomerId || '' 
+      };
+      setFormData(newForm);
+      setInitialForm(newForm);
     } catch (err) {
-      setFormData(EMPTY_FORM);
+      setFormData({ ...EMPTY_FORM, customerId: searchParams.get('customerId') || '' });
+      setInitialForm({ ...EMPTY_FORM, customerId: searchParams.get('customerId') || '' });
     }
     setShowForm(true);
   };
@@ -99,18 +138,23 @@ export default function OrdersView() {
   const openEditForm = (order: OrderSummary) => {
     setEditingOrder(order);
     setFormError('');
-    setFormData({
+    const newForm = {
       displayId: order.display_id,
       customerId: String(order.customer_id),
       productSummary: order.product_summary || '',
       details: '',
       totalAmount: String(order.total_amount || 0),
-    });
+    };
+    setFormData(newForm);
+    setInitialForm(newForm);
     setShowForm(true);
   };
 
   const closeForm = () => {
     setEditingOrder(null);
+    setFormData(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setFormError('');
     setShowForm(false);
   };
 
@@ -119,13 +163,20 @@ export default function OrdersView() {
     setFormError('');
     const payload = { ...formData, customerId: Number(formData.customerId), totalAmount: Number(formData.totalAmount) };
     try {
-      if (editingOrder) await apiFetch(`/api/orders/${editingOrder.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-      else {
+      if (editingOrder) {
+        await apiFetch(`/api/orders/${editingOrder.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+        closeForm();
+        await loadData();
+      } else {
         const created = await apiFetch<{ display_id: string }>('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
-        navigate(`/orders/${created.display_id}`);
+        closeForm();
+        const navigateToDetail = () => navigate(`/orders/${created.display_id}`);
+        if ((document as any).startViewTransition) {
+          (document as any).startViewTransition(navigateToDetail);
+        } else {
+          navigateToDetail();
+        }
       }
-      closeForm();
-      await loadData();
     } catch (err) {
       setFormError(getErrorMessage(err, '保存失败'));
     }
@@ -160,8 +211,8 @@ export default function OrdersView() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
+    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_160px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -186,22 +237,14 @@ export default function OrdersView() {
                <option value="completed">已完成</option>
              </select>
           </div>
-          <button onClick={showForm ? closeForm : openCreateForm} className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md transition-all active:scale-95">
+          <button onClick={openCreateForm} className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md transition-all active:scale-95">
             <Plus className="mr-2 h-4 w-4" />
-            {showForm ? '取消' : '新建订单'}
+            新建订单
           </button>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-           {[
-             { key: 'week', label: '近一周' },
-             { key: 'month', label: '本月' },
-             { key: 'last_month', label: '上月' },
-             { key: '3months', label: '近3个月' },
-             { key: '6months', label: '半年' },
-             { key: 'year', label: '近1年' },
-             { key: 'all', label: '全部' }
-           ].map(chip => (
+           {TIME_RANGES.map(chip => (
              <button
                key={chip.key}
                onClick={() => updateParam('timeRange', chip.key)}
@@ -211,97 +254,59 @@ export default function OrdersView() {
              </button>
            ))}
         </div>
-
-        {showForm && (
-          <form onSubmit={handleSubmit} className="mt-6 rounded-3xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 shadow-inner">
-            <div className="mb-6 text-[11px] font-bold text-primary-navy dark:text-white uppercase tracking-widest">{editingOrder ? '编辑订单基本信息' : '创建新订单'}</div>
-            {formError && <div className="mb-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{formError}</div>}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Field label="订单单号 *">
-                 <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <input 
-                      required 
-                      value={formData.displayId} 
-                      onChange={e => setFormData({...formData, displayId: e.target.value.trim()})} 
-                      placeholder="如: CQBX-2026-..."
-                      className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 pl-9 pr-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white data-field"
-                    />
-                 </div>
-              </Field>
-              <Field label="关联客户 *">
-                <select required value={formData.customerId} onChange={e=>setFormData({...formData, customerId:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
-                  <option value="">选择客户...</option>
-                  {customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </Field>
-              <Field label="订单总额 (USD) *">
-                <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
-              </Field>
-              <div className="md:col-span-2 lg:col-span-3">
-                <Field label="产品摘要 *">
-                  <input required value={formData.productSummary} onChange={e=>setFormData({...formData, productSummary:e.target.value})} placeholder="例如：太阳能板 A-Type 500pcs..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
-                </Field>
-              </div>
-            </div>
-            <div className="mt-8 flex justify-end gap-3">
-              <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-              <button type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md transition-all active:scale-95">确认并进入详情</button>
-            </div>
-          </form>
-        )}
+        {error && <div className="mt-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{error}</div>}
       </section>
 
-      <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-md transition-colors">
-        {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold">读取订单列表中...</div> : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-navy-800">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+      <section className="flex-1 min-h-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-md transition-colors flex flex-col overflow-hidden">
+        {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">读取订单列表中...</div> : (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+              <table className="min-w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
-                    <th className="px-4 py-5">订单号 / 日期</th>
-                    <th className="px-4 py-5">客户 / 国家</th>
-                    <th className="px-4 py-5">产品摘要</th>
-                    <th className="px-4 py-5">金额</th>
-                    <th className="px-4 py-5">收款进度</th>
-                    <th className="px-4 py-5 text-right">操作</th>
+                    <th className="px-4 py-5 text-left">订单号 / 日期</th>
+                    <th className="px-4 py-5 text-left">客户 / 国家</th>
+                    <th className="px-4 py-5 text-left">产品摘要</th>
+                    <th className="px-4 py-5 text-right">金额</th>
+                    <th className="px-4 py-5 text-right">收款进度</th>
+                    <th className="px-4 py-5 text-center">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
-                  {orders.length ? orders.map(o => {
+                  {currentItems.length ? currentItems.map(o => {
                     const meta = getOrderStatusMeta(o.status);
                     return (
                       <tr key={o.id} onClick={() => {
-                        if (document.startViewTransition) {
-                          document.startViewTransition(() => navigate(`/orders/${o.display_id}`));
+                        if ((document as any).startViewTransition) {
+                          (document as any).startViewTransition(() => navigate(`/orders/${o.display_id}`));
                         } else {
                           navigate(`/orders/${o.display_id}`);
                         }
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
-                        <td className="px-4 py-5">
+                        <td className="px-4 py-5 text-left">
                            <div 
                              className="font-bold text-primary-navy dark:text-tertiary-sage uppercase data-field"
                              style={{ viewTransitionName: 'order-id' }}
                            >
-                             {o.display_id}
+                             {o.display_id || '—'}
                            </div>
                            <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1.5 font-bold data-field">{formatDateOnly(o.created_at)}</div>
                         </td>
-                        <td className="px-4 py-5">
-                           <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight">{o.customer_name}</div>
-                           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 uppercase font-extrabold">{o.customer_country}</div>
+                        <td className="px-4 py-5 text-left">
+                           <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={o.customer_name}>{o.customer_name || '—'}</div>
+                           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 uppercase font-extrabold">{o.customer_country || '—'}</div>
                         </td>
-                        <td className="px-4 py-5">
+                        <td className="px-4 py-5 text-left">
                            <div className="flex items-center gap-2 mb-1.5"><Chip tone={meta.tone}>{meta.label}</Chip></div>
-                           <div className="text-slate-600 dark:text-slate-400 font-bold truncate max-w-[200px]">{o.product_summary}</div>
+                           <div className="text-slate-600 dark:text-slate-400 font-bold truncate max-w-[200px]" title={o.product_summary}>{o.product_summary || '—'}</div>
                         </td>
-                        <td className="px-4 py-5 font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
-                        <td className="px-4 py-5">
+                        <td className="px-4 py-5 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
+                        <td className="px-4 py-5 text-right">
                            <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
-                           <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1.5">核销中: {o.pending_finance_count} 笔</div>
+                           <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1.5">{o.pending_finance_count > 0 ? `核销中: ${o.pending_finance_count} 笔` : '—'}</div>
                         </td>
-                        <td className="px-4 py-5" onClick={e=>e.stopPropagation()}>
-                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <td className="px-4 py-5 text-center" onClick={e=>e.stopPropagation()}>
+                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                               <button onClick={()=>openEditForm(o)} className="p-2 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
                               {user?.role === 'admin' && (
                                 <button 
@@ -315,13 +320,73 @@ export default function OrdersView() {
                         </td>
                       </tr>
                     );
-                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest">暂无订单记录。</td></tr>}
+                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[11px]">暂无订单记录。</td></tr>}
                 </tbody>
               </table>
+            </div>
+            <div className="shrink-0">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             </div>
           </div>
         )}
       </section>
+
+      <Drawer
+        isOpen={showForm}
+        onClose={closeForm}
+        title={editingOrder ? '编辑订单基本信息' : '创建新订单'}
+        isDirty={isFormDirty}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">确认并进入详情</button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {formError && <div className="rounded-lg border border-red-100 dark:border-red-800/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 font-bold">{formError}</div>}
+          <div className="space-y-6">
+            <Field label="订单单号 *">
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input 
+                    required 
+                    value={formData.displayId} 
+                    onChange={e => setFormData({...formData, displayId: e.target.value.trim()})} 
+                    placeholder="如: CQBX-2026-..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 pl-9 pr-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white data-field"
+                  />
+                </div>
+            </Field>
+            <Field label="关联客户 *">
+              <Combobox
+                value={formData.customerId}
+                onChange={val => setFormData({ ...formData, customerId: String(val) })}
+                onSearch={async (q) => {
+                  const data = await apiFetch<CustomerListItem[]>(`/api/customers?q=${encodeURIComponent(q)}`);
+                  return data.slice(0, 20).map(c => ({ value: c.id, label: c.name, subLabel: c.country }));
+                }}
+                disabled={!!searchParams.get('customerId')}
+                placeholder="搜索并选择客户..."
+              />
+            </Field>
+            <Field label="订单总额 (USD) *">
+              <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+            </Field>
+            <Field label="产品摘要 *">
+              <input required value={formData.productSummary} onChange={e=>setFormData({...formData, productSummary:e.target.value})} placeholder="例如：太阳能板 A-Type 500pcs..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+            </Field>
+          </div>
+          <button type="submit" className="hidden">Submit</button>
+        </form>
+      </Drawer>
 
       {/* Danger Modal: 订单列表删除二次确认 */}
       {isDeleteModalOpen && (
@@ -381,6 +446,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function formatDateOnly(v: string) {
-  if (!v) return '-';
+  if (!v) return '—';
   return v.split(' ')[0];
 }

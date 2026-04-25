@@ -41,11 +41,14 @@ async function runMigrations() {
 
     CREATE TABLE IF NOT EXISTS customers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      display_id TEXT UNIQUE,
       name TEXT,
       country TEXT,
       contact TEXT,
       logistics_preference TEXT,
       payment_terms TEXT,
+      source_channel TEXT,
+      intent_products TEXT,
       created_by INTEGER,
       updated_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -207,6 +210,41 @@ async function runMigrations() {
       file_path TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      user_name TEXT,
+      action_type TEXT, -- CREATE, UPDATE, DELETE
+      entity_type TEXT, -- ORDER, CUSTOMER, FINANCE, etc.
+      entity_id TEXT,
+      old_value TEXT, -- JSON
+      new_value TEXT, -- JSON
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS customer_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      title TEXT,
+      email TEXT,
+      contact TEXT,
+      is_primary INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS customer_followups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      channel TEXT DEFAULT 'other',
+      created_by INTEGER,
+      created_by_name TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    );
   `);
 
   await ensureColumn('orders', 'product_summary', 'TEXT');
@@ -223,6 +261,11 @@ async function runMigrations() {
   await ensureColumn('partners', 'updated_by', 'INTEGER');
   await ensureColumn('partners', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
   await ensureColumn('customers', 'updated_by', 'INTEGER');
+  await ensureColumn('customers', 'display_id', 'TEXT');
+  await ensureColumn('customers', 'source_channel', 'TEXT');
+  await ensureColumn('customers', 'intent_products', 'TEXT');
+  await ensureColumn('customer_contacts', 'email', 'TEXT');
+  await ensureColumn('customer_contacts', 'is_primary', 'INTEGER DEFAULT 0');
   await ensureColumn('finance_records', 'partner_id', 'INTEGER');
   await ensureColumn('finance_records', 'currency', 'TEXT');
   await ensureColumn('finance_records', 'payment_category', 'TEXT');
@@ -362,6 +405,16 @@ async function runMigrations() {
     const year = new Date(order.created_at).getFullYear();
     const displayId = `ORD-${year}-${String(order.id).padStart(6, '0')}`;
     await db.run(`UPDATE orders SET display_id = ? WHERE id = ?`, [displayId, order.id]);
+  }
+
+  // Generate display_id for customers that don't have one
+  const customersWithoutDisplayId = await db.all<{ id: number; created_at: string }[]>(
+    `SELECT id, created_at FROM customers WHERE display_id IS NULL OR TRIM(display_id) = ''`,
+  );
+  for (const customer of customersWithoutDisplayId) {
+    const year = new Date(customer.created_at).getFullYear();
+    const displayId = `CUST-${year}-${String(customer.id).padStart(6, '0')}`;
+    await db.run(`UPDATE customers SET display_id = ? WHERE id = ?`, [displayId, customer.id]);
   }
 }
 

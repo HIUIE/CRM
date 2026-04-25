@@ -90,7 +90,7 @@ export default function AIAssistantPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-xl transition-colors relative">
+      <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-xl transition-colors relative">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] dark:invert pointer-events-none" />
         
         {/* 对话框头部，增加清除记录按钮 */}
@@ -130,20 +130,35 @@ export default function AIAssistantPage() {
           )}
         </div>
 
-        <form onSubmit={sendMessage} className="border-t border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 p-6 relative z-10">
-          <div className="relative flex items-center gap-3">
-            <input
+        <form onSubmit={sendMessage} className="border-t border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 p-4 relative z-10">
+          <div className="relative flex items-end gap-3 max-w-4xl mx-auto">
+            <textarea
               value={input}
-              onChange={e => setFormInput(e.target.value)}
-              placeholder="在这里输入业务咨询或指令..."
-              className="flex-1 rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-4 text-sm font-medium focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none shadow-inner text-primary-navy dark:text-white"
+              onChange={(e) => {
+                setFormInput(e.target.value);
+                e.target.style.height = '52px';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(e as any);
+                }
+              }}
+              placeholder="在这里输入业务咨询或指令 (Shift + Enter 换行)..."
+              className="flex-1 rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-3.5 text-sm font-medium focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none shadow-inner text-primary-navy dark:text-white min-h-[52px] max-h-[200px] resize-none custom-scrollbar leading-relaxed"
+              style={{ height: '52px' }}
             />
             <button
               disabled={loading || !input.trim()}
               type="submit"
-              className="rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-8 py-4 text-sm font-bold text-white shadow-lg transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 active:scale-95 disabled:opacity-30"
+              className={`flex items-center justify-center shrink-0 h-[52px] w-[52px] rounded-2xl font-bold transition-all active:scale-95 shadow-lg ${
+                input.trim() 
+                  ? 'bg-primary-navy dark:bg-tertiary-sage text-white hover:bg-slate-800 dark:hover:bg-emerald-700' 
+                  : 'bg-slate-100 dark:bg-navy-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+              }`}
             >
-              <Send size={18} />
+              <Send size={20} className={input.trim() ? 'ml-1' : ''} />
             </button>
           </div>
         </form>

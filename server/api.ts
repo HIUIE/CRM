@@ -13,6 +13,7 @@ import { createOrdersRouter } from './routes/orders.js';
 import { createPartnersRouter } from './routes/partners.js';
 import { createSettingsRouter } from './routes/settings.js';
 import { createUsersRouter } from './routes/users.js';
+import { createAuditRouter } from './routes/audit.js';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use('/auth', createAuthRouter());
 router.use(requireAuth);
 router.use('/dashboard', createDashboardRouter());
 router.use('/settings', createSettingsRouter());
+router.use('/audit', createAuditRouter());
 router.use('/users', createUsersRouter());
 router.use('/customers', createCustomersRouter());
 router.use('/partners', createPartnersRouter());

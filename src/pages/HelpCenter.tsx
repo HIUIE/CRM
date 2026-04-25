@@ -33,7 +33,7 @@ export default function HelpCenterPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-12 animate-in fade-in duration-500">
-      <section className="relative overflow-hidden rounded-3xl bg-primary-navy dark:bg-navy-900 px-8 py-16 text-white shadow-2xl transition-colors">
+      <section className="relative overflow-hidden rounded-lg bg-primary-navy dark:bg-navy-900 px-8 py-16 text-white shadow-2xl transition-colors">
         <div className="absolute right-0 top-0 h-96 w-96 -translate-y-48 translate-x-32 rounded-full bg-white/5 blur-[100px]" />
         <div className="relative z-10 text-center">
           <h1 className="text-4xl font-bold tracking-tight uppercase">SmartTrade 帮助中心</h1>
@@ -45,7 +45,7 @@ export default function HelpCenterPage() {
 
       <div className="grid gap-6 md:grid-cols-3">
         {sections.map((section, idx) => (
-          <div key={idx} className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-all hover:shadow-md">
+          <div key={idx} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-all hover:shadow-md">
             <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 dark:bg-navy-950 shadow-inner">
               {section.icon}
             </div>
@@ -65,7 +65,7 @@ export default function HelpCenterPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-colors">
+        <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-colors">
           <div className="mb-6 flex items-center gap-3">
             <MessageCircle className="text-tertiary-sage dark:text-emerald-400" size={20} />
             <h2 className="text-lg font-bold text-primary-navy dark:text-white uppercase tracking-tight">联系技术支持</h2>
@@ -91,7 +91,7 @@ export default function HelpCenterPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-colors">
+        <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-colors">
           <div className="mb-6 flex items-center gap-3">
             <ShieldCheck className="text-blue-500 dark:text-blue-400" size={20} />
             <h2 className="text-lg font-bold text-primary-navy dark:text-white uppercase tracking-tight">安全与合规</h2>

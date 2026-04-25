@@ -15,6 +15,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     SELECT
       o.*,
       c.name AS customer_name,
+      c.display_id AS customer_display_id,
       c.country AS customer_country,
       c.contact AS customer_contact,
       c.logistics_preference AS customer_logistics_preference,
@@ -186,6 +187,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     },
     customer: {
       id: order.customer_id,
+      display_id: order.customer_display_id,
       name: order.customer_name,
       country: order.customer_country,
       contact: order.customer_contact,

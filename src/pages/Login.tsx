@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Globe, Lock, User } from 'lucide-react';
+import { Lock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import type { AuthUser } from '../types/auth';
@@ -34,65 +34,72 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background dark:bg-navy-950 p-4 transition-colors">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="relative bg-blue-600 dark:bg-navy-800 p-8 text-center">
-          <div className="absolute right-0 top-0 h-32 w-32 translate-x-10 -translate-y-10 rounded-full bg-white/10 blur-2xl" />
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/30 bg-white/20 backdrop-blur-sm">
-            <Globe className="h-8 w-8 text-white" />
+    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-tr from-slate-950 via-slate-900 to-slate-900 transition-all duration-700">
+      {/* Background patterns */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary-navy rounded-full blur-[120px]" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-tertiary-sage rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-[420px] rounded-[24px] bg-white p-10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all animate-in fade-in zoom-in-95 duration-500 mx-4">
+        <div className="mb-10 text-center">
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 shadow-inner border border-slate-100 overflow-hidden p-2">
+            <img src="/logo.png" alt="SmartTrade" className="h-full w-full object-contain" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white uppercase">SmartTrade AI CRM</h1>
-          <p className="mt-2 text-sm text-blue-100 dark:text-slate-400">面向小团队协作的外贸订单与流程工作台</p>
+          <h1 className="text-[24px] font-extrabold tracking-tight text-primary-navy uppercase">SmartTrade AI CRM</h1>
+          <p className="mt-2 text-[13px] font-medium text-slate-500">统一化外贸业务管理与 AI 协同平台</p>
         </div>
 
-        <div className="p-8">
-          <form onSubmit={handleLogin} className="space-y-5">
-            {error ? (
-              <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            ) : null}
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">登录账号</label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 py-3 pl-10 pr-4 text-sm text-primary-navy dark:text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-emerald-500/50"
-                  required
-                />
-              </div>
+        <form onSubmit={handleLogin} className="space-y-6">
+          {error && (
+            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 animate-in shake duration-300">
+              {error}
             </div>
+          )}
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">密码</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 py-3 pl-10 pr-4 text-sm text-primary-navy dark:text-white transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-emerald-500/50"
-                  required
-                />
-              </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">登录账号</label>
+            <div className="relative">
+              <User className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="请输入用户名"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-primary-navy transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
+                required
+              />
             </div>
+          </div>
 
-            <button
-              disabled={isSubmitting}
-              className="flex w-full items-center justify-center rounded-xl bg-blue-600 dark:bg-tertiary-sage py-3 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-lg disabled:cursor-not-allowed disabled:opacity-70 active:scale-95"
-            >
-              {isSubmitting ? '登录中...' : '登录系统'}
-            </button>
-
-            <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 px-4 py-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
-              请输入管理员分配的账号和密码。首次部署默认管理员仅保留在初始化说明中，不在登录页公开展示。
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">访问密码</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-primary-navy transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
+                required
+              />
             </div>
-          </form>
-        </div>
+          </div>
+
+          <button
+            disabled={isSubmitting}
+            className="flex w-full items-center justify-center rounded-xl bg-primary-navy py-4 text-[13px] font-bold text-white transition-all hover:bg-slate-800 shadow-xl shadow-primary-navy/20 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95 uppercase tracking-widest mt-4"
+          >
+            {isSubmitting ? '验证授权中...' : '立即登录'}
+          </button>
+
+          <div className="pt-6 text-center">
+            <p className="text-[11px] font-medium text-slate-400">
+              Verdana Health System · v2.0
+            </p>
+          </div>
+        </form>
       </div>
     </div>
   );
