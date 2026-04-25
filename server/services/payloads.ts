@@ -108,6 +108,7 @@ export async function readProductionPayload(body: Record<string, unknown>, order
 
 export async function readOrderPayload(body: Record<string, unknown>) {
   const customerId = readNumber(body.customerId);
+  const displayId = readString(body.displayId);
   const status = readString(body.status);
   const productSummary = readString(body.productSummary);
   const details = readString(body.details);
@@ -142,6 +143,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
   return {
     payload: {
       customerId,
+      displayId,
       status: (status as OrderStatus) || 'draft',
       productSummary,
       details,

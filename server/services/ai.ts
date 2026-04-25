@@ -20,39 +20,74 @@ export async function runOpenAiCompatibleModel({
   apiKey,
   baseUrl,
   prompt,
+  jsonMode = true, // 默认开启，但允许关闭
 }: {
   model: string;
   apiKey: string;
   baseUrl: string;
   prompt: string;
+  jsonMode?: boolean;
 }) {
-  const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
-  const response = await fetch(`${normalizedBaseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  const data = (await response.json().catch(() => null)) as
-    | {
-        error?: { message?: string };
-        choices?: Array<{ message?: { content?: string | null } }>;
-      }
-    | null;
-
-  if (!response.ok) {
-    throw new Error(data?.error?.message || `兼容模型请求失败 (${response.status})`);
+  let normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
+  
+  if (normalizedBaseUrl.includes('deepseek.com')) {
+    normalizedBaseUrl = normalizedBaseUrl.replace(/\/v1$/, '');
+  } else if (normalizedBaseUrl.includes('api.openai.com') && !normalizedBaseUrl.endsWith('/v1')) {
+    normalizedBaseUrl += '/v1';
   }
 
-  const content = data?.choices?.[0]?.message?.content || '';
-  return parseJsonObject(content);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+  try {
+    const body: any = {
+      model,
+      temperature: 0.1,
+      messages: [{ role: 'user', content: prompt }],
+    };
+
+    // 只有在 jsonMode 为 true 时才发送 response_format
+    if (jsonMode) {
+      body.response_format = { type: 'json_object' };
+    }
+
+    const response = await fetch(`${normalizedBaseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'SmartTrade-CRM/2.0',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage += `: ${errorJson.error?.message || errorText}`;
+      } catch (_e) {
+        errorMessage += `: ${errorText}`;
+      }
+      throw new Error(`AI 服务端返回错误 (${errorMessage})`);
+    }
+
+    const data = (await response.json()) as any;
+    const content = data?.choices?.[0]?.message?.content || '';
+    
+    // 如果不是 JSON 模式，直接返回文字内容，不要尝试解析
+    if (!jsonMode) {
+      return content;
+    }
+
+    const cleanContent = content.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
+    return parseJsonObject(cleanContent);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export function buildOrderParsingPrompt(text: string) {

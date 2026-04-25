@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 @theme {
+  /* Core Brand Colors */
+  --color-navy-950: #020617;
+  --color-navy-900: #0F172A;
+  --color-navy-800: #1E293B;
+  --color-navy-700: #334155;
+  
   --color-primary-navy: #0F172A;
   --color-secondary-slate: #475569;
   --color-tertiary-sage: #059669;
@@ -11,16 +17,42 @@
   --color-error: #DC2626;
   --color-info: #0284C7;
 
+  /* Shadows */
   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
   --shadow-default: 0 4px 6px -1px rgba(15, 23, 42, 0.12), 0 2px 4px -1px rgba(15, 23, 42, 0.08);
   --shadow-md: 0 4px 20px -2px rgba(15, 23, 42, 0.1), 0 8px 15px -4px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
 
+  /* Radius */
   --radius-sm: 4px;
   --radius-default: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-full: 9999px;
+}
+
+/* 强制 Tailwind 4 支持 .dark 类名变体 */
+@variant dark (&:where(.dark, .dark *));
+
+/* Theme Semantic Variables */
+:root {
+  --app-bg: #F8FAFC;
+  --app-surface: #FFFFFF;
+  --app-text-primary: #0F172A;
+  --app-text-secondary: #475569;
+  --app-border: #E2E8F0;
+  --app-divider: #F1F5F9;
+  --app-sage: #059669;
+}
+
+.dark {
+  --app-bg: #020617;
+  --app-surface: #0F172A;
+  --app-text-primary: #F1F5F9;
+  --app-text-secondary: #94A3B8;
+  --app-border: #1E293B;
+  --app-divider: #1E293B;
+  --app-sage: #10B981;
 }
 
 html {
@@ -29,10 +61,12 @@ html {
 }
 
 body {
-  @apply bg-background text-primary-navy;
+  background-color: var(--app-bg);
+  color: var(--app-text-primary);
   font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: 0.01em;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 标题规范：Plus Jakarta Sans */
@@ -55,30 +89,39 @@ h1, h2, h3, h4, .headline {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-slate-200 rounded-full border-2 border-transparent bg-clip-padding;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-300;
-  }
-
-  /* 规范化状态标签 (Chips) */
-  .chip-base {
-    @apply inline-flex items-center rounded-[4px] px-3 py-1 text-[12px] font-medium uppercase tracking-[0.5px];
+    background-color: var(--app-border);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
   }
   
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #334155;
+  }
+
   /* 规范化卡片 (Card) */
   .card-base {
-    @apply bg-white border border-[#E2E8F0] rounded-[8px] p-6 transition-all duration-200;
+    background-color: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
+  
   .card-elevated {
-    @apply bg-white rounded-[8px] p-6 shadow-md transition-all duration-200;
+    background-color: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .dark .card-elevated {
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   }
 
   .btn-transition {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
-}
-
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
 }

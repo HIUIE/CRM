@@ -9,7 +9,7 @@ import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
-import { bindAttachmentsToEntity, getAttachmentsByEntity } from '../services/attachments.js';
+import { bindAttachmentsToEntity, getAttachmentsByEntity, deleteAttachmentRows } from '../services/attachments.js';
 import { readLogisticsPayload } from '../services/payloads.js';
 
 const upload = multer({
@@ -261,6 +261,27 @@ export function createLogisticsRouter() {
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '删除附件失败');
+    }
+  });
+
+  router.delete('/:id', requireAdmin, async (req, res) => {
+    const recordId = Number(req.params.id);
+    if (!Number.isInteger(recordId) || recordId <= 0) {
+      return fail(res, 400, '物流记录编号无效', 'INVALID_LOGISTICS_ID');
+    }
+
+    try {
+      const existing = await db.get<{ id: number }>(`SELECT id FROM logistics_records WHERE id = ?`, [recordId]);
+      if (!existing) {
+        return fail(res, 404, '物流记录不存在', 'LOGISTICS_NOT_FOUND');
+      }
+
+      await deleteAttachmentRows('logistics', recordId);
+      await db.run(`DELETE FROM logistics_records WHERE id = ?`, [recordId]);
+
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '删除物流记录失败');
     }
   });
 

@@ -18,6 +18,15 @@ Verdana Health is a calm, trustworthy design system built for digital health pla
 - **Error** (#EF4444): Critical, out of range
 - **Info** (#0EA5E9): Informational, new feature
 
+### Dark Mode (New)
+- **Background**: #020617 (Deepest Navy)
+- **Surface Default**: #0F172A (Navy Surface)
+- **Text Primary**: #F8FAFC (Near-white)
+- **Text Secondary**: #94A3B8 (Muted Slate)
+- **Tertiary Sage**: #10B981 (Brighter Green for Dark)
+- **Border**: #1E293B (Deep Slate)
+- **Elevated Surface**: #1E293B (Slightly lighter than Surface)
+
 ## Typography
 
 - **Headline Font**: Plus Jakarta Sans

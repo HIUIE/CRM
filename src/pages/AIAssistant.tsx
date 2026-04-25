@@ -1,183 +1,153 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, Sparkles } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Bot, Send, Sparkles, Zap, ShieldCheck, Database, LayoutDashboard, FileText, Trash2 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
-import type { AiSettings } from '../types/crm';
 
-interface ParseResult {
-  customerName: string;
-  country: string;
-  logistics: string;
-  payment: string;
-  totalAmount: number;
-  details: string;
-  suggestedReply: string;
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
-export default function AIAssistantView() {
-  const navigate = useNavigate();
-  const [text, setText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<AiSettings | null>(null);
-  const [result, setResult] = useState<ParseResult | null>(null);
-  const [error, setError] = useState('');
+const STORAGE_KEY = 'smarttrade_ai_chat_history';
 
-  useEffect(() => {
-    let mounted = true;
-
-    const loadSettings = async () => {
+export default function AIAssistantPage() {
+  // 1. 初始化时尝试从本地存储读取历史记录
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
       try {
-        const data = await apiFetch<AiSettings>('/api/settings/ai');
-        if (mounted) {
-          setSettings(data);
-        }
-      } catch (_error) {
-        if (mounted) {
-          setSettings({ model: 'deepseek-chat', hasApiKey: false, baseUrl: '' });
-        }
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to load chat history', e);
       }
-    };
-
-    loadSettings();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const handleParse = async () => {
-    if (!text.trim()) {
-      setError('请先输入需要解析的邮件、聊天记录或需求描述');
-      return;
     }
+    return [
+      { role: 'assistant', content: '您好！我是 SmartTrade AI 业务向导。我可以帮您分析订单风险、生成报关草单建议，或者回答关于业务流程的问题。请问今天有什么可以帮您？' }
+    ];
+  });
+  
+  const [input, setFormInput] = useState('');
+  const [loading, setLoading] = useState(false);
 
+  // 2. 每当消息列表更新时，自动同步到本地存储
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
+
+  const clearHistory = () => {
+    if (window.confirm('确定要清空所有对话记录吗？')) {
+      const initialMsg: Message[] = [{ role: 'assistant', content: '对话已重置。请问还有什么可以帮您？' }];
+      setMessages(initialMsg);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  };
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || loading) return;
+
+    const userMsg: Message = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMsg]);
+    setFormInput('');
     setLoading(true);
-    setResult(null);
-    setError('');
 
     try {
-      const data = await apiFetch<ParseResult>('/api/ai/parse-order', {
+      const response = await apiFetch<{ content: string }>('/api/ai/chat', {
         method: 'POST',
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ message: input })
       });
-      setResult(data);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, '解析失败，请稍后重试'));
+      setMessages(prev => [...prev, { role: 'assistant', content: response.content }]);
+    } catch (err) {
+      const detailedError = getErrorMessage(err);
+      setMessages(prev => [...prev, { role: 'assistant', content: `诊断反馈：${detailedError}` }]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUseAsDraft = () => {
-    if (!result) {
-      return;
-    }
-
-    navigate('/orders?create=1', {
-      state: {
-        orderDraft: {
-          customerName: result.customerName,
-          details: `${result.details}\n\n付款信息：${result.payment || '未提取到'}\n物流要求：${result.logistics || '未提取到'}`,
-          totalAmount: Number(result.totalAmount) || 0,
-        },
-      },
-    });
-  };
-
-  const providerLabel = settings?.model?.toLowerCase().includes('deepseek')
-    ? 'DeepSeek'
-    : settings?.model?.toLowerCase().includes('gemini')
-      ? 'Gemini'
-      : '当前模型';
-  const aiReady = Boolean(settings?.hasApiKey);
-
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <div className="mb-3 inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              AI 助手
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">AI 外贸辅助引擎</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-              AI 目前只承担两件事：把文本整理成订单草稿，以及辅助识别订单风险。它不会阻塞客户、订单、财务和物流的日常主流程。
-            </p>
+    <div className="flex h-[calc(100vh-120px)] flex-col gap-4">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+          <div className="flex items-center gap-3 text-tertiary-sage dark:text-emerald-400 mb-2">
+            <Zap size={18} />
+            <span className="text-xs font-bold uppercase tracking-widest">实时诊断</span>
           </div>
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-indigo-100 bg-indigo-50">
-            <Bot className="h-8 w-8 text-indigo-600" />
-          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">自动识别订单中的潜在逾期风险与财务缺口，并在详情页实时同步。</p>
         </div>
-
-        {!aiReady ? (
-          <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            {!settings?.hasApiKey
-              ? '还没有配置可用的 AI API Key。你仍然可以正常使用 CRM 主流程，等需要时再到系统设置中开启 AI。'
-              : `${providerLabel} 当前还不可用，请检查系统设置中的模型、Key 和 Base URL。`}
+        <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+          <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400 mb-2">
+            <Database size={18} />
+            <span className="text-xs font-bold uppercase tracking-widest">知识增强</span>
           </div>
-        ) : null}
-
-        {error ? (
-          <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
-        ) : null}
-
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-          <textarea
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="例如：客户 Amsource 昨天邮件说要 3000 个不锈钢杯，发往洛杉矶，指定货代为东方国际，FOB 宁波，下周一支付 30% 定金，要求加固包装。"
-            className="h-56 w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 outline-none transition-shadow focus:ring-2 focus:ring-indigo-500"
-            spellCheck={false}
-          />
-
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={handleParse}
-              disabled={loading || !aiReady}
-              className="inline-flex items-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Bot className="mr-2 h-4 w-4" />
-              {loading ? 'AI 解析中...' : '解析成订单草稿'}
-            </button>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">结合您的历史客户偏好与物流时效，提供智能化的排产与发货建议。</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+          <div className="flex items-center gap-3 text-primary-navy dark:text-white mb-2">
+            <ShieldCheck size={18} />
+            <span className="text-xs font-bold uppercase tracking-widest">合规审计</span>
           </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">基于最新 HS Code 库，预先校验报关资料的逻辑严密性，减少清关障碍。</p>
         </div>
       </div>
 
-      {result ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">提取结果</h3>
-              <p className="text-sm text-slate-500">先确认 AI 提取结果，再决定是否带入订单草稿。</p>
+      <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-xl transition-colors relative">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] dark:invert pointer-events-none" />
+        
+        {/* 对话框头部，增加清除记录按钮 */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-slate-50/30 dark:bg-navy-950/30 z-20">
+           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <Bot size={14} /> 实时 AI 会话
+           </div>
+           <button onClick={clearHistory} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="清空对话历史">
+              <Trash2 size={16} />
+           </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar relative z-10">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
+              <div className={`flex max-w-[80%] gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-md ${m.role === 'user' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-100 dark:bg-navy-800 text-primary-navy dark:text-white'}`}>
+                  {m.role === 'user' ? <LayoutDashboard size={20} /> : <Bot size={22} />}
+                </div>
+                <div className={`rounded-2xl px-5 py-3.5 text-sm font-medium leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 text-slate-700 dark:text-slate-200 whitespace-pre-wrap'}`}>
+                  {m.content}
+                </div>
+              </div>
             </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="flex gap-4 items-center">
+                 <div className="h-10 w-10 bg-slate-100 dark:bg-navy-800 rounded-xl flex items-center justify-center text-primary-navy dark:text-white animate-pulse"><Sparkles size={20} /></div>
+                 <div className="flex gap-1.5 px-4 py-3 bg-slate-50 dark:bg-navy-950/50 rounded-2xl border border-slate-100 dark:border-navy-800">
+                    <div className="h-2 w-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce" />
+                    <div className="h-2 w-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="h-2 w-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce [animation-delay:0.4s]" />
+                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={sendMessage} className="border-t border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 p-6 relative z-10">
+          <div className="relative flex items-center gap-3">
+            <input
+              value={input}
+              onChange={e => setFormInput(e.target.value)}
+              placeholder="在这里输入业务咨询或指令..."
+              className="flex-1 rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-4 text-sm font-medium focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none shadow-inner text-primary-navy dark:text-white"
+            />
             <button
-              onClick={handleUseAsDraft}
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-black"
+              disabled={loading || !input.trim()}
+              type="submit"
+              className="rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-8 py-4 text-sm font-bold text-white shadow-lg transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 active:scale-95 disabled:opacity-30"
             >
-              带入订单草稿
+              <Send size={18} />
             </button>
           </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <InfoCard label="客户名称" value={result.customerName || '暂无'} />
-            <InfoCard label="国家/地区" value={result.country || '暂无'} />
-            <InfoCard label="交易金额" value={String(result.totalAmount || 0)} />
-            <InfoCard label="付款方式" value={result.payment || '暂无'} />
-            <InfoCard label="物流要求" value={result.logistics || '暂无'} className="md:col-span-2" />
-            <InfoCard label="订单摘要" value={result.details || '暂无'} className="md:col-span-2" />
-            <InfoCard label="建议英文回复" value={result.suggestedReply || '暂无'} className="md:col-span-2" />
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function InfoCard({ label, value, className = '' }: { label: string; value: string; className?: string }) {
-  return (
-    <div className={`rounded-2xl border border-slate-200 bg-slate-50 p-4 ${className}`}>
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{value}</div>
+        </form>
+      </div>
     </div>
   );
 }

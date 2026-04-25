@@ -25,6 +25,8 @@ export function handleRouteError(res: Response, error: unknown, fallbackMessage:
     return fail(res, error.status, error.message, error.code);
   }
 
-  console.error(error);
-  return fail(res, 500, fallbackMessage, 'INTERNAL_ERROR');
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[Route Error] ${fallbackMessage}:`, error);
+  
+  return fail(res, 500, `${fallbackMessage}: ${message}`, 'INTERNAL_ERROR');
 }
