@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  ArrowLeft, CheckCircle2, Clock, Plus, MoreHorizontal, User, Calendar,
-  Package, ArrowRight, MessageSquare, Paperclip
+  CheckCircle2, Clock, Plus, User, Calendar,
+  Package, MessageSquare, Paperclip
 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -9,7 +9,7 @@ import { Chip, Toast } from '../features/order-detail/components';
 import { TaskDrawer } from '../components/ui/TaskDrawer';
 import { TaskDetailDrawer } from '../components/ui/TaskDetailDrawer';
 import { AnimatePresence, motion } from 'motion/react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface Task {
   id: number;
@@ -88,41 +88,28 @@ export default function TasksView() {
   };
 
   return (
-    <div className="flex flex-col">
-      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
+        <div className="flex items-center justify-between">
+          <h1 className="text-base font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">团队协同看板</h1>
           <button
-            onClick={() => navigate('/dashboard')}
-            className="group flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-navy-800 text-slate-400 hover:border-primary-navy transition-all shadow-sm bg-white dark:bg-navy-900"
-            title="返回控制台"
+            onClick={() => setShowCreateDrawer(true)}
+            className="btn-primary text-xs px-5 py-2"
           >
-            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+            <Plus size={14} /> 指派新任务
           </button>
-          <div className="flex items-center gap-2 text-sm font-bold tracking-tight">
-            <Link to="/dashboard" className="text-slate-400 uppercase tracking-widest hover:text-primary-navy dark:hover:text-white transition-colors">任务管理</Link>
-            <span className="text-slate-200 dark:text-navy-800">/</span>
-            <span className="text-primary-navy dark:text-white uppercase tracking-widest">团队协同看板</span>
-          </div>
         </div>
-        <button
-          onClick={() => setShowCreateDrawer(true)}
-          className="btn-primary text-xs px-5 py-2"
-        >
-          <Plus size={14} /> 指派新任务
-        </button>
-      </header>
 
-      <div className="flex-1 px-1 space-y-4">
-        {/* View Toggle Controller */}
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center mt-4">
            <div className="flex p-1 bg-slate-100 dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-800 shadow-inner overflow-hidden w-full max-w-md">
               <ViewToggle active={viewMode === 'assigned'} label="我负责的" onClick={() => updateView('assigned')} />
               <ViewToggle active={viewMode === 'delegated'} label="我派发的" onClick={() => updateView('delegated')} />
               {(user?.role === 'admin') && <ViewToggle active={viewMode === 'all'} label="全局视图" onClick={() => updateView('all')} />}
            </div>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
            {columns.map(col => (
              <div key={col.key} className={`flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm ${col.color}`}>
                 <div className="px-5 py-4 border-b border-slate-200 dark:border-navy-800 flex items-center justify-between shrink-0 rounded-t-lg">
@@ -154,9 +141,8 @@ export default function TasksView() {
              </div>
            ))}
         </div>
-      </div>
 
-      <TaskDrawer 
+      <TaskDrawer
         isOpen={showCreateDrawer} 
         onClose={() => setShowCreateDrawer(false)} 
         onSuccess={loadTasks} 
