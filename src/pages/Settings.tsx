@@ -388,7 +388,7 @@ export default function SettingsView() {
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-navy-800">
               <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
                   <tr>
                     <th className="px-4 py-4">姓名</th>
                     <th className="px-4 py-4">账号</th>
@@ -403,23 +403,23 @@ export default function SettingsView() {
                       <td className="px-4 py-4 font-bold text-primary-navy dark:text-white">{managedUser.name}</td>
                       <td className="px-4 py-4 text-slate-600 dark:text-slate-400 font-medium">{managedUser.username}</td>
                       <td className="px-4 py-4">
-                         <span className="text-[11px] font-bold text-secondary-slate dark:text-slate-500 uppercase">{managedUser.role === 'admin' ? '管理员' : '业务员'}</span>
+                         <span className="text-xs font-bold text-secondary-slate dark:text-slate-500 uppercase">{managedUser.role === 'admin' ? '管理员' : '业务员'}</span>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${managedUser.active === false ? 'bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-600' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wider ${managedUser.active === false ? 'bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-600' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'}`}>
                           {managedUser.active === false ? '已停用' : '启用中'}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => startEditUser(managedUser)} className="rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-tertiary-sage transition-all">
+                          <button onClick={() => startEditUser(managedUser)} className="rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-tertiary-sage transition-all">
                             编辑
                           </button>
-                          <button onClick={() => setResettingUserId(managedUser.id)} className="rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-tertiary-sage transition-all">
+                          <button onClick={() => setResettingUserId(managedUser.id)} className="rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-tertiary-sage transition-all">
                             重置
                           </button>
                           {managedUser.username !== 'root' ? (
-                            <button onClick={() => void toggleUserStatus(managedUser)} className="rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-tertiary-sage transition-all">
+                            <button onClick={() => void toggleUserStatus(managedUser)} className="rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-tertiary-sage transition-all">
                               {managedUser.active === false ? '启用' : '停用'}
                             </button>
                           ) : null}
@@ -503,7 +503,7 @@ export default function SettingsView() {
               {resettingUserId ? (
                 <div className="mt-8 border-t border-slate-200 dark:border-navy-800 pt-6 animate-in fade-in relative">
                   <button onClick={() => setResettingUserId(null)} className="absolute top-6 right-0 text-slate-400 hover:text-primary-navy dark:hover:text-white"><X size={16} /></button>
-                  <div className="mb-4 text-[10px] font-bold text-primary-navy dark:text-tertiary-sage uppercase tracking-widest">强制重置密码</div>
+                  <div className="mb-4 text-xs font-bold text-primary-navy dark:text-tertiary-sage uppercase tracking-widest">强制重置密码</div>
                   <div className="flex gap-3">
                     <input
                       type="password"

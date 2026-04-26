@@ -40,10 +40,10 @@ export function Pagination({
       </div>
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <p className="text-[12px] text-slate-600 dark:text-slate-400 font-medium">
+          <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
             共 <span className="font-extrabold text-primary-navy dark:text-white">{totalItems}</span> 条记录
           </p>
-          <div className="flex items-center gap-2 text-[12px] text-slate-600 dark:text-slate-400 font-medium">
+          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
             每页显示
             <select
               value={pageSize}

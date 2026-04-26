@@ -249,7 +249,7 @@ export default function PartnersView() {
              <button
                key={chip.key}
                onClick={() => updateParam('type', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${typeFilter === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
+               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${typeFilter === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
              >
                {chip.label}
              </button>
@@ -266,7 +266,7 @@ export default function PartnersView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">伙伴名称</th>
                     <th className="px-4 py-4 text-left">伙伴类型</th>
@@ -303,7 +303,7 @@ export default function PartnersView() {
                         </td>
                         <td className="px-4 py-4 text-left">
                            <div className="font-bold text-slate-700 dark:text-slate-300">{partner.contact_person || '—'}</div>
-                           <div className="text-[11px] text-slate-400 font-medium">{partner.contact || '—'}</div>
+                           <div className="text-xs text-slate-400 font-medium">{partner.contact || '—'}</div>
                         </td>
                         <td className="px-4 py-4 text-left">
                            <CountryDisplay value={partner.country} className="text-xs" />
@@ -433,7 +433,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
         {children}
       </label>
       {error && (
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-red-500 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-red-500 animate-in fade-in slide-in-from-top-1 duration-200">
            <AlertTriangle size={12} />
            {error}
         </div>

@@ -248,7 +248,7 @@ export default function OrdersView() {
              <button
                key={chip.key}
                onClick={() => updateParam('timeRange', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
+               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
              >
                {chip.label}
              </button>
@@ -262,7 +262,7 @@ export default function OrdersView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">订单号 / 日期</th>
                     <th className="px-4 py-4 text-left">客户 / 国家</th>
@@ -291,11 +291,11 @@ export default function OrdersView() {
                            >
                              {o.display_id || '—'}
                            </div>
-                           <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1.5 font-bold data-field">{formatDateOnly(o.created_at)}</div>
+                           <div className="text-xs text-slate-500 dark:text-slate-500 mt-1.5 font-bold data-field">{formatDateOnly(o.created_at)}</div>
                         </td>
                         <td className="px-4 py-4 text-left">
                            <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={o.customer_name}>{o.customer_name || '—'}</div>
-                           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 uppercase font-extrabold">{o.customer_country || '—'}</div>
+                           <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 uppercase font-extrabold">{o.customer_country || '—'}</div>
                         </td>
                         <td className="px-4 py-4 text-left">
                            <div className="flex items-center gap-2 mb-1.5"><Chip tone={meta.tone}>{meta.label}</Chip></div>
@@ -304,7 +304,7 @@ export default function OrdersView() {
                         <td className="px-4 py-4 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
                         <td className="px-4 py-4 text-right">
                            <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
-                           <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1.5">{o.pending_finance_count > 0 ? `核销中: ${o.pending_finance_count} 笔` : '—'}</div>
+                           <div className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase mt-1.5">{o.pending_finance_count > 0 ? `核销中: ${o.pending_finance_count} 笔` : '—'}</div>
                         </td>
                         <td className="px-4 py-4 text-center" onClick={e=>e.stopPropagation()}>
                            <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
@@ -321,7 +321,7 @@ export default function OrdersView() {
                         </td>
                       </tr>
                     );
-                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[11px]">暂无订单记录。</td></tr>}
+                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">暂无订单记录。</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -400,18 +400,18 @@ export default function OrdersView() {
               </div>
               <div className="p-6 space-y-5">
                  <div className="space-y-2">
-                    <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
                         确定要永久删除订单吗？此操作将同步清除与之关联的所有<span className="text-red-600 font-bold">生产、财务及物流数据</span>。
                     </p>
                     <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950 rounded-xl border border-slate-100 dark:border-navy-800">
                        <span className="font-bold text-primary-navy dark:text-white data-field">{orderToDelete?.display_id}</span>
-                       <button onClick={copyId} className="flex items-center gap-1 text-[10px] font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
+                       <button onClick={copyId} className="flex items-center gap-1 text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
                           {copied ? <><Check size={12} /> 已复制</> : <><Copy size={12} /> 复制单号</>}
                        </button>
                     </div>
                  </div>
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">请输入单号以确认删除</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">请输入单号以确认删除</label>
                     <input 
                        value={deleteInput}
                        onChange={e => setDeleteInput(e.target.value)}
@@ -424,7 +424,7 @@ export default function OrdersView() {
                     <button 
                        disabled={isDeleting || deleteInput !== orderToDelete?.display_id}
                        onClick={handleConfirmDelete}
-                       className="flex-2 rounded-xl bg-red-600 px-6 py-3 text-xs font-bold text-white shadow-lg hover:bg-red-700 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all uppercase tracking-widest"
+                       className="btn-destructive flex-2 text-xs px-6 py-3"
                     >
                        {isDeleting ? '正在销毁...' : '确认永久删除'}
                     </button>

@@ -130,7 +130,7 @@ export function Combobox({ value, onChange, onSearch, placeholder = '请选择..
                 </div>
               ))
             ) : (
-              <div className="py-8 text-center text-[12px] text-slate-400 font-bold uppercase tracking-widest">未找到匹配结果</div>
+              <div className="py-8 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">未找到匹配结果</div>
             )}
           </div>
         </div>

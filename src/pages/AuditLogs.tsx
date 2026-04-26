@@ -71,7 +71,7 @@ export default function AuditLogsPage() {
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
-          <div className="flex items-center gap-2 text-[13px] font-bold tracking-tight">
+          <div className="flex items-center gap-2 text-sm font-bold tracking-tight">
             <Link to="/dashboard" className="text-slate-400 uppercase tracking-widest hover:text-primary-navy dark:hover:text-white transition-colors">系统管理</Link>
             <span className="text-slate-200 dark:text-navy-800">/</span>
             <span className="text-primary-navy dark:text-white uppercase tracking-widest">操作审计日志</span>
@@ -79,7 +79,7 @@ export default function AuditLogsPage() {
         </div>
         <button 
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+          className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
         >
           <Printer size={14} /> 导出报告
         </button>
@@ -91,7 +91,7 @@ export default function AuditLogsPage() {
             <div className="flex flex-col">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                     <tr>
                       <th className="px-6 py-4 text-left">时间 / 操作人</th>
                       <th className="px-6 py-4 text-center">类型</th>
@@ -108,7 +108,7 @@ export default function AuditLogsPage() {
                             <Clock size={14} className="text-slate-400" />
                             <span className="data-field">{log.created_at ? String(log.created_at).replace('T', ' ').slice(0, 19) : '—'}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
                             <User size={12} className="text-slate-300" />
                             {log.user_name || 'System'}
                           </div>
@@ -123,10 +123,10 @@ export default function AuditLogsPage() {
                             <Box size={14} />
                             {log.entity_type}
                           </div>
-                          <div className="text-[11px] font-bold text-slate-400 data-field">ID: {log.entity_id}</div>
+                          <div className="text-xs font-bold text-slate-400 data-field">ID: {log.entity_id}</div>
                         </td>
                         <td className="px-6 py-4 text-left">
-                          <div className="max-w-[300px] text-[11px] text-slate-500 font-medium truncate italic">
+                          <div className="max-w-[300px] text-xs text-slate-500 font-medium truncate italic">
                              {log.new_value || log.old_value || 'No data snapshot'}
                           </div>
                         </td>
@@ -203,8 +203,8 @@ export default function AuditLogsPage() {
 function DetailBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="p-3 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800">
-       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</div>
-       <div className="text-[13px] font-extrabold text-primary-navy dark:text-white uppercase truncate">{value}</div>
+       <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</div>
+       <div className="text-sm font-extrabold text-primary-navy dark:text-white uppercase truncate">{value}</div>
     </div>
   );
 }
@@ -219,12 +219,12 @@ function JsonSection({ title, content, onCopy, copied }: { title: string; conten
   return (
     <div className="space-y-2">
        <div className="flex items-center justify-between">
-          <label className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{title}</label>
-          <button onClick={onCopy} className="flex items-center gap-1.5 text-[10px] font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
+          <label className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{title}</label>
+          <button onClick={onCopy} className="flex items-center gap-1.5 text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
             {copied ? <><Check size={12} /> 已复制</> : <><Copy size={12} /> 复制代码</>}
           </button>
        </div>
-       <pre className="bg-slate-900 dark:bg-black p-4 rounded-xl text-[12px] text-emerald-400 font-mono overflow-x-auto border border-white/5 leading-relaxed">
+       <pre className="bg-slate-900 dark:bg-black p-4 rounded-xl text-xs text-emerald-400 font-mono overflow-x-auto border border-white/5 leading-relaxed">
           {formatted}
        </pre>
     </div>

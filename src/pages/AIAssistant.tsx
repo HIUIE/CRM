@@ -72,21 +72,21 @@ export default function AIAssistantPage() {
             <Zap size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">实时诊断</span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">自动识别订单中的潜在逾期风险与财务缺口，并在详情页实时同步。</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">自动识别订单中的潜在逾期风险与财务缺口，并在详情页实时同步。</p>
         </div>
         <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400 mb-2">
             <Database size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">知识增强</span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">结合您的历史客户偏好与物流时效，提供智能化的排产与发货建议。</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">结合您的历史客户偏好与物流时效，提供智能化的排产与发货建议。</p>
         </div>
         <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-primary-navy dark:text-white mb-2">
             <ShieldCheck size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">合规审计</span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">基于最新 HS Code 库，预先校验报关资料的逻辑严密性，减少清关障碍。</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">基于最新 HS Code 库，预先校验报关资料的逻辑严密性，减少清关障碍。</p>
         </div>
       </div>
 
@@ -95,7 +95,7 @@ export default function AIAssistantPage() {
         
         {/* 对话框头部，增加清除记录按钮 */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-slate-50/30 dark:bg-navy-950/30 z-20">
-           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+           <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
               <Bot size={14} /> 实时 AI 会话
            </div>
            <button onClick={clearHistory} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="清空对话历史">

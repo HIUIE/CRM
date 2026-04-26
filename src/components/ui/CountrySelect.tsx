@@ -117,7 +117,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = '�
           {/* Options list */}
           <div className="max-h-64 overflow-y-auto custom-scrollbar">
             {filtered.length === 0 ? (
-              <div className="py-8 text-center text-[12px] text-slate-400 font-medium">未找到匹配国家</div>
+              <div className="py-8 text-center text-xs text-slate-400 font-medium">未找到匹配国家</div>
             ) : (
               filtered.map(country => (
                 <button

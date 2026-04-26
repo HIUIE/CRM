@@ -237,7 +237,7 @@ export default function FinanceView() {
              <button
                key={chip.key}
                onClick={() => updateParam('timeRange', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
+               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
              >
                {chip.label}
              </button>
@@ -253,7 +253,7 @@ export default function FinanceView() {
            <StatCard title="CNY 付款" value={totals.payment.CNY || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="CNY" />
            <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-2xl border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors">
               <div>
-                <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">待核销</div>
+                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">待核销</div>
                 <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{totals.pending} 笔</div>
               </div>
               <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500"><Clock size={16} /></div>
@@ -267,7 +267,7 @@ export default function FinanceView() {
             <div className="overflow-x-auto">
 
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">日期 / 订单</th>
                     <th className="px-4 py-4 text-center">类型 / 分类</th>
@@ -290,18 +290,18 @@ export default function FinanceView() {
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                       <td className="px-4 py-4 text-left">
                          <div className="font-bold text-primary-navy dark:text-white data-field">{formatDateOnly(r.created_at)}</div>
-                         <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase hover:text-primary-navy transition-colors">{r.order_display_id || 'MISC'}</div>
+                         <div className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase hover:text-primary-navy transition-colors">{r.order_display_id || 'MISC'}</div>
                       </td>
                       <td className="px-4 py-4 text-center">
                          <div className="flex items-center justify-center gap-2 mb-1"><Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip></div>
-                         <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">{getPaymentCategoryLabel(r.recordCategory || r.payment_category)}</div>
+                         <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{getPaymentCategoryLabel(r.recordCategory || r.payment_category)}</div>
                       </td>
-                      <td className={`px-4 py-4 text-right font-bold data-field text-[14px] ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
+                      <td className={`px-4 py-4 text-right font-bold data-field text-sm ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
                          {r.type === 'receipt' ? '+' : '-'}{r.currency} {Number(r.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-4 text-left">
                          <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={r.partner_name || r.target}>{r.partner_name || r.target || '—'}</div>
-                         <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[150px]">{r.remark || '—'}</div>
+                         <div className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[150px]">{r.remark || '—'}</div>
                       </td>
                       <td className="px-4 py-4 text-center"><Chip tone={r.status === 'completed' ? 'neutral' : 'warning'}>{r.status === 'completed' ? '已核销' : '待处理'}</Chip></td>
                       <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
@@ -417,7 +417,7 @@ function StatCard({ title, value, icon, currency }: { title: string; value: numb
   return (
     <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-2xl border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors shadow-inner">
       <div>
-        <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{title}</div>
+        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{title}</div>
         <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{value.toLocaleString()}</div>
       </div>
       <div className="h-8 w-8 rounded-lg bg-white dark:bg-navy-800 shadow-sm flex items-center justify-center border border-slate-100 dark:border-navy-700">{icon}</div>

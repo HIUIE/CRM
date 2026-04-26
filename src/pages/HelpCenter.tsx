@@ -76,14 +76,14 @@ export default function HelpCenterPage() {
           <div className="space-y-4">
              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-2xl border border-slate-100 dark:border-navy-800">
                 <div>
-                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">开发者邮箱</div>
+                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">开发者邮箱</div>
                    <div className="text-sm font-bold text-primary-navy dark:text-white data-field">support@smarttrade.ai</div>
                 </div>
                 <ExternalLink size={16} className="text-slate-300 dark:text-slate-600" />
              </div>
              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-2xl border border-slate-100 dark:border-navy-800">
                 <div>
-                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">内部协作群</div>
+                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">内部协作群</div>
                    <div className="text-sm font-bold text-primary-navy dark:text-white">SmartTrade 研发部</div>
                 </div>
                 <ExternalLink size={16} className="text-slate-300 dark:text-slate-600" />
@@ -104,7 +104,7 @@ export default function HelpCenterPage() {
                 <ShieldCheck size={18} />
                 <span className="text-xs font-bold uppercase tracking-widest">已启用 TLS 传输加密</span>
              </div>
-             <p className="text-[11px] text-emerald-800/70 dark:text-emerald-500/70 leading-relaxed font-medium">所有与 AI 引擎的交互均通过加密通道传输，系统不存储您的 API 访问详情。</p>
+             <p className="text-xs text-emerald-800/70 dark:text-emerald-500/70 leading-relaxed font-medium">所有与 AI 引擎的交互均通过加密通道传输，系统不存储您的 API 访问详情。</p>
           </div>
         </section>
       </div>

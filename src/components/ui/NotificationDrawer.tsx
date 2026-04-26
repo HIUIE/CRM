@@ -74,7 +74,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                        <h3 className={`text-[13px] font-bold ${n.is_read ? 'text-slate-500' : 'text-primary-navy dark:text-white'}`}>{n.title}</h3>
                        {!n.is_read && <div className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />}
                     </div>
-                    <p className="text-[12px] text-slate-500 dark:text-slate-400 leading-relaxed mb-3">{n.message}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">{n.message}</p>
                     <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
                        <span>{n.created_at.slice(0, 16).replace('T', ' ')}</span>
                        <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary-navy dark:text-tertiary-sage">查看详情 <ArrowRight size={12} /></span>
@@ -94,7 +94,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
           <div className="p-4 border-t border-slate-100 dark:border-navy-800">
             <button 
               onClick={markAllRead}
-              className="w-full py-2.5 rounded-lg bg-slate-50 dark:bg-navy-950 text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors border border-slate-100 dark:border-navy-800"
+              className="w-full py-2.5 rounded-lg bg-slate-50 dark:bg-navy-950 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors border border-slate-100 dark:border-navy-800"
             >
               全部标记为已读
             </button>

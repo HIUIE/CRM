@@ -205,11 +205,11 @@ export function FinanceDashboard({
   const percentage = activeCurrency === 'USD' && totalAmount > 0 ? Math.round((paid / totalAmount) * 100) : 0;
   
   return (
-    <div className="grid gap-12 lg:grid-cols-[280px_1fr] items-start">
-      <div className="space-y-6 border-r border-slate-100 dark:border-navy-800 pr-12">
+    <div className="grid gap-8 lg:grid-cols-12 items-start">
+      <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8">
         <div className="flex items-center justify-between">
-           <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">回款汇总 / Revenue Summary</div>
-           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-[10px] font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 outline-none">
+           <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">回款汇总</div>
+           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 outline-none">
              {currencies.map(c=><option key={c} value={c}>{c}</option>)}
            </select>
         </div>
@@ -220,19 +220,19 @@ export function FinanceDashboard({
            </div>
            {activeCurrency === 'USD' && (
              <div className="space-y-3">
-                <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
-                   <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(percentage, 100)}%` }} />
-                </div>
                 <div className="flex justify-between text-xs font-medium text-slate-500 uppercase tracking-wider">
                    <span>订单总额 {totalAmount.toLocaleString()}</span>
                    <span className="text-emerald-600 font-bold">{percentage}%</span>
+                </div>
+                <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
+                   <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(percentage, 100)}%` }} />
                 </div>
              </div>
            )}
         </div>
       </div>
 
-      <div className="min-w-0">
+      <div className="lg:col-span-8 min-w-0">
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 dark:bg-navy-950/50 font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 text-xs">
@@ -265,7 +265,7 @@ export function FinanceDashboard({
                     <tr className="bg-slate-50/30">
                       <td colSpan={4} className="px-8 py-4">
                         <div className="flex flex-col gap-3">
-                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                           <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                               <Paperclip size={12} /> 财务凭证存档 ({record.attachments.length})
                            </div>
                            <div className="grid gap-3 sm:grid-cols-2">
@@ -275,7 +275,7 @@ export function FinanceDashboard({
                                      <div className="text-slate-400 group-hover/file:text-slate-900 transition-colors">{getFileIcon(att.fileName, 18)}</div>
                                      <div className="min-w-0">
                                         <div className="text-xs font-semibold text-slate-900 truncate max-w-[200px]">{att.fileName}</div>
-                                        <div className="text-[10px] text-slate-400 font-medium">{formatDateTime(att.createdAt)}</div>
+                                        <div className="text-xs text-slate-400 font-medium">{formatDateTime(att.createdAt)}</div>
                                      </div>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -319,9 +319,9 @@ export function ProductionDashboard({
   const statusLabel = plan?.id ? `MO-${plan.id.toString().padStart(6, '0')}` : '尚未录入生产计划';
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1fr_2fr] items-start">
-      {/* 左侧 33%：核心状态总览 */}
-      <div className="space-y-6">
+    <div className="grid gap-8 lg:grid-cols-12 items-start">
+      {/* 左侧 col-span-4：核心状态总览 */}
+      <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8">
         <div>
           <h4 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight uppercase mb-2">{statusLabel}</h4>
           <Chip tone={status==='ready'?'success':'warning'}>{getProductionStatusLabel(status)}</Chip>
@@ -343,8 +343,8 @@ export function ProductionDashboard({
         </div>
       </div>
 
-      {/* 右侧 67%：浅灰底板 + 4 字段 */}
-      <div className="bg-slate-50 dark:bg-navy-950/50 rounded-lg p-6">
+      {/* 右侧 col-span-8：白底 + 浅灰边框（镜像财务容器风格） */}
+      <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900 p-6">
         <div className="grid grid-cols-4 gap-6">
           <GridItem label="制造工厂" value={<span className="truncate block font-bold text-slate-900 uppercase">{plan?.partnerName || '待指派'}</span>} />
           <GridItem label="排产日期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
@@ -405,7 +405,7 @@ export function StatusFileRow({
         </div>
         <div className="min-w-0">
            <button type="button" onClick={onPreview} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-slate-600 transition-all block truncate text-left w-full uppercase tracking-tight">{label}</button>
-           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">{status === 'uploaded' ? '已归档 · Official' : '待处理'}</span>
+           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">{status === 'uploaded' ? '已归档 · Official' : '待处理'}</span>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -483,7 +483,7 @@ export function AttachmentEditor({
 
       {isUploading && (
         <div className="space-y-2.5 animate-in fade-in zoom-in duration-300">
-           <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">
+           <div className="flex justify-between items-center text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">
               <span>文件上传进度</span>
               <span className="data-field">{uploadProgress}%</span>
            </div>
@@ -500,7 +500,7 @@ export function AttachmentEditor({
               <div className="text-slate-400 opacity-80">{getFileIcon(att.fileName)}</div>
               <div className="min-w-0">
                 <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">{att.fileName}</span>
-                {att.remark && <span className="text-[10px] text-slate-400 font-medium italic">备注: {att.remark}</span>}
+                {att.remark && <span className="text-xs text-slate-400 font-medium italic">备注: {att.remark}</span>}
               </div>
             </div>
             <button type="button" onClick={() => onRemoveExisting(att.id)} className="text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><Trash2 size={16} /></button>
@@ -584,7 +584,7 @@ export const LogisticsSnapshot = ({ title, record, fields, onEdit, onPreview }: 
       <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100 shadow-inner"><Truck size={20} /></div>
       <div>
         <div className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">{title}</div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
       </div>
     </div>
     <div className="grid gap-6 text-sm sm:grid-cols-2 bg-slate-50/50 p-6 rounded-lg border border-slate-100">
@@ -612,9 +612,9 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                    <span className="text-sm font-bold text-slate-900 uppercase">{log.createdByName}</span>
-                   <span className="text-[10px] font-bold text-white bg-slate-900 px-2 py-0.5 rounded uppercase tracking-wider">{formatDateOnly(log.logDate || log.createdAt)}</span>
+                   <span className="text-xs font-bold text-white bg-slate-900 px-2 py-0.5 rounded uppercase tracking-wider">{formatDateOnly(log.logDate || log.createdAt)}</span>
                 </div>
-                <span className="text-[10px] font-medium text-slate-400 uppercase">{formatDateTime(log.createdAt)}</span>
+                <span className="text-xs font-medium text-slate-400 uppercase">{formatDateTime(log.createdAt)}</span>
               </div>
               <p className="text-sm font-medium text-slate-600 leading-relaxed mb-4">{log.content}</p>
               {log.attachments && log.attachments.length > 0 && (

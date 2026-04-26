@@ -125,7 +125,7 @@ export function MentionTextarea({ value, onChange, placeholder, className }: Men
                 className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${i === selectedIndex ? 'bg-primary-navy/5 dark:bg-tertiary-sage/5 text-primary-navy dark:text-tertiary-sage font-bold' : 'text-slate-600 dark:text-slate-300'}`}
               >
                 <div className="h-5 w-5 rounded-full bg-slate-100 dark:bg-navy-900 flex items-center justify-center text-[10px] font-bold border border-slate-200 dark:border-navy-700">{user.name.charAt(0)}</div>
-                <div className="text-[12px] truncate">{user.name}</div>
+                <div className="text-xs truncate">{user.name}</div>
               </div>
             ))}
           </div>

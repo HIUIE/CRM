@@ -140,7 +140,7 @@ export default function CustomerDetailPage() {
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
-          <div className="flex items-center gap-2 text-[13px] font-bold tracking-tight">
+          <div className="flex items-center gap-2 text-sm font-bold tracking-tight">
             <Link to="/customers" className="text-slate-400 uppercase tracking-widest hover:text-primary-navy dark:hover:text-white transition-colors">客户管理</Link>
             <span className="text-slate-200 dark:text-navy-800">/</span>
             <span className="text-primary-navy dark:text-white uppercase truncate max-w-[200px]">{data.name}</span>
@@ -149,19 +149,19 @@ export default function CustomerDetailPage() {
         <div className="flex items-center gap-3">
            <button 
              onClick={() => setShowFinanceDrawer(true)}
-             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
            >
              <DollarSign size={14} /> 录入收款
            </button>
            <button 
              onClick={() => navigate(`/logistics?customerId=${data.id}&create=1`)}
-             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
            >
              <Truck size={14} /> 创建物流
            </button>
            <button 
              onClick={() => setShowOrderDrawer(true)}
-             className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-5 py-2 text-[11px] font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-widest"
+             className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-widest"
            >
              <Plus size={16} /> 新建订单
            </button>
@@ -196,10 +196,10 @@ export default function CustomerDetailPage() {
 
                 <div className="space-y-5 border-t border-slate-50 dark:border-navy-800 pt-8">
                   <div className="rounded-xl bg-slate-50 dark:bg-navy-950/50 p-5 border border-slate-100 dark:border-navy-800 shadow-inner">
-                    <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">累计贡献额 (LTV)</div>
+                    <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">累计贡献额 (LTV)</div>
                     <div className="text-2xl font-extrabold text-primary-navy dark:text-white data-field mb-4">$ {totalPaid.toLocaleString()}</div>
                     
-                    <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">当前欠款总额</div>
+                    <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">当前欠款总额</div>
                     <div className={`text-2xl font-extrabold data-field ${pendingAmount > 0 ? 'text-amber-600 dark:text-amber-500' : 'text-slate-700 dark:text-slate-300'}`}>$ {pendingAmount.toLocaleString()}</div>
                   </div>
 
@@ -208,7 +208,7 @@ export default function CustomerDetailPage() {
                       <MapPin size={16} />
                     </div>
                     <div className="min-w-0 flex-1 relative">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">国家 / 地区</div>
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">国家 / 地区</div>
                       <CountryDisplay value={data.country} className="mt-0.5" />
                     </div>
                   </div>
@@ -228,26 +228,26 @@ export default function CustomerDetailPage() {
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
-              <h3 className="text-[12px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest mb-4">意向偏好</h3>
+              <h3 className="text-xs font-extrabold text-primary-navy dark:text-white uppercase tracking-widest mb-4">意向偏好</h3>
               <div className="p-4 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800 group relative cursor-pointer" onClick={() => setEditingField('intent_products')}>
                 {editingField === 'intent_products' ? (
                    <textarea
                     autoFocus
                     onBlur={(e) => handleInlineSave('intent_products', e.target.value)}
                     defaultValue={data.intent_products}
-                    className="w-full bg-transparent text-[12px] font-medium focus:outline-none"
+                    className="w-full bg-transparent text-xs font-medium focus:outline-none"
                     rows={4}
                    />
                 ) : (
                   <>
-                    <p className="text-[12px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">
                       “{data.intent_products || '暂无明确意向描述'}”
                     </p>
                     <Pencil size={12} className="absolute top-2 right-2 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </>
                 )}
               </div>
-              <div className="mt-6 flex items-center justify-between text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              <div className="mt-6 flex items-center justify-between text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                 <span>归属人员：{data.created_by_name || '系统分配'}</span>
                 <span>建档：{data.created_at ? formatDateOnly(data.created_at) : '—'}</span>
               </div>
@@ -280,7 +280,7 @@ export default function CustomerDetailPage() {
                        <button 
                         disabled={!followupInput.trim() || isSubmittingFollowup}
                         onClick={handlePostFollowup}
-                        className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-6 py-2 text-[11px] font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest"
+                        className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-6 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest"
                        >
                          <Send size={14} /> {isSubmittingFollowup ? '发布中...' : '发布跟进'}
                        </button>
@@ -296,10 +296,10 @@ export default function CustomerDetailPage() {
                         </div>
                         <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-100 dark:border-navy-800 p-5 shadow-sm">
                           <div className="flex items-center justify-between mb-3">
-                             <span className="text-[13px] font-extrabold text-primary-navy dark:text-white uppercase">{f.created_by_name}</span>
-                             <span className="text-[11px] font-bold text-slate-400 data-field">{String(f.created_at).slice(0, 16).replace('T', ' ')}</span>
+                             <span className="text-sm font-extrabold text-primary-navy dark:text-white uppercase">{f.created_by_name}</span>
+                             <span className="text-xs font-bold text-slate-400 data-field">{String(f.created_at).slice(0, 16).replace('T', ' ')}</span>
                           </div>
-                          <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">{f.content}</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">{f.content}</p>
                         </div>
                       </div>
                     )) : (
@@ -319,16 +319,16 @@ export default function CustomerDetailPage() {
                       <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-100 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
-                              <span className="text-[13px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">{activity.title}</span>
+                              <span className="text-sm font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">{activity.title}</span>
                               {activity.order_display_id && <Chip tone="neutral">{activity.order_display_id}</Chip>}
                             </div>
-                            <span className="text-[11px] font-bold text-slate-400 data-field">{String(activity.created_at).slice(0, 16).replace('T', ' ')}</span>
+                            <span className="text-xs font-bold text-slate-400 data-field">{String(activity.created_at).slice(0, 16).replace('T', ' ')}</span>
                         </div>
-                        <p className="text-[12px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                           {activity.desc || '—'}
                         </p>
                         {activity.value && (
-                          <div className={`mt-2 text-[12px] font-bold data-field ${activity.valueColor || 'text-primary-navy dark:text-white'}`}>
+                          <div className={`mt-2 text-xs font-bold data-field ${activity.valueColor || 'text-primary-navy dark:text-white'}`}>
                             {activity.value}
                           </div>
                         )}
@@ -344,7 +344,7 @@ export default function CustomerDetailPage() {
                 <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm flex flex-col">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
-                        <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                           <tr>
                             <th className="px-6 py-4">订单号 / 日期</th>
                             <th className="px-6 py-4">产品摘要</th>
@@ -356,21 +356,21 @@ export default function CustomerDetailPage() {
                           {data.orders && data.orders.length ? data.orders.map((order) => (
                             <tr key={order.id} onClick={() => navigate(`/orders/${String(order.display_id).toLowerCase()}`)} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                               <td className="px-6 py-4">
-                                <div className="text-[13px] font-extrabold text-primary-navy dark:text-white mb-0.5 data-field group-hover:text-blue-600 transition-colors">{order.display_id}</div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatDateOnly(order.created_at)}</div>
+                                <div className="text-sm font-extrabold text-primary-navy dark:text-white mb-0.5 data-field group-hover:text-blue-600 transition-colors">{order.display_id}</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{formatDateOnly(order.created_at)}</div>
                               </td>
                               <td className="px-6 py-4">
                                 <div className="text-slate-600 dark:text-slate-400 font-bold truncate max-w-[200px]" title={order.product_summary}>{order.product_summary || '—'}</div>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                <div className="text-[14px] font-extrabold text-primary-navy dark:text-white data-field">{Number(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                                <div className="text-sm font-extrabold text-primary-navy dark:text-white data-field">{Number(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <Chip tone={order.status === 'completed' ? 'success' : order.status === 'draft' ? 'neutral' : 'warning'}>{order.status}</Chip>
                               </td>
                             </tr>
                           )) : (
-                            <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[11px]">暂无关联订单记录</td></tr>
+                            <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">暂无关联订单记录</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -382,7 +382,7 @@ export default function CustomerDetailPage() {
                 <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm flex flex-col">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
-                        <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                           <tr>
                             <th className="px-6 py-4">日期 / 订单</th>
                             <th className="px-6 py-4 text-center">类型</th>
@@ -395,25 +395,25 @@ export default function CustomerDetailPage() {
                           {data.finance_records && data.finance_records.length ? data.finance_records.map((r) => (
                             <tr key={r.id} onClick={() => navigate(`/orders/${String(r.order_display_id).toLowerCase()}`)} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                               <td className="px-6 py-4">
-                                <div className="text-[12px] font-bold text-primary-navy dark:text-white mb-0.5 data-field">{formatDateOnly(r.created_at)}</div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-blue-600 transition-colors">{r.order_display_id || 'MISC'}</div>
+                                <div className="text-xs font-bold text-primary-navy dark:text-white mb-0.5 data-field">{formatDateOnly(r.created_at)}</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest group-hover:text-blue-600 transition-colors">{r.order_display_id || 'MISC'}</div>
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip>
                               </td>
-                              <td className={`px-6 py-4 text-right font-bold data-field text-[14px] ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
+                              <td className={`px-6 py-4 text-right font-bold data-field text-sm ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
                                 {r.type === 'receipt' ? '+' : '-'}{r.currency} {Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                               </td>
                               <td className="px-6 py-4">
                                 <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={r.target}>{r.target || '—'}</div>
-                                <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[150px]" title={r.remark}>{r.remark || '—'}</div>
+                                <div className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[150px]" title={r.remark}>{r.remark || '—'}</div>
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <Chip tone={r.status === 'completed' ? 'neutral' : 'warning'}>{r.status === 'completed' ? '已核销' : '待处理'}</Chip>
                               </td>
                             </tr>
                           )) : (
-                            <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[11px]">暂无相关财务流水</td></tr>
+                            <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">暂无相关财务流水</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -424,8 +424,8 @@ export default function CustomerDetailPage() {
               {activeTab === 'tasks' && (
                  <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
                     <div className="mb-6 flex items-center justify-between">
-                      <h2 className="text-[14px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">关联协同任务</h2>
-                      <button onClick={() => setShowTaskDrawer(true)} className="text-[12px] font-bold text-primary-navy dark:text-tertiary-sage hover:underline">+ 指派新任务</button>
+                      <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">关联协同任务</h2>
+                      <button onClick={() => setShowTaskDrawer(true)} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">+ 指派新任务</button>
                     </div>
                     <div className="space-y-3">
                       {data.tasks && data.tasks.length > 0 ? data.tasks.map(t => (
@@ -435,8 +435,8 @@ export default function CustomerDetailPage() {
                                  {t.status === 'done' ? <Check size={14} /> : <Clock size={14} />}
                               </div>
                               <div>
-                                 <div className={`text-[13px] font-bold ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-primary-navy dark:text-white'}`}>{t.title}</div>
-                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">负责人: {t.assignee_name} · 截止: {t.due_date}</div>
+                                 <div className={`text-sm font-bold ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-primary-navy dark:text-white'}`}>{t.title}</div>
+                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">负责人: {t.assignee_name} · 截止: {t.due_date}</div>
                               </div>
                            </div>
                            <Chip tone={t.priority === 'P0' ? 'error' : t.priority === 'P1' ? 'warning' : 'info'}>{t.priority}</Chip>
@@ -451,8 +451,8 @@ export default function CustomerDetailPage() {
               {activeTab === 'contacts' && (
                 <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm flex flex-col p-6">
                     <div className="mb-6 flex items-center justify-between">
-                      <h2 className="text-[14px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">企业联系人矩阵</h2>
-                      <button onClick={() => setShowContactDrawer(true)} className="text-[12px] font-bold text-primary-navy dark:text-tertiary-sage hover:underline">+ 新增联系人</button>
+                      <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">企业联系人矩阵</h2>
+                      <button onClick={() => setShowContactDrawer(true)} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">+ 新增联系人</button>
                       </div>                    <div className="grid gap-4 sm:grid-cols-2">
                       {data.contacts && data.contacts.length ? data.contacts.map(c => (
                         <div key={c.id} className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 shadow-sm hover:border-primary-navy/20 transition-colors cursor-pointer group">
@@ -460,12 +460,12 @@ export default function CustomerDetailPage() {
                             {String(c.name).charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[14px] font-bold text-primary-navy dark:text-white truncate" title={c.name}>{c.name}</div>
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{c.title}</div>
+                            <div className="text-sm font-bold text-primary-navy dark:text-white truncate" title={c.name}>{c.name}</div>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{c.title}</div>
                             <div className="flex items-center gap-2">
-                               <div className="text-[12px] text-slate-500 font-medium truncate font-mono" title={c.contact}>{maskContact(c.contact)}</div>
+                               <div className="text-xs text-slate-500 font-medium truncate font-mono" title={c.contact}>{maskContact(c.contact)}</div>
                                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                               <div className="text-[12px] text-slate-500 font-medium truncate font-mono" title={c.email}>{maskContact(c.email)}</div>
+                               <div className="text-xs text-slate-500 font-medium truncate font-mono" title={c.email}>{maskContact(c.email)}</div>
                             </div>
                           </div>
                         </div>
@@ -520,14 +520,14 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean; o
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-6 py-4 text-[13px] font-bold uppercase tracking-widest border-b-2 transition-all ${
+      className={`flex items-center gap-2 px-6 py-4 text-sm font-bold uppercase tracking-widest border-b-2 transition-all ${
         active 
           ? 'border-primary-navy dark:border-tertiary-sage text-primary-navy dark:text-tertiary-sage bg-slate-50 dark:bg-navy-900/30' 
           : 'border-transparent text-slate-500 hover:text-primary-navy dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800/30'
       }`}
     >
       {icon} {label}
-      {count !== undefined && <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] ${active ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-100 dark:bg-navy-800 text-slate-500'}`}>{count}</span>}
+      {count !== undefined && <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${active ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-100 dark:bg-navy-800 text-slate-500'}`}>{count}</span>}
     </button>
   );
 }
@@ -536,7 +536,7 @@ function ActionButton({ icon, label, onClick }: { icon: React.ReactNode; label: 
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-2.5 text-[12px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-tight"
+      className="flex w-full items-center gap-3 px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-tight"
     >
       <span className="opacity-70">{icon}</span>
       {label}
@@ -555,7 +555,7 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
     <div className="flex items-center gap-4 group">
       <div className="h-9 w-9 rounded-full bg-slate-50 dark:bg-navy-950 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-navy-800 shrink-0">{icon}</div>
       <div className="min-w-0 flex-1 relative">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</div>
         {isEditing ? (
           type === 'select' ? (
             <select
@@ -563,7 +563,7 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
               value={val}
               onChange={(e) => { setVal(e.target.value); onSave?.(e.target.value); setIsEditing(false); }}
               onBlur={() => setIsEditing(false)}
-              className="text-[13px] font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-white dark:bg-navy-900 border border-slate-200 rounded p-1 outline-none"
+              className="text-sm font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-white dark:bg-navy-900 border border-slate-200 rounded p-1 outline-none"
             >
                <option value="">请选择...</option>
                {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -575,12 +575,12 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
               onChange={(e) => setVal(e.target.value)}
               onBlur={() => { setIsEditing(false); if (val !== value) onSave?.(val); }}
               onKeyDown={(e) => { if (e.key === 'Enter') { setIsEditing(false); if (val !== value) onSave?.(val); } }}
-              className="text-[13px] font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-transparent border-b border-primary-navy/20 outline-none"
+              className="text-sm font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-transparent border-b border-primary-navy/20 outline-none"
             />
           )
         ) : (
           <div className="flex items-center gap-2">
-            <div className={`text-[13px] font-bold text-primary-navy dark:text-white mt-0.5 truncate ${isSensitive && !showSensitive ? 'font-mono' : ''}`} title={value}>{displayValue}</div>
+            <div className={`text-sm font-bold text-primary-navy dark:text-white mt-0.5 truncate ${isSensitive && !showSensitive ? 'font-mono' : ''}`} title={value}>{displayValue}</div>
             {isSensitive && (
               <button onClick={() => setShowSensitive(!showSensitive)} className="p-1 text-slate-300 hover:text-primary-navy transition-colors">
                 {showSensitive ? <EyeOff size={10} /> : <Eye size={10} />}
@@ -628,7 +628,7 @@ function StatBox({ title, value, icon, color = "text-primary-navy dark:text-whit
     <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-slate-400">{icon}</span>
-        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{title}</span>
+        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{title}</span>
       </div>
       <div className={`text-xl font-extrabold tracking-tight data-field ${color}`}>{value}</div>
     </div>

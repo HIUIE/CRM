@@ -100,8 +100,8 @@ export default function DashboardView() {
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div>
-                <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">今日待处理 ({data.todos.length})</h2>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">优先处理以下业务阻点</p>
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">今日待处理 ({data.todos.length})</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">优先处理以下业务阻点</p>
               </div>
               <button onClick={() => navigate('/orders')} className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看全部 <ChevronRight size={14} /></button>
             </div>
@@ -133,8 +133,8 @@ export default function DashboardView() {
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div className="flex items-center gap-6">
-                <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">最近动态</h2>
-                <div className="hidden sm:flex gap-4 text-[10px] font-bold uppercase tracking-widest">
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">最近动态</h2>
+                <div className="hidden sm:flex gap-4 text-xs font-bold uppercase tracking-widest">
                   <span className="text-primary-navy dark:text-tertiary-sage border-b-2 border-primary-navy dark:border-tertiary-sage pb-1">全部</span>
                   <span className="text-slate-400 hover:text-primary-navy pb-1 cursor-pointer transition-colors">财务</span>
                   <span className="text-slate-400 hover:text-primary-navy pb-1 cursor-pointer transition-colors">物流</span>
@@ -171,7 +171,7 @@ export default function DashboardView() {
         {/* Right Column: Tools & Analysis */}
         <div className="flex flex-col space-y-8">
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
-            <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
+            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
               <QuickAction icon={<FilePlus size={20} />} label="新建订单" onClick={() => navigate('/orders?create=1')} />
               <QuickAction icon={<Wallet size={20} />} label="收款登记" onClick={() => navigate('/finance?create=1')} />
@@ -192,7 +192,7 @@ export default function DashboardView() {
                 <h3 className="text-[14px] font-extrabold text-primary-navy dark:text-white tracking-tight">使用 AI 助手，提升效率</h3>
               </div>
               <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-4 max-w-[200px]">智能分析订单数据，自动生成业务建议</p>
-              <Link to="/ai" className="inline-flex items-center gap-2 rounded bg-blue-600 dark:bg-blue-500 px-4 py-2 text-[12px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm">
+              <Link to="/ai" className="btn-primary text-xs px-4 py-2">
                 立即体验 <ArrowUpRight size={14} />
               </Link>
             </div>
@@ -203,8 +203,8 @@ export default function DashboardView() {
 
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
             <div className="mb-8 flex items-center justify-between shrink-0">
-              <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">订单状态分布</h2>
-              <select className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-[10px] font-bold text-slate-600 dark:text-slate-400 outline-none uppercase">
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">订单状态分布</h2>
+              <select className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none uppercase">
                 <option>本月</option>
                 <option>本周</option>
                 <option>今年</option>
@@ -262,7 +262,7 @@ function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: s
       <div className="h-10 w-10 rounded-full bg-slate-50 dark:bg-navy-900 border border-slate-100 dark:border-navy-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mb-2 group-hover:text-primary-navy dark:group-hover:text-white transition-colors shadow-sm">
         {icon}
       </div>
-      <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-primary-navy dark:group-hover:text-white transition-colors uppercase tracking-tight">{label}</div>
+      <div className="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-primary-navy dark:group-hover:text-white transition-colors uppercase tracking-tight">{label}</div>
     </div>
   );
 }
@@ -308,7 +308,7 @@ function DonutChart({ data }: { data: { status: string, count: number, percentag
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-extrabold text-primary-navy dark:text-white data-field leading-none">{total}</span>
-        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1">总订单</span>
+        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1">总订单</span>
       </div>
     </div>
   );

@@ -131,18 +131,18 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
            <div className="flex gap-2">
               <button 
                 onClick={() => handleStatusChange(task?.status === 'done' ? 'in_progress' : 'done')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold uppercase transition-all shadow-sm ${task?.status === 'done' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-500 text-white shadow-emerald-500/20'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all shadow-sm ${task?.status === 'done' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-500 text-white shadow-emerald-500/20'}`}
               >
                 {task?.status === 'done' ? <History size={14} /> : <CheckCircle2 size={14} />}
                 {task?.status === 'done' ? '重新开启任务' : '标记任务完成'}
               </button>
            </div>
-           <button onClick={onClose} className="px-6 py-2 text-[11px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest">关闭</button>
+           <button onClick={onClose} className="px-6 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest">关闭</button>
         </div>
       }
     >
       {loading ? (
-        <div className="py-20 text-center animate-pulse text-slate-400 text-[11px] font-bold uppercase">正在读取进展...</div>
+        <div className="py-20 text-center animate-pulse text-slate-400 text-xs font-bold uppercase">正在读取进展...</div>
       ) : task ? (
         <div className="flex flex-col h-full space-y-8">
           {/* Metadata Section */}
@@ -154,7 +154,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
                     <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">当前状态</label>
                     <div className="flex items-center gap-2">
                        <div className={`h-2 w-2 rounded-full ${task.status === 'done' ? 'bg-emerald-500' : task.status === 'in_progress' ? 'bg-blue-500' : 'bg-slate-400'}`} />
-                       <span className="text-[12px] font-bold text-primary-navy dark:text-white uppercase">{task.status.replace('_', ' ')}</span>
+                       <span className="text-xs font-bold text-primary-navy dark:text-white uppercase">{task.status.replace('_', ' ')}</span>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -212,7 +212,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
                      </div>
                      <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between">
-                           <span className="text-[12px] font-extrabold text-primary-navy dark:text-white">{c.creator_name}</span>
+                           <span className="text-xs font-extrabold text-primary-navy dark:text-white">{c.creator_name}</span>
                            <span className="text-[10px] font-bold text-slate-400">{c.created_at.slice(0, 16).replace('T', ' ')}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-navy-950/50 p-4 rounded-xl border border-slate-100 dark:border-navy-800">
@@ -256,7 +256,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
 
                    <div className="px-4 py-3 bg-slate-50 dark:bg-navy-950 flex justify-between items-center border-t border-slate-100 dark:border-navy-800">
                       <div className="flex gap-2">
-                         <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 text-[11px] font-bold text-slate-500 hover:text-primary-navy dark:hover:text-white cursor-pointer transition-all shadow-sm">
+                         <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 text-xs font-bold text-slate-500 hover:text-primary-navy dark:hover:text-white cursor-pointer transition-all shadow-sm">
                             <Paperclip size={14} />
                             <span>上传交付物</span>
                             <input type="file" multiple className="hidden" onChange={e => e.target.files && setNewFiles([...newFiles, ...Array.from(e.target.files)])} />
@@ -265,7 +265,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
                       <button 
                         disabled={(!commentInput.trim() && newFiles.length === 0) || isSubmitting}
                         onClick={postComment}
-                        className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-6 py-2 text-[11px] font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest"
+                        className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-6 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest"
                       >
                         <Send size={14} /> {isSubmitting ? (isUploading ? `上传中 ${uploadProgress}%` : '发布中...') : '确认提交'}
                       </button>

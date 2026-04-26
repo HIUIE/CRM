@@ -283,7 +283,7 @@ export default function CustomersView() {
              <button
                key={chip.key}
                onClick={() => updateParam('timeRange', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
+               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
              >
                {chip.label}
              </button>
@@ -300,7 +300,7 @@ export default function CustomersView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">国家</th>
                     <th className="px-4 py-4 text-left">客户名称</th>
@@ -326,7 +326,7 @@ export default function CustomersView() {
                         <td className="px-4 py-4 text-center">{customer.source_channel ? <Chip tone="neutral">{customer.source_channel}</Chip> : '—'}</td>
                         <td className="px-4 py-4 text-left text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px]" title={customer.contact}>{customer.contact || '—'}</td>
                         <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-300 font-bold data-field">{customer.order_count || '—'}</td>
-                        <td className="px-4 py-4 text-center text-slate-500 dark:text-slate-500 text-[11px] font-bold uppercase">{customer.created_by_name || '系统'}</td>
+                        <td className="px-4 py-4 text-center text-slate-500 dark:text-slate-500 text-xs font-bold uppercase">{customer.created_by_name || '系统'}</td>
                         <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                             <button onClick={() => openEdit(customer)} className="rounded-lg border border-transparent p-2 text-secondary-slate dark:text-slate-400 transition-all hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 shadow-sm">
@@ -431,18 +431,18 @@ export default function CustomersView() {
               </div>
               <div className="p-6 space-y-5">
                  <div className="space-y-2">
-                    <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
                         确定要永久删除客户“{customerToDelete?.name}”吗？此操作将同步清除与之关联的所有记录，<span className="text-red-600 font-bold">不可逆转</span>。
                     </p>
                     <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950 rounded-xl border border-slate-100 dark:border-navy-800">
                        <span className="font-bold text-primary-navy dark:text-white data-field">{customerToDelete?.display_id || customerToDelete?.id}</span>
-                       <button onClick={copyId} className="flex items-center gap-1 text-[10px] font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
+                       <button onClick={copyId} className="flex items-center gap-1 text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
                           {copied ? <><Check size={12} /> 已复制</> : <><Copy size={12} /> 复制编号</>}
                        </button>
                     </div>
                  </div>
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">请输入编号以确认删除</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">请输入编号以确认删除</label>
                     <input 
                        value={deleteInput}
                        onChange={e => setDeleteInput(e.target.value)}
@@ -455,7 +455,7 @@ export default function CustomersView() {
                     <button 
                        disabled={isDeleting || deleteInput !== (customerToDelete?.display_id || String(customerToDelete?.id))}
                        onClick={handleConfirmDelete}
-                       className="flex-2 rounded-xl bg-red-600 px-6 py-3 text-xs font-bold text-white shadow-lg hover:bg-red-700 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all uppercase tracking-widest"
+                       className="btn-destructive flex-2 text-xs px-6 py-3"
                     >
                        {isDeleting ? '正在注销...' : '确认永久销毁'}
                     </button>
@@ -478,7 +478,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
         {children}
       </label>
       {error && (
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-red-500 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-red-500 animate-in fade-in slide-in-from-top-1 duration-200">
           <AlertTriangle size={12} />
           {error}
         </div>
