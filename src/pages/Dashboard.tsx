@@ -85,7 +85,7 @@ export default function DashboardView() {
   if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{error || '无法读取控制台数据'}</div>;
 
   return (
-    <div className="flex flex-col space-y-6">
+    <div className="flex flex-col space-y-8">
       {/* Top Indicators */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 shrink-0">
         <StatCard title="订单总数" value={String(data.overview.totalOrders)} subValue={`进行中 ${data.overview.activeOrders}`} icon={<FileText size={16} className="text-blue-500" />} sparklineColor="#3B82F6" sparklineData={[10, 20, 15, 25, 20, 30]} />
@@ -96,7 +96,7 @@ export default function DashboardView() {
 
       <div className="grid gap-6 lg:grid-cols-[65%_minmax(0,1fr)] items-start">
         {/* Left Column: Business Drivers */}
-        <div className="flex flex-col space-y-6">
+        <div className="flex flex-col space-y-8">
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div>
@@ -169,7 +169,7 @@ export default function DashboardView() {
         </div>
 
         {/* Right Column: Tools & Analysis */}
-        <div className="flex flex-col space-y-6">
+        <div className="flex flex-col space-y-8">
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
             <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
@@ -238,7 +238,7 @@ export default function DashboardView() {
 
 function StatCard({ title, value, subValue, subValueColor = "text-slate-400", icon, sparklineColor, sparklineData }: { title: string; value: string; subValue: string; subValueColor?: string; icon: React.ReactNode; sparklineColor: string; sparklineData: number[] }) {
   return (
-    <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 transition-all flex flex-col justify-between h-[130px]">
+    <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 transition-all flex flex-col justify-between h-[130px]">
       <div className="flex items-center gap-3 mb-2">
         <div className="h-8 w-8 rounded bg-slate-50 dark:bg-navy-950 flex items-center justify-center shrink-0 border border-slate-100 dark:border-navy-800">{icon}</div>
         <div className="text-[12px] font-bold text-slate-500 dark:text-slate-400">{title}</div>

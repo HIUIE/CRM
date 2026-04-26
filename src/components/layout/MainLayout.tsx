@@ -105,12 +105,13 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-[#F8FAFC] dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300">
+    <div className="min-h-screen w-full bg-[#F8FAFC] dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300">
       <NotificationDrawer isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
 
-      {/* 1. 全屏垂直侧边栏 - Flush 100vh Sidebar */}
-      <aside className="sticky top-0 self-start flex h-screen w-[240px] shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 z-50">
-        <div className="p-8 border-b border-slate-50 dark:border-navy-800/50">
+      {/* 1. 固定侧边栏 - position: fixed, 脱离文档流 */}
+      <aside className="fixed left-0 top-0 flex h-screen w-[240px] flex-col border-r border-slate-200 bg-white shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 z-50 px-6">
+        {/* Logo 区域：pt-8 pb-6 mb-8 确保与主导航视觉隔离 */}
+        <div className="pt-8 pb-6 mb-8 border-b border-slate-50 dark:border-navy-800/50">
           <Link to="/" className="flex items-center gap-3 group">
             <img src="/logo.png" alt="SmartTrade" className="h-8 w-8 rounded-lg object-contain shadow-md" />
             <div className="min-w-0">
@@ -120,7 +121,8 @@ export default function MainLayout() {
           </Link>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-1 custom-scrollbar">
+        {/* 主导航：无额外水平 padding，继承 aside px-6 */}
+        <nav className="flex-1 space-y-1">
           <ul className="space-y-1.5">
             <NavItem icon={<LayoutDashboard size={18} />} label="业务控制台" path="/dashboard" currentPath={location.pathname} />
             <NavItem icon={<PackageSearch size={18} />} label="客户档案" path="/customers" currentPath={location.pathname} />
@@ -140,8 +142,10 @@ export default function MainLayout() {
           </ul>
         </nav>
 
-        {/* 底部菜单：利用 margin-top: auto 推至左下角 */}
-        <div className="mt-auto space-y-1 px-3 pb-2">
+        {/* 底部菜单：排序 操作审计 -> 帮助中心 -> 深色模式 -> 系统配置 */}
+        <div className="mt-auto pt-4 space-y-1 pb-2 list-none">
+          <NavItem icon={<History size={18} />} label="操作审计" path="/audit" currentPath={location.pathname} />
+          <NavItem icon={<CircleHelp size={18} />} label="帮助中心" path="/help" currentPath={location.pathname} />
           <button
             onClick={() => setIsDark(!isDark)}
             className="flex w-full items-center rounded-md px-3 py-2 text-xs font-bold transition-all text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white"
@@ -152,11 +156,27 @@ export default function MainLayout() {
             <span className="truncate tracking-wide">{isDark ? '浅色模式' : '深色模式'}</span>
           </button>
           <NavItem icon={<Settings size={18} />} label="系统配置" path="/settings" currentPath={location.pathname} />
-          <NavItem icon={<CircleHelp size={18} />} label="帮助中心" path="/help" currentPath={location.pathname} />
-          <NavItem icon={<History size={18} />} label="操作审计" path="/audit" currentPath={location.pathname} />
         </div>
 
-        <div className="p-4 border-t border-slate-50 dark:border-navy-800">
+        {/* 用户卡片 + 向上弹出下拉菜单 */}
+        <div className="relative py-4 border-t border-slate-50 dark:border-navy-800">
+           {showUserMenu && (
+             <div className="absolute bottom-full left-0 right-0 mb-2 z-[100]">
+               <div className="rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 shadow-lg overflow-hidden">
+                 <div className="px-4 py-3 border-b border-slate-100 dark:border-navy-700">
+                   <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">当前账号</div>
+                   <div className="text-sm font-black text-primary-navy dark:text-white mt-0.5">{user?.name}</div>
+                 </div>
+                 <button
+                   onClick={() => { logout(); setShowUserMenu(false); }}
+                   className="flex w-full items-center gap-3 px-4 py-3 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
+                 >
+                   <LogOut size={16} />
+                   退出系统
+                 </button>
+               </div>
+             </div>
+           )}
            <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="w-full rounded-xl bg-slate-50 dark:bg-navy-950/50 p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-navy-800 transition-all border border-slate-100 dark:border-navy-800"
@@ -170,13 +190,13 @@ export default function MainLayout() {
                   <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">{user?.role}</div>
                 </div>
               </div>
-              <ChevronDown size={14} className="text-slate-400" />
+              <ChevronDown size={14} className={`text-slate-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
             </button>
         </div>
       </aside>
 
-      {/* 2. 主内容区 - 原生浏览器滚动 */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
+      {/* 2. 主内容区 - margin-left 避开固定侧边栏，自然撑开文档流 */}
+      <main className="ml-[240px] min-h-screen flex flex-col relative">
         <CommandPalette />
         {!isDetailPage && (
           <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-5 flex items-center justify-between transition-all shrink-0">
@@ -195,7 +215,7 @@ export default function MainLayout() {
           </header>
         )}
 
-        <div className="flex-1">
+        <div className="flex-1 px-8 py-6">
           <Outlet />
         </div>
       </main>

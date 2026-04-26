@@ -257,19 +257,19 @@ export default function OrdersView() {
         {error && <div className="mt-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{error}</div>}
       </section>
 
-      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-md transition-colors flex flex-col">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
         {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">读取订单列表中...</div> : (
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
-                    <th className="px-4 py-5 text-left">订单号 / 日期</th>
-                    <th className="px-4 py-5 text-left">客户 / 国家</th>
-                    <th className="px-4 py-5 text-left">产品摘要</th>
-                    <th className="px-4 py-5 text-right">金额</th>
-                    <th className="px-4 py-5 text-right">收款进度</th>
-                    <th className="px-4 py-5 text-center">操作</th>
+                    <th className="px-4 py-4 text-left">订单号 / 日期</th>
+                    <th className="px-4 py-4 text-left">客户 / 国家</th>
+                    <th className="px-4 py-4 text-left">产品摘要</th>
+                    <th className="px-4 py-4 text-right">金额</th>
+                    <th className="px-4 py-4 text-right">收款进度</th>
+                    <th className="px-4 py-4 text-center">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
@@ -284,7 +284,7 @@ export default function OrdersView() {
                           navigate(target);
                         }
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                            <div 
                              className="font-bold text-primary-navy dark:text-tertiary-sage uppercase data-field"
                              style={{ viewTransitionName: 'order-id' }}
@@ -293,20 +293,20 @@ export default function OrdersView() {
                            </div>
                            <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1.5 font-bold data-field">{formatDateOnly(o.created_at)}</div>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                            <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={o.customer_name}>{o.customer_name || '—'}</div>
                            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 uppercase font-extrabold">{o.customer_country || '—'}</div>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                            <div className="flex items-center gap-2 mb-1.5"><Chip tone={meta.tone}>{meta.label}</Chip></div>
                            <div className="text-slate-600 dark:text-slate-400 font-bold truncate max-w-[200px]" title={o.product_summary}>{o.product_summary || '—'}</div>
                         </td>
-                        <td className="px-4 py-5 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
-                        <td className="px-4 py-5 text-right">
+                        <td className="px-4 py-4 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
+                        <td className="px-4 py-4 text-right">
                            <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
                            <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1.5">{o.pending_finance_count > 0 ? `核销中: ${o.pending_finance_count} 笔` : '—'}</div>
                         </td>
-                        <td className="px-4 py-5 text-center" onClick={e=>e.stopPropagation()}>
+                        <td className="px-4 py-4 text-center" onClick={e=>e.stopPropagation()}>
                            <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                               <button onClick={()=>openEditForm(o)} className="p-2 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
                               {user?.role === 'admin' && (
@@ -346,7 +346,7 @@ export default function OrdersView() {
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
             <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">确认并进入详情</button>
           </div>
         }

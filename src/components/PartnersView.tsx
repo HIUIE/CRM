@@ -429,7 +429,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   return (
     <div className="space-y-2">
       <label className="block">
-        <span className="mb-2 block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{label}</span>
+        <span className="mb-2 block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
         {children}
       </label>
       {error && (

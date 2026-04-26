@@ -529,7 +529,7 @@ export default function SettingsView() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-2">
-      <span className="block text-[11px] font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-60 dark:opacity-50 ml-1">{label}</span>
+      <span className="block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
       {children}
     </label>
   );

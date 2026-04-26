@@ -284,9 +284,10 @@ export default function OrderDetailPage() {
   };
 
   // 5. Handlers
-  const scrollToSection = (section: SectionKey | 'packing' | 'documents') => {
-    if (section === 'documents') {
-      const el = document.getElementById('documents-vault');
+  const scrollToSection = (section: SectionKey | 'packing' | 'documents' | 'followups') => {
+    if (section === 'documents' || section === 'followups') {
+      const id = section === 'documents' ? 'documents-vault' : 'followups-timeline';
+      const el = document.getElementById(id);
       if (el) {
         const top = el.getBoundingClientRect().top + window.pageYOffset - 24;
         window.scrollTo({ top, behavior: 'smooth' });
@@ -386,6 +387,18 @@ export default function OrderDetailPage() {
   const handleSaveProduction = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     try {
+      let newAtts: AttachmentMeta[] = [];
+      if (productionForm.newPhotos.length) {
+        setIsUploading(true); setUploadProgress(0);
+        const fd = new FormData();
+        fd.append('customerId', String(customer.id));
+        fd.append('orderId', String(order?.id));
+        fd.append('entityType', 'production_photo');
+        fd.append('entityId', String(order?.id));
+        productionForm.newPhotos.forEach(f => fd.append('files', f));
+        newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
+        setIsUploading(false);
+      }
       const payload = {
         partnerId: productionForm.partnerId ? Number(productionForm.partnerId) : null,
         orderDate: productionForm.orderDate,
@@ -393,7 +406,8 @@ export default function OrderDetailPage() {
         productionStatus: productionForm.productionStatus,
         inspectionStatus: productionForm.inspectionStatus,
         remark: productionForm.remark,
-        orderId: Number(order?.id), 
+        orderId: Number(order?.id),
+        attachmentIds: [...productionForm.photos.map(a => a.id), ...newAtts.map(a => a.id)],
       };
       const url = productionForm.id ? `/api/orders/production/${productionForm.id}` : `/api/orders/${order?.id}/production`;
       await apiFetch(url, { method: productionForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
@@ -626,9 +640,9 @@ export default function OrderDetailPage() {
       </div>
 
       {/* header Section */}
-      <header ref={sectionRefs.basic} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-5 shadow-md mt-0 transition-colors">
-        <div className="flex flex-col gap-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-5">
+      <header ref={sectionRefs.basic} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
+        <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-6">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest leading-none">
                     <Link to="/orders" className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单管理</Link>
@@ -657,7 +671,7 @@ export default function OrderDetailPage() {
                      <button 
                        disabled={order.status === 'completed'}
                        onClick={openOrderDrawer} 
-                       className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-5 py-2 text-[11px] font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
+                       className="btn-primary text-[11px] px-5 py-2"
                      >
                        <Edit3 size={14} /> 编辑清单
                      </button>
@@ -666,7 +680,7 @@ export default function OrderDetailPage() {
                    {/* Secondary Actions */}
                    <button 
                      onClick={() => openFinanceDrawer()} 
-                     className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+                     className="btn-secondary text-[11px] px-4 py-2"
                    >
                      <DollarSign size={14} className="text-emerald-500" /> 录入收支
                    </button>
@@ -714,7 +728,7 @@ export default function OrderDetailPage() {
 
                    <button 
                      onClick={handleExportPdf}
-                     className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+                     className="btn-secondary text-[11px] px-4 py-2"
                    >
                      <Printer size={14} className="text-slate-400" /> 导出 PDF
                    </button>
@@ -728,6 +742,24 @@ export default function OrderDetailPage() {
                      </button>
                    )}
                 </div>
+              </div>
+
+              {/* 快速跟进记录 */}
+              <div className="flex gap-2">
+                <input
+                  value={followUpInput}
+                  onChange={e => setFollowUpInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSubmitFollowUp())}
+                  placeholder="记录最新跟进动态，例如：今天发了最新版 PI 给客户..."
+                  className="flex-1 bg-slate-50 dark:bg-navy-950 px-4 py-2.5 rounded-lg border border-slate-100 dark:border-navy-800 text-sm font-bold text-slate-700 dark:text-white outline-none focus:bg-white dark:focus:bg-navy-900 transition-all"
+                />
+                <button
+                  onClick={handleSubmitFollowUp}
+                  disabled={saving || !followUpInput.trim()}
+                  className="shrink-0 rounded-lg bg-amber-500 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-amber-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider"
+                >
+                  记录
+                </button>
               </div>
 
               <div className="rounded-md bg-[#F8FAFC] dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-3">
@@ -744,7 +776,7 @@ export default function OrderDetailPage() {
       </header>
 
       {/* 2. Physical 2-Column Main Layout */}
-      <main className="max-w-[1600px] mx-auto px-8 py-10 flex gap-8 items-start">
+      <main className="max-w-[1600px] mx-auto py-10 flex gap-8 items-start">
         
         {/* Left Side: Vertical Business Feed */}
         <div className="flex-1 min-w-0 flex flex-col gap-8">
@@ -828,12 +860,9 @@ export default function OrderDetailPage() {
           {/* Production Section */}
           <DocumentBoard ref={sectionRefs.production} title="生产信息" action={productionPlan ? <LightActionButton onClick={openProductionDrawer} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 更新排产</LightActionButton> : null}>
             {productionPlan ? (
-               <ProductionDashboard 
-                 plan={productionPlan} 
-                 onEditLink={openProductionDrawer} 
-                 onUploadPlan={openProductionDrawer} 
-                 onAddLog={() => openProductionLogDrawer()} 
-                 onUpdateStatus={handleUpdateProductionStatus}
+               <ProductionDashboard
+                 plan={productionPlan}
+                 onEditLink={openProductionDrawer}
                  onUpdateInspection={handleUpdateInspectionStatus}
                />
             ) : (
@@ -980,12 +1009,31 @@ export default function OrderDetailPage() {
           <DocumentBoard title="关联协同任务" action={<LightActionButton onClick={() => setShowTaskDrawer(true)} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 指派任务</LightActionButton>}>
              <EmptyStateBoard title="暂无关联任务" description="您可以为该订单指派特定的内部协同任务。" icon={CheckCircle2} actionLabel="+ 发起第一项任务" onAction={() => setShowTaskDrawer(true)} />
           </DocumentBoard>
+
+          {/* 跟进时间轴 */}
+          <DocumentBoard title="跟进时间轴" id="followups-timeline">
+            <div className="space-y-0">
+              {followUps.length > 0 ? followUps.map((fu, i) => (
+                <div key={fu.id || i} className="relative pl-8 pb-6 last:pb-0">
+                  <div className="absolute left-0 top-1.5 h-[18px] w-[18px] rounded-full border-2 border-slate-900 dark:border-tertiary-sage bg-white dark:bg-navy-900" />
+                  {i < followUps.length - 1 && <div className="absolute left-[8px] top-[22px] bottom-0 w-[2px] bg-slate-100 dark:bg-navy-800" />}
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">{fu.createdByName || '未知用户'}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatDateTime(fu.createdAt)}</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{fu.content}</p>
+                </div>
+              )) : (
+                <div className="py-12 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">暂无跟进记录</div>
+              )}
+            </div>
+          </DocumentBoard>
         </div>
 
         {/* Right Nav Rail */}
-        <aside className="w-[320px] shrink-0 sticky top-[100px] space-y-6">
-          <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm transition-colors">
-            <div className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 rounded-full" /> 页面导航</div>
+        <aside className="w-[280px] shrink-0 sticky top-6 self-start space-y-6">
+          <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm transition-colors">
+            <div className="text-xs font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 dark:bg-tertiary-sage rounded-full" /> 页面导航</div>
             <div className="space-y-1.5">
               {[
                 { section: 'items', label: '商品明细' },
@@ -994,7 +1042,8 @@ export default function OrderDetailPage() {
                 { section: 'production', label: '生产排产' },
                 { section: 'customs', label: '报关资料' },
                 { section: 'packing', label: '装箱明细' },
-                { section: 'logistics', label: '运输轨迹' }
+                { section: 'logistics', label: '运输轨迹' },
+                { section: 'followups', label: '跟进时间轴' }
               ].map(item => (
                 <button key={item.section} onClick={() => scrollToSection(item.section as any)} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-bold text-sm transition-all ${activeSection === item.section ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}>
                   <span>{item.label}</span>
@@ -1003,44 +1052,9 @@ export default function OrderDetailPage() {
             </div>
           </section>
 
-          <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm transition-colors">
-             <div className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-5"><div className="w-1 h-4 bg-amber-500 rounded-full" /> 跟进时间轴</div>
-             <div className="flex gap-2 mb-6">
-               <input
-                 value={followUpInput}
-                 onChange={e => setFollowUpInput(e.target.value)}
-                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSubmitFollowUp())}
-                 placeholder="记录最新跟进动态，例如：今天发了最新版 PI 给客户..."
-                 className="flex-1 bg-slate-50 dark:bg-navy-950 px-4 py-3 rounded-xl border border-slate-100 dark:border-navy-800 text-sm font-bold text-slate-700 dark:text-white outline-none focus:bg-white dark:focus:bg-navy-900 transition-all"
-               />
-               <button
-                 onClick={handleSubmitFollowUp}
-                 disabled={saving || !followUpInput.trim()}
-                 className="shrink-0 rounded-xl bg-amber-500 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-amber-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider"
-               >
-                 记录
-               </button>
-             </div>
-             <div className="space-y-0 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
-               {followUps.length > 0 ? followUps.map((fu, i) => (
-                 <div key={fu.id || i} className="relative pl-8 pb-5 last:pb-0">
-                   <div className="absolute left-0 top-1.5 h-[18px] w-[18px] rounded-full border-2 border-slate-900 dark:border-tertiary-sage bg-white dark:bg-navy-900" />
-                   {i < followUps.length - 1 && <div className="absolute left-[8px] top-[22px] bottom-0 w-[2px] bg-slate-100 dark:bg-navy-800" />}
-                   <div className="flex items-center gap-3 mb-1.5">
-                     <span className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">{fu.createdByName || '未知用户'}</span>
-                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{formatDateTime(fu.createdAt)}</span>
-                   </div>
-                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{fu.content}</p>
-                 </div>
-               )) : (
-                 <div className="py-8 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">暂无跟进记录</div>
-               )}
-             </div>
-          </section>
-
-          <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-3 transition-colors">
-             <div className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-4"><div className="w-1 h-4 bg-emerald-500 rounded-full" /> AI 智能辅助诊断</div>
-             <p className="text-xs font-bold text-slate-500 leading-relaxed mb-6">正在实时分析订单风险、回款率及交付合规性...</p>
+          <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
+             <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4"><div className="w-1 h-4 bg-emerald-500 rounded-full" /> AI 智能辅助诊断</div>
+             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed mb-6">正在实时分析订单风险、回款率及交付合规性...</p>
              <button onClick={() => setDrawer({ mode: 'ai-analysis' })} disabled={analyzing} className="w-full flex items-center justify-center gap-3 rounded-lg bg-slate-900 py-3 text-[12px] font-bold text-white hover:bg-slate-800 transition-all shadow-md group active:scale-95">
                 <Sparkles size={16} className={`${analyzing ? 'animate-spin opacity-50' : 'group-hover:scale-110 transition-transform'}`} />
                 <span>开始深度分析</span>
@@ -1165,20 +1179,20 @@ export default function OrderDetailPage() {
                      <div className="space-y-2 pt-1"><h5 className="text-[16px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">记录生产进度更新</h5><p className="text-[12px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">实时同步制造链路数据，确保持续的可追溯性。</p></div>
                    </div>
                    <div className="grid gap-10 sm:grid-cols-2">
-                     <Field label="生产记录日期"><input type="date" value={productionLogForm.logDate} onChange={e => setProductionLogForm({ ...productionLogForm, logDate: e.target.value })} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+                     <Field label="生产记录日期"><input type="date" value={productionLogForm.logDate} onChange={e => setProductionLogForm({ ...productionLogForm, logDate: e.target.value })} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
                    </div>
-                   <Field label="进度情况详细描述 *"><textarea rows={8} value={productionLogForm.content} onChange={e => setProductionLogForm({ ...productionLogForm, content: e.target.value })} placeholder="例如：车间 B 报线，主控板已完成 80% 贴片工作，预计明天下午进入组装环节..." className="w-full bg-slate-50 dark:bg-navy-950 p-5 rounded-2xl text-[15px] font-bold text-primary-navy dark:text-white leading-relaxed focus:outline-none border border-slate-200 dark:border-navy-800 shadow-inner" /></Field>
-                   <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="现场照片或测试报告附件" attachments={productionLogForm.attachments} newFiles={productionLogForm.newFiles} onFilesSelected={fs=>setProductionLogForm({...productionLogForm, newFiles:[...productionLogForm.newFiles,...fs]})} onRemoveExisting={id=>setProductionLogForm({...productionLogForm, attachments:productionLogForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setProductionLogForm({...productionLogForm, newFiles:productionLogForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
+                   <Field label="进度情况详细描述 *"><textarea rows={8} value={productionLogForm.content} onChange={e => setProductionLogForm({ ...productionLogForm, content: e.target.value })} placeholder="例如：车间 B 报线，主控板已完成 80% 贴片工作，预计明天下午进入组装环节..." className="w-full bg-slate-50 dark:bg-navy-950 p-5 rounded-lg text-[15px] font-bold text-primary-navy dark:text-white leading-relaxed focus:outline-none border border-slate-200 dark:border-navy-800 shadow-inner" /></Field>
+                   <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="现场照片或测试报告附件" attachments={productionLogForm.attachments} newFiles={productionLogForm.newFiles} onFilesSelected={fs=>setProductionLogForm({...productionLogForm, newFiles:[...productionLogForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setProductionLogForm({...productionLogForm, attachments:productionLogForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setProductionLogForm({...productionLogForm, newFiles:productionLogForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
                 </div>
               ) : drawer.mode === 'customs' ? (
                 <div className="space-y-10">
                    <div className="grid gap-8 sm:grid-cols-2">
                      <Field label="正式报关单号"><input value={customsForm.declarationNo} onChange={e=>setCustomsForm({...customsForm, declarationNo:e.target.value})} placeholder="输入 18 位海关报关单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
                      <Field label="贸易方式分类"><select value={customsForm.tradeMode} onChange={e=>setCustomsForm({...customsForm, tradeMode:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer"><option value="一般贸易">一般贸易 (0110)</option><option value="进料加工">进料加工 (0615)</option><option value="来料加工">来料加工 (0214)</option><option value="其他">其他类型</option></select></Field>
-                     <Field label="海关清关日期"><input type="date" value={customsForm.declarationDate} onChange={e=>setCustomsForm({...customsForm, declarationDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
-                     <Field label="预计离港/出口日期"><input type="date" value={customsForm.releaseDate} onChange={e=>setCustomsForm({...customsForm, releaseDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+                     <Field label="海关清关日期"><input type="date" value={customsForm.declarationDate} onChange={e=>setCustomsForm({...customsForm, declarationDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+                     <Field label="预计离港/出口日期"><input type="date" value={customsForm.releaseDate} onChange={e=>setCustomsForm({...customsForm, releaseDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
                    </div>
-                   <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="扫描件存档 (发票/装箱单/报关单)" attachments={customsForm.attachments} newFiles={customsForm.newFiles} onFilesSelected={fs=>setCustomsForm({...customsForm, newFiles:[...customsForm.newFiles,...fs]})} onRemoveExisting={id=>setCustomsForm({...customsForm, attachments:customsForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setCustomsForm({...customsForm, newFiles:customsForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
+                   <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="扫描件存档 (发票/装箱单/报关单)" attachments={customsForm.attachments} newFiles={customsForm.newFiles} onFilesSelected={fs=>setCustomsForm({...customsForm, newFiles:[...customsForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setCustomsForm({...customsForm, attachments:customsForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setCustomsForm({...customsForm, newFiles:customsForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
                 </div>
               ) : drawer.mode === 'packing' ? (
                 <div className="space-y-8">
@@ -1189,7 +1203,7 @@ export default function OrderDetailPage() {
                    <div className="space-y-5">
                       {packingForm.items.length === 0 && <div className="py-20 text-center border border-dashed border-slate-200 dark:border-navy-800 rounded-2xl text-slate-400 font-bold uppercase tracking-widest">尚未添加任何装箱组</div>}
                       {packingForm.items.map((item, idx) => (
-                        <div key={item.clientKey} className="relative p-6 bg-slate-50 dark:bg-navy-950/50 rounded-2xl border border-slate-200 dark:border-navy-800 group shadow-inner">
+                        <div key={item.clientKey} className="relative p-6 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-200 dark:border-navy-800 group shadow-inner">
                            <button type="button" onClick={() => setPackingForm({ items: packingForm.items.filter((_, i) => i !== idx) })} className="absolute -right-2.5 -top-2.5 h-8 w-8 rounded-full bg-error text-white shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-30 hover:scale-110"><Trash size={14} /></button>
                            <div className="grid gap-6 sm:grid-cols-4 items-end">
                               <div className="sm:col-span-3">
@@ -1219,37 +1233,49 @@ export default function OrderDetailPage() {
                       <button type="button" onClick={()=>setLogisticsForm({...logisticsForm, segmentType:'international'})} className={`flex-1 py-3 text-[13px] font-bold rounded-lg transition-all ${logisticsForm.segmentType==='international'?'bg-white dark:bg-navy-800 text-primary-navy dark:text-white shadow-md':'text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white'}`}>国际/主线轨迹</button>
                    </div>
                    <div className="grid gap-10 sm:grid-cols-2">
-                     <Field label="货运代理 (Freight Forwarder)"><input value={logisticsForm.freightForwarder} onChange={e=>setLogisticsForm({...logisticsForm, freightForwarder:e.target.value})} placeholder="记录委托的货代公司..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
-                     <Field label="实际承运商 (Actual Carrier)"><input required value={logisticsForm.carrier} onChange={e=>setLogisticsForm({...logisticsForm, carrier:e.target.value})} placeholder="例如: 顺丰 / 马士基 / DHL..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+                     <Field label="货运代理 (Freight Forwarder)"><input value={logisticsForm.freightForwarder} onChange={e=>setLogisticsForm({...logisticsForm, freightForwarder:e.target.value})} placeholder="记录委托的货代公司..." className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+                     <Field label="实际承运商 (Actual Carrier)"><input required value={logisticsForm.carrier} onChange={e=>setLogisticsForm({...logisticsForm, carrier:e.target.value})} placeholder="例如: 顺丰 / 马士基 / DHL..." className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
                      <Field label="主运单/提单识别码 *"><input required value={logisticsForm.trackingNo} onChange={e=>setLogisticsForm({...logisticsForm, trackingNo:e.target.value})} placeholder="请输入单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
-                     <Field label={logisticsForm.segmentType === 'domestic' ? '实际发货日期' : '预计离港日期'}><input type="date" value={logisticsForm.shippingDate} onChange={e=>setLogisticsForm({...logisticsForm, shippingDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+                     <Field label={logisticsForm.segmentType === 'domestic' ? '实际发货日期' : '预计离港日期'}><input type="date" value={logisticsForm.shippingDate} onChange={e=>setLogisticsForm({...logisticsForm, shippingDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
                      <Field label="当前物流节点状态"><select value={logisticsForm.status} onChange={e=>setLogisticsForm({...logisticsForm, status:e.target.value as any})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer"><option value="preparing">01. 待起运 (Pre-shipment)</option><option value="shipped">02. 运输中 (In-transit)</option><option value="arrived">03. 已妥投 (Delivered)</option></select></Field>
                      {logisticsForm.segmentType === 'domestic' && <div className="sm:col-span-2"><Field label="最终收货/卸货地址 *"><textarea rows={3} value={logisticsForm.recipientAddress} onChange={e=>setLogisticsForm({...logisticsForm, recipientAddress:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm leading-relaxed" /></Field></div>}
                    </div>
-                   <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="运单扫描件或签收单存档" attachments={logisticsForm.attachments} newFiles={logisticsForm.newFiles} onFilesSelected={fs=>setLogisticsForm({...logisticsForm, newFiles:[...logisticsForm.newFiles,...fs]})} onRemoveExisting={id=>setLogisticsForm({...logisticsForm, attachments:logisticsForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setLogisticsForm({...logisticsForm, newFiles:logisticsForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
+                   <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="运单扫描件或签收单存档" attachments={logisticsForm.attachments} newFiles={logisticsForm.newFiles} onFilesSelected={fs=>setLogisticsForm({...logisticsForm, newFiles:[...logisticsForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setLogisticsForm({...logisticsForm, attachments:logisticsForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setLogisticsForm({...logisticsForm, newFiles:logisticsForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
                 </div>
               ) : drawer.mode === 'finance' ? (
                 <div className="space-y-12">
                   <div className="grid gap-12 sm:grid-cols-2">
-                    <Field label="资产流转方向"><select value={financeForm.type} onChange={e=>setFinanceForm({...financeForm, type:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="receipt">资产流入 (收款)</option><option value="payment">资产流出 (付款)</option></select></Field>
+                    <Field label="资产流转方向"><select value={financeForm.type} onChange={e=>setFinanceForm({...financeForm, type:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="receipt">资产流入 (收款)</option><option value="payment">资产流出 (付款)</option></select></Field>
                     <div className="flex gap-4 items-end">
-                      <div className="w-24"><Field label="币种"><select value={financeForm.currency} onChange={e=>setFinanceForm({...financeForm, currency:e.target.value})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="HKD">HKD</option></select></Field></div>
+                      <div className="w-24"><Field label="币种"><select value={financeForm.currency} onChange={e=>setFinanceForm({...financeForm, currency:e.target.value})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="HKD">HKD</option></select></Field></div>
                       <div className="flex-1"><Field label="计价金额"><input type="number" step="0.01" value={financeForm.amount} onChange={e=>setFinanceForm({...financeForm, amount:e.target.value})} className="w-full bg-transparent p-2 text-[32px] font-bold text-primary-navy dark:text-white data-field focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors" /></Field></div>
                     </div>
                   </div>
                   <div className="grid gap-12 sm:grid-cols-2">
-                    <Field label="账务核销状态"><select value={financeForm.status} onChange={e=>setFinanceForm({...financeForm, status:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="completed">已核销同步 (Closed)</option><option value="pending">待处理流水 (Pending)</option></select></Field>
-                    <Field label="款项所属分类"><select value={financeForm.recordCategory} onChange={e=>setFinanceForm({...financeForm, recordCategory:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="deposit">预付定金</option><option value="balance">尾款</option><option value="goods">货款</option><option value="freight">运费</option><option value="customs">报关费</option><option value="other">杂项其他</option></select></Field>
+                    <Field label="账务核销状态"><select value={financeForm.status} onChange={e=>setFinanceForm({...financeForm, status:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="completed">已核销同步 (Closed)</option><option value="pending">待处理流水 (Pending)</option></select></Field>
+                    <Field label="款项所属分类"><select value={financeForm.recordCategory} onChange={e=>setFinanceForm({...financeForm, recordCategory:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="deposit">预付定金</option><option value="balance">尾款</option><option value="goods">货款</option><option value="freight">运费</option><option value="customs">报关费</option><option value="other">杂项其他</option></select></Field>
                   </div>
-                  <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="银行水单或支付凭证存档" attachments={financeForm.attachments} newFiles={financeForm.newFiles} onFilesSelected={fs=>setFinanceForm({...financeForm, newFiles:[...financeForm.newFiles,...fs]})} onRemoveExisting={id=>setFinanceForm({...financeForm, attachments:financeForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setFinanceForm({...financeForm, newFiles:financeForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
+                  <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="银行水单或支付凭证存档" attachments={financeForm.attachments} newFiles={financeForm.newFiles} onFilesSelected={fs=>setFinanceForm({...financeForm, newFiles:[...financeForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setFinanceForm({...financeForm, attachments:financeForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setFinanceForm({...financeForm, newFiles:financeForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
                 </div>
               ) : drawer.mode === 'production' ? (
-                <div className="space-y-16">
-                   <div className="grid gap-12 sm:grid-cols-2">
-                     <Field label="指派制造供应商"><select value={productionForm.partnerId} onChange={e=>setProductionForm({...productionForm, partnerId:e.target.value})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="">请选择合作厂商...</option>{productionPartners.map(p=><option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)}</select></Field>
-                     <Field label="实时生产节点状态"><select value={productionForm.productionStatus} onChange={e=>setProductionForm({...productionForm, productionStatus:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm"><option value="not_started">待生产</option><option value="scheduled">已排产</option><option value="in_progress">生产中</option><option value="ready">已完工</option></select></Field>
+                <div className="space-y-12">
+                   <div className="grid gap-8 sm:grid-cols-2">
+                     <Field label="指派制造供应商"><select value={productionForm.partnerId} onChange={e=>setProductionForm({...productionForm, partnerId:e.target.value})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="">请选择合作厂商...</option>{productionPartners.map(p=><option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)}</select></Field>
+                     <Field label="实时生产节点状态"><select value={productionForm.productionStatus} onChange={e=>setProductionForm({...productionForm, productionStatus:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="not_started">待生产</option><option value="scheduled">已排产</option><option value="in_progress">生产中</option><option value="ready">已完工</option></select></Field>
                      <Field label="指令下达日期"><input type="date" value={productionForm.orderDate} onChange={e => setProductionForm({ ...productionForm, orderDate: e.target.value })} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white data-field focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
                      <Field label="合约预期交期"><input type="date" value={productionForm.estimatedDeliveryDate} onChange={e => setProductionForm({ ...productionForm, estimatedDeliveryDate: e.target.value })} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white data-field focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+                   </div>
+                   <div className="pt-6 border-t border-slate-100 dark:border-navy-800">
+                     <AttachmentEditor
+                       title="生产计划单 / PO 文件"
+                       attachments={productionForm.photos}
+                       newFiles={productionForm.newPhotos}
+                       onFilesSelected={fs => setProductionForm({...productionForm, newPhotos: [...productionForm.newPhotos, ...fs.map(f=>({file:f,remark:''}))]})}
+                       onRemoveExisting={id => setProductionForm({...productionForm, photos: productionForm.photos.filter(a => a.id !== id)})}
+                       onRemovePending={idx => setProductionForm({...productionForm, newPhotos: productionForm.newPhotos.filter((_, i) => i !== idx)})}
+                       isUploading={isUploading}
+                       uploadProgress={uploadProgress}
+                     />
                    </div>
                 </div>
               ) : (
@@ -1269,8 +1295,8 @@ export default function OrderDetailPage() {
               )}
 
               <div className="flex gap-6 pt-16 sticky bottom-0 bg-white/95 dark:bg-navy-900/95 backdrop-blur-2xl pb-12 z-[40] border-t border-slate-100 dark:border-navy-800">
-                <button type="button" onClick={closeDrawer} className="flex-1 rounded-xl border-2 border-slate-200 dark:border-navy-800 py-5 text-[12px] font-extrabold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all uppercase tracking-[0.5em] shadow-sm">放弃修改</button>
-                <button type="submit" disabled={saving} className="flex-[3] rounded-xl bg-primary-navy dark:bg-tertiary-sage py-5 text-base font-extrabold text-white shadow-2xl hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all uppercase tracking-[0.5em] active:scale-95 disabled:opacity-50">{saving ? '同步同步中...' : '确认并同步数据'}</button>
+                <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-5 text-[12px] font-extrabold uppercase tracking-[0.5em]">放弃修改</button>
+                <button type="submit" disabled={saving} className="btn-primary flex-[3] py-5 text-base font-extrabold uppercase tracking-[0.5em]">{saving ? '同步同步中...' : '确认并同步数据'}</button>
               </div>
             </form>
           </div>
