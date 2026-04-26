@@ -67,21 +67,21 @@ export default function AIAssistantPage() {
   return (
     <div className="flex h-[calc(100vh-120px)] flex-col gap-4">
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-tertiary-sage dark:text-emerald-400 mb-2">
             <Zap size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">实时诊断</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">自动识别订单中的潜在逾期风险与财务缺口，并在详情页实时同步。</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400 mb-2">
             <Database size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">知识增强</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">结合您的历史客户偏好与物流时效，提供智能化的排产与发货建议。</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-primary-navy dark:text-white mb-2">
             <ShieldCheck size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">合规审计</span>
@@ -107,10 +107,10 @@ export default function AIAssistantPage() {
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
               <div className={`flex max-w-[80%] gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-md ${m.role === 'user' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-100 dark:bg-navy-800 text-primary-navy dark:text-white'}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-md ${m.role === 'user' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-100 dark:bg-navy-800 text-primary-navy dark:text-white'}`}>
                   {m.role === 'user' ? <LayoutDashboard size={20} /> : <Bot size={22} />}
                 </div>
-                <div className={`rounded-2xl px-5 py-3.5 text-sm font-medium leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 text-slate-700 dark:text-slate-200 whitespace-pre-wrap'}`}>
+                <div className={`rounded-lg px-5 py-3.5 text-sm font-medium leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 text-slate-700 dark:text-slate-200 whitespace-pre-wrap'}`}>
                   {m.content}
                 </div>
               </div>
@@ -119,8 +119,8 @@ export default function AIAssistantPage() {
           {loading && (
             <div className="flex justify-start">
               <div className="flex gap-4 items-center">
-                 <div className="h-10 w-10 bg-slate-100 dark:bg-navy-800 rounded-xl flex items-center justify-center text-primary-navy dark:text-white animate-pulse"><Sparkles size={20} /></div>
-                 <div className="flex gap-1.5 px-4 py-3 bg-slate-50 dark:bg-navy-950/50 rounded-2xl border border-slate-100 dark:border-navy-800">
+                 <div className="h-10 w-10 bg-slate-100 dark:bg-navy-800 rounded-lg flex items-center justify-center text-primary-navy dark:text-white animate-pulse"><Sparkles size={20} /></div>
+                 <div className="flex gap-1.5 px-4 py-3 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800">
                     <div className="h-2 w-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce" />
                     <div className="h-2 w-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce [animation-delay:0.2s]" />
                     <div className="h-2 w-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce [animation-delay:0.4s]" />
@@ -146,13 +146,13 @@ export default function AIAssistantPage() {
                 }
               }}
               placeholder="在这里输入业务咨询或指令 (Shift + Enter 换行)..."
-              className="flex-1 rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-3.5 text-sm font-medium focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none shadow-inner text-primary-navy dark:text-white min-h-[52px] max-h-[200px] resize-none custom-scrollbar leading-relaxed"
+              className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-3.5 text-sm font-medium focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none shadow-inner text-primary-navy dark:text-white min-h-[52px] max-h-[200px] resize-none custom-scrollbar leading-relaxed"
               style={{ height: '52px' }}
             />
             <button
               disabled={loading || !input.trim()}
               type="submit"
-              className={`flex items-center justify-center shrink-0 h-[52px] w-[52px] rounded-2xl font-bold transition-all active:scale-95 shadow-lg ${
+              className={`flex items-center justify-center shrink-0 h-[52px] w-[52px] rounded-lg font-bold transition-all active:scale-95 shadow-lg ${
                 input.trim() 
                   ? 'bg-primary-navy dark:bg-tertiary-sage text-white hover:bg-slate-800 dark:hover:bg-emerald-700' 
                   : 'bg-slate-100 dark:bg-navy-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'

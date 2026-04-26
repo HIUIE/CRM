@@ -7,9 +7,11 @@ import { useAuth } from '../context/AuthContext';
 import { Chip, Toast } from '../features/order-detail/components';
 import { Drawer } from './ui/Drawer';
 import { Pagination } from './ui/Pagination';
+import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
-import { TIME_RANGES, getRangeDates } from '../lib/date';
+import { getRangeDates } from '../lib/date';
+import { withTransition } from '../lib/transition';
 import type { FinanceListRecord, OrderOption, PartnerOption, PartnerRecord } from '../types/crm';
 
 type FinanceFormState = {
@@ -221,12 +223,12 @@ export default function FinanceView() {
               value={query}
               onChange={(event) => updateParam('q', event.target.value)}
               placeholder="搜索订单、客户、对象或分类..."
-              className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
             />
           </div>
           <button
             onClick={openCreateForm}
-            className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md"
+            className="btn-primary shadow-md"
           >
             <Plus className="mr-2 h-4 w-4" />
             登记流水
@@ -234,25 +236,17 @@ export default function FinanceView() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-           {TIME_RANGES.map(chip => (
-             <button
-               key={chip.key}
-               onClick={() => updateParam('timeRange', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
-             >
-               {chip.label}
-             </button>
-           ))}
+          <TimeRangeFilter value={timeRange} onChange={(key) => updateParam('timeRange', key)} />
         </div>
 
-        {error ? <div className="mt-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
+        {error ? <div className="mt-4 rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
 
         <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
            <StatCard title="USD 收款" value={totals.receipt.USD || 0} icon={<ArrowDownLeft className="text-emerald-500" size={16} />} currency="USD" />
            <StatCard title="CNY 收款" value={totals.receipt.CNY || 0} icon={<ArrowDownLeft className="text-emerald-500" size={16} />} currency="CNY" />
            <StatCard title="USD 付款" value={totals.payment.USD || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="USD" />
            <StatCard title="CNY 付款" value={totals.payment.CNY || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="CNY" />
-           <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-2xl border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors">
+           <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors">
               <div>
                 <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">待核销</div>
                 <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{totals.pending} 笔</div>
@@ -282,11 +276,7 @@ export default function FinanceView() {
                   {currentItems.length ? currentItems.map((r) => (
                     <tr key={r.id} onClick={() => {
                         if (r.order_display_id) {
-                          if ((document as any).startViewTransition) {
-                            (document as any).startViewTransition(() => navigate(`/orders/${r.order_display_id}`));
-                          } else {
-                            navigate(`/orders/${r.order_display_id}`);
-                          }
+                          withTransition(() => navigate(`/orders/${r.order_display_id}`));
                         }
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                       <td className="px-4 py-4 text-left">
@@ -349,13 +339,13 @@ export default function FinanceView() {
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">保存流水</button>
+            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSubmit} type="submit" className="btn-primary shadow-md">保存流水</button>
           </div>
         }
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          {formError ? <div className="rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
+          {formError ? <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
           <div className="space-y-6">
             <Field label="关联订单 *">
               <Combobox
@@ -369,17 +359,17 @@ export default function FinanceView() {
               />
             </Field>
             <Field label="流水类型 *">
-              <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as any })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+              <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as any })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
                 <option value="receipt">收款 (In)</option>
                 <option value="payment">付款 (Out)</option>
               </select>
             </Field>
             <div className="flex gap-4">
-                <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
-                <div className="flex-1"><Field label="金额 *"><input required type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field" /></Field></div>
+                <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
+                <div className="flex-1"><Field label="金额 *"><input required type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field" /></Field></div>
             </div>
             <Field label="款项用途">
-              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
                 <option value="deposit">首付款 / 定金</option>
                 <option value="balance">尾款</option>
                 <option value="goods">货款</option>
@@ -388,7 +378,7 @@ export default function FinanceView() {
                 <option value="other">其他</option>
             </select></Field>
             <Field label="核销状态">
-              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
+              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
             </Field>
             <Field label="对方/合作伙伴">
               <Combobox
@@ -402,7 +392,7 @@ export default function FinanceView() {
               />
             </Field>
             <Field label="备注">
-              <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言或打款参考号..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
+              <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言或打款参考号..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
             </Field>
           </div>
           <button type="submit" className="hidden">Submit</button>
@@ -416,7 +406,7 @@ export default function FinanceView() {
 
 function StatCard({ title, value, icon, currency }: { title: string; value: number; icon: React.ReactNode; currency: string }) {
   return (
-    <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-2xl border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors shadow-inner">
+    <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors shadow-inner">
       <div>
         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{title}</div>
         <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{value.toLocaleString()}</div>

@@ -170,7 +170,7 @@ export default function AuditLogsPage() {
       {selectedLog && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setSelectedLog(null)} />
-          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in duration-300 flex flex-col max-h-[85vh]">
+          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in duration-300 flex flex-col max-h-[85vh]">
             <div className="bg-slate-50 dark:bg-navy-950 px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800">
                <div className="flex items-center gap-3">
                  <FileJson className="text-primary-navy dark:text-tertiary-sage" size={20} />
@@ -182,7 +182,7 @@ export default function AuditLogsPage() {
                <div className="grid grid-cols-3 gap-4">
                   <DetailBox label="操作类型" value={selectedLog.action_type} />
                   <DetailBox label="影响实体" value={selectedLog.entity_type} />
-                  <DetailBox label="操作时间" value={selectedLog.created_at.replace('T', ' ').slice(0, 19)} />
+                  <DetailBox label="操作时间" value={(selectedLog.created_at ?? '—').replace('T', ' ').slice(0, 19)} />
                </div>
 
                <div className="space-y-4">
@@ -191,7 +191,7 @@ export default function AuditLogsPage() {
                </div>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-navy-950 border-t border-slate-100 dark:border-navy-800 flex justify-end">
-               <button onClick={() => setSelectedLog(null)} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-8 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all uppercase tracking-widest">关闭</button>
+               <button onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-8 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all uppercase tracking-widest">关闭</button>
             </div>
           </div>
         </div>
@@ -224,7 +224,7 @@ function JsonSection({ title, content, onCopy, copied }: { title: string; conten
             {copied ? <><Check size={12} /> 已复制</> : <><Copy size={12} /> 复制代码</>}
           </button>
        </div>
-       <pre className="bg-slate-900 dark:bg-black p-4 rounded-xl text-xs text-emerald-400 font-mono overflow-x-auto border border-white/5 leading-relaxed">
+       <pre className="bg-slate-900 dark:bg-black p-4 rounded-lg text-xs text-emerald-400 font-mono overflow-x-auto border border-white/5 leading-relaxed">
           {formatted}
        </pre>
     </div>

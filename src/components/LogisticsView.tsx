@@ -5,10 +5,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { Chip, Toast } from '../features/order-detail/components';
 import { Pagination } from './ui/Pagination';
+import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { Drawer } from './ui/Drawer';
 import { Combobox } from './ui/Combobox';
-import { TIME_RANGES, getRangeDates } from '../lib/date';
+import { getRangeDates } from '../lib/date';
+import { withTransition } from '../lib/transition';
 import type { OrderOption } from '../types/crm';
 
 interface LogisticsSummary {
@@ -184,14 +186,14 @@ export default function LogisticsView() {
               value={q}
               onChange={e => updateParam('q', e.target.value)}
               placeholder="搜索单号、承运商、客户名称..."
-              className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
             />
           </div>
           <div className="relative">
              <select
                value={status}
                onChange={e => updateParam('status', e.target.value)}
-               className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-4 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
+               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-4 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
              >
                <option value="">全部状态</option>
                <option value="preparing">待起运</option>
@@ -201,7 +203,7 @@ export default function LogisticsView() {
           </div>
           <button
             onClick={openCreateForm}
-            className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md"
+            className="btn-primary shadow-md"
           >
             <Plus className="mr-2 h-4 w-4" />
             创建物流
@@ -209,15 +211,7 @@ export default function LogisticsView() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-           {TIME_RANGES.map(chip => (
-             <button
-               key={chip.key}
-               onClick={() => updateParam('timeRange', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
-             >
-               {chip.label}
-             </button>
-           ))}
+          <TimeRangeFilter value={timeRange} onChange={(key) => updateParam('timeRange', key)} />
         </div>
       </section>
 
@@ -242,11 +236,7 @@ export default function LogisticsView() {
                     <tr
                       key={r.id}
                       onClick={() => {
-                        if ((document as any).startViewTransition) {
-                          (document as any).startViewTransition(() => navigate(`/orders/${r.order_display_id}`));
-                        } else {
-                          navigate(`/orders/${r.order_display_id}`);
-                        }
+                        withTransition(() => navigate(`/orders/${r.order_display_id}`));
                       }}
                       className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                     >
@@ -313,13 +303,13 @@ export default function LogisticsView() {
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">保存物流</button>
+            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSubmit} type="submit" className="btn-primary shadow-md">保存物流</button>
           </div>
         }
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          {formError && <div className="rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div>}
+          {formError && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div>}
           <div className="space-y-6">
             <Field label="关联订单 *">
               <Combobox
@@ -334,7 +324,7 @@ export default function LogisticsView() {
             </Field>
 
             {selectedOrder && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
                 <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">自动带出：收货方 / 地址</div>
                 <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {selectedOrder.customer_name}<br/>
@@ -344,30 +334,30 @@ export default function LogisticsView() {
             )}
 
             <Field label="段落类型 *">
-              <select value={formData.segmentType} onChange={e=>setFormData({...formData, segmentType:e.target.value as any})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
+              <select value={formData.segmentType} onChange={e=>setFormData({...formData, segmentType:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
                 <option value="international">国际段</option>
                 <option value="domestic">国内段</option>
               </select>
             </Field>
 
             <Field label="承运商 / 快递公司 *">
-              <input required value={formData.carrier} onChange={e=>setFormData({...formData, carrier:e.target.value})} placeholder="例如：DHL, FedEx..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+              <input required value={formData.carrier} onChange={e=>setFormData({...formData, carrier:e.target.value})} placeholder="例如：DHL, FedEx..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
             </Field>
             <Field label="追踪单号 *">
-              <input required value={formData.trackingNo} onChange={e=>setFormData({...formData, trackingNo:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white data-field font-bold" />
+              <input required value={formData.trackingNo} onChange={e=>setFormData({...formData, trackingNo:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white data-field font-bold" />
             </Field>
             
             <div className="grid grid-cols-2 gap-4">
               <Field label="发货日期">
-                <input type="date" value={formData.shippingDate} onChange={e=>setFormData({...formData, shippingDate:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+                <input type="date" value={formData.shippingDate} onChange={e=>setFormData({...formData, shippingDate:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
               </Field>
               <Field label="包裹箱数">
-                <input type="number" min="1" value={formData.packageCount} onChange={e=>setFormData({...formData, packageCount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white data-field" />
+                <input type="number" min="1" value={formData.packageCount} onChange={e=>setFormData({...formData, packageCount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white data-field" />
               </Field>
             </div>
 
             <Field label="详细目的地址">
-               <textarea value={formData.recipientAddress} onChange={e=>setFormData({...formData, recipientAddress:e.target.value})} placeholder="选填，补充详细收货地址..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
+               <textarea value={formData.recipientAddress} onChange={e=>setFormData({...formData, recipientAddress:e.target.value})} placeholder="选填，补充详细收货地址..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
             </Field>
           </div>
           <button type="submit" className="hidden">Submit</button>

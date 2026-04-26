@@ -46,7 +46,7 @@ export default function HelpCenterPage() {
       <div className="grid gap-6 md:grid-cols-3">
         {sections.map((section, idx) => (
           <div key={idx} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-all hover:shadow-md">
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 dark:bg-navy-950 shadow-inner">
+            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-slate-50 dark:bg-navy-950 shadow-inner">
               {section.icon}
             </div>
             <h2 className="mb-6 text-xl font-bold text-primary-navy dark:text-white uppercase tracking-tight">{section.title}</h2>
@@ -74,14 +74,14 @@ export default function HelpCenterPage() {
             如果您在使用过程中遇到 Bug 或有新的功能建议，欢迎随时联系系统管理员或开发者进行反馈。
           </p>
           <div className="space-y-4">
-             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-2xl border border-slate-100 dark:border-navy-800">
+             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800">
                 <div>
                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">开发者邮箱</div>
                    <div className="text-sm font-bold text-primary-navy dark:text-white data-field">support@smarttrade.ai</div>
                 </div>
                 <ExternalLink size={16} className="text-slate-300 dark:text-slate-600" />
              </div>
-             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-2xl border border-slate-100 dark:border-navy-800">
+             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800">
                 <div>
                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">内部协作群</div>
                    <div className="text-sm font-bold text-primary-navy dark:text-white">SmartTrade 研发部</div>
@@ -99,7 +99,7 @@ export default function HelpCenterPage() {
           <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 font-medium mb-8">
             系统严格遵守企业级数据加密规范，所有附件均存储在受保护的隔离目录，确保您的商业机密万无一失。
           </p>
-          <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/10 p-5 border border-emerald-100 dark:border-emerald-900/30">
+          <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/10 p-5 border border-emerald-100 dark:border-emerald-900/30">
              <div className="flex items-center gap-3 text-emerald-700 dark:text-emerald-400 mb-3">
                 <ShieldCheck size={18} />
                 <span className="text-xs font-bold uppercase tracking-widest">已启用 TLS 传输加密</span>

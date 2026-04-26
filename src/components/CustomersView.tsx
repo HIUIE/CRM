@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Edit, ExternalLink, Plus, Search, Trash2, Hash } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -8,8 +8,10 @@ import { Chip, Toast } from '../features/order-detail/components';
 import ConfirmDeleteModal from './ui/ConfirmDeleteModal';
 import { Drawer } from './ui/Drawer';
 import { Pagination } from './ui/Pagination';
+import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
-import { TIME_RANGES, getRangeDates } from '../lib/date';
+import { getRangeDates } from '../lib/date';
+import { withTransition } from '../lib/transition';
 import CountrySelect from './ui/CountrySelect';
 import CountryDisplay from './ui/CountryDisplay';
 import { getCountryDisplay } from '../lib/countries';
@@ -56,6 +58,24 @@ export default function CustomersView() {
   const query = searchParams.get('q') || '';
   const countryFilter = searchParams.get('country') || '';
   const timeRange = searchParams.get('timeRange') || 'all';
+
+  // Debounced search input: local state drives the input, URL param updates after 300ms of inactivity
+  const [inputValue, setInputValue] = useState(query);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    setInputValue(query);
+  }, [query]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateParam('q', inputValue);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [inputValue]);
 
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(searchParams);
@@ -201,12 +221,7 @@ export default function CustomersView() {
         closeForm();
         setTimeout(() => {
           setToast('');
-          const navigateToDetail = () => navigate(`/customers/detail/${String(result.displayId || result.id).toLowerCase()}`);
-          if ((document as any).startViewTransition) {
-            (document as any).startViewTransition(navigateToDetail);
-          } else {
-            navigateToDetail();
-          }
+          withTransition(() => navigate(`/customers/detail/${String(result.displayId || result.id).toLowerCase()}`));
         }, 1000);
       }
     } catch (requestError) {
@@ -240,17 +255,17 @@ export default function CustomersView() {
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
-              value={query}
-              onChange={(event) => updateParam('q', event.target.value)}
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
               placeholder="搜索客户名称、渠道..."
-              className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-9 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-9 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white"
             />
           </div>
           <div className="relative">
              <select
                value={countryFilter}
                onChange={(event) => updateParam('country', event.target.value)}
-               className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none text-primary-navy dark:text-white cursor-pointer"
+               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none text-primary-navy dark:text-white cursor-pointer"
              >
                <option value="">全部国家</option>
                {countryOptions.map((country) => (
@@ -262,7 +277,7 @@ export default function CustomersView() {
           </div>
           <button
             onClick={openCreate}
-            className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md active:scale-95"
+            className="btn-primary shadow-md active:scale-95"
           >
             <Plus className="mr-2 h-4 w-4" />
             新增客户
@@ -270,18 +285,10 @@ export default function CustomersView() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-           {TIME_RANGES.map(chip => (
-             <button
-               key={chip.key}
-               onClick={() => updateParam('timeRange', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
-             >
-               {chip.label}
-             </button>
-           ))}
+          <TimeRangeFilter value={timeRange} onChange={(key) => updateParam('timeRange', key)} />
         </div>
 
-        {error ? <div className="mt-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
+        {error ? <div className="mt-4 rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
       </section>
 
       <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
@@ -361,13 +368,13 @@ export default function CustomersView() {
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={() => void handleSubmit(null as any)} type="button" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md active:scale-95">保存客户</button>
+            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={() => void handleSubmit(null as any)} type="button" className="btn-primary shadow-md active:scale-95">保存客户</button>
           </div>
         }
       >
         <div className="space-y-6">
-          {formError ? <div className="rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
+          {formError ? <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
           <div className="space-y-6">
             <Field label="客户名称 *" error={fieldErrors.name}>
               <input 
@@ -377,7 +384,7 @@ export default function CustomersView() {
                   if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: '' });
                 }} 
                 placeholder="例如：Verdana Health Ltd."
-                className={`w-full rounded-xl border ${fieldErrors.name ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white`} 
+                className={`w-full rounded-lg border ${fieldErrors.name ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white`} 
               />
             </Field>
             <Field label="国家 / 地区 *" error={fieldErrors.country}>
@@ -391,10 +398,10 @@ export default function CustomersView() {
               />
             </Field>
             <Field label="联系方式">
-              <input value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} placeholder="姓名 / 邮箱 / 电话" className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
+              <input value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} placeholder="姓名 / 邮箱 / 电话" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
             </Field>
             <Field label="客户来源渠道">
-              <select value={form.sourceChannel} onChange={(event) => setForm({ ...form, sourceChannel: event.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
+              <select value={form.sourceChannel} onChange={(event) => setForm({ ...form, sourceChannel: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
                   <option value="">请选择来源...</option>
                   <option value="阿里巴巴国际站">阿里巴巴国际站</option>
                   <option value="官网">官网</option>
@@ -405,7 +412,7 @@ export default function CustomersView() {
               </select>
             </Field>
             <Field label="意向产品类型">
-              <textarea value={form.intentProducts} onChange={(event) => setForm({ ...form, intentProducts: event.target.value })} placeholder="例如：太阳能板、逆变器等..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[100px] resize-y" rows={3} />
+              <textarea value={form.intentProducts} onChange={(event) => setForm({ ...form, intentProducts: event.target.value })} placeholder="例如：太阳能板、逆变器等..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[100px] resize-y" rows={3} />
             </Field>
           </div>
         </div>

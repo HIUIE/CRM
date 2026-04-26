@@ -161,7 +161,7 @@ export default function CustomerDetailPage() {
            </button>
            <button 
              onClick={() => setShowOrderDrawer(true)}
-             className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-widest"
+             className="btn-primary active:scale-95"
            >
              <Plus size={16} /> 新建订单
            </button>
@@ -176,7 +176,7 @@ export default function CustomerDetailPage() {
             <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-colors overflow-hidden relative group">
               <div className="absolute top-0 right-0 h-32 w-32 translate-x-16 -translate-y-16 rounded-full bg-slate-50 dark:bg-navy-800 pointer-events-none" />
               <div className="relative z-10">
-                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 dark:bg-navy-950 shadow-inner border border-slate-100 dark:border-navy-800">
+                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-slate-50 dark:bg-navy-950 shadow-inner border border-slate-100 dark:border-navy-800">
                   <Building2 size={32} className="text-primary-navy dark:text-tertiary-sage" />
                 </div>
                 
@@ -195,7 +195,7 @@ export default function CustomerDetailPage() {
                 </div>
 
                 <div className="space-y-5 border-t border-slate-50 dark:border-navy-800 pt-8">
-                  <div className="rounded-xl bg-slate-50 dark:bg-navy-950/50 p-5 border border-slate-100 dark:border-navy-800 shadow-inner">
+                  <div className="rounded-lg bg-slate-50 dark:bg-navy-950/50 p-5 border border-slate-100 dark:border-navy-800 shadow-inner">
                     <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">累计贡献额 (LTV)</div>
                     <div className="text-2xl font-extrabold text-primary-navy dark:text-white data-field mb-4">$ {totalPaid.toLocaleString()}</div>
                     
@@ -274,13 +274,13 @@ export default function CustomerDetailPage() {
                       value={followupInput}
                       onChange={(e) => setFollowupInput(e.target.value)}
                       placeholder="记录今天的沟通摘要：聊了什么？重点需求？"
-                      className="w-full bg-slate-50 dark:bg-navy-950 rounded-xl p-4 text-sm font-medium focus:bg-white dark:focus:bg-navy-900 focus:ring-2 focus:ring-primary-navy/5 outline-none transition-all resize-none min-h-[100px] border border-slate-100 dark:border-navy-800"
+                      className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-4 text-sm font-medium focus:bg-white dark:focus:bg-navy-900 focus:ring-2 focus:ring-primary-navy/5 outline-none transition-all resize-none min-h-[100px] border border-slate-100 dark:border-navy-800"
                     />
                     <div className="mt-3 flex justify-end">
                        <button 
                         disabled={!followupInput.trim() || isSubmittingFollowup}
                         onClick={handlePostFollowup}
-                        className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-6 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest"
+                        className="btn-primary active:scale-95"
                        >
                          <Send size={14} /> {isSubmittingFollowup ? '发布中...' : '发布跟进'}
                        </button>
@@ -294,7 +294,7 @@ export default function CustomerDetailPage() {
                         <div className="absolute -left-8 top-1 h-6 w-6 rounded-full border-4 border-white dark:border-navy-950 flex items-center justify-center z-10 shadow-sm bg-primary-navy">
                            <MessageSquare size={10} className="text-white" />
                         </div>
-                        <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-100 dark:border-navy-800 p-5 shadow-sm">
+                        <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-100 dark:border-navy-800 p-5 shadow-sm">
                           <div className="flex items-center justify-between mb-3">
                              <span className="text-sm font-extrabold text-primary-navy dark:text-white uppercase">{f.created_by_name || '当前用户'}</span>
                              <span className="text-xs font-bold text-slate-400 data-field">{String(f.created_at).slice(0, 16).replace('T', ' ')}</span>
@@ -324,7 +324,7 @@ export default function CustomerDetailPage() {
                       <div className={`absolute -left-8 top-1 h-6 w-6 rounded-full border-4 border-white dark:border-navy-950 flex items-center justify-center z-10 shadow-sm transition-transform group-hover:scale-110 ${activity.type === 'finance' ? 'bg-emerald-500' : activity.type === 'logistics' ? 'bg-blue-500' : activity.type === 'customs' ? 'bg-amber-500' : 'bg-slate-400'}`}>
                           {activity.type === 'finance' ? <DollarSign size={10} className="text-white" /> : activity.type === 'logistics' ? <Truck size={10} className="text-white" /> : <Clock size={10} className="text-white" />}
                       </div>
-                      <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-100 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all">
+                      <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-100 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
                               <span className="text-sm font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">{activity.title}</span>
@@ -437,7 +437,7 @@ export default function CustomerDetailPage() {
                     </div>
                     <div className="space-y-3">
                       {data.tasks && data.tasks.length > 0 ? data.tasks.map(t => (
-                        <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-xl border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 transition-all group">
+                        <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 transition-all group">
                            <div className="flex items-center gap-4">
                               <div className={`h-8 w-8 rounded-full flex items-center justify-center ${t.status === 'done' ? 'bg-emerald-50 text-emerald-500' : 'bg-white border border-slate-200 text-slate-400'}`}>
                                  {t.status === 'done' ? <Check size={14} /> : <Clock size={14} />}
@@ -463,7 +463,7 @@ export default function CustomerDetailPage() {
                       <button onClick={() => setShowContactDrawer(true)} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">+ 新增联系人</button>
                       </div>                    <div className="grid gap-4 sm:grid-cols-2">
                       {data.contacts && data.contacts.length ? data.contacts.map(c => (
-                        <div key={c.id} className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 shadow-sm hover:border-primary-navy/20 transition-colors cursor-pointer group">
+                        <div key={c.id} className="flex items-center gap-4 p-4 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 shadow-sm hover:border-primary-navy/20 transition-colors cursor-pointer group">
                           <div className="h-12 w-12 rounded-full bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 flex items-center justify-center text-primary-navy dark:text-white font-bold text-sm shadow-inner group-hover:scale-105 transition-transform">
                             {String(c.name).charAt(0).toUpperCase()}
                           </div>

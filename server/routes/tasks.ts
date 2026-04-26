@@ -72,14 +72,31 @@ export function createTasksRouter() {
         ORDER BY c.created_at ASC
       `, [taskId]);
 
-      for (const comment of comments) {
-        const atts = await db.all(`
-          SELECT a.*
+      if (comments.length > 0) {
+        const commentIds = comments.map(c => c.id);
+        const placeholders = commentIds.map(() => '?').join(',');
+        const allAttachments = await db.all(`
+          SELECT a.*, ta.comment_id
           FROM attachments a
           JOIN task_attachments ta ON a.id = ta.attachment_id
-          WHERE ta.comment_id = ?
-        `, [comment.id]);
-        comment.attachments = atts;
+          WHERE ta.comment_id IN (${placeholders})
+        `, commentIds);
+
+        const attsByCommentId: Record<number, any[]> = {};
+        for (const att of allAttachments) {
+          const cid = att.comment_id;
+          if (!attsByCommentId[cid]) attsByCommentId[cid] = [];
+          attsByCommentId[cid].push(att);
+          delete att.comment_id;
+        }
+
+        for (const comment of comments) {
+          comment.attachments = attsByCommentId[comment.id] || [];
+        }
+      } else {
+        for (const comment of comments) {
+          comment.attachments = [];
+        }
       }
 
       res.json({ ...task, comments });

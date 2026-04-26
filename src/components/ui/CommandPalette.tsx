@@ -76,7 +76,7 @@ export function CommandPalette() {
         onClick={() => setIsOpen(false)} 
       />
       
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in-95 duration-200 flex flex-col">
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in-95 duration-200 flex flex-col">
         <div className="flex items-center px-5 py-4 border-b border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50">
            <Search size={20} className="text-slate-400 mr-4" />
            <input
@@ -103,7 +103,7 @@ export function CommandPalette() {
                       else navigate(`/customers/detail/${String(res.display_id || res.id).toLowerCase()}`);
                       setIsOpen(false);
                     }}
-                    className="flex items-center justify-between p-4 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-navy-950/50 transition-all border border-transparent hover:border-slate-100 dark:hover:border-navy-800 group"
+                    className="flex items-center justify-between p-4 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-navy-950/50 transition-all border border-transparent hover:border-slate-100 dark:hover:border-navy-800 group"
                   >
                     <div className="flex items-center gap-4">
                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center border shadow-sm ${res.type === 'order' ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-emerald-50 text-emerald-500 border-emerald-100'}`}>

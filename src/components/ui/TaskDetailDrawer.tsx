@@ -148,7 +148,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
         <div className="flex flex-col h-full space-y-8">
           {/* Metadata Section */}
           <section className="space-y-6 shrink-0">
-            <div className="p-5 bg-slate-50 dark:bg-navy-950 rounded-2xl border border-slate-100 dark:border-navy-800">
+            <div className="p-5 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800">
                <h1 className="text-[15px] font-extrabold text-primary-navy dark:text-white leading-tight mb-4">{task.title}</h1>
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -190,7 +190,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
 
             <div className="space-y-2">
                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">核心任务指令</label>
-               <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium bg-slate-50/50 dark:bg-navy-950/30 p-4 rounded-xl border border-slate-100 dark:border-navy-800 italic">
+               <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium bg-slate-50/50 dark:bg-navy-950/30 p-4 rounded-lg border border-slate-100 dark:border-navy-800 italic">
                   “{task.description || '暂无详细背景描述。'}”
                </p>
             </div>
@@ -216,7 +216,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
                            <span className="text-xs font-extrabold text-primary-navy dark:text-white">{c.creator_name}</span>
                            <span className="text-[10px] font-bold text-slate-400">{c.created_at.slice(0, 16).replace('T', ' ')}</span>
                         </div>
-                        <div className="bg-slate-50 dark:bg-navy-950/50 p-4 rounded-xl border border-slate-100 dark:border-navy-800">
+                        <div className="bg-slate-50 dark:bg-navy-950/50 p-4 rounded-lg border border-slate-100 dark:border-navy-800">
                           <p className="text-[13px] text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">{c.content}</p>
                           {c.attachments && c.attachments.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-navy-800 space-y-1">
@@ -235,7 +235,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
 
              {/* Reply Box: Permanent at bottom */}
              <div className="shrink-0 pt-4 border-t border-slate-100 dark:border-navy-800">
-                <div className="bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-navy-800 shadow-lg overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary-navy/5">
+                <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-800 shadow-lg overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary-navy/5">
                    <MentionTextarea 
                      value={commentInput}
                      onChange={setCommentInput}
@@ -266,7 +266,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
                       <button 
                         disabled={(!commentInput.trim() && newFiles.length === 0) || isSubmitting}
                         onClick={postComment}
-                        className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-6 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest"
+                        className="btn-primary active:scale-95"
                       >
                         <Send size={14} /> {isSubmitting ? (isUploading ? `上传中 ${uploadProgress}%` : '发布中...') : '确认提交'}
                       </button>

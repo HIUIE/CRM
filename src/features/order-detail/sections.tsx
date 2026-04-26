@@ -489,7 +489,7 @@ export function TasksSection({
       {tasks.length > 0 ? (
         <div className="space-y-2">
           {tasks.map(t => (
-            <div key={t.id} onClick={() => navigate(`/tasks?detail=${t.id}`)} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950/50 rounded-xl border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:ring-1 hover:ring-primary-navy/10 dark:hover:ring-tertiary-sage/10 cursor-pointer transition-all group">
+            <div key={t.id} onClick={() => navigate(`/tasks?detail=${t.id}`)} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:ring-1 hover:ring-primary-navy/10 dark:hover:ring-tertiary-sage/10 cursor-pointer transition-all group">
               <div className="flex items-center gap-3">
                 <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${t.status === 'done' ? 'bg-emerald-50 text-emerald-500' : 'bg-white border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
                   {t.status === 'done' ? <Check size={12} /> : <Clock size={12} />}

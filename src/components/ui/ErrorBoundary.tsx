@@ -35,7 +35,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             )}
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-2.5 bg-primary-navy dark:bg-tertiary-sage text-white dark:text-navy-950 rounded-lg text-sm font-bold hover:opacity-90 transition-all"
+              className="btn-primary"
             >
               刷新页面
             </button>

@@ -40,7 +40,7 @@ export default function VersionGuard() {
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] w-[320px] animate-in slide-in-from-bottom-5 fade-in duration-500">
-      <div className="flex flex-col gap-3 rounded-2xl border border-blue-200 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/20 p-5 shadow-2xl backdrop-blur-md">
+      <div className="flex flex-col gap-3 rounded-lg border border-blue-200 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/20 p-5 shadow-2xl backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-white shadow-inner">
             <Zap size={14} className="fill-current" />
@@ -52,7 +52,7 @@ export default function VersionGuard() {
         </div>
         <button
           onClick={() => window.location.reload()}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95"
         >
           <RefreshCw size={14} />
           一键刷新并应用

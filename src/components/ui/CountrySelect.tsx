@@ -67,7 +67,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = 'æ
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className={`w-full flex items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm transition-all outline-none cursor-pointer
+        className={`w-full flex items-center justify-between gap-2 rounded-lg border px-4 py-3 text-sm transition-all outline-none cursor-pointer
           ${error 
             ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' 
             : open
@@ -98,7 +98,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = 'æ
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-full mt-1.5 left-0 right-0 z-[110] rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute top-full mt-1.5 left-0 right-0 z-[110] rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Search bar */}
           <div className="p-2 border-b border-slate-100 dark:border-navy-800">
             <div className="relative">

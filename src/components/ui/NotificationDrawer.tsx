@@ -68,7 +68,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                       if (n.link) navigate(n.link);
                       onClose();
                     }}
-                    className={`p-4 rounded-xl transition-all cursor-pointer group ${n.is_read ? 'opacity-60' : 'bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 shadow-sm'}`}
+                    className={`p-4 rounded-lg transition-all cursor-pointer group ${n.is_read ? 'opacity-60' : 'bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 shadow-sm'}`}
                   >
                     <div className="flex justify-between items-start mb-1">
                        <h3 className={`text-[13px] font-bold ${n.is_read ? 'text-slate-500' : 'text-primary-navy dark:text-white'}`}>{n.title}</h3>

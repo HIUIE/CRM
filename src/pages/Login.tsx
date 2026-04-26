@@ -43,7 +43,7 @@ export default function LoginScreen() {
 
       <div className="relative z-10 w-full max-w-[420px] rounded-[24px] bg-white p-10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all animate-in fade-in zoom-in-95 duration-500 mx-4">
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 shadow-inner border border-slate-100 overflow-hidden p-2">
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-slate-50 shadow-inner border border-slate-100 overflow-hidden p-2">
             <img src="/logo.png" alt="SmartTrade" className="h-full w-full object-contain" />
           </div>
           <h1 className="text-[24px] font-extrabold tracking-tight text-primary-navy uppercase">SmartTrade AI CRM</h1>
@@ -52,7 +52,7 @@ export default function LoginScreen() {
 
         <form onSubmit={handleLogin} className="space-y-6">
           {error && (
-            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 animate-in shake duration-300">
+            <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 animate-in shake duration-300">
               {error}
             </div>
           )}
@@ -66,7 +66,7 @@ export default function LoginScreen() {
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 placeholder="请输入用户名"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-primary-navy transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-primary-navy transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
                 required
               />
             </div>
@@ -81,7 +81,7 @@ export default function LoginScreen() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-primary-navy transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-primary-navy transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
                 required
               />
             </div>
@@ -89,7 +89,7 @@ export default function LoginScreen() {
 
           <button
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center rounded-xl bg-primary-navy py-4 text-[13px] font-bold text-white transition-all hover:bg-slate-800 shadow-xl shadow-primary-navy/20 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95 uppercase tracking-widest mt-4"
+            className="btn-primary w-full mt-4 shadow-xl shadow-primary-navy/20 active:scale-95"
           >
             {isSubmitting ? '验证授权中...' : '立即登录'}
           </button>

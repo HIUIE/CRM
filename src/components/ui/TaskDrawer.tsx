@@ -91,8 +91,8 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
       isDirty={isDirty}
       footer={
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase">取消</button>
-          <button onClick={handleSubmit} disabled={isSubmitting} className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30 uppercase">{isSubmitting ? '指派中...' : '确认指派'}</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase">取消</button>
+          <button onClick={handleSubmit} disabled={isSubmitting} className="btn-primary shadow-md active:scale-95">{isSubmitting ? '指派中...' : '确认指派'}</button>
         </div>
       }
     >
@@ -106,7 +106,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
               value={formData.title} 
               onChange={e => setFormData({...formData, title: e.target.value})}
               placeholder="如：准备报关单据、催促付款..."
-              className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-primary-navy"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-primary-navy"
             />
           </Field>
 
@@ -115,7 +115,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
                 <select 
                   value={formData.priority} 
                   onChange={e => setFormData({...formData, priority: e.target.value as any})}
-                  className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
                 >
                   <option value="P0">P0 - 紧急 (红色)</option>
                   <option value="P1">P1 - 高 (橙色)</option>
@@ -128,7 +128,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
                   required 
                   value={formData.dueDate}
                   onChange={e => setFormData({...formData, dueDate: e.target.value})}
-                  className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none"
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none"
                 />
              </Field>
           </div>
@@ -138,7 +138,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
               required 
               value={formData.assigneeId}
               onChange={e => setFormData({...formData, assigneeId: e.target.value})}
-              className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
             >
               <option value="">选择负责人...</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -146,7 +146,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
           </Field>
 
           <Field label="关联业务 (自动锁定)">
-             <div className="p-3 bg-slate-50 dark:bg-navy-950 rounded-xl border border-slate-100 dark:border-navy-800">
+             <div className="p-3 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{entityType === 'ORDER' ? '关联订单' : '关联客户'}</div>
                 <div className="text-[13px] font-extrabold text-primary-navy dark:text-white uppercase">{entityName || '全局任务'}</div>
              </div>
@@ -157,7 +157,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
               value={formData.description}
               onChange={val => setFormData({...formData, description: val})}
               placeholder="请输入任务详细说明... 输入 @ 提及同事"
-              className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 text-sm font-medium outline-none focus:border-primary-navy min-h-[120px]"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 text-sm font-medium outline-none focus:border-primary-navy min-h-[120px]"
              />
           </Field>
         </div>

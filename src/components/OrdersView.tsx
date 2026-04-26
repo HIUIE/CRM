@@ -8,9 +8,11 @@ import { Chip, Toast } from '../features/order-detail/components';
 import ConfirmDeleteModal from './ui/ConfirmDeleteModal';
 import { Drawer } from './ui/Drawer';
 import { Pagination } from './ui/Pagination';
+import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
-import { TIME_RANGES, getRangeDates } from '../lib/date';
+import { getRangeDates } from '../lib/date';
+import { withTransition } from '../lib/transition';
 import type { CustomerListItem, OrderSummary } from '../types/crm';
 
 type OrderFormState = {
@@ -172,11 +174,7 @@ export default function OrdersView() {
         const created = await apiFetch<{ display_id: string }>('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
         closeForm();
         const navigateToDetail = () => navigate(`/orders/${created.display_id}`);
-        if ((document as any).startViewTransition) {
-          (document as any).startViewTransition(navigateToDetail);
-        } else {
-          navigateToDetail();
-        }
+        withTransition(navigateToDetail);
       }
     } catch (err) {
       setFormError(getErrorMessage(err, '保存失败'));
@@ -212,14 +210,14 @@ export default function OrdersView() {
               value={q}
               onChange={e => updateParam('q', e.target.value)}
               placeholder="搜索订单号、产品、客户名称..."
-              className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
             />
           </div>
           <div className="relative">
              <select
                value={status}
                onChange={e => updateParam('status', e.target.value)}
-               className="w-full rounded-2xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-4 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
+               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-4 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
              >
                <option value="">全部状态</option>
                <option value="draft">待受理</option>
@@ -229,22 +227,14 @@ export default function OrdersView() {
                <option value="completed">已完成</option>
              </select>
           </div>
-          <button onClick={openCreateForm} className="inline-flex items-center justify-center rounded-2xl bg-primary-navy dark:bg-tertiary-sage px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md transition-all active:scale-95">
+          <button onClick={openCreateForm} className="btn-primary shadow-md active:scale-95">
             <Plus className="mr-2 h-4 w-4" />
             新建订单
           </button>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-           {TIME_RANGES.map(chip => (
-             <button
-               key={chip.key}
-               onClick={() => updateParam('timeRange', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${timeRange === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
-             >
-               {chip.label}
-             </button>
-           ))}
+          <TimeRangeFilter value={timeRange} onChange={(key) => updateParam('timeRange', key)} />
         </div>
         {error && <div className="mt-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{error}</div>}
       </section>
@@ -270,11 +260,7 @@ export default function OrdersView() {
                     return (
                       <tr key={o.id} onClick={() => {
                         const target = `/orders/${String(o.display_id).toLowerCase()}`;
-                        if ((document as any).startViewTransition) {
-                          (document as any).startViewTransition(() => navigate(target));
-                        } else {
-                          navigate(target);
-                        }
+                        withTransition(() => navigate(target));
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                         <td className="px-4 py-4 text-left">
                            <div 
@@ -338,8 +324,8 @@ export default function OrdersView() {
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={handleSubmit} type="submit" className="rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-2.5 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">确认并进入详情</button>
+            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSubmit} type="submit" className="btn-primary shadow-md">确认并进入详情</button>
           </div>
         }
       >
@@ -354,7 +340,7 @@ export default function OrdersView() {
                     value={formData.displayId} 
                     onChange={e => setFormData({...formData, displayId: e.target.value.trim()})} 
                     placeholder="如: CQBX-2026-..."
-                    className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 pl-9 pr-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white data-field"
+                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 pl-9 pr-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white data-field"
                   />
                 </div>
             </Field>
@@ -371,10 +357,10 @@ export default function OrdersView() {
               />
             </Field>
             <Field label="订单总额 (USD) *">
-              <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+              <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
             </Field>
             <Field label="产品摘要 *">
-              <input required value={formData.productSummary} onChange={e=>setFormData({...formData, productSummary:e.target.value})} placeholder="例如：太阳能板 A-Type 500pcs..." className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+              <input required value={formData.productSummary} onChange={e=>setFormData({...formData, productSummary:e.target.value})} placeholder="例如：太阳能板 A-Type 500pcs..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
             </Field>
           </div>
           <button type="submit" className="hidden">Submit</button>

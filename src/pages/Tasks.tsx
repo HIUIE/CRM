@@ -190,7 +190,7 @@ interface TaskCardProps {
   onStatusChange: (taskId: number, newStatus: ColumnKey) => Promise<void>;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onSelect, onStatusChange }) => {
+const TaskCard = React.memo<React.FC<TaskCardProps>>(({ task, onSelect, onStatusChange }) => {
   const navigate = useNavigate();
   const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'done';
   const priorityColor = task.priority === 'P0' ? 'bg-red-500' : task.priority === 'P1' ? 'bg-amber-500' : 'bg-blue-500';
@@ -202,7 +202,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onSelect, onStatusChange }) =
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={onSelect}
-      className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden cursor-pointer"
+      className="bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden cursor-pointer"
     >
       <div className={`absolute top-0 left-0 bottom-0 w-1 ${priorityColor}`} />
       
@@ -245,4 +245,4 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onSelect, onStatusChange }) =
       </div>
     </motion.div>
   );
-};
+});

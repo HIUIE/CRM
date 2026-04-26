@@ -431,7 +431,7 @@ export function EmptyStateBoard({ title, description, actionLabel, onAction, ico
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-navy-950/30 rounded-xl border border-dashed border-slate-200 dark:border-navy-800 transition-colors">
+    <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-navy-950/30 rounded-lg border border-dashed border-slate-200 dark:border-navy-800 transition-colors">
       <div className="h-12 w-12 rounded-full bg-white dark:bg-navy-900 flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-navy-800">
         {renderIcon()}
       </div>
@@ -508,7 +508,7 @@ export function AttachmentEditor({
         ))}
         
         {newFiles.map((item, idx) => (
-          <div key={idx} className="p-4 bg-slate-50 dark:bg-navy-950/50 border border-dashed border-slate-300 dark:border-navy-800 rounded-xl space-y-3 group">
+          <div key={idx} className="p-4 bg-slate-50 dark:bg-navy-950/50 border border-dashed border-slate-300 dark:border-navy-800 rounded-lg space-y-3 group">
             <div className="flex items-center justify-between">
                <div className="flex items-center gap-3.5 min-w-0">
                  <div className="text-slate-400"><FileCode size={16} /></div>
@@ -540,7 +540,7 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <button onClick={onClose} className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md transition-all" />
-      <div className="relative z-10 flex h-full max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
+      <div className="relative z-10 flex h-full max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-5 bg-white dark:bg-navy-950/50">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{attachment.fileName}</h3>
@@ -556,7 +556,7 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
           ) : isImage ? (
             <img src={attachment.url} alt={attachment.fileName} className="max-h-full max-w-full object-contain rounded-lg shadow-2xl bg-white dark:bg-navy-900 border-4 border-white dark:border-navy-800" />
           ) : (
-            <div className="flex flex-col items-center justify-center space-y-6 rounded-2xl border border-dashed border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-900 p-16 shadow-inner">
+            <div className="flex flex-col items-center justify-center space-y-6 rounded-lg border border-dashed border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-900 p-16 shadow-inner">
               <div className="h-24 w-24 rounded-full bg-slate-50 dark:bg-navy-950 flex items-center justify-center border border-slate-100 dark:border-navy-800">
                  <FileCode size={48} className="text-slate-200 dark:text-navy-800" />
               </div>
@@ -564,7 +564,7 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
                 <p className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tighter">预览暂不支持</p>
                 <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">请下载后在本地查看此文件类型。</p>
               </div>
-              <a href={attachment.url} download className="mt-4 rounded-xl bg-slate-900 dark:bg-tertiary-sage px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition-all uppercase tracking-widest active:scale-95">
+              <a href={attachment.url} download className="mt-4 rounded-lg bg-slate-900 dark:bg-tertiary-sage px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition-all uppercase tracking-widest active:scale-95">
                 立即下载文件
               </a>
             </div>
@@ -608,7 +608,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
             <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-white border-4 border-slate-900 flex items-center justify-center shadow-sm z-10">
                <div className="h-1.5 w-1.5 rounded-full bg-white" />
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 group-hover:border-l-slate-900">
+            <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 group-hover:border-l-slate-900">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                    <span className="text-sm font-bold text-slate-900 uppercase">{log.createdByName}</span>
@@ -636,7 +636,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
 }
 
 export const ProductImagePlaceholder = ({ url, name }: { url?: string; name: string }) => (
-  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-slate-900 group">
+  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all hover:border-slate-900 group">
     {url ? (
       <img src={url} alt={name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
     ) : (

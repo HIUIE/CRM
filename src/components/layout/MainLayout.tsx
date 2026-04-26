@@ -179,7 +179,7 @@ export default function MainLayout() {
            )}
            <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-full rounded-xl bg-slate-50 dark:bg-navy-950/50 p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-navy-800 transition-all border border-slate-100 dark:border-navy-800"
+              className="w-full rounded-lg bg-slate-50 dark:bg-navy-950/50 p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-navy-800 transition-all border border-slate-100 dark:border-navy-800"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-[11px] font-black text-white shadow-lg">

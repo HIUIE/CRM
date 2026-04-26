@@ -223,15 +223,15 @@ export default function SettingsView() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex bg-white dark:bg-navy-900 p-1 rounded-2xl border border-slate-200 dark:border-navy-800 w-fit transition-colors">
-         <button onClick={() => setActiveTab('general')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Settings size={16} /> 常规配置</button>
-         <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'export' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Download size={16} /> 数据导出</button>
-         <button onClick={() => setActiveTab('interface')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'interface' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Layout size={16} /> 团队管理</button>
-         <button onClick={() => setActiveTab('ai')} className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'ai' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><BrainCircuit size={16} /> AI 配置</button>
+      <div className="flex bg-white dark:bg-navy-900 p-1 rounded-lg border border-slate-200 dark:border-navy-800 w-fit transition-colors">
+         <button onClick={() => setActiveTab('general')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Settings size={16} /> 常规配置</button>
+         <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'export' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Download size={16} /> 数据导出</button>
+         <button onClick={() => setActiveTab('interface')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'interface' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Layout size={16} /> 团队管理</button>
+         <button onClick={() => setActiveTab('ai')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'ai' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><BrainCircuit size={16} /> AI 配置</button>
       </div>
 
-      {error ? <div className="rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 animate-in fade-in">{error}</div> : null}
-      {userMessage ? <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400 animate-in fade-in">{userMessage}</div> : null}
+      {error ? <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 animate-in fade-in">{error}</div> : null}
+      {userMessage ? <div className="rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400 animate-in fade-in">{userMessage}</div> : null}
 
       {activeTab === 'general' && (
         <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
@@ -254,13 +254,13 @@ export default function SettingsView() {
                 value={orderNumberPrefix}
                 onChange={(event) => setOrderNumberPrefix(event.target.value)}
                 placeholder="如 ORD- / PO-"
-                className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
               />
             </Field>
             <button
               type="button"
               onClick={saveDocumentSettings}
-              className="inline-flex items-center rounded-xl bg-primary-navy dark:bg-tertiary-sage px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md"
+              className="btn-primary shadow-md"
             >
               {savedDocument ? <><CheckCircle2 className="mr-2 h-4 w-4" />已保存</> : '保存编码规则'}
             </button>
@@ -300,7 +300,7 @@ export default function SettingsView() {
                 type="button"
                 onClick={() => void exportData()}
                 disabled={exporting}
-                className="inline-flex items-center justify-center rounded-xl bg-primary-navy dark:bg-tertiary-sage px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-primary shadow-md disabled:opacity-60"
               >
                 <Download className="mr-2 h-4 w-4" />
                 {exporting ? '正在导出...' : '导出客户订单归档'}
@@ -332,7 +332,7 @@ export default function SettingsView() {
                 <select 
                   value={model} 
                   onChange={(event) => setModel(event.target.value)} 
-                  className="w-full rounded-xl border border-slate-200 dark:border-navy-800 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none appearance-none cursor-pointer bg-white dark:bg-navy-950 text-primary-navy dark:text-white"
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none appearance-none cursor-pointer bg-white dark:bg-navy-950 text-primary-navy dark:text-white"
                 >
                   <option value="deepseek-v4-flash">DeepSeek-V4-Flash (极速推荐)</option>
                   <option value="deepseek-v4-pro">DeepSeek-V4-Pro (全能旗舰)</option>
@@ -350,20 +350,20 @@ export default function SettingsView() {
                   value={model} 
                   onChange={(e) => setModel(e.target.value)} 
                   placeholder="如 deepseek-chat" 
-                  className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white data-field"
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white data-field"
                 />
               </Field>
             </div>
 
             <Field label="API 访问密钥 (API Key)">
-              <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="留空表示沿用现有密钥" className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white" />
+              <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="留空表示沿用现有密钥" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white" />
             </Field>
 
             <Field label="自定义 API 代理地址 (Base URL)">
-              <input type="text" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="DeepSeek 请用 https://api.deepseek.com" className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white" />
+              <input type="text" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="DeepSeek 请用 https://api.deepseek.com" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white" />
             </Field>
 
-            <button onClick={saveAiSettings} className="inline-flex items-center rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-3.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all">
+            <button onClick={saveAiSettings} className="btn-primary shadow-md">
               {savedAi ? <><CheckCircle2 className="mr-2 h-4 w-4" />配置已更新</> : '保存 AI 引擎配置'}
             </button>
           </div>
@@ -380,14 +380,14 @@ export default function SettingsView() {
               </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">配置管理员与业务员账号权限。</p>
             </div>
-            <button onClick={startCreateUser} className="inline-flex items-center rounded-xl bg-primary-navy dark:bg-tertiary-sage px-6 py-2 text-sm font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all">
+            <button onClick={startCreateUser} className="btn-primary shadow-md">
               <Plus className="mr-2 h-4 w-4" />
               新增账号
             </button>
           </div>
 
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-navy-800">
+            <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
                   <tr>
@@ -432,7 +432,7 @@ export default function SettingsView() {
               </table>
             </div>
 
-            <div className="rounded-2xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+            <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
               <div className="mb-6 flex items-center text-sm font-bold text-primary-navy dark:text-white uppercase tracking-widest">
                 <Shield className="mr-2 h-4 w-4 text-primary-navy dark:text-tertiary-sage" />
                 {editingUser ? '编辑成员' : '创建成员'}
@@ -444,12 +444,12 @@ export default function SettingsView() {
                     <input
                       value={userForm.username}
                       onChange={(event) => setUserForm((current) => ({ ...current, username: event.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+                      className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
                     />
                   </Field>
                 ) : (
                   <Field label="用户名">
-                    <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-slate-200/50 dark:bg-navy-800/50 px-4 py-3 text-sm text-slate-500 dark:text-slate-500 font-bold">{editingUser.username}</div>
+                    <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-200/50 dark:bg-navy-800/50 px-4 py-3 text-sm text-slate-500 dark:text-slate-500 font-bold">{editingUser.username}</div>
                   </Field>
                 )}
 
@@ -457,7 +457,7 @@ export default function SettingsView() {
                   <input
                     value={userForm.name}
                     onChange={(event) => setUserForm((current) => ({ ...current, name: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
                   />
                 </Field>
 
@@ -465,7 +465,7 @@ export default function SettingsView() {
                   <select
                     value={userForm.role}
                     onChange={(event) => setUserForm((current) => ({ ...current, role: event.target.value as UserRole }))}
-                    className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
+                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
                   >
                     <option value="staff">业务员 (普通权限)</option>
                     <option value="admin">管理员 (最高权限)</option>
@@ -478,13 +478,13 @@ export default function SettingsView() {
                       type="password"
                       value={userForm.password}
                       onChange={(event) => setUserForm((current) => ({ ...current, password: event.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+                      className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
                     />
                   </Field>
                 ) : null}
 
                 <div className="flex gap-3 pt-2">
-                  <button onClick={saveUser} className="flex-1 rounded-xl bg-primary-navy dark:bg-tertiary-sage px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all">
+                  <button onClick={saveUser} className="btn-primary shadow-md">
                     {editingUser ? '确认修改' : '立即创建'}
                   </button>
                   <button
@@ -494,7 +494,7 @@ export default function SettingsView() {
                       setResettingUserId(null);
                       setResetPassword('');
                     }}
-                    className="rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 transition-all"
+                    className="rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 transition-all"
                   >
                     重置
                   </button>
@@ -511,9 +511,9 @@ export default function SettingsView() {
                       value={resetPassword}
                       onChange={(event) => setResetPassword(event.target.value)}
                       placeholder="新密码(至少6位)"
-                      className="flex-1 rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white"
+                      className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white"
                     />
-                    <button onClick={submitResetPassword} className="rounded-xl bg-slate-900 dark:bg-tertiary-sage px-6 py-3 text-sm font-bold text-white hover:bg-black dark:hover:bg-emerald-700 transition-all shadow-md">
+                    <button onClick={submitResetPassword} className="rounded-lg bg-slate-900 dark:bg-tertiary-sage px-6 py-3 text-sm font-bold text-white hover:bg-black dark:hover:bg-emerald-700 transition-all shadow-md">
                       提交
                     </button>
                   </div>

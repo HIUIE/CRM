@@ -47,12 +47,12 @@ export function OrderEditForm({
       <section className="space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-4">
           <h4 className="text-sm font-bold text-primary-navy dark:text-white uppercase tracking-widest">产品项目清单</h4>
-          <button type="button" onClick={() => setOrderForm({ ...orderForm, items: [...orderForm.items, { clientKey: Math.random().toString(36).slice(2), productName: '', specification: '', quantity: '1', unit: 'pcs', unitPrice: '0', subtotal: '0', imageUrl: '' }] })} className="text-xs font-bold text-white bg-primary-navy dark:bg-tertiary-sage px-5 py-2 rounded-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">+ 新增产品</button>
+          <button type="button" onClick={() => setOrderForm({ ...orderForm, items: [...orderForm.items, { clientKey: Math.random().toString(36).slice(2), productName: '', specification: '', quantity: '1', unit: 'pcs', unitPrice: '0', subtotal: '0', imageUrl: '' }] })} className="btn-primary text-xs px-5 py-2 rounded-md">+ 新增产品</button>
         </div>
         <div className="space-y-4">
-          {orderForm.items.length === 0 && <div className="py-16 text-center border border-dashed border-slate-300 dark:border-navy-800 rounded-xl text-slate-400 text-xs font-bold uppercase tracking-widest">点击上方按钮添加产品明细</div>}
+          {orderForm.items.length === 0 && <div className="py-16 text-center border border-dashed border-slate-300 dark:border-navy-800 rounded-lg text-slate-400 text-xs font-bold uppercase tracking-widest">点击上方按钮添加产品明细</div>}
           {orderForm.items.map((item, idx) => (
-            <div key={item.clientKey} className="relative p-5 bg-slate-50 dark:bg-navy-950/50 rounded-xl border border-slate-200 dark:border-navy-800 group hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/30 dark:hover:border-tertiary-sage/30 transition-all shadow-sm">
+            <div key={item.clientKey} className="relative p-5 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-200 dark:border-navy-800 group hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/30 dark:hover:border-tertiary-sage/30 transition-all shadow-sm">
               <button type="button" onClick={() => { if (item.id) setDeletedItemIds([...deletedItemIds, item.id]); setOrderForm({ ...orderForm, items: orderForm.items.filter((_, i) => i !== idx) }); }} className="absolute -right-2 -top-2 h-7 w-7 rounded-full bg-error text-white shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"><Trash size={12} /></button>
               <div className="grid gap-5 sm:grid-cols-12">
                 <div className="sm:col-span-12"><Field label="产品名称/型号 *"><input required value={item.productName} onChange={e => { const next = [...orderForm.items]; next[idx].productName = e.target.value; setOrderForm({ ...orderForm, items: next }); }} placeholder="输入正式商业发票名称..." className="w-full bg-transparent p-1 text-sm font-bold text-primary-navy dark:text-white focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors" /></Field></div>
@@ -73,7 +73,7 @@ export function OrderEditForm({
           <Field label="预估出口运费 (USD)"><input type="number" value={orderForm.freightAmount} onChange={e => setOrderForm({ ...orderForm, freightAmount: e.target.value })} className="w-full bg-transparent p-2 text-lg font-bold text-primary-navy dark:text-white focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors data-field" /></Field>
           <Field label="其他税杂补差 (USD)"><input type="number" value={orderForm.miscAmount} onChange={e => setOrderForm({ ...orderForm, miscAmount: e.target.value })} className="w-full bg-transparent p-2 text-lg font-bold text-primary-navy dark:text-white focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors data-field" /></Field>
         </div>
-        <Field label="内部核心指令与备注"><textarea rows={6} value={orderForm.details} onChange={e => setOrderForm({ ...orderForm, details: e.target.value })} placeholder="输入包装协议、客户强制性要求、业务风险点等重要备注..." className="w-full bg-slate-50 dark:bg-navy-950 p-4 rounded-xl text-[14px] font-bold text-slate-700 dark:text-slate-300 leading-relaxed focus:outline-none border border-slate-200 dark:border-navy-800 shadow-inner" /></Field>
+        <Field label="内部核心指令与备注"><textarea rows={6} value={orderForm.details} onChange={e => setOrderForm({ ...orderForm, details: e.target.value })} placeholder="输入包装协议、客户强制性要求、业务风险点等重要备注..." className="w-full bg-slate-50 dark:bg-navy-950 p-4 rounded-lg text-[14px] font-bold text-slate-700 dark:text-slate-300 leading-relaxed focus:outline-none border border-slate-200 dark:border-navy-800 shadow-inner" /></Field>
       </section>
     </div>
   );
@@ -130,8 +130,8 @@ export function ProductionForm({
       <div className="grid gap-8 sm:grid-cols-2">
         <Field label="指派制造供应商"><select value={productionForm.partnerId} onChange={e=>setProductionForm({...productionForm, partnerId:e.target.value})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="">请选择合作厂商...</option>{productionPartners.map(p=><option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)}</select></Field>
         <Field label="实时生产节点状态"><select value={productionForm.productionStatus} onChange={e=>setProductionForm({...productionForm, productionStatus:e.target.value as any})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="not_started">待生产</option><option value="scheduled">已排产</option><option value="in_progress">生产中</option><option value="ready">已完工</option></select></Field>
-        <Field label="指令下达日期"><input type="date" value={productionForm.orderDate} onChange={e => setProductionForm({ ...productionForm, orderDate: e.target.value })} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white data-field focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
-        <Field label="合约预期交期"><input type="date" value={productionForm.estimatedDeliveryDate} onChange={e => setProductionForm({ ...productionForm, estimatedDeliveryDate: e.target.value })} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white data-field focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+        <Field label="指令下达日期"><input type="date" value={productionForm.orderDate} onChange={e => setProductionForm({ ...productionForm, orderDate: e.target.value })} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white data-field focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+        <Field label="合约预期交期"><input type="date" value={productionForm.estimatedDeliveryDate} onChange={e => setProductionForm({ ...productionForm, estimatedDeliveryDate: e.target.value })} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white data-field focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
       </div>
       <div className="pt-6 border-t border-slate-100 dark:border-navy-800">
         <AttachmentEditor
@@ -164,8 +164,8 @@ export function ProductionLogForm({
 }) {
   return (
     <div className="space-y-10">
-      <div className="p-8 bg-slate-50 dark:bg-navy-950 rounded-2xl border border-slate-200 dark:border-navy-800 flex gap-6 shadow-inner">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary-navy dark:bg-tertiary-sage text-white shadow-lg"><Clock size={28} /></div>
+      <div className="p-8 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 flex gap-6 shadow-inner">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shadow-lg"><Clock size={28} /></div>
         <div className="space-y-2 pt-1"><h5 className="text-[16px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">记录生产进度更新</h5><p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">实时同步制造链路数据，确保持续的可追溯性。</p></div>
       </div>
       <div className="grid gap-10 sm:grid-cols-2">
@@ -193,8 +193,8 @@ export function CustomsForm({
   return (
     <div className="space-y-10">
       <div className="grid gap-8 sm:grid-cols-2">
-        <Field label="正式报关单号"><input value={customsForm.declarationNo} onChange={e=>setCustomsForm({...customsForm, declarationNo:e.target.value})} placeholder="输入 18 位海关报关单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
-        <Field label="贸易方式分类"><select value={customsForm.tradeMode} onChange={e=>setCustomsForm({...customsForm, tradeMode:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer"><option value="一般贸易">一般贸易 (0110)</option><option value="进料加工">进料加工 (0615)</option><option value="来料加工">来料加工 (0214)</option><option value="其他">其他类型</option></select></Field>
+        <Field label="正式报关单号"><input value={customsForm.declarationNo} onChange={e=>setCustomsForm({...customsForm, declarationNo:e.target.value})} placeholder="输入 18 位海关报关单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
+        <Field label="贸易方式分类"><select value={customsForm.tradeMode} onChange={e=>setCustomsForm({...customsForm, tradeMode:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer"><option value="一般贸易">一般贸易 (0110)</option><option value="进料加工">进料加工 (0615)</option><option value="来料加工">来料加工 (0214)</option><option value="其他">其他类型</option></select></Field>
         <Field label="海关清关日期"><input type="date" value={customsForm.declarationDate} onChange={e=>setCustomsForm({...customsForm, declarationDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
         <Field label="预计离港/出口日期"><input type="date" value={customsForm.releaseDate} onChange={e=>setCustomsForm({...customsForm, releaseDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
       </div>
@@ -218,17 +218,17 @@ export function LogisticsForm({
 }) {
   return (
     <div className="space-y-10">
-      <div className="flex gap-4 p-1.5 bg-slate-100 dark:bg-navy-950 rounded-xl">
+      <div className="flex gap-4 p-1.5 bg-slate-100 dark:bg-navy-950 rounded-lg">
         <button type="button" onClick={()=>setLogisticsForm({...logisticsForm, segmentType:'domestic'})} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${logisticsForm.segmentType==='domestic'?'bg-white dark:bg-navy-800 text-primary-navy dark:text-white shadow-md':'text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white'}`}>国内运输轨迹</button>
         <button type="button" onClick={()=>setLogisticsForm({...logisticsForm, segmentType:'international'})} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${logisticsForm.segmentType==='international'?'bg-white dark:bg-navy-800 text-primary-navy dark:text-white shadow-md':'text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white'}`}>国际/主线轨迹</button>
       </div>
       <div className="grid gap-10 sm:grid-cols-2">
         <Field label="货运代理 (Freight Forwarder)"><input value={logisticsForm.freightForwarder} onChange={e=>setLogisticsForm({...logisticsForm, freightForwarder:e.target.value})} placeholder="记录委托的货代公司..." className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
         <Field label="实际承运商 (Actual Carrier)"><input required value={logisticsForm.carrier} onChange={e=>setLogisticsForm({...logisticsForm, carrier:e.target.value})} placeholder="例如: 顺丰 / 马士基 / DHL..." className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
-        <Field label="主运单/提单识别码 *"><input required value={logisticsForm.trackingNo} onChange={e=>setLogisticsForm({...logisticsForm, trackingNo:e.target.value})} placeholder="请输入单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
+        <Field label="主运单/提单识别码 *"><input required value={logisticsForm.trackingNo} onChange={e=>setLogisticsForm({...logisticsForm, trackingNo:e.target.value})} placeholder="请输入单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
         <Field label={logisticsForm.segmentType === 'domestic' ? '实际发货日期' : '预计离港日期'}><input type="date" value={logisticsForm.shippingDate} onChange={e=>setLogisticsForm({...logisticsForm, shippingDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
-        <Field label="当前物流节点状态"><select value={logisticsForm.status} onChange={e=>setLogisticsForm({...logisticsForm, status:e.target.value as any})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer"><option value="preparing">01. 待起运 (Pre-shipment)</option><option value="shipped">02. 运输中 (In-transit)</option><option value="arrived">03. 已妥投 (Delivered)</option></select></Field>
-        {logisticsForm.segmentType === 'domestic' && <div className="sm:col-span-2"><Field label="最终收货/卸货地址 *"><textarea rows={3} value={logisticsForm.recipientAddress} onChange={e=>setLogisticsForm({...logisticsForm, recipientAddress:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-xl border border-slate-200 dark:border-navy-800 shadow-sm leading-relaxed" /></Field></div>}
+        <Field label="当前物流节点状态"><select value={logisticsForm.status} onChange={e=>setLogisticsForm({...logisticsForm, status:e.target.value as any})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer"><option value="preparing">01. 待起运 (Pre-shipment)</option><option value="shipped">02. 运输中 (In-transit)</option><option value="arrived">03. 已妥投 (Delivered)</option></select></Field>
+        {logisticsForm.segmentType === 'domestic' && <div className="sm:col-span-2"><Field label="最终收货/卸货地址 *"><textarea rows={3} value={logisticsForm.recipientAddress} onChange={e=>setLogisticsForm({...logisticsForm, recipientAddress:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm leading-relaxed" /></Field></div>}
       </div>
       <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="运单扫描件或签收单存档" attachments={logisticsForm.attachments} newFiles={logisticsForm.newFiles} onFilesSelected={fs=>setLogisticsForm({...logisticsForm, newFiles:[...logisticsForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setLogisticsForm({...logisticsForm, attachments:logisticsForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setLogisticsForm({...logisticsForm, newFiles:logisticsForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
     </div>
@@ -250,10 +250,10 @@ export function PackingForm({
     <div className="space-y-8">
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-5">
         <div className="space-y-1"><h4 className="text-[16px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">装箱明细数据维护</h4><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">维护物理包装参数，支持一单多规格录入。</p></div>
-        <button type="button" onClick={() => setPackingForm({ items: [...packingForm.items, { clientKey: Math.random().toString(36).slice(2), packageCount: '1', packageSize: '', grossWeight: '', netWeight: '' }] })} className="text-xs font-bold text-white bg-primary-navy dark:bg-tertiary-sage px-6 py-2.5 rounded-lg hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">+ 新增包装组</button>
+        <button type="button" onClick={() => setPackingForm({ items: [...packingForm.items, { clientKey: Math.random().toString(36).slice(2), packageCount: '1', packageSize: '', grossWeight: '', netWeight: '' }] })} className="btn-primary text-xs px-6 py-2.5 rounded-lg">+ 新增包装组</button>
       </div>
       <div className="space-y-5">
-        {packingForm.items.length === 0 && <div className="py-20 text-center border border-dashed border-slate-200 dark:border-navy-800 rounded-2xl text-slate-400 font-bold uppercase tracking-widest">尚未添加任何装箱组</div>}
+        {packingForm.items.length === 0 && <div className="py-20 text-center border border-dashed border-slate-200 dark:border-navy-800 rounded-lg text-slate-400 font-bold uppercase tracking-widest">尚未添加任何装箱组</div>}
         {packingForm.items.map((item, idx) => (
           <div key={item.clientKey} className="relative p-6 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-200 dark:border-navy-800 group shadow-inner">
             <button type="button" onClick={() => setPackingForm({ items: packingForm.items.filter((_, i) => i !== idx) })} className="absolute -right-2.5 -top-2.5 h-8 w-8 rounded-full bg-error text-white shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-30 hover:scale-110"><Trash size={14} /></button>
@@ -267,7 +267,7 @@ export function PackingForm({
                 </div>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <label className="h-14 w-14 rounded-xl border-2 border-dashed border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-950 flex items-center justify-center cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage hover:bg-slate-50 transition-all overflow-hidden shadow-sm">
+                <label className="h-14 w-14 rounded-lg border-2 border-dashed border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-950 flex items-center justify-center cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage hover:bg-slate-50 transition-all overflow-hidden shadow-sm">
                   {item.imageUrl ? <img src={item.imageUrl} className="h-full w-full object-cover" /> : <Upload size={20} className="text-slate-200 dark:text-navy-800" />}
                   <input type="file" className="hidden" onChange={e => e.target.files?.[0] && onUploadPhoto(idx, e.target.files[0])} />
                 </label>
@@ -303,7 +303,7 @@ export function AIAnalysisContent({
 
   return (
     <div className="space-y-12 animate-in fade-in duration-1000">
-      <div className="p-10 bg-primary-navy dark:bg-navy-950 rounded-2xl text-white flex items-center justify-between shadow-2xl relative overflow-hidden">
+      <div className="p-10 bg-primary-navy dark:bg-navy-950 rounded-lg text-white flex items-center justify-between shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 h-96 w-96 bg-white/5 rounded-full blur-[100px] -translate-y-48 translate-x-32" />
         <div>
           <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.6em] mb-4 opacity-70">Consolidated Risk Score</h4>
@@ -315,7 +315,7 @@ export function AIAnalysisContent({
       <section className="space-y-10 px-2">
         <div className="flex items-center gap-5 px-4"><div className="h-6 w-1.5 rounded-full bg-error" /><h5 className="text-[14px] font-extrabold text-primary-navy dark:text-white uppercase tracking-[0.5em]">识别到的关键异常与偏差</h5></div>
         <div className="space-y-8">
-          {aiResult.risks.map((r, i) => <div key={i} className="p-10 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-2xl text-[18px] font-bold text-slate-700 dark:text-slate-300 leading-relaxed shadow-md border-l-[20px] border-l-error/20 hover:border-l-error transition-all duration-300">"{r.content}"</div>)}
+          {aiResult.risks.map((r, i) => <div key={i} className="p-10 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg text-[18px] font-bold text-slate-700 dark:text-slate-300 leading-relaxed shadow-md border-l-[20px] border-l-error/20 hover:border-l-error transition-all duration-300">"{r.content}"</div>)}
         </div>
       </section>
     </div>

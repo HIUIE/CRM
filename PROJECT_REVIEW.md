@@ -371,17 +371,19 @@
 | ~~quick-notes 端点损坏~~ | `server/routes/orders.ts` | 在 `db.ts` 添加 `quick_notes` 列迁移 | ✅ 已修复 |
 | ~~死依赖~~ | `package.json` | 移除 `date-fns`/`react-hook-form`/`i18next` + 2 子包 | ✅ 已修复 |
 
-### P1 — 重要优化
-| `startViewTransition` 重复 7 次 | `OrderDetail.tsx`（已拆分解耦）| 应封装为 `useTransitionedLoad` hook |
-| `rounded-lg/xl/2xl` 三类圆角混用 | 全站页面文件 | 选一种标准统一（建议 `rounded-lg`）|
-| 按钮样式不统一 | 6 个 View/Component | 首屏按钮用内联类而非 `btn-primary` |
-| 任务评论 N+1 查询 | `server/routes/tasks.ts:75-83` | 循环查附件，应改为 `WHERE comment_id IN (...)` |
-| 3 份重复时间范围芯片 | Customers/Orders/Finance/LogisticsView | 应提取 `<TimeRangeFilter>` |
-| 任务卡片未 memo | `src/pages/Tasks.tsx:184` | `TaskCard` 在 AnimatePresence 内无节流 |
-| 搜索无防抖 | `CustomersView.tsx:60-70` | 每次按键重建 URLSearchParams 触发全组件重渲染 |
-| 审计日志空指针风险 | `AuditLogs.tsx:185` | `created_at.replace('T',' ')` 可能为 null |
-| 40+ 处 `:any` 类型 | 全栈各处 | 应用具体类型替换 |
-| 未捕获的异步错误 | 各 Express route | v4 需手动 catch，v5 自动处理 |
+### P1 — 重要优化（部分已修复 ✅）
+| 问题 | 位置 | 详情 | 状态 |
+|------|------|------|------|
+| ~~`startViewTransition` 重复 7 处~~ | 4 个 View 文件 + handlers.ts | 提取为 `src/lib/transition.ts` 的 `withTransition()` 函数 | ✅ 已修复 |
+| ~~`rounded-lg/xl/2xl` 三类圆角混用~~ | 全站页面文件 | 全部统一为 `rounded-lg` | ✅ 已修复 |
+| ~~按钮样式不统一~~ | 6 个 View/Component | 替换为 `btn-primary` 统一类 | ✅ 已修复 |
+| ~~任务评论 N+1 查询~~ | `server/routes/tasks.ts` | 单次 `WHERE comment_id IN (...)` 批量查询 | ✅ 已修复 |
+| ~~3 份重复时间范围芯片~~ | Customers/Orders/Finance/LogisticsView | 提取为共享 `TimeRangeFilter` 组件 | ✅ 已修复 |
+| ~~任务卡片未 memo~~ | `src/pages/Tasks.tsx` | 使用 `React.memo` 包裹 `TaskCard` | ✅ 已修复 |
+| ~~搜索无防抖~~ | `CustomersView.tsx` | 添加 300ms 防抖（`inputValue` 本地状态 + setTimeout） | ✅ 已修复 |
+| ~~审计日志空指针风险~~ | `AuditLogs.tsx:185` | 添加 `created_at?.replace(...)` 可选链 | ✅ 已修复 |
+| 40+ 处 `:any` 类型 | 全栈各处 | 应用具体类型替换 | ⏳ 待处理 |
+| 未捕获的异步错误 | 各 Express route | v4 需手动 catch，v5 自动处理 | ⏳ 待处理 |
 
 ### P2 — 代码卫生
 
@@ -409,7 +411,7 @@
 
 ```
 迭代 1 (P0) ✅     → 拆分 OrderDetail、添加 Error Boundary、淘汰 alert()、修复 N+1、提取共享组件、清理死依赖
-迭代 2 (P1)        → 统一 UI tokens、提取 TimeRangeFilter、修复任务评论 N+1、搜索防抖、修复审计日志空指针
+迭代 2 (P1) ✅     → 统一 UI tokens（圆角/按钮）、提取 TimeRangeFilter 与 withTransition、修复任务评论 N+1、搜索防抖、修复审计日志空指针、memoize TaskCard
 迭代 3 (P2)        → 清理 CSS 死类、修剪未用图标、修复 CustomerDetail 闭包陈旧
 迭代 4 (架构)      → 引入数据层（React Query/SWR）、消除 features/components 循环依赖
 ```
