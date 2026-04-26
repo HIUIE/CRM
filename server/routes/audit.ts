@@ -8,6 +8,9 @@ export function createAuditRouter() {
 
   router.get('/', requireAdmin, async (req: AuthedRequest, res) => {
     try {
+      // Auto-prune: keep only last 30 days of audit logs to prevent unbounded growth
+      await db.run(`DELETE FROM audit_logs WHERE datetime(created_at) < datetime('now', '-30 days')`);
+
       const logs = await db.all(`
         SELECT * FROM audit_logs
         ORDER BY created_at DESC

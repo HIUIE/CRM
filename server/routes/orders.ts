@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { logAction } from '../lib/audit.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows } from '../services/attachments.js';
 import { buildOrderDetail } from '../services/order-detail.js';
@@ -197,9 +198,12 @@ export function createOrdersRouter() {
     }
   });
 
-  router.delete('/:id', requireAdmin, async (req, res) => {
+  router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     try {
+      const order = await db.get<{ display_id: string }>(`SELECT display_id FROM orders WHERE id = ?`, [orderId]);
+      if (!order) return fail(res, 404, '订单不存在');
+
       await db.run('BEGIN TRANSACTION');
       await db.run(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
       await db.run(`DELETE FROM finance_records WHERE order_id = ?`, [orderId]);
@@ -207,13 +211,19 @@ export function createOrdersRouter() {
       await db.run(`DELETE FROM production_plans WHERE order_id = ?`, [orderId]);
       await db.run(`DELETE FROM customs_records WHERE order_id = ?`, [orderId]);
       await db.run(`DELETE FROM packing_records WHERE order_id = ?`, [orderId]);
-      
-      const result = await db.run(`DELETE FROM orders WHERE id = ?`, [orderId]);
-      if (!result.changes) {
-        await db.run('ROLLBACK');
-        return fail(res, 404, '订单不存在');
-      }
+
+      await db.run(`DELETE FROM orders WHERE id = ?`, [orderId]);
       await db.run('COMMIT');
+
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'DELETE',
+        entityType: 'ORDER',
+        entityId: orderId,
+        oldValue: { display_id: order.display_id },
+      });
+
       res.json({ success: true });
     } catch (error) {
       await db.run('ROLLBACK');

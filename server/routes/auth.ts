@@ -5,10 +5,40 @@ import { clearAuthCookie, getCookieOptions, requireAuth, signAuthToken } from '.
 import { handleRouteError, fail } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 
+// Simple in-memory rate limiter for login attempts
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function checkLoginRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_LOGIN_ATTEMPTS) return false;
+  entry.count++;
+  return true;
+}
+
+// Periodic cleanup of stale entries
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) {
+    if (now > entry.resetAt) loginAttempts.delete(ip);
+  }
+}, 60 * 1000);
+
 export function createAuthRouter() {
   const router = Router();
 
   router.post('/login', async (req, res) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!checkLoginRateLimit(ip)) {
+      return fail(res, 429, '登录尝试过于频繁，请 15 分钟后再试', 'RATE_LIMITED');
+    }
+
     const username = readString(req.body?.username);
     const password = readString(req.body?.password);
 

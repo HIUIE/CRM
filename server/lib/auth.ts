@@ -15,7 +15,10 @@ export type AuthedRequest = Request & {
   user?: AuthUser;
 };
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-preview-only';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is required. Set a strong random string in production.');
+}
 
 function isCookieSecure() {
   return process.env.COOKIE_SECURE === 'true';

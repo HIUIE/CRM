@@ -77,8 +77,8 @@ export function createTasksRouter() {
           SELECT a.*
           FROM attachments a
           JOIN task_attachments ta ON a.id = ta.attachment_id
-          WHERE ta.task_id = ?
-        `, [taskId]); // In a more complex system, we'd link attachments to comment_id, but here we use task_id as requested
+          WHERE ta.comment_id = ?
+        `, [comment.id]);
         comment.attachments = atts;
       }
 
@@ -112,8 +112,8 @@ export function createTasksRouter() {
       if (attachmentIds.length > 0) {
         for (const aid of attachmentIds) {
           await db.run(
-            `INSERT INTO task_attachments (task_id, attachment_id) VALUES (?, ?)`,
-            [taskId, aid]
+            `INSERT INTO task_attachments (task_id, attachment_id, comment_id) VALUES (?, ?, ?)`,
+            [taskId, aid, commentId]
           );
         }
         await db.run(`UPDATE tasks SET attachment_count = attachment_count + ? WHERE id = ?`, [attachmentIds.length, taskId]);

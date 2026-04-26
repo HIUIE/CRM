@@ -152,18 +152,31 @@ export function createFinanceRouter() {
     }
   });
 
-  router.delete('/:id', requireAdmin, async (req, res) => {
+  router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
     const recordId = Number(req.params.id);
     if (!Number.isInteger(recordId) || recordId <= 0) {
       return fail(res, 400, '财务记录编号无效', 'INVALID_FINANCE_ID');
     }
 
     try {
+      const record = await db.get(`SELECT id, type, amount, currency FROM finance_records WHERE id = ?`, [recordId]);
+      if (!record) return fail(res, 404, '财务记录不存在', 'FINANCE_NOT_FOUND');
+
       await deleteAttachmentRows('finance', recordId);
       const result = await db.run(`DELETE FROM finance_records WHERE id = ?`, [recordId]);
       if (!result.changes) {
         return fail(res, 404, '财务记录不存在', 'FINANCE_NOT_FOUND');
       }
+
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'DELETE',
+        entityType: 'FINANCE',
+        entityId: recordId,
+        oldValue: { type: record.type, amount: record.amount, currency: record.currency },
+      });
+
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '删除财务记录失败');
