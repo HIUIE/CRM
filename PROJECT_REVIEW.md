@@ -1,6 +1,6 @@
 # SmartTrade AI CRM — 项目全面审查报告
 
-> 审查日期：2026-04-25 | 版本：1.0.5
+> 审查日期：2026-04-26 | 版本：1.0.7
 
 ---
 
@@ -242,29 +242,21 @@
 | **唯一约束** | 订单号 display_id 应用层检查 + DB UNIQUE 双保险 | `orders.ts` |
 | **health 信息** | `/api/health` 不暴露物理路径 | `api.ts` |
 
-### ⚠️ 安全风险（需修复）
+### ⚠️ 安全风险
 
-| 严重度 | 问题 | 位置 | 说明 |
-|--------|------|------|------|
-| **高危** | **JWT 密钥硬编码默认值** | `server/lib/auth.ts:18` | `JWT_SECRET` 默认值为 `'super-secret-key-for-preview-only'`。开发模式下若忘设环境变量，任何人都可伪造 JWT |
-| **高危** | **CSRF 无防护** | 全站 | 全部使用 cookie 认证但无 CSRF token。sameSite:'lax' 对 POST/DELETE 保护不足 |
-| **中危** | **登录无速率限制** | `server/routes/auth.ts:11` | `/api/auth/login` 无 brute-force 防护，可暴力枚举密码 |
-| **中危** | **密码重置无限流** | `server/routes/users.ts:101` | admin 可直接重置任意用户密码，无二次确认（如输入旧密码）|
-| **中危** | **审计日志无限增长** | `server/routes/audit.ts:13-15` | LIMIT 200 但无自动清理机制，数据库无限膨胀 |
-| **中危** | **任务附件查询 Bug** | `server/routes/tasks.ts:81` | `WHERE ta.task_id = ?` 传的是 `taskId` 参数，所有评论返回相同附件 |
-| **低危** | **部分 DELETE 缺审计** | `orders.ts:200`, `finance.ts:155` | DELETE 操作未记录审计日志 |
-| **低危** | **前端暴露 API Key** | `vite.config.ts:12` | `GEMINI_API_KEY` 编译进前端 JS 包，用户可查看 |
-| **低危** | **密码重置不含审计** | `users.ts:101` | 重置密码操作未写入 audit_logs |
+| 严重度 | 问题 | 位置 | 说明 | 状态 |
+|--------|------|------|------|------|
+| ~~**高危**~~ | ~~**JWT 密钥硬编码默认值**~~ | ~~`server/lib/auth.ts:18`~~ | ~~`JWT_SECRET` 默认值为 `'super-secret-key-for-preview-only'`。开发模式下若忘设环境变量，任何人都可伪造 JWT~~ | ✅ 已修复 |
+| **高危** | **CSRF 无防护** | 全站 | 全部使用 cookie 认证但无 CSRF token。sameSite:'lax' 对 POST/DELETE 保护不足 | ⏳ 待处理 |
+| ~~**中危**~~ | ~~**登录无速率限制**~~ | ~~`server/routes/auth.ts:11`~~ | ~~`/api/auth/login` 无 brute-force 防护，可暴力枚举密码~~ | ✅ 已修复 |
+| ~~**中危**~~ | ~~**密码重置无限流**~~ | ~~`server/routes/users.ts:101`~~ | ~~admin 可直接重置任意用户密码，无二次确认（如输入旧密码）~~ | ✅ 已修复 |
+| ~~**中危**~~ | ~~**审计日志无限增长**~~ | ~~`server/routes/audit.ts:13-15`~~ | ~~LIMIT 200 但无自动清理机制，数据库无限膨胀~~ | ✅ 已修复 |
+| ~~**中危**~~ | ~~**任务附件查询 Bug**~~ | ~~`server/routes/tasks.ts:81`~~ | ~~`WHERE ta.task_id = ?` 传的是 `taskId` 参数，所有评论返回相同附件~~ | ✅ 已修复 |
+| ~~**低危**~~ | ~~**部分 DELETE 缺审计**~~ | ~~`orders.ts:200`, `finance.ts:155`~~ | ~~DELETE 操作未记录审计日志~~ | ✅ 已修复 |
+| ~~**低危**~~ | ~~**前端暴露 API Key**~~ | ~~`vite.config.ts:12`~~ | ~~`GEMINI_API_KEY` 编译进前端 JS 包，用户可查看~~ | ✅ 已修复 |
+| ~~**低危**~~ | ~~**密码重置不含审计**~~ | ~~`users.ts:101`~~ | ~~重置密码操作未写入 audit_logs~~ | ✅ 已修复 |
 
-### 建议修复
-
-1. **JWT_SECRET**：开发环境也强制要求环境变量，去掉默认值。修改 `auth.ts:18`
-2. **添加 CSRF 保护**：使用 `csurf` 中间件或 Double Submit Cookie 模式
-3. **登录限流**：使用 `express-rate-limit` 对 `/api/auth/login` 限制为 10 次/分钟/IP
-4. **审计表自动清理**：在 `audit.ts:logAction()` 中添加行数检查，超过 10000 行时删除最旧的 1000 条
-5. **修复任务附件 Bug**：tasks.ts:81 `WHERE ta.task_id = ?` 应改为按 comment 关联或将参数改为 `commentId`
-6. **前端敏感 key**：移除 `vite.config.ts` 中 `process.env.GEMINI_API_KEY` 暴露（或加 `JSON.stringify("")`）
-7. **密码重置审计**：添加 `logAction({ action: 'UPDATE', entityType: 'USER' })`
+> 注：已修复 8/9 项安全风险。CSRF 防护因涉及全站架构调整，暂搁置。
 
 ---
 
@@ -354,3 +346,67 @@
 ---
 
 > **审查结论**：项目代码质量较高，安全方面已有 PII 脱敏、鉴权、路径防护等多项最佳实践。最优先修复 **JWT 默认密钥**（高危）和 **SQLite 并发问题**（影响生产可用性），功能优化建议按 P0→P2 优先级逐步推进。
+
+---
+
+## 四、代码质量全面审计 (2026-04-26)
+
+### P0 — 必须修复
+
+| 问题 | 位置 | 详情 |
+|------|------|------|
+| **OrderDetail 1336 行巨型组件** | `src/pages/OrderDetail.tsx` | 单文件管理 30+ state、20+ handler、7 个抽屉表单。应拆分到 `src/features/order-detail/` 下各自文件 |
+| **无 Error Boundary** | 全站 | 任何组件渲染崩溃会导致整个应用白屏 |
+| **9 处 `alert()` 阻塞用户** | OrderDetail、CustomerDetail、OrdersView、CustomersView、TaskDetailDrawer | 应用内应该用 Toast 统一替代 |
+| **export 服务 N+1 查询 (760+ SQL)** | `server/services/export.ts:534-726` | 10 客户 × 5 订单 = 760+ 次 SQL 查询 |
+| **3 份重复删除确认弹窗** | OrderDetail / OrdersView / CustomersView | 应提取为共享 `ConfirmDeleteModal` 组件 |
+| **9 份重复 Field 组件** | 各 View 文件中本地定义 | 应提取到 `components/ui/Field.tsx` |
+| **Tasks 页缺少加载态** | `src/pages/Tasks.tsx:43` | `loading` 状态从未渲染 |
+| **quick-notes 端点损坏** | `server/routes/orders.ts:287` | `quick_notes` 列未在 schema 定义，请求永远失败 |
+| **死依赖** | `package.json` | `date-fns`、`react-hook-form`、`i18next` + 2 子包从未被使用 |
+
+### P1 — 重要优化
+
+| 问题 | 位置 | 详情 |
+|------|------|------|
+| `startViewTransition` 重复 7 次 | `OrderDetail.tsx` | 应封装为 `useTransitionedLoad` hook |
+| `rounded-lg/xl/2xl` 三类圆角混用 | 全站页面文件 | 选一种标准统一（建议 `rounded-lg`）|
+| 按钮样式不统一 | 6 个 View/Component | 首屏按钮用内联类而非 `btn-primary` |
+| 任务评论 N+1 查询 | `server/routes/tasks.ts:75-83` | 循环查附件，应改为 `WHERE comment_id IN (...)` |
+| 3 份重复时间范围芯片 | Customers/Orders/Finance/LogisticsView | 应提取 `<TimeRangeFilter>` |
+| 任务卡片未 memo | `src/pages/Tasks.tsx:184` | `TaskCard` 在 AnimatePresence 内无节流 |
+| 搜索无防抖 | `CustomersView.tsx:60-70` | 每次按键重建 URLSearchParams 触发全组件重渲染 |
+| 审计日志空指针风险 | `AuditLogs.tsx:185` | `created_at.replace('T',' ')` 可能为 null |
+| 40+ 处 `:any` 类型 | 全栈各处 | 应用具体类型替换 |
+| 未捕获的异步错误 | 各 Express route | v4 需手动 catch，v5 自动处理 |
+
+### P2 — 代码卫生
+
+| 问题 | 位置 | 详情 |
+|------|------|------|
+| `card-elevated` CSS 定义两次 | `src/index.css:240,376` | 重复定义且从未使用 |
+| ~30 个未使用的 CSS 类 | `src/index.css` | `glass-nav`、`headline-*`、`body-*`、`.screenshot-safe` 等 |
+| `.btn-ghost` 定义但从未使用 | `src/index.css:184` | |
+| 图标导入过多 | `OrderDetail.tsx` | 39 个 lucide 图标导入，约 10 个未使用 |
+| `Login.tsx` 无限流反馈 | `src/pages/Login.tsx` | 服务端已限流但前端无展示 |
+| `console.error` 静默失败 | NotificationDrawer、TaskDetailDrawer 等 | 无用户反馈 |
+| `DonutChart` / `Sparkline` 未 memo | `Dashboard.tsx` | 每次渲染重算 SVG 路径 |
+| `CustomerDetail.tsx` 变量 `val` 闭包陈旧 | `line 558` | prop 更新后编辑表单仍显示旧值 |
+| `CustomerDetail.tsx` onSave 重复触发 | `line 567` | onChange + onBlur 各触发一次 |
+
+### 架构观察
+
+- `features/order-detail/components.tsx` 的 `Chip`、`EmptyStateBoard`、`Toast` 被 10+ 个外部文件引用，违背 Feature Module 边界
+- 全站无数据层抽象（无 React Query/SWR），每个组件直接在 `useEffect` 里 `apiFetch`
+- `apiFetch` 用 Fetch API 但 `apiUpload` 用 XHR，双 HTTP 实现
+- `lucide-react` 未 tree-shake 的导入增加 bundle 体积
+- `dayjs` 已使用但 `date-fns` 是死依赖
+
+### 优化路线图
+
+```
+迭代 1 (P0)        → 拆分 OrderDetail、添加 Error Boundary、淘汰 alert()
+迭代 2 (P1)        → 统一 UI tokens、提取共享组件（Field/ConfirmDelete/TimeRangeFilter）
+迭代 3 (P2)        → 清理 CSS 死类、修剪死依赖、减少 :any 类型
+迭代 4 (架构)      → 引入数据层、消除 features/components 循环依赖
+```
