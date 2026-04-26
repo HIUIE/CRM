@@ -92,12 +92,20 @@ export function createCustomersRouter() {
       `, [actualId]);
 
       const followups = await db.all(`
-        SELECT f.*, u.name as created_by_name
+        SELECT f.id, f.content, f.created_at, f.created_by, f.created_by_name,
+               NULL as source_order_id, NULL as source_order_display_id
         FROM customer_followups f
-        LEFT JOIN users u ON f.created_by = u.id
         WHERE f.customer_id = ?
-        ORDER BY f.created_at DESC
-      `, [actualId]);
+        UNION ALL
+        SELECT ofu.id, ofu.content, ofu.created_at, ofu.created_by,
+               COALESCE(u.name, '系统') as created_by_name,
+               ofu.order_id as source_order_id, o.display_id as source_order_display_id
+        FROM order_follow_ups ofu
+        JOIN orders o ON ofu.order_id = o.id
+        LEFT JOIN users u ON ofu.created_by = u.id
+        WHERE o.customer_id = ?
+        ORDER BY created_at DESC
+      `, [actualId, actualId]);
 
       const system_activities = await db.all(`
         SELECT 'finance' as type, f.id, o.display_id as order_display_id, 

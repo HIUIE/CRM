@@ -63,6 +63,7 @@ import {
   EmptyStateBoard,
   GridItem,
   HistoryTimeline,
+  FileIcon,
   Toast
 } from '../features/order-detail/components';
 import { TaskDrawer } from '../components/ui/TaskDrawer';
@@ -198,6 +199,7 @@ export default function OrderDetailPage() {
   const packingRecords = detail?.packingRecords || [];
   const orderDocuments = detail?.orderDocuments || [];
   const followUps = detail?.followUps || [];
+  const tasks = detail?.tasks || [];
   const domesticLogistics = detail?.domesticLogistics || null;
   const internationalLogistics = detail?.internationalLogistics || null;
   const summary = detail?.summary || { receiptsByCurrency: {}, attachmentsSummary: { finance: 0, logistics: 0, customs: 0 } };
@@ -369,7 +371,7 @@ export default function OrderDetailPage() {
         const fd = new FormData(); 
         fd.append('customerId', String(customer.id));
         fd.append('orderId', String(order?.id));
-        financeForm.newFiles.forEach(f => fd.append('files', f));
+        financeForm.newFiles.forEach(f => fd.append('files', f.file));
         newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
         setIsUploading(false);
       }
@@ -396,7 +398,7 @@ export default function OrderDetailPage() {
         fd.append('orderId', String(order?.id));
         fd.append('entityType', 'production_photo');
         fd.append('entityId', String(order?.id));
-        productionForm.newPhotos.forEach(f => fd.append('files', f));
+        productionForm.newPhotos.forEach(f => fd.append('files', f.file));
         newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
         setIsUploading(false);
       }
@@ -468,7 +470,7 @@ export default function OrderDetailPage() {
         const fd = new FormData(); 
         fd.append('customerId', String(customer.id));
         fd.append('orderId', String(order?.id));
-        productionLogForm.newFiles.forEach(f => fd.append('files', f));
+        productionLogForm.newFiles.forEach(f => fd.append('files', f.file));
         newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
         setIsUploading(false);
       }
@@ -492,7 +494,7 @@ export default function OrderDetailPage() {
         const fd = new FormData(); 
         fd.append('customerId', String(customer.id));
         fd.append('orderId', String(order?.id));
-        customsForm.newFiles.forEach(f => fd.append('files', f));
+        customsForm.newFiles.forEach(f => fd.append('files', f.file));
         newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
         setIsUploading(false);
       }
@@ -517,7 +519,7 @@ export default function OrderDetailPage() {
         const fd = new FormData(); 
         fd.append('customerId', String(customer.id));
         fd.append('orderId', String(order?.id));
-        logisticsForm.newFiles.forEach(f => fd.append('files', f));
+        logisticsForm.newFiles.forEach(f => fd.append('files', f.file));
         newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
         setIsUploading(false);
       }
@@ -680,47 +682,47 @@ export default function OrderDetailPage() {
                    </Tooltip>
 
                    {/* Secondary Actions */}
-                   <button 
-                     onClick={() => openFinanceDrawer()} 
+                   <button
+                     onClick={() => openFinanceDrawer()}
                      className="btn-secondary text-xs px-4 py-2"
                    >
-                     <DollarSign size={14} className="text-emerald-500" /> 录入收支
+                     <DollarSign size={14} className="text-slate-400" /> 录入收支
                    </button>
 
-                   <Tooltip 
-                     text="需先确认清单并核销定金收据后解锁生产同步。" 
+                   <Tooltip
+                     text="需先确认清单并核销定金收据后解锁生产同步。"
                      disabled={items.length > 0 && financeRecords.some(r => r.type === 'receipt' && r.recordCategory === 'deposit' && r.status === 'completed')}
                    >
-                     <button 
+                     <button
                        disabled={!(items.length > 0 && financeRecords.some(r => r.type === 'receipt' && r.recordCategory === 'deposit' && r.status === 'completed'))}
-                       onClick={openProductionDrawer} 
-                       className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                       onClick={openProductionDrawer}
+                       className="btn-secondary text-xs px-4 py-2"
                      >
-                       <Factory size={14} className="text-amber-500" /> 同步生产
+                       <Factory size={14} className="text-slate-400" /> 同步生产
                      </button>
                    </Tooltip>
 
-                   <Tooltip 
-                     text="需先完成装箱单录入或至少有一条发运记录后开启报关。" 
+                   <Tooltip
+                     text="需先完成装箱单录入或至少有一条发运记录后开启报关。"
                      disabled={hasAnyLogistics || packingRecords.length > 0}
                    >
-                     <button 
+                     <button
                        disabled={!(hasAnyLogistics || packingRecords.length > 0)}
-                       onClick={openCustomsDrawer} 
-                       className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                       onClick={openCustomsDrawer}
+                       className="btn-secondary text-xs px-4 py-2"
                      >
-                       <ShieldCheck size={14} className="text-blue-500" /> 更新报关
+                       <ShieldCheck size={14} className="text-slate-400" /> 更新报关
                      </button>
                    </Tooltip>
 
-                   <Tooltip 
-                     text="需待生产环节进入‘进行中’或‘已完工’状态后方可安排发运。" 
+                   <Tooltip
+                     text="需待生产环节进入’进行中’或’已完工’状态后方可安排发运。"
                      disabled={productionPlan?.productionStatus === 'ready' || productionPlan?.productionStatus === 'in_progress'}
                    >
-                     <button 
+                     <button
                        disabled={!(productionPlan?.productionStatus === 'ready' || productionPlan?.productionStatus === 'in_progress')}
-                       onClick={() => openLogisticsDrawer()} 
-                       className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                       onClick={() => openLogisticsDrawer()}
+                       className="btn-secondary text-xs px-4 py-2"
                      >
                        <Truck size={14} className="text-slate-400" /> 创建物流
                      </button>
@@ -803,18 +805,10 @@ export default function OrderDetailPage() {
           }>
             {orderDocuments.length ? (
               <div className="grid grid-cols-2 gap-4">
-                {orderDocuments.map(doc => {
-                  const ext = doc.fileName.split('.').pop()?.toLowerCase() || '';
-                  const isPdf = ext === 'pdf';
-                  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
-                  const isWord = ['doc', 'docx'].includes(ext);
-                  const isExcel = ['xls', 'xlsx', 'csv'].includes(ext);
-                  const Icon = isPdf ? FileText : isImage ? ImageIcon : isWord ? FileCode : isExcel ? FileCode : Paperclip;
-                  const iconColor = isPdf ? 'text-error' : isImage ? 'text-info' : isWord ? 'text-blue-500' : isExcel ? 'text-emerald-500' : 'text-slate-400';
-                  return (
+                {orderDocuments.map(doc => (
                     <div key={doc.id} className="flex items-center h-14 px-4 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
-                      <button onClick={() => setPreviewAttachment(doc)} className={`shrink-0 mr-3 ${iconColor}`}>
-                        <Icon size={20} />
+                      <button onClick={() => setPreviewAttachment(doc)} className="shrink-0 mr-3">
+                        <FileIcon fileName={doc.fileName} url={doc.url} size={20} />
                       </button>
                       <div className="min-w-0 flex-1">
                         <button onClick={() => setPreviewAttachment(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block w-full text-left hover:underline leading-tight" title={doc.fileName}>{doc.fileName}</button>
@@ -828,8 +822,7 @@ export default function OrderDetailPage() {
                         )}
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             ) : (
               <EmptyStateBoard
@@ -859,6 +852,7 @@ export default function OrderDetailPage() {
                  plan={productionPlan}
                  onEditLink={openProductionDrawer}
                  onUpdateInspection={handleUpdateInspectionStatus}
+                 onPreview={setPreviewAttachment}
                />
             ) : (
                <EmptyStateBoard title="暂无排产计划" description="目前该订单尚未关联任何制造工厂。请指派供应商并录入预计交期。" icon={Factory} actionLabel="+ 录入排产单" onAction={openProductionDrawer} />
@@ -868,16 +862,16 @@ export default function OrderDetailPage() {
           {/* Customs Section */}
           <DocumentBoard ref={sectionRefs.customs} title="报关信息" action={customs ? <LightActionButton onClick={openCustomsDrawer} className="!py-1.5 !px-3 !text-xs"><ShieldCheck size={14} className="mr-1 opacity-70" /> 更新报关</LightActionButton> : null}>
             {customs ? (
-              <div className="grid gap-8 lg:grid-cols-[240px_1fr] p-1">
-                <div className="space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
+              <div className="grid gap-8 lg:grid-cols-12 items-start">
+                <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
                   <GridItem label="报关单号" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
                   <GridItem label="贸易方式" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
                   <GridItem label="报关日期" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
                   <GridItem label="预计出口" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-2">
-                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest opacity-70">官方凭证电子仓库</div>
+                <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-3">
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">官方凭证电子仓库</div>
                     <button onClick={openCustomsDrawer} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">追加文件 +</button>
                   </div>
                   <div className="space-y-1">
@@ -987,7 +981,7 @@ export default function OrderDetailPage() {
                         {l.attachments.map((att: any) => (
                           <div key={att.id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-navy-950 rounded border border-slate-100 dark:border-navy-800 text-primary-navy dark:text-white hover:bg-white dark:hover:bg-navy-800 transition-all shadow-sm">
                              <button onClick={() => setPreviewAttachment(att)} className="flex items-center gap-1.5">
-                               <Paperclip size={12} className="text-slate-400 dark:text-slate-600" />
+                               <FileIcon fileName={att.fileName} size={12} />
                                <span className="text-xs font-bold truncate max-w-[100px]">{att.fileName.split('.')[0]}</span>
                              </button>
                              {user?.role === 'admin' && <button onClick={() => handleDeleteAttachment(att.id)} className="ml-1 text-slate-300 dark:text-slate-700 hover:text-error"><X size={12} /></button>}
@@ -1002,7 +996,26 @@ export default function OrderDetailPage() {
 
           {/* Related Tasks Section */}
           <DocumentBoard title="关联协同任务" action={<LightActionButton onClick={() => setShowTaskDrawer(true)} className="!py-1.5 !px-3 !text-xs"><Plus size={12} className="mr-1" /> 指派任务</LightActionButton>}>
-             <EmptyStateBoard title="暂无关联任务" description="您可以为该订单指派特定的内部协同任务。" icon={CheckCircle2} actionLabel="+ 发起第一项任务" onAction={() => setShowTaskDrawer(true)} />
+            {tasks.length > 0 ? (
+              <div className="space-y-2">
+                {tasks.map(t => (
+                  <div key={t.id} onClick={() => navigate(`/tasks?detail=${t.id}`)} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950/50 rounded-xl border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:ring-1 hover:ring-primary-navy/10 dark:hover:ring-tertiary-sage/10 cursor-pointer transition-all group">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${t.status === 'done' ? 'bg-emerald-50 text-emerald-500' : 'bg-white border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
+                        {t.status === 'done' ? <Check size={12} /> : <Clock size={12} />}
+                      </div>
+                      <div>
+                        <div className={`text-xs font-bold ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-primary-navy dark:text-white'}`}>{t.title}</div>
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">负责人: {t.assignee_name} · 截止: {formatDateOnly(t.due_date)}</div>
+                      </div>
+                    </div>
+                    <Chip tone={t.priority === 'P0' ? 'error' : t.priority === 'P1' ? 'warning' : 'info'}>{t.priority}</Chip>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyStateBoard title="暂无关联任务" description="您可以为该订单指派特定的内部协同任务。" icon={CheckCircle2} actionLabel="+ 发起第一项任务" onAction={() => setShowTaskDrawer(true)} />
+            )}
           </DocumentBoard>
 
           {/* 跟进时间轴 */}

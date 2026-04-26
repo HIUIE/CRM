@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { apiFetch, apiUpload, getErrorMessage } from '../../lib/api';
 import { Drawer } from './Drawer';
-import { Chip, Toast, AttachmentEditor, StatusFileRow } from '../../features/order-detail/components';
-import { 
-  Clock, User, Package, Calendar, AlertCircle, MessageSquare, 
+import { Chip, Toast, AttachmentEditor, StatusFileRow, PreviewModal } from '../../features/order-detail/components';
+import {
+  Clock, User, Package, Calendar, AlertCircle, MessageSquare,
   Send, CheckCircle2, ChevronRight, History, Trash2, Edit3, X, Paperclip, Upload
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +48,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [toast, setToast] = useState('');
+  const [previewAttachment, setPreviewAttachment] = useState<AttachmentMeta | null>(null);
   const navigate = useNavigate();
 
   const loadTask = async () => {
@@ -221,7 +222,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
                             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-navy-800 space-y-1">
                                {c.attachments.map(att => (
                                  <div key={att.id}>
-                                   <StatusFileRow label={att.fileName} fileName={att.fileName} status="uploaded" onPreview={() => window.open(att.url)} />
+                                   <StatusFileRow label={att.fileName} fileName={att.fileName} status="uploaded" onPreview={() => setPreviewAttachment(att)} />
                                  </div>
                                ))}
                             </div>
@@ -276,6 +277,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
         </div>
       ) : null}
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
+      {previewAttachment && <PreviewModal attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
     </Drawer>
   );
 }

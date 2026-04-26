@@ -255,39 +255,24 @@ export function FinanceDashboard({
                       {record.type === 'receipt' ? '+' : '-'}{record.currency} {Number(record.amount).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                         <button type="button" onClick={() => onEdit?.(record)} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-slate-200"><Edit3 size={14} /></button>
-                         <button type="button" onClick={() => onDelete?.(record)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all border border-transparent hover:border-red-100"><Trash2 size={14} /></button>
+                      <div className="flex items-center justify-end gap-1 flex-wrap">
+                        {record.attachments && record.attachments.length > 0 && record.attachments.map(att => (
+                          <button
+                            key={att.id}
+                            type="button"
+                            onClick={() => onPreview?.(att)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-900 transition-all"
+                            title={att.fileName}
+                          >
+                            {getFileIcon(att.fileName, 12)}
+                            <span className="max-w-[80px] truncate">{att.fileName}</span>
+                          </button>
+                        ))}
+                        <button type="button" onClick={() => onEdit?.(record)} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-slate-200"><Edit3 size={14} /></button>
+                        <button type="button" onClick={() => onDelete?.(record)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all border border-transparent hover:border-red-100"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
-                  {record.attachments && record.attachments.length > 0 && (
-                    <tr className="bg-slate-50/30">
-                      <td colSpan={4} className="px-8 py-4">
-                        <div className="flex flex-col gap-3">
-                           <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                              <Paperclip size={12} /> 财务凭证存档 ({record.attachments.length})
-                           </div>
-                           <div className="grid gap-3 sm:grid-cols-2">
-                             {record.attachments.map(att => (
-                               <div key={att.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg shadow-sm group/file">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                     <div className="text-slate-400 group-hover/file:text-slate-900 transition-colors">{getFileIcon(att.fileName, 18)}</div>
-                                     <div className="min-w-0">
-                                        <div className="text-xs font-semibold text-slate-900 truncate max-w-[200px]">{att.fileName}</div>
-                                        <div className="text-xs text-slate-400 font-medium">{formatDateTime(att.createdAt)}</div>
-                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                     <button onClick={() => onPreview?.(att)} className="p-1.5 text-slate-400 hover:text-slate-900 transition-all"><ChevronRight size={16} /></button>
-                                  </div>
-                               </div>
-                             ))}
-                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                 </React.Fragment>
               )) : (
                 <tr><td colSpan={4} className="p-0"><EmptyStateBoard title="暂无财务记录" description="点击右上角登记第一笔收支流水，开始追踪回款状态。" icon={Wallet} /></td></tr>
@@ -303,14 +288,11 @@ export function FinanceDashboard({
 export function ProductionDashboard({
   plan,
   onEditLink,
-  onUploadPlan,
-  onAddLog,
-  onUpdateStatus,
-  onUpdateInspection,
-  onPreview
+  onPreview,
 }: {
   plan: ProductionPlan | null;
   onEditLink: () => void;
+  onPreview?: (att: AttachmentMeta) => void;
   onUpdateInspection?: (status: InspectionStatus) => void;
 }) {
   const status = plan?.productionStatus || 'not_started';
@@ -367,6 +349,24 @@ export function ProductionDashboard({
             </div>
           } />
         </div>
+        {plan?.photos && plan.photos.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-slate-100 dark:border-navy-800">
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">计划单附件 ({plan.photos.length})</div>
+            <div className="flex flex-wrap gap-3">
+              {plan.photos.map(att => (
+                <button key={att.id} onClick={() => onPreview?.(att)} className="group relative w-20 h-20 rounded-lg border border-slate-200 dark:border-navy-700 overflow-hidden bg-slate-50 dark:bg-navy-950 hover:ring-2 hover:ring-primary-navy/20 dark:hover:ring-tertiary-sage/20 transition-all shrink-0">
+                  {att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.fileName) ? (
+                    <img src={att.url} alt={att.fileName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <FileText size={20} className="text-slate-300" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -647,9 +647,23 @@ export const ProductImagePlaceholder = ({ url, name }: { url?: string; name: str
   </div>
 );
 
+export function FileIcon({ fileName, url, size = 16 }: { fileName: string; url?: string; size?: number }) {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  const isImage = url && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '');
+  if (isImage) {
+    return <img src={url} alt={fileName} className="rounded object-cover shrink-0" style={{ width: size, height: size }} />;
+  }
+  if (ext === 'pdf') return <FileText size={size} className="text-red-500 shrink-0" />;
+  if (['doc', 'docx'].includes(ext || '')) return <FileCode size={size} className="text-blue-500 shrink-0" />;
+  if (['xls', 'xlsx', 'csv'].includes(ext || '')) return <FileText size={size} className="text-emerald-500 shrink-0" />;
+  return <Paperclip size={size} className="text-slate-400 shrink-0" />;
+}
+
 function getFileIcon(fileName: string, size = 16) {
   const ext = fileName.split('.').pop()?.toLowerCase();
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return <ImageIcon size={size} />;
-  if (ext === 'pdf') return <FileText size={size} />;
-  return <Paperclip size={size} />;
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return <ImageIcon size={size} className="text-sky-500" />;
+  if (ext === 'pdf') return <FileText size={size} className="text-red-500" />;
+  if (['doc', 'docx'].includes(ext || '')) return <FileCode size={size} className="text-blue-500" />;
+  if (['xls', 'xlsx', 'csv'].includes(ext || '')) return <FileText size={size} className="text-emerald-500" />;
+  return <Paperclip size={size} className="text-slate-400" />;
 }

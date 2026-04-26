@@ -187,6 +187,15 @@ export type OrderDetailResponse = {
     createdByName?: string | null;
     createdAt?: string;
   }>;
+  tasks?: Array<{
+    id: number;
+    title: string;
+    assignee_name: string;
+    due_date: string;
+    priority: string;
+    status: string;
+    description?: string;
+  }>;
   summary?: {
     receiptsByCurrency: Record<string, number>;
     paymentsByCurrency: Record<string, number>;

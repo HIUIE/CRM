@@ -296,9 +296,17 @@ export default function CustomerDetailPage() {
                         </div>
                         <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-100 dark:border-navy-800 p-5 shadow-sm">
                           <div className="flex items-center justify-between mb-3">
-                             <span className="text-sm font-extrabold text-primary-navy dark:text-white uppercase">{f.created_by_name}</span>
+                             <span className="text-sm font-extrabold text-primary-navy dark:text-white uppercase">{f.created_by_name || '当前用户'}</span>
                              <span className="text-xs font-bold text-slate-400 data-field">{String(f.created_at).slice(0, 16).replace('T', ' ')}</span>
                           </div>
+                          {f.source_order_display_id && (
+                            <Link
+                              to={`/orders/${f.source_order_display_id}`}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 mb-2 text-xs font-bold bg-slate-100 dark:bg-navy-800 text-primary-navy dark:text-tertiary-sage rounded-md hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors"
+                            >
+                              <Package size={10} /> 订单：{f.source_order_display_id}
+                            </Link>
+                          )}
                           <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">{f.content}</p>
                         </div>
                       </div>

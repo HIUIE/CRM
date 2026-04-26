@@ -182,6 +182,15 @@ export async function buildOrderDetail(idOrNo: number | string) {
     [orderId],
   );
 
+  const tasks = await db.all<Record<string, unknown>[]>(
+    `SELECT t.*, u.name as assignee_name
+     FROM tasks t
+     LEFT JOIN users u ON t.assignee_id = u.id
+     WHERE t.entity_type = 'ORDER' AND t.entity_id = ?
+     ORDER BY CASE WHEN t.status = 'done' THEN 1 ELSE 0 END, t.due_date ASC, t.created_at DESC`,
+    [String(orderId)],
+  );
+
   return {
     order: {
       ...order,
@@ -330,6 +339,15 @@ export async function buildOrderDetail(idOrNo: number | string) {
       content: l.content,
       createdByName: l.created_by_name,
       createdAt: l.created_at,
+    })),
+    tasks: tasks.map(t => ({
+      id: t.id,
+      title: t.title,
+      assignee_name: t.assignee_name,
+      due_date: t.due_date,
+      priority: t.priority,
+      status: t.status,
+      description: t.description,
     })),
     summary: {
       receiptsByCurrency,
