@@ -60,9 +60,9 @@ export default function AuditLogsPage() {
   if (error) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error}</div>;
 
   return (
-    <div className="flex flex-col animate-in fade-in duration-500 overflow-hidden h-full">
+    <div className="flex flex-col animate-in fade-in duration-500">
       {/* Standalone Header for Audit Logs */}
-      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm shrink-0">
+      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')} 
@@ -85,13 +85,13 @@ export default function AuditLogsPage() {
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-1">
-        <div className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden flex flex-col">
+      <div className="flex-1 px-1">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
           {logs && logs.length > 0 ? (
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+            <div className="flex flex-col">
+              <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                     <tr>
                       <th className="px-6 py-4 text-left">时间 / 操作人</th>
                       <th className="px-6 py-4 text-center">类型</th>
@@ -155,7 +155,7 @@ export default function AuditLogsPage() {
               </div>
             </div>
           ) : (
-            <div className="py-20 flex items-center justify-center w-full h-full">
+            <div className="py-20 flex items-center justify-center w-full">
               <EmptyStateBoard 
                 title="暂无审计记录" 
                 description="系统尚未产生任何针对核心实体的敏感操作日志。" 

@@ -11,3 +11,11 @@ coverage/
 *.sqlite-journal
 uploads/
 backups/
+.learnings/
+.gemini/
+*.b
+*.c
+*.bak
+*.tmp
+*.part*
+*.old

@@ -211,7 +211,7 @@ export default function FinanceView() {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+    <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px]">
           <div className="relative">
@@ -261,10 +261,11 @@ export default function FinanceView() {
         </div>
       </section>
 
-      <section className="flex-1 min-h-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col overflow-hidden">
-        {loading ? <div className="p-8 text-sm text-slate-500 dark:text-slate-400 font-bold animate-pulse text-center">读取流水中...</div> : (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
+        {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">正在加载流水账目...</div> : (
+          <div className="flex flex-col">
+            <div className="overflow-x-auto">
+
               <table className="min-w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>

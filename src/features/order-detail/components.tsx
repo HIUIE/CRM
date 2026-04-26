@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Download,
   Edit3,
@@ -23,7 +24,8 @@ import {
   X,
   AlertTriangle,
   Copy,
-  Check
+  Check,
+  Package
 } from 'lucide-react';
 import type { 
   SectionKey, 
@@ -44,7 +46,7 @@ import { formatDateOnly, formatDateTime, getProductionStatusLabel, getInspection
 export const ActionButton = ({ children, onClick, icon }: { children: React.ReactNode; icon: React.ReactNode; onClick: () => void }) => (
   <button 
     onClick={onClick} 
-    className="flex items-center gap-2 rounded-[4px] bg-primary-navy dark:bg-tertiary-sage px-5 py-2 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 active:scale-95"
+    className="flex items-center gap-2 rounded-lg bg-slate-900 dark:bg-tertiary-sage px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-slate-800 dark:hover:bg-emerald-700 active:scale-95 uppercase tracking-wider"
   >
     <span className="opacity-90">{icon}</span>
     {children}
@@ -54,7 +56,7 @@ export const ActionButton = ({ children, onClick, icon }: { children: React.Reac
 export const LightActionButton = ({ children, onClick, className = '' }: { children: React.ReactNode; onClick: () => void; className?: string }) => (
   <button 
     onClick={onClick} 
-    className={`flex items-center gap-2 rounded-[4px] border border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-800 px-4 py-1.5 text-[11px] font-bold text-primary-navy dark:text-white transition-all hover:bg-slate-50 dark:hover:bg-navy-700 active:scale-95 ${className}`}
+    className={`flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-4 py-2 text-xs font-bold text-slate-600 dark:text-white transition-all hover:bg-slate-50 dark:hover:bg-navy-700 active:scale-95 shadow-sm ${className}`}
   >
     {children}
   </button>
@@ -62,28 +64,28 @@ export const LightActionButton = ({ children, onClick, className = '' }: { child
 
 const CHIP_CLASSES = {
   success: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/30',
-  warning: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-800/30',
-  error: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800/30',
-  info: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800/30',
+  warning: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-emerald-800/30',
+  error: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-emerald-800/30',
+  info: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-emerald-800/30',
   neutral: 'bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-navy-700',
 };
 
 export const Chip = ({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: keyof typeof CHIP_CLASSES }) => (
-  <span className={`inline-flex items-center rounded-[3px] border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${CHIP_CLASSES[tone]}`}>
+  <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${CHIP_CLASSES[tone]}`}>
     {children}
   </span>
 );
 
 export const GridItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="space-y-1.5">
-    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{label}</div>
-    <div className="text-[13px] font-bold text-primary-navy dark:text-white leading-tight">{value}</div>
+  <div className="space-y-1">
+    <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">{label}</div>
+    <div className="text-sm font-semibold text-slate-900 dark:text-white leading-tight">{value}</div>
   </div>
 );
 
 export const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block space-y-2">
-    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest ml-0.5">{label}</span>
+  <label className="block space-y-1.5">
+    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-0.5">{label}</span>
     <div className="relative transition-all overflow-hidden min-h-[42px] flex items-center">
       {children}
     </div>
@@ -93,10 +95,10 @@ export const Field = ({ label, children }: { label: string; children: React.Reac
 export const FilterPill = ({ children, active, onClick }: { children: React.ReactNode; active: boolean; onClick: () => void }) => (
   <button 
     onClick={onClick} 
-    className={`rounded-md px-3 py-1 text-[11px] font-bold transition-all ${
+    className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
       active 
-        ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' 
-        : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-navy-700 hover:bg-slate-200 dark:hover:bg-navy-700'
+        ? 'bg-slate-900 dark:bg-tertiary-sage text-white shadow-sm' 
+        : 'bg-white dark:bg-navy-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700'
     }`}
   >
     {children}
@@ -106,7 +108,7 @@ export const FilterPill = ({ children, active, onClick }: { children: React.Reac
 export const Toast = ({ message, onClose }: { message: string; onClose: () => void }) => (
   <div 
     onClick={onClose}
-    className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[200] flex cursor-pointer items-center rounded-lg bg-slate-900 dark:bg-navy-800 px-8 py-4 text-[13px] font-bold text-white shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-8 uppercase tracking-widest border border-white/10 dark:border-navy-700 hover:scale-105 transition-transform"
+    className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[200] flex cursor-pointer items-center rounded-lg bg-slate-900 dark:bg-navy-800 px-8 py-4 text-sm font-semibold text-white shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-8 uppercase tracking-widest border border-white/10 dark:border-navy-700 hover:scale-105 transition-transform"
   >
     <CheckCircle2 size={20} className="mr-4 text-emerald-400" />
     {message}
@@ -128,16 +130,16 @@ export const WorkSection = React.forwardRef<
     children: React.ReactNode;
   }
 >(({ section, title, icon, collapsed, onToggle, action, children }, ref) => (
-  <section ref={ref} data-section={section} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-md transition-shadow hover:shadow-lg">
-    <div className="px-5 py-3.5 border-b border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 flex items-center justify-between">
+  <section ref={ref} data-section={section} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl overflow-hidden shadow-sm transition-shadow hover:shadow-md">
+    <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="text-primary-navy dark:text-tertiary-sage">{icon}</div>
-        <h3 className="text-[15px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">{title}</h3>
+        <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
+        <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
       </div>
       <div className="flex items-center gap-2">
         {action}
-        <button onClick={onToggle} className="text-slate-400 hover:text-primary-navy dark:hover:text-white p-1 transition-colors ml-2">
-          {collapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+        <button onClick={onToggle} className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 transition-colors ml-2">
+          {collapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
         </button>
       </div>
     </div>
@@ -152,13 +154,14 @@ export const DocumentBoard = React.forwardRef<
     title: string;
     children: React.ReactNode;
     action?: React.ReactNode;
+    id?: string;
   }
->(({ title, children, action }, ref) => (
-  <div ref={ref} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all">
-    <div className="px-5 py-3.5 border-b border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 flex items-center justify-between">
+>(({ title, children, action, id }, ref) => (
+  <div id={id} ref={ref} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+    <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
       <div className="flex items-center gap-3">
-         <div className="h-1.5 w-4 rounded-full bg-primary-navy dark:bg-tertiary-sage opacity-30" />
-         <h3 className="text-[15px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">{title}</h3>
+         <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
+         <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
       </div>
       <div className="flex gap-2 items-center">
         {action}
@@ -173,13 +176,13 @@ DocumentBoard.displayName = 'DocumentBoard';
 
 export function RemarkBoard({ content, onEdit }: { content: string; onEdit: () => void }) {
   return (
-    <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-md border-l-4 border-l-warning">
-      <div className="px-5 py-3 border-b border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 flex items-center justify-between">
-        <h3 className="text-[12px] font-bold text-primary-navy dark:text-white uppercase tracking-widest">内部备注</h3>
-        <button onClick={onEdit} className="text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all">编辑</button>
+    <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-sm border-l-4 border-l-amber-400">
+      <div className="px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
+        <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">内部备注 / Internal Notes</h3>
+        <button onClick={onEdit} className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-all">编辑</button>
       </div>
-      <div className="p-5 bg-slate-50 dark:bg-navy-950/30 shadow-inner min-h-[100px]">
-        <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed tracking-tight">
+      <div className="p-6 bg-slate-50/50 dark:bg-navy-950/30 min-h-[100px]">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed tracking-tight">
           {content || '尚无内部指令...'}
         </p>
       </div>
@@ -210,27 +213,27 @@ export function FinanceDashboard({
   const percentage = activeCurrency === 'USD' && totalAmount > 0 ? Math.round((paid / totalAmount) * 100) : 0;
   
   return (
-    <div className="grid gap-10 lg:grid-cols-[260px_1fr] items-start">
-      <div className="space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8">
+    <div className="grid gap-12 lg:grid-cols-[280px_1fr] items-start">
+      <div className="space-y-6 border-r border-slate-100 dark:border-navy-800 pr-12">
         <div className="flex items-center justify-between">
-           <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">回款汇总</div>
-           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-[10px] font-bold text-primary-navy dark:text-white bg-white dark:bg-navy-800 px-2 py-0.5 rounded border border-slate-300 dark:border-navy-700 outline-none">
+           <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">回款汇总 / Revenue Summary</div>
+           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-[10px] font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 outline-none">
              {currencies.map(c=><option key={c} value={c}>{c}</option>)}
            </select>
         </div>
         <div className="space-y-4">
-           <div className="flex items-center gap-3">
-              <div className="text-3xl font-bold text-primary-navy dark:text-white data-field tracking-tighter">{paid.toLocaleString()}</div>
-              <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase pt-2">{activeCurrency}</div>
+           <div className="flex items-baseline gap-2">
+              <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tighter">{paid.toLocaleString()}</div>
+              <div className="text-sm font-semibold text-slate-500 uppercase">{activeCurrency}</div>
            </div>
            {activeCurrency === 'USD' && (
-             <div className="space-y-2">
+             <div className="space-y-3">
                 <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
-                   <div className="h-full bg-tertiary-sage rounded-full transition-all duration-1000" style={{ width: `${Math.min(percentage, 100)}%` }} />
+                   <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(percentage, 100)}%` }} />
                 </div>
-                <div className="flex justify-between text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                <div className="flex justify-between text-xs font-medium text-slate-500 uppercase tracking-wider">
                    <span>订单总额 {totalAmount.toLocaleString()}</span>
-                   <span className="text-primary-navy dark:text-tertiary-sage">{percentage}%</span>
+                   <span className="text-emerald-600 font-bold">{percentage}%</span>
                 </div>
              </div>
            )}
@@ -239,33 +242,61 @@ export function FinanceDashboard({
 
       <div className="min-w-0">
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900">
-          <table className="min-w-full text-left text-[12px]">
-            <thead className="bg-slate-50 dark:bg-navy-950/50 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-navy-800 font-mono text-[10px]">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-50 dark:bg-navy-950/50 font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 text-xs">
               <tr>
-                <th className="px-4 py-3.5">日期</th>
-                <th className="px-4 py-3.5">分类</th>
-                <th className="px-4 py-3.5">金额</th>
-                <th className="px-4 py-3.5 text-right">操作</th>
+                <th className="px-6 py-4">收支日期</th>
+                <th className="px-6 py-4">类目</th>
+                <th className="px-6 py-4">流水金额</th>
+                <th className="px-6 py-4 text-right">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-medium">
+            <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
               {records.length > 0 ? records.map(record => (
-                <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors group">
-                  <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 data-field">{formatDateOnly(record.createdAt)}</td>
-                  <td className="px-4 py-3.5">
-                    <Chip tone={record.type === 'receipt' ? 'success' : 'error'}>{record.type === 'receipt' ? '收款' : '付款'}</Chip>
-                  </td>
-                  <td className={`px-4 py-3.5 font-bold data-field text-[14px] ${record.type === 'receipt' ? 'text-tertiary-sage' : 'text-error'}`}>
-                    {record.type === 'receipt' ? '+' : '-'}{record.currency} {Number(record.amount).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
-                       {record.attachments && record.attachments.length > 0 && <button type="button" onClick={() => onPreview?.(record.attachments![0])} className="p-1.5 text-slate-500 hover:text-primary-navy dark:hover:text-white hover:bg-white dark:hover:bg-navy-700 rounded-md transition-all shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-navy-600"><Paperclip size={14} /></button>}
-                       <button type="button" onClick={() => onEdit?.(record)} className="p-1.5 text-slate-500 hover:text-primary-navy dark:hover:text-white hover:bg-white dark:hover:bg-navy-700 rounded-md transition-all shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-navy-600"><Edit3 size={14} /></button>
-                       <button type="button" onClick={() => onDelete?.(record)} className="p-1.5 text-slate-400 hover:text-error hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all shadow-sm border border-transparent hover:border-red-200 dark:hover:border-red-800"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
+                <React.Fragment key={record.id}>
+                  <tr className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4 text-slate-600 font-medium">{formatDateOnly(record.createdAt)}</td>
+                    <td className="px-6 py-4">
+                      <Chip tone={record.type === 'receipt' ? 'success' : 'error'}>{record.type === 'receipt' ? '收款' : '付款'}</Chip>
+                    </td>
+                    <td className={`px-6 py-4 font-bold text-sm ${record.type === 'receipt' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {record.type === 'receipt' ? '+' : '-'}{record.currency} {Number(record.amount).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                         <button type="button" onClick={() => onEdit?.(record)} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-slate-200"><Edit3 size={14} /></button>
+                         <button type="button" onClick={() => onDelete?.(record)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all border border-transparent hover:border-red-100"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                  {record.attachments && record.attachments.length > 0 && (
+                    <tr className="bg-slate-50/30">
+                      <td colSpan={4} className="px-8 py-4">
+                        <div className="flex flex-col gap-3">
+                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                              <Paperclip size={12} /> 财务凭证存档 ({record.attachments.length})
+                           </div>
+                           <div className="grid gap-3 sm:grid-cols-2">
+                             {record.attachments.map(att => (
+                               <div key={att.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg shadow-sm group/file">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                     <div className="text-slate-400 group-hover/file:text-slate-900 transition-colors">{getFileIcon(att.fileName, 18)}</div>
+                                     <div className="min-w-0">
+                                        <div className="text-xs font-semibold text-slate-900 truncate max-w-[200px]">{att.fileName}</div>
+                                        <div className="text-[10px] text-slate-400 font-medium">{formatDateTime(att.createdAt)}</div>
+                                     </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                     <button onClick={() => onPreview?.(att)} className="p-1.5 text-slate-400 hover:text-slate-900 transition-all"><ChevronRight size={16} /></button>
+                                  </div>
+                               </div>
+                             ))}
+                           </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               )) : (
                 <tr><td colSpan={4} className="p-0"><EmptyStateBoard title="暂无财务记录" description="点击右上角登记第一笔收支流水，开始追踪回款状态。" icon={Wallet} /></td></tr>
               )}
@@ -277,77 +308,84 @@ export function FinanceDashboard({
   );
 }
 
-export function ProductionDashboard({ 
-  plan, 
-  onEditLink, 
-  onUploadPlan, 
+export function ProductionDashboard({
+  plan,
+  onEditLink,
+  onUploadPlan,
   onAddLog,
   onUpdateStatus,
-  onUpdateInspection
-}: { 
-  plan: ProductionPlan | null; 
-  onEditLink: () => void; 
-  onUploadPlan: () => void; 
+  onUpdateInspection,
+  onPreview
+}: {
+  plan: ProductionPlan | null;
+  onEditLink: () => void;
+  onUploadPlan: () => void;
   onAddLog: () => void;
   onUpdateStatus?: (status: ProductionStatus) => void;
   onUpdateInspection?: (status: InspectionStatus) => void;
+  onPreview?: (attachment: AttachmentMeta) => void;
 }) {
   const status = plan?.productionStatus || 'not_started';
   const percentage = status === 'ready' ? 100 : status === 'in_progress' ? 60 : status === 'scheduled' ? 20 : 0;
-  
+
   return (
-    <div className="grid gap-10 lg:grid-cols-[260px_1fr] items-center">
-      <div className="space-y-5 border-r border-slate-100 dark:border-navy-800 pr-8">
-        <div className="flex items-center justify-between">
-           <div className="text-[28px] font-bold text-primary-navy dark:text-white data-field tracking-tighter">{percentage}%</div>
-           <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">生产进度</div>
+    <div className="grid gap-8 lg:grid-cols-[1fr]">
+      {/* Linear Progress Bar (取代大绿圈) */}
+      <div className="flex items-center gap-8 p-6 bg-white dark:bg-navy-900 border border-slate-100 dark:border-navy-800 rounded-xl shadow-sm">
+        <div className="flex-1 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">生产进度 / Production Progress</span>
+            <span className="text-sm font-extrabold text-slate-900 dark:text-white data-field">{percentage}%</span>
+          </div>
+          <div className="h-2.5 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
+            <div
+              className="h-full rounded-full transition-all duration-1000 ease-out"
+              style={{
+                width: `${Math.min(percentage, 100)}%`,
+                backgroundColor: percentage >= 100 ? '#059669' : percentage >= 50 ? '#0EA5E9' : '#CA8A04'
+              }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <span>待排产</span>
+            <span>生产中</span>
+            <span>已完工</span>
+          </div>
         </div>
-        <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
-           <div className="h-full bg-primary-navy dark:bg-tertiary-sage rounded-full transition-all duration-[1200ms]" style={{ width: `${percentage}%` }} />
-        </div>
-        <div className="grid gap-3 pt-2">
-          <GridItem label="预期交期" value={<span className="data-field">{plan ? formatDateOnly(plan.estimatedDeliveryDate) : '待定'}</span>} />
-          <GridItem label="排产状态" value={<Chip tone={status==='ready'?'success':'info'}>{getProductionStatusLabel(status)}</Chip>} />
-        </div>
+        <button
+          onClick={onUploadPlan}
+          className="shrink-0 flex items-center gap-2 rounded-lg bg-slate-900 dark:bg-tertiary-sage px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-wider"
+        >
+          <Upload size={16} />
+          上传生产计划单
+        </button>
       </div>
 
-      <div className="min-w-0">
-        <div className="flex items-center justify-between mb-5 border-b border-slate-100 dark:border-navy-800 pb-4">
-          <button onClick={onEditLink} className="text-xl font-bold text-primary-navy dark:text-white hover:text-tertiary-sage transition-all data-field uppercase tracking-tighter flex items-center gap-2">
-            {plan?.id ? `MO-${plan.id.toString().padStart(6, '0')}` : '+ 录入排产单'}
-          </button>
-          <div className="flex gap-2.5">
-            <button onClick={onUploadPlan} title="上传文件" className="p-2 bg-primary-navy dark:bg-tertiary-sage text-white rounded-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md"><Upload size={18} /></button>
+      {/* Info Section */}
+      <div className="min-w-0 flex flex-col gap-6">
+        {/* Row 1: ID & Actions */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <h4 className="text-lg font-bold text-slate-900 tracking-tight uppercase">
+              {plan?.id ? `MO-${plan.id.toString().padStart(6, '0')}` : '尚未录入生产计划'}
+            </h4>
+            <Chip tone={status==='ready'?'success':'warning'}>{getProductionStatusLabel(status)}</Chip>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onEditLink} className="p-2 text-slate-400 hover:text-slate-900 bg-white border border-slate-200 rounded-md transition-all shadow-sm"><Edit3 size={18} /></button>
+            <button onClick={onAddLog} className="p-2 text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-all shadow-md"><Clock size={18} /></button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 bg-slate-50 dark:bg-navy-950/50 p-5 rounded-lg border border-slate-100 dark:border-navy-800">
-          <GridItem label="生产工厂" value={<span className="uppercase truncate block text-slate-700 dark:text-slate-200 font-extrabold">{plan?.partnerName || '待指派'}</span>} />
-          <GridItem label="下单日期" value={<span className="data-field text-slate-700 dark:text-slate-300">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
-          <GridItem label="当前节点" value={
+        {/* Row 2: 4-Column Grid */}
+        <div className="grid grid-cols-4 gap-6">
+          <GridItem label="制造工厂" value={<span className="truncate block font-bold text-slate-900 uppercase">{plan?.partnerName || '待指派'}</span>} />
+          <GridItem label="排产日期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
+          <GridItem label="预期交期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.estimatedDeliveryDate) : '待定'}</span>} />
+          <GridItem label="质检结论" value={
             <div className="relative inline-block">
-               <select 
-                 value={status} 
-                 onChange={e => onUpdateStatus?.(e.target.value as ProductionStatus)}
-                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-               >
-                 <option value="not_started">待产</option>
-                 <option value="scheduled">已排产</option>
-                 <option value="in_progress">生产中</option>
-                 <option value="ready">已完工</option>
-               </select>
-               <Chip tone={status === 'ready' ? 'success' : 'warning'}>
-                 <span className="flex items-center gap-1">
-                   {getProductionStatusLabel(status)}
-                   <ChevronDown size={10} className="opacity-50" />
-                 </span>
-               </Chip>
-            </div>
-          } />
-          <GridItem label="质检状态" value={
-            <div className="relative inline-block">
-               <select 
-                 value={plan?.inspectionStatus || 'pending'} 
+               <select
+                 value={plan?.inspectionStatus || 'pending'}
                  onChange={e => onUpdateInspection?.(e.target.value as InspectionStatus)}
                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                >
@@ -355,10 +393,10 @@ export function ProductionDashboard({
                  <option value="passed">质检通过</option>
                  <option value="failed">质检异常</option>
                </select>
-               <button className="flex items-center gap-1.5 text-info dark:text-blue-400 font-bold uppercase hover:underline">
+               <div className="flex items-center gap-1.5 text-blue-600 font-bold uppercase cursor-pointer hover:underline text-xs">
                   <span>{getInspectionStatusLabel(plan?.inspectionStatus || 'pending')}</span>
-                  <ChevronDown size={12} />
-               </button>
+                  <ChevronDown size={14} />
+               </div>
             </div>
           } />
         </div>
@@ -367,112 +405,13 @@ export function ProductionDashboard({
   );
 }
 
-// --- Utils ---
-
-export const ProductImagePlaceholder = () => (
-  <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-50 dark:bg-navy-800 text-slate-300 dark:text-navy-600 border border-slate-200 dark:border-navy-700 font-bold text-[9px] shadow-inner uppercase">
-    IMG
-  </div>
-);
-
-export function EmptyStateBoard({ title, description, actionLabel, onAction, icon: Icon = Truck }: { title: string; description: string; actionLabel?: string; onAction?: () => void; icon?: any }) {
-  const renderIcon = () => {
-    if (!Icon) return null;
-    if (React.isValidElement(Icon)) return Icon;
-    const IconComp = Icon;
-    return <IconComp size={28} className="text-slate-200 dark:text-navy-800" />;
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-navy-950/30 rounded-xl border border-dashed border-slate-300 dark:border-navy-800 shadow-inner transition-colors">
-      <div className="h-14 w-14 rounded-full bg-white dark:bg-navy-900 flex items-center justify-center mb-5 shadow-sm border border-slate-100 dark:border-navy-800">
-        {renderIcon()}
-      </div>
-      <h4 className="text-[14px] font-bold text-primary-navy dark:text-white uppercase tracking-tight mb-1.5">{title}</h4>
-      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest max-w-[280px] text-center leading-relaxed">
-        {description}
-      </p>
-      {actionLabel && onAction && (
-        <button onClick={onAction} className="mt-6 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-8 py-2.5 text-[11px] font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all uppercase tracking-widest active:scale-95">
-          {actionLabel}
-        </button>
-      )}
-    </div>
-  );
-}
-
-export function AttachmentEditor({
-  title,
-  attachments,
-  newFiles,
-  onFilesSelected,
-  onRemoveExisting,
-  onRemovePending,
-  isUploading = false,
-  uploadProgress = 0,
-}: {
-  title: string;
-  attachments: AttachmentMeta[];
-  newFiles: File[];
-  onFilesSelected: (files: File[]) => void;
-  onRemoveExisting: (id: number) => void;
-  onRemovePending: (index: number) => void;
-  isUploading?: boolean;
-  uploadProgress?: number;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h4 className="text-[12px] font-bold text-primary-navy dark:text-white uppercase tracking-widest">{title}</h4>
-        <label className={`rounded-md border px-5 py-2 text-[11px] font-bold transition-all ${isUploading ? 'bg-slate-100 dark:bg-navy-950 text-slate-400 border-slate-200 dark:border-navy-800 cursor-not-allowed' : 'bg-slate-50 dark:bg-navy-800 text-primary-navy dark:text-white border-slate-300 dark:border-navy-600 hover:bg-slate-100 dark:hover:bg-navy-700 cursor-pointer shadow-sm'}`}>
-          {isUploading ? '正在上传...' : '选择文件 +'}
-          {!isUploading && <input type="file" multiple className="hidden" onChange={(e) => e.target.files && onFilesSelected(Array.from(e.target.files))} />}
-        </label>
-      </div>
-
-      {isUploading && (
-        <div className="space-y-2.5 animate-in fade-in zoom-in duration-300">
-           <div className="flex justify-between items-center text-[10px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest">
-              <span>文件上传进度</span>
-              <span className="data-field">{uploadProgress}%</span>
-           </div>
-           <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-navy-700">
-              <div className="h-full bg-primary-navy dark:bg-tertiary-sage rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-           </div>
-        </div>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {attachments.map((att) => (
-          <div key={att.id} className="flex items-center justify-between p-3.5 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group shadow-sm hover:border-slate-300 dark:hover:border-navy-600 transition-all">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="text-tertiary-sage opacity-80">{getFileIcon(att.fileName)}</div>
-              <span className="text-[12px] font-bold text-primary-navy dark:text-white truncate">{att.fileName}</span>
-            </div>
-            <button type="button" onClick={() => onRemoveExisting(att.id)} className="text-slate-400 hover:text-error opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><Trash2 size={16} /></button>
-          </div>
-        ))}
-        {newFiles.map((file, idx) => (
-          <div key={idx} className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-navy-950/50 border border-dashed border-slate-300 dark:border-navy-800 rounded-lg group opacity-70 hover:opacity-100 transition-all">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="text-slate-400"><FileCode size={16} /></div>
-              <span className="text-[12px] font-bold text-slate-600 dark:text-slate-400 truncate">{file.name}</span>
-            </div>
-            <button type="button" onClick={() => onRemovePending(idx)} className="text-slate-400 hover:text-error opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><X size={16} /></button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export const MetricCard = ({ label, value, icon, tone = 'neutral' }: { label: string; value: string | number; icon: React.ReactNode; tone?: keyof typeof CHIP_CLASSES }) => (
-  <div className="p-5 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg shadow-md hover:shadow-lg transition-all">
-    <div className="flex items-center gap-3.5 mb-3">
-      <div className={`p-2.5 rounded-lg ${CHIP_CLASSES[tone]} border`}>{icon}</div>
-      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{label}</span>
+  <div className="p-6 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg shadow-sm hover:shadow-md transition-all">
+    <div className="flex items-center gap-3 mb-4">
+      <div className={`p-2 rounded-lg ${CHIP_CLASSES[tone]} border`}>{icon}</div>
+      <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{label}</span>
     </div>
-    <div className="text-2xl font-bold text-primary-navy dark:text-white data-field tracking-tighter">{value}</div>
+    <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">{value}</div>
   </div>
 );
 
@@ -492,25 +431,135 @@ export function StatusFileRow({
   onUpload?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between group py-3.5 px-5 rounded-lg border border-transparent hover:bg-slate-50 dark:hover:bg-navy-800 hover:border-slate-200 dark:hover:border-navy-700 transition-all">
+    <div className="flex items-center justify-between group py-3 px-4 rounded-lg border border-transparent hover:bg-slate-50 dark:hover:bg-navy-800 hover:border-slate-200 dark:hover:border-navy-700 transition-all">
       <div className="flex items-center gap-4 min-w-0 flex-1">
-        <div className={`flex h-11 w-11 aspect-square shrink-0 items-center justify-center rounded border-2 transition-all ${status === 'uploaded' ? 'bg-white dark:bg-navy-900 text-tertiary-sage border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-slate-200 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
-          {fileName ? getFileIcon(fileName, 20) : <FileCode size={20} />}
+        <div className={`flex h-10 w-10 aspect-square shrink-0 items-center justify-center rounded border transition-all ${status === 'uploaded' ? 'bg-white dark:bg-navy-900 text-emerald-600 border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-slate-300 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
+          {fileName ? getFileIcon(fileName, 18) : <FileCode size={18} />}
         </div>
         <div className="min-w-0">
-           <button type="button" onClick={onPreview} className="text-[14px] font-bold text-primary-navy dark:text-white hover:text-tertiary-sage transition-all block truncate text-left w-full uppercase tracking-tight">{label}</button>
-           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5 block">{status === 'uploaded' ? '已归档 · 官方凭证' : '待处理'}</span>
+           <button type="button" onClick={onPreview} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-slate-600 transition-all block truncate text-left w-full uppercase tracking-tight">{label}</button>
+           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">{status === 'uploaded' ? '已归档 · Official' : '待处理'}</span>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
            {status === 'uploaded' ? (
              <>
-               <button type="button" onClick={onPreview} className="p-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white hover:bg-white dark:hover:bg-navy-700 border border-transparent hover:border-slate-200 dark:hover:border-navy-600 transition-all shadow-sm hover:shadow-default"><CircleHelp size={18} /></button>
-               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white hover:bg-white dark:hover:bg-navy-700 border border-transparent hover:border-slate-200 dark:hover:border-navy-600 transition-all shadow-sm hover:shadow-default"><Download size={18} /></a> : null}
+               <button type="button" onClick={onPreview} className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 transition-all"><CircleHelp size={16} /></button>
+               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 transition-all"><Download size={16} /></a> : null}
              </>
            ) : (
-             <button type="button" onClick={onUpload} className="p-2.5 rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md"><Upload size={18} /></button>
+             <button type="button" onClick={onUpload} className="p-2 rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-md"><Upload size={16} /></button>
            )}
+      </div>
+    </div>
+  );
+}
+
+export function EmptyStateBoard({ title, description, actionLabel, onAction, icon: Icon = Truck }: { title: string; description: string; actionLabel?: string; onAction?: () => void; icon?: any }) {
+  const renderIcon = () => {
+    if (!Icon) return null;
+    if (React.isValidElement(Icon)) return Icon;
+    const IconComp = Icon;
+    return <IconComp size={24} className="text-slate-300 dark:text-navy-800" />;
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-navy-950/30 rounded-xl border border-dashed border-slate-200 dark:border-navy-800 transition-colors">
+      <div className="h-12 w-12 rounded-full bg-white dark:bg-navy-900 flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-navy-800">
+        {renderIcon()}
+      </div>
+      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-1">{title}</h4>
+      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider max-w-[280px] text-center leading-relaxed">
+        {description}
+      </p>
+      {actionLabel && onAction && (
+        <button onClick={onAction} className="mt-6 rounded-md bg-slate-900 dark:bg-tertiary-sage px-6 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all uppercase tracking-widest active:scale-95">
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function AttachmentEditor({
+  title,
+  attachments,
+  newFiles,
+  onFilesSelected,
+  onRemoveExisting,
+  onRemovePending,
+  onUpdatePendingRemark,
+  isUploading = false,
+  uploadProgress = 0,
+  showRemarkInput = false,
+}: {
+  title: string;
+  attachments: AttachmentMeta[];
+  newFiles: Array<{ file: File; remark: string }>;
+  onFilesSelected: (files: File[]) => void;
+  onRemoveExisting: (id: number) => void;
+  onRemovePending: (index: number) => void;
+  onUpdatePendingRemark?: (index: number, remark: string) => void;
+  isUploading?: boolean;
+  uploadProgress?: number;
+  showRemarkInput?: boolean;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">{title}</h4>
+        <label className={`rounded-md border px-5 py-2 text-xs font-bold transition-all ${isUploading ? 'bg-slate-100 dark:bg-navy-950 text-slate-400 border-slate-200 dark:border-navy-800 cursor-not-allowed' : 'bg-white dark:bg-navy-800 text-slate-900 dark:text-white border-slate-200 dark:border-navy-600 hover:bg-slate-50 dark:hover:bg-navy-700 cursor-pointer shadow-sm'}`}>
+          {isUploading ? '正在上传...' : '选择文件 +'}
+          {!isUploading && <input type="file" multiple className="hidden" onChange={(e) => e.target.files && onFilesSelected(Array.from(e.target.files))} />}
+        </label>
+      </div>
+
+      {isUploading && (
+        <div className="space-y-2.5 animate-in fade-in zoom-in duration-300">
+           <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">
+              <span>文件上传进度</span>
+              <span className="data-field">{uploadProgress}%</span>
+           </div>
+           <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-navy-700">
+              <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+           </div>
+        </div>
+      )}
+
+      <div className="grid gap-4">
+        {attachments.map((att) => (
+          <div key={att.id} className="flex items-center justify-between p-4 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group shadow-sm">
+            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+              <div className="text-slate-400 opacity-80">{getFileIcon(att.fileName)}</div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">{att.fileName}</span>
+                {att.remark && <span className="text-[10px] text-slate-400 font-medium italic">备注: {att.remark}</span>}
+              </div>
+            </div>
+            <button type="button" onClick={() => onRemoveExisting(att.id)} className="text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><Trash2 size={16} /></button>
+          </div>
+        ))}
+        
+        {newFiles.map((item, idx) => (
+          <div key={idx} className="p-4 bg-slate-50 dark:bg-navy-950/50 border border-dashed border-slate-300 dark:border-navy-800 rounded-xl space-y-3 group">
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-3.5 min-w-0">
+                 <div className="text-slate-400"><FileCode size={16} /></div>
+                 <span className="text-xs font-bold text-slate-600 dark:text-slate-400 truncate">{item.file.name}</span>
+               </div>
+               <button type="button" onClick={() => onRemovePending(idx)} className="text-slate-400 hover:text-red-600 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><X size={16} /></button>
+            </div>
+            {showRemarkInput && (
+              <input 
+                type="text" 
+                placeholder="为此照片添加备注说明 (如：包装细节、大货实拍)..." 
+                value={item.remark}
+                onChange={e => onUpdatePendingRemark?.(idx, e.target.value)}
+                className="w-full bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-slate-900 transition-all"
+              />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -523,18 +572,18 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <button onClick={onClose} className="absolute inset-0 bg-primary-navy/40 dark:bg-black/60 backdrop-blur-md transition-all" />
+      <button onClick={onClose} className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md transition-all" />
       <div className="relative z-10 flex h-full max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-5 bg-slate-50 dark:bg-navy-950/50">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-5 bg-white dark:bg-navy-950/50">
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-bold text-primary-navy dark:text-white uppercase tracking-tight">{attachment.fileName}</h3>
-            <p className="mt-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest data-field">
+            <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{attachment.fileName}</h3>
+            <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest data-field">
                {attachment.mimeType}
             </p>
           </div>
-          <button onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={22} /></button>
+          <button onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"><X size={22} /></button>
         </div>
-        <div className="flex-1 overflow-auto bg-slate-200/30 dark:bg-navy-950/50 p-8 flex items-center justify-center">
+        <div className="flex-1 overflow-auto bg-slate-50 dark:bg-navy-950/50 p-8 flex items-center justify-center">
           {isPdf ? (
             <iframe src={attachment.url} className="h-full w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-lg" title={attachment.fileName} />
           ) : isImage ? (
@@ -545,10 +594,10 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
                  <FileCode size={48} className="text-slate-200 dark:text-navy-800" />
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-primary-navy dark:text-white uppercase tracking-tighter">预览暂不支持</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tighter">预览暂不支持</p>
                 <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">请下载后在本地查看此文件类型。</p>
               </div>
-              <a href={attachment.url} download className="mt-4 rounded-xl bg-primary-navy dark:bg-tertiary-sage px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all uppercase tracking-widest active:scale-95">
+              <a href={attachment.url} download className="mt-4 rounded-xl bg-slate-900 dark:bg-tertiary-sage px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition-all uppercase tracking-widest active:scale-95">
                 立即下载文件
               </a>
             </div>
@@ -560,18 +609,18 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
 }
 
 export const LogisticsSnapshot = ({ title, record, fields, onEdit, onPreview }: { title: string; record: LogisticsRecord; fields: Array<[string, string]>; onEdit: () => void; onPreview?: (attachment: AttachmentMeta) => void }) => (
-  <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 transition-all hover:border-primary-navy/20 relative group shadow-md hover:shadow-lg">
+  <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 transition-all hover:shadow-md relative group shadow-sm">
     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
-       <button onClick={onEdit} className="p-2 bg-white dark:bg-navy-800 rounded-md border border-slate-200 dark:border-navy-700 text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm hover:shadow-default"><Edit3 size={16} /></button>
+       <button onClick={onEdit} className="p-2 bg-white rounded-md border border-slate-200 text-slate-400 hover:text-slate-900 transition-all"><Edit3 size={16} /></button>
     </div>
-    <div className="mb-5 flex items-center gap-3">
-      <div className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-navy-950 flex items-center justify-center text-primary-navy dark:text-tertiary-sage border border-slate-100 dark:border-navy-800 shadow-inner"><Truck size={20} /></div>
+    <div className="mb-6 flex items-center gap-3">
+      <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100 shadow-inner"><Truck size={20} /></div>
       <div>
-        <div className="text-[14px] font-bold text-primary-navy dark:text-white uppercase tracking-tight leading-none">{title}</div>
-        <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1.5 data-field">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
+        <div className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">{title}</div>
+        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
       </div>
     </div>
-    <div className="grid gap-y-4 gap-x-10 text-[13px] sm:grid-cols-2 bg-slate-50/50 dark:bg-navy-950/50 p-5 rounded-lg border border-slate-100 dark:border-navy-800">
+    <div className="grid gap-6 text-sm sm:grid-cols-2 bg-slate-50/50 p-6 rounded-lg border border-slate-100">
       {fields.map(([label, value]) => (
         <div key={label}>
           <GridItem label={label} value={value} />
@@ -584,29 +633,29 @@ export const LogisticsSnapshot = ({ title, record, fields, onEdit, onPreview }: 
 export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; onPreview?: (attachment: AttachmentMeta) => void }) {
   if (!logs || logs.length === 0) return null;
   return (
-    <div className="mt-8 space-y-5 px-1">
-      <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[2px] mb-6 flex items-center gap-3"><div className="h-px w-10 bg-slate-300 dark:bg-navy-800" /> 生产进度时间轴</div>
-      <div className="relative space-y-4 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-200 dark:before:bg-navy-800">
+    <div className="mt-8 space-y-6">
+      <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-3"><div className="h-px w-8 bg-slate-200" /> 生产进度时间轴 / Production Timeline</div>
+      <div className="relative space-y-6 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-100">
         {logs.map((log) => (
           <div key={log.id} className="relative pl-12 group">
-            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-white dark:bg-navy-900 border-4 border-primary-navy dark:border-tertiary-sage flex items-center justify-center shadow-sm z-10 transition-all group-hover:scale-110">
-               <div className="h-2 w-2 rounded-full bg-white dark:bg-navy-900" />
+            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-white border-4 border-slate-900 flex items-center justify-center shadow-sm z-10">
+               <div className="h-1.5 w-1.5 rounded-full bg-white" />
             </div>
-            <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-md group-hover:shadow-lg transition-all border-l-[6px] border-l-primary-navy/10 dark:border-l-tertiary-sage/10 group-hover:border-l-primary-navy dark:group-hover:border-l-tertiary-sage">
-              <div className="flex items-center justify-between mb-3">
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 group-hover:border-l-slate-900">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                   <span className="text-[14px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">{log.createdByName}</span>
-                   <span className="text-[10px] font-extrabold text-white bg-slate-900 dark:bg-navy-800 px-2.5 py-1 rounded-[4px] data-field shadow-sm">{formatDateOnly(log.logDate || log.createdAt)}</span>
+                   <span className="text-sm font-bold text-slate-900 uppercase">{log.createdByName}</span>
+                   <span className="text-[10px] font-bold text-white bg-slate-900 px-2 py-0.5 rounded uppercase tracking-wider">{formatDateOnly(log.logDate || log.createdAt)}</span>
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 data-field uppercase">{formatDateTime(log.createdAt)}</span>
+                <span className="text-[10px] font-medium text-slate-400 uppercase">{formatDateTime(log.createdAt)}</span>
               </div>
-              <p className="text-[14px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">{log.content}</p>
+              <p className="text-sm font-medium text-slate-600 leading-relaxed mb-4">{log.content}</p>
               {log.attachments && log.attachments.length > 0 && (
-                <div className="flex flex-wrap gap-2.5 pt-4 border-t border-slate-100 dark:border-navy-800">
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-50">
                   {log.attachments.map(att => (
-                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2.5 px-3 py-2 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 transition-all shadow-sm hover:shadow-default">
-                      <div className="text-slate-400 group-hover:text-primary-navy dark:group-hover:text-tertiary-sage">{getFileIcon(att.fileName, 14)}</div>
-                      <span className="text-[11px] font-bold text-primary-navy dark:text-white truncate max-w-[140px]">{att.fileName}</span>
+                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-white hover:border-slate-200 transition-all shadow-sm">
+                      <div className="text-slate-400 group-hover:text-slate-900">{getFileIcon(att.fileName, 12)}</div>
+                      <span className="text-xs font-semibold text-slate-900 truncate max-w-[140px]">{att.fileName}</span>
                     </button>
                   ))}
                 </div>
@@ -619,7 +668,17 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
   );
 }
 
-// --- Internal Helpers ---
+export const ProductImagePlaceholder = ({ url, name }: { url?: string; name: string }) => (
+  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-slate-900 group">
+    {url ? (
+      <img src={url} alt={name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+    ) : (
+      <div className="flex h-full w-full items-center justify-center bg-slate-50">
+        <Package size={24} className="text-slate-300" />
+      </div>
+    )}
+  </div>
+);
 
 function getFileIcon(fileName: string, size = 16) {
   const ext = fileName.split('.').pop()?.toLowerCase();
@@ -627,4 +686,3 @@ function getFileIcon(fileName: string, size = 16) {
   if (ext === 'pdf') return <FileText size={size} />;
   return <Paperclip size={size} />;
 }
-

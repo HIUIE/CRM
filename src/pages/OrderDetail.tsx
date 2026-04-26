@@ -34,10 +34,12 @@ import {
   Check,
   Package,
   BadgeDollarSign,
-  DollarSign
+  DollarSign,
+  Printer
 } from 'lucide-react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { apiFetch, apiUpload, getErrorMessage } from '../lib/api';
+import { exportElementToPdf } from '../lib/pdfExport';
 import { useAuth } from '../context/AuthContext';
 import { Tooltip } from '../components/ui/Tooltip';
 import {
@@ -126,6 +128,7 @@ export default function OrderDetailPage() {
     packing: useRef(null),
     logistics: useRef(null),
   };
+  const printContentRef = useRef<HTMLDivElement>(null);
 
   // 2. State
   const [detail, setDetail] = useState<OrderDetailResponse | null>(null);
@@ -159,10 +162,11 @@ export default function OrderDetailPage() {
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [showTaskDrawer, setShowTaskDrawer] = useState(false);
-  const [quickNotes, setQuickNotes] = useState('');
-  const [savingNotes, setSavingNotes] = useState(false);
+  // 跟进时间轴
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [followUpInput, setFollowUpInput] = useState('');
 
   // 删除确认状态
   const [isDeleting, setIsDeleting] = useState(false);
@@ -191,6 +195,8 @@ export default function OrderDetailPage() {
   const customs = detail?.customs || null;
   const logisticsRecords = detail?.logisticsRecords || [];
   const packingRecords = detail?.packingRecords || [];
+  const orderDocuments = detail?.orderDocuments || [];
+  const followUps = detail?.followUps || [];
   const domesticLogistics = detail?.domesticLogistics || null;
   const internationalLogistics = detail?.internationalLogistics || null;
   const summary = detail?.summary || { receiptsByCurrency: {}, attachmentsSummary: { finance: 0, logistics: 0, customs: 0 } };
@@ -240,7 +246,7 @@ export default function OrderDetailPage() {
     try {
       const detailData = await apiFetch<OrderDetailResponse>(`/api/orders/${orderNo}`);
       setDetail(detailData);
-      setQuickNotes(detailData.order?.quick_notes || '');
+      // quick_notes replaced by follow-up timeline
       const partnerData = await apiFetch<Partner[]>('/api/partners');
       setPartners(partnerData);
     } catch (err) {
@@ -277,24 +283,16 @@ export default function OrderDetailPage() {
     toastTimerRef.current = setTimeout(() => setToast(''), 3000);
   };
 
-  const saveQuickNotes = async (val: string) => {
-    setSavingNotes(true);
-    try {
-      await apiFetch(`/api/orders/${order?.id}/quick-notes`, { method: 'PATCH', body: JSON.stringify({ content: val }) });
-    } catch (err) { console.error('Auto-save failed', err); }
-    finally { setSavingNotes(false); }
-  };
-
-  const debounceRef = useRef<any>(null);
-  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setQuickNotes(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => saveQuickNotes(val), 1000);
-  };
-
   // 5. Handlers
-  const scrollToSection = (section: SectionKey | 'packing') => {
+  const scrollToSection = (section: SectionKey | 'packing' | 'documents') => {
+    if (section === 'documents') {
+      const el = document.getElementById('documents-vault');
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 24;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+      return;
+    }
     const ref = sectionRefs[section as keyof typeof sectionRefs];
     if (ref?.current) {
       const top = ref.current.getBoundingClientRect().top + window.pageYOffset - 24;
@@ -559,6 +557,44 @@ export default function OrderDetailPage() {
     } catch (err) { alert(getErrorMessage(err, '删除失败')); }
   };
 
+  const handleUploadOrderDocument = async (files: FileList | null) => {
+    if (!files?.length || !order) return;
+    setUploadingDoc(true);
+    try {
+      const fd = new FormData();
+      fd.append('customerId', String(customer.id));
+      fd.append('orderId', String(order.id));
+      fd.append('entityType', 'order_document');
+      fd.append('entityId', String(order.id));
+      Array.from(files).forEach(f => fd.append('files', f));
+      await apiUpload('/api/attachments', fd);
+      showToast('凭证已上传');
+      await loadDetail({ showLoading: false });
+    } catch (err) {
+      showToast(getErrorMessage(err, '上传失败'));
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleSubmitFollowUp = async () => {
+    if (!followUpInput.trim() || !order) return;
+    setSaving(true);
+    try {
+      await apiFetch(`/api/orders/${order.id}/follow-ups`, {
+        method: 'POST',
+        body: JSON.stringify({ content: followUpInput.trim() }),
+      });
+      setFollowUpInput('');
+      showToast('跟进记录已保存');
+      await loadDetail({ showLoading: false });
+    } catch (err) {
+      setDrawerError(getErrorMessage(err, '保存失败'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteOrder = async () => {
     if (!order || deleteConfirmId !== order.display_id) return;
     setIsDeleting(true);
@@ -569,6 +605,13 @@ export default function OrderDetailPage() {
       navigate('/orders');
     } catch (err) { alert(getErrorMessage(err, '删除失败')); }
     finally { setIsDeleting(false); }
+  };
+
+  const handleExportPdf = async () => {
+    if (!printContentRef.current || !order) return;
+    try {
+      await exportElementToPdf(printContentRef.current, `${order.display_id}-REPORT`);
+    } catch { showToast('PDF 生成失败'); }
   };
 
   // 6. View Helpers
@@ -582,11 +625,9 @@ export default function OrderDetailPage() {
         <div className="h-full bg-tertiary-sage transition-all duration-300 ease-out" style={{ width: `${scrollPercent}%` }} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_200px] items-start pt-0">
-        <div className="space-y-4 min-w-0 pt-0">
-          {/* header Section */}
-          <header ref={sectionRefs.basic} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-5 shadow-md mt-0 transition-colors">
-            <div className="flex flex-col gap-5">
+      {/* header Section */}
+      <header ref={sectionRefs.basic} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-5 shadow-md mt-0 transition-colors">
+        <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest leading-none">
@@ -670,6 +711,14 @@ export default function OrderDetailPage() {
                    </Tooltip>
                    
                    <div className="h-6 w-px bg-slate-100 dark:bg-navy-800 mx-4 hidden sm:block" />
+
+                   <button 
+                     onClick={handleExportPdf}
+                     className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+                   >
+                     <Printer size={14} className="text-slate-400" /> 导出 PDF
+                   </button>
+
                    {user?.role === 'admin' && (
                      <button 
                        onClick={() => { setDeleteConfirmId(''); setIsDeleteModalOpen(true); }} 
@@ -692,29 +741,35 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             </div>
-          </header>
+      </header>
 
+      {/* 2. Physical 2-Column Main Layout */}
+      <main className="max-w-[1600px] mx-auto px-8 py-10 flex gap-8 items-start">
+        
+        {/* Left Side: Vertical Business Feed */}
+        <div className="flex-1 min-w-0 flex flex-col gap-8">
           {/* Manifest Table */}
           <WorkSection ref={sectionRefs.items} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed.items} onToggle={() => toggleSection('items')} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!text-[10px] !px-3"><Plus size={12} className="mr-1" /> 编辑清单</LightActionButton> : null}>
             {items.length ? (
               <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
                 <table className="min-w-full text-left text-xs font-medium">
                   <thead className="bg-slate-50 dark:bg-navy-950 font-bold uppercase tracking-widest border-b border-slate-200 dark:border-navy-800 data-field text-[10px] text-secondary-slate dark:text-slate-400">
-                    <tr><th className="px-5 py-4">商品名称与标识</th><th className="px-5 py-4 text-center">配置规格</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">金额 (USD)</th></tr>
+                    <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">总价 (USD)</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-medium tracking-tight">
                     {items.map(item => (
                       <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
-                        <td className="px-5 py-4 flex items-center gap-4 font-bold text-primary-navy dark:text-white uppercase">{asText(item.product_name)}</td>
+                        <td className="px-5 py-4 font-bold text-primary-navy dark:text-white uppercase">{asText(item.product_name)}</td>
                         <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 text-[10px] data-field uppercase font-bold">{asText(item.specification, '通用')}</td>
-                        <td className="px-5 py-4 text-center font-bold text-primary-navy dark:text-white data-field">{item.quantity} {item.unit || 'pcs'}</td>
+                        <td className="px-5 py-4 text-center font-bold text-primary-navy dark:text-white data-field">{item.quantity}</td>
+                        <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 font-bold">{item.unit || 'pcs'}</td>
                         <td className="px-5 py-4 text-right text-secondary-slate dark:text-slate-400 data-field font-bold">{asNumber(item.unit_price).toLocaleString()}</td>
                         <td className="px-5 py-4 text-right font-bold text-primary-navy dark:text-tertiary-sage data-field text-[15px]">USD {asNumber(item.subtotal).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="bg-[#F1F5F9] dark:bg-navy-950 text-primary-navy dark:text-white font-extrabold border-t border-slate-200 dark:border-navy-800">
-                    <tr><td colSpan={4} className="px-5 py-5 text-right text-[11px] uppercase tracking-widest opacity-70">合计总值 (估算)</td><td className="px-5 py-5 text-right text-[20px] data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td></tr>
+                    <tr><td colSpan={5} className="px-5 py-5 text-right text-[11px] uppercase tracking-widest opacity-70">合计总值 (估算)</td><td className="px-5 py-5 text-right text-[20px] data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td></tr>
                   </tfoot>
                 </table>
               </div>
@@ -722,6 +777,44 @@ export default function OrderDetailPage() {
               <EmptyStateBoard title="暂无商品明细" description="尚未录入任何货物信息。请立即初始化本单的货物清单数据，以便后续核算。" icon={Package} actionLabel="+ 初始化货物清单" onAction={openOrderDrawer} />
             )}
           </WorkSection>
+
+          {/* 核心单据凭证库 */}
+          <DocumentBoard title="核心单据凭证库" id="documents-vault" action={
+            <label className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold transition-all cursor-pointer ${uploadingDoc ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white dark:bg-navy-800 text-slate-900 dark:text-white border-slate-200 dark:border-navy-600 hover:bg-slate-50 dark:hover:bg-navy-700 shadow-sm'}`}>
+              {uploadingDoc ? '上传中...' : <><Upload size={14} className="mr-1" /> 上传凭证</>}
+              {!uploadingDoc && <input type="file" multiple className="hidden" onChange={e => e.target.files && handleUploadOrderDocument(e.target.files)} />}
+            </label>
+          }>
+            {orderDocuments.length ? (
+              <div className="space-y-2">
+                {orderDocuments.map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:shadow-sm transition-all">
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      <button onClick={() => setPreviewAttachment(doc)} className="text-slate-400 hover:text-slate-900 transition-colors">
+                        {doc.fileName.match(/\.(pdf)$/i) ? <FileText size={20} /> : <Paperclip size={20} />}
+                      </button>
+                      <div className="min-w-0">
+                        <button onClick={() => setPreviewAttachment(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block hover:underline text-left">{doc.fileName}</button>
+                        {doc.createdAt && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">{formatDateOnly(doc.createdAt)}</span>}
+                      </div>
+                    </div>
+                    {user?.role === 'admin' && (
+                      <button onClick={() => handleDeleteAttachment(doc.id)} className="text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all p-1"><Trash size={14} /></button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyStateBoard
+                title="暂无核心交易凭证"
+                description="请上传双方盖章版 PO、我方 PI 等核心交易凭证，方便业务核对与归档。"
+                icon={FileText}
+                actionLabel="+ 上传首份凭证"
+                onAction={() => document.getElementById('doc-upload-input')?.click()}
+              />
+            )}
+            <input id="doc-upload-input" type="file" multiple className="hidden" onChange={e => e.target.files && handleUploadOrderDocument(e.target.files)} />
+          </DocumentBoard>
 
           {/* Finance Section */}
           <DocumentBoard ref={sectionRefs.finance} title="财务信息" action={financeRecords.length ? <div className="flex items-center gap-3"><div className="flex bg-white dark:bg-navy-800 p-0.5 rounded border border-slate-200 dark:border-navy-700"><FilterPill active={financeFilter==='all'} onClick={()=>setFinanceFilter('all')}>全部</FilterPill><FilterPill active={financeFilter==='receipt'} onClick={()=>setFinanceFilter('receipt')}>收款</FilterPill><FilterPill active={financeFilter==='payment'} onClick={()=>setFinanceFilter('payment')}>付款</FilterPill></div><LightActionButton onClick={() => openFinanceDrawer()} className="!py-1.5 !px-3 !text-[11px]"><Plus size={12} className="mr-1" /> 录入收支</LightActionButton></div> : null}>
@@ -795,7 +888,7 @@ export default function OrderDetailPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-bold text-primary-navy dark:text-white data-field">
-                      {packingRecords.map((r, i) => (
+                            {packingRecords.map((r, i) => (
                         <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
                            <td className="px-5 py-3 text-slate-400 dark:text-slate-500">{(i+1).toString().padStart(2, '0')}</td>
                            <td className="px-5 py-3">{r.packageCount}</td>
@@ -809,6 +902,22 @@ export default function OrderDetailPage() {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      {(() => {
+                        const totalBoxes = packingRecords.reduce((s, r) => s + asNumber(r.packageCount), 0);
+                        const totalGross = packingRecords.reduce((s, r) => s + asNumber(r.grossWeight), 0);
+                        const totalNet = packingRecords.reduce((s, r) => s + asNumber(r.netWeight), 0);
+                        return (
+                          <tr className="bg-emerald-50 dark:bg-emerald-900/10 font-extrabold border-t-2 border-emerald-200 dark:border-emerald-800">
+                            <td className="px-5 py-4 text-emerald-700 dark:text-emerald-400 text-xs uppercase tracking-widest">合计 Total</td>
+                            <td className="px-5 py-4 text-emerald-700 dark:text-emerald-400 data-field">{totalBoxes} 箱</td>
+                            <td className="px-5 py-4 text-emerald-700 dark:text-emerald-400 data-field text-[10px]">见明细</td>
+                            <td className="px-5 py-4 text-emerald-700 dark:text-emerald-400 data-field">{totalGross.toFixed(1)} / {totalNet.toFixed(1)} kg</td>
+                            <td className="px-5 py-4" />
+                          </tr>
+                        );
+                      })()}
+                    </tfoot>
                   </table>
                </div>
             ) : (
@@ -874,39 +983,71 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Right Nav Rail */}
-        <aside className="hidden xl:block sticky top-0 space-y-4 self-start pt-0">
-          <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-5 shadow-md transition-colors">
-            <div className="text-[13px] font-bold text-primary-navy dark:text-white mb-6 text-center uppercase tracking-widest">页面导航</div>
+        <aside className="w-[320px] shrink-0 sticky top-[100px] space-y-6">
+          <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm transition-colors">
+            <div className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 rounded-full" /> 页面导航</div>
             <div className="space-y-1.5">
               {[
                 { section: 'items', label: '商品明细' },
+                { section: 'documents', label: '核心单据' },
                 { section: 'finance', label: '财务信息' },
-                { section: 'production', label: '生产信息' },
+                { section: 'production', label: '生产排产' },
                 { section: 'customs', label: '报关资料' },
                 { section: 'packing', label: '装箱明细' },
                 { section: 'logistics', label: '运输轨迹' }
               ].map(item => (
-                <button key={item.section} onClick={() => scrollToSection(item.section as any)} className={`flex w-full items-center gap-3 rounded-md px-3.5 py-2.5 text-left text-[11px] font-bold transition-all uppercase tracking-widest group ${activeSection === item.section ? 'bg-slate-100 dark:bg-navy-800 text-primary-navy dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white'}`}>
-                  <div className={`h-1.5 w-1.5 rounded-full ${activeSection === item.section ? 'bg-tertiary-sage scale-125' : 'bg-slate-200 dark:bg-navy-700'}`} />{item.label}
+                <button key={item.section} onClick={() => scrollToSection(item.section as any)} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-bold text-sm transition-all ${activeSection === item.section ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}>
+                  <span>{item.label}</span>
                 </button>
               ))}
             </div>
           </section>
 
-          <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-5 shadow-md space-y-3 transition-colors">
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[11px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest"><StickyNote size={14} className="text-primary-navy dark:text-tertiary-sage" /> 订单快捷备注</div>
-                {savingNotes && <div className="h-2 w-2 rounded-full bg-tertiary-sage animate-pulse" />}
+          <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm transition-colors">
+             <div className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-5"><div className="w-1 h-4 bg-amber-500 rounded-full" /> 跟进时间轴</div>
+             <div className="flex gap-2 mb-6">
+               <input
+                 value={followUpInput}
+                 onChange={e => setFollowUpInput(e.target.value)}
+                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSubmitFollowUp())}
+                 placeholder="记录最新跟进动态，例如：今天发了最新版 PI 给客户..."
+                 className="flex-1 bg-slate-50 dark:bg-navy-950 px-4 py-3 rounded-xl border border-slate-100 dark:border-navy-800 text-sm font-bold text-slate-700 dark:text-white outline-none focus:bg-white dark:focus:bg-navy-900 transition-all"
+               />
+               <button
+                 onClick={handleSubmitFollowUp}
+                 disabled={saving || !followUpInput.trim()}
+                 className="shrink-0 rounded-xl bg-amber-500 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-amber-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider"
+               >
+                 记录
+               </button>
              </div>
-             <textarea value={quickNotes} onChange={handleNotesChange} placeholder="在此输入灵感、特殊要求或紧急备注，系统将自动保存..." className="w-full bg-slate-50 dark:bg-navy-950 p-3 rounded border border-slate-200 dark:border-navy-800 text-[12px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-primary-navy/40 dark:focus:border-tertiary-sage/40 transition-all min-h-[140px] resize-none leading-relaxed" />
+             <div className="space-y-0 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+               {followUps.length > 0 ? followUps.map((fu, i) => (
+                 <div key={fu.id || i} className="relative pl-8 pb-5 last:pb-0">
+                   <div className="absolute left-0 top-1.5 h-[18px] w-[18px] rounded-full border-2 border-slate-900 dark:border-tertiary-sage bg-white dark:bg-navy-900" />
+                   {i < followUps.length - 1 && <div className="absolute left-[8px] top-[22px] bottom-0 w-[2px] bg-slate-100 dark:bg-navy-800" />}
+                   <div className="flex items-center gap-3 mb-1.5">
+                     <span className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">{fu.createdByName || '未知用户'}</span>
+                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{formatDateTime(fu.createdAt)}</span>
+                   </div>
+                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{fu.content}</p>
+                 </div>
+               )) : (
+                 <div className="py-8 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">暂无跟进记录</div>
+               )}
+             </div>
           </section>
 
-          <button onClick={() => setDrawer({ mode: 'ai-analysis' })} disabled={analyzing} className="w-full flex items-center justify-center gap-3 rounded-lg bg-primary-navy dark:bg-tertiary-sage py-4 text-[12px] font-bold text-white hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-lg group active:scale-95">
-             <Sparkles size={18} className={`${analyzing ? 'animate-spin opacity-50' : 'group-hover:scale-110 transition-transform'}`} />
-             <span>AI 智能辅助诊断</span>
-          </button>
+          <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-3 transition-colors">
+             <div className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-4"><div className="w-1 h-4 bg-emerald-500 rounded-full" /> AI 智能辅助诊断</div>
+             <p className="text-xs font-bold text-slate-500 leading-relaxed mb-6">正在实时分析订单风险、回款率及交付合规性...</p>
+             <button onClick={() => setDrawer({ mode: 'ai-analysis' })} disabled={analyzing} className="w-full flex items-center justify-center gap-3 rounded-lg bg-slate-900 py-3 text-[12px] font-bold text-white hover:bg-slate-800 transition-all shadow-md group active:scale-95">
+                <Sparkles size={16} className={`${analyzing ? 'animate-spin opacity-50' : 'group-hover:scale-110 transition-transform'}`} />
+                <span>开始深度分析</span>
+             </button>
+          </section>
         </aside>
-      </div>
+      </main>
 
       {previewAttachment && <PreviewModal attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
       <TaskDrawer
@@ -988,7 +1129,7 @@ export default function OrderDetailPage() {
                   <section className="space-y-6">
                     <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-4">
                       <h4 className="text-[13px] font-bold text-primary-navy dark:text-white uppercase tracking-widest">产品项目清单</h4>
-                      <button type="button" onClick={() => setOrderForm({ ...orderForm, items: [...orderForm.items, { clientKey: Math.random().toString(36).slice(2), productName: '', specification: '', hsCode: '', quantity: '1', unit: 'pcs', unitPrice: '0', subtotal: '0', imageUrl: '' }] })} className="text-[11px] font-bold text-white bg-primary-navy dark:bg-tertiary-sage px-5 py-2 rounded-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">+ 新增产品</button>
+                      <button type="button" onClick={() => setOrderForm({ ...orderForm, items: [...orderForm.items, { clientKey: Math.random().toString(36).slice(2), productName: '', specification: '', quantity: '1', unit: 'pcs', unitPrice: '0', subtotal: '0', imageUrl: '' }] })} className="text-[11px] font-bold text-white bg-primary-navy dark:bg-tertiary-sage px-5 py-2 rounded-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all shadow-md">+ 新增产品</button>
                     </div>
                     <div className="space-y-4">
                       {orderForm.items.length === 0 && <div className="py-16 text-center border border-dashed border-slate-300 dark:border-navy-800 rounded-xl text-slate-400 text-[11px] font-bold uppercase tracking-widest">点击上方按钮添加产品明细</div>}
@@ -998,7 +1139,6 @@ export default function OrderDetailPage() {
                           <div className="grid gap-5 sm:grid-cols-12">
                             <div className="sm:col-span-12"><Field label="产品名称/型号 *"><input required value={item.productName} onChange={e => { const next = [...orderForm.items]; next[idx].productName = e.target.value; setOrderForm({ ...orderForm, items: next }); }} placeholder="输入正式商业发票名称..." className="w-full bg-transparent p-1 text-[15px] font-bold text-primary-navy dark:text-white focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors" /></Field></div>
                             <div className="sm:col-span-4"><Field label="配置规格"><input value={item.specification} onChange={e => { const next = [...orderForm.items]; next[idx].specification = e.target.value; setOrderForm({ ...orderForm, items: next }); }} placeholder="标准规格..." className="w-full bg-transparent p-1 text-[13px] font-bold text-secondary-slate dark:text-slate-400 focus:outline-none" /></Field></div>
-                            <div className="sm:col-span-4"><Field label="海关编码 (HS)"><input value={item.hsCode} onChange={e => { const next = [...orderForm.items]; next[idx].hsCode = e.target.value; setOrderForm({ ...orderForm, items: next }); }} placeholder="可选填..." className="w-full bg-transparent p-1 text-[13px] font-bold text-secondary-slate dark:text-slate-400 focus:outline-none data-field" /></Field></div>
                             <div className="sm:col-span-4"><Field label="单位"><select value={item.unit} onChange={e => { const next = [...orderForm.items]; next[idx].unit = e.target.value; setOrderForm({ ...orderForm, items: next }); }} className="w-full bg-transparent p-1 text-[13px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none cursor-pointer"><option value="pcs">pcs (件)</option><option value="sets">sets (套)</option><option value="kg">kg (公斤)</option><option value="m">m (米)</option><option value="rolls">rolls (卷)</option></select></Field></div>
                             <div className="sm:col-span-4"><Field label="单价 (USD)"><input type="number" step="0.0001" value={item.unitPrice} onChange={e => { const next = [...orderForm.items]; next[idx].unitPrice = e.target.value; next[idx].subtotal = String(asNumber(e.target.value) * asNumber(next[idx].quantity)); setOrderForm({ ...orderForm, items: next }); }} className="w-full bg-transparent p-1 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none data-field border-b border-slate-100 dark:border-navy-800" /></Field></div>
                             <div className="sm:col-span-4"><Field label="数量"><input type="number" value={item.quantity} onChange={e => { const next = [...orderForm.items]; next[idx].quantity = e.target.value; next[idx].subtotal = String(asNumber(e.target.value) * asNumber(next[idx].unitPrice)); setOrderForm({ ...orderForm, items: next }); }} className="w-full bg-transparent p-1 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none data-field border-b border-slate-100 dark:border-navy-800 text-center" /></Field></div>

@@ -283,6 +283,37 @@ export function createOrdersRouter() {
     }
   });
 
+  // 跟进时间轴
+  router.get('/:id/follow-ups', async (req, res) => {
+    const orderId = Number(req.params.id);
+    try {
+      const rows = await db.all(
+        `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC, of.id DESC`,
+        [orderId],
+      );
+      res.json(rows);
+    } catch (error) {
+      return handleRouteError(res, error, '读取跟进记录失败');
+    }
+  });
+
+  router.post('/:id/follow-ups', async (req: AuthedRequest, res) => {
+    const orderId = Number(req.params.id);
+    const content = String(req.body.content || '').trim();
+    if (!content) {
+      return fail(res, 400, '内容不能为空');
+    }
+    try {
+      await db.run(
+        `INSERT INTO order_follow_ups (order_id, content, created_by) VALUES (?, ?, ?)`,
+        [orderId, content, req.user?.id || null],
+      );
+      res.status(201).json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '保存跟进记录失败');
+    }
+  });
+
   router.post('/:id/production', async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     const result = await readProductionPayload(req.body || {}, orderId);

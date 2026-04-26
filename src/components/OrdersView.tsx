@@ -211,7 +211,7 @@ export default function OrdersView() {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+    <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_160px]">
           <div className="relative">
@@ -257,12 +257,12 @@ export default function OrdersView() {
         {error && <div className="mt-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{error}</div>}
       </section>
 
-      <section className="flex-1 min-h-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-md transition-colors flex flex-col overflow-hidden">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-md transition-colors flex flex-col">
         {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">读取订单列表中...</div> : (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+          <div className="flex flex-col">
+            <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-5 text-left">订单号 / 日期</th>
                     <th className="px-4 py-5 text-left">客户 / 国家</th>
@@ -325,7 +325,7 @@ export default function OrdersView() {
                 </tbody>
               </table>
             </div>
-            <div className="shrink-0">
+            <div>
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

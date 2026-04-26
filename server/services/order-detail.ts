@@ -175,6 +175,12 @@ export async function buildOrderDetail(idOrNo: number | string) {
   const logisticsAttachments = await getAttachmentsByEntity('logistics', logisticsRecords.map((record) => Number(record.id)));
   const customsAttachments = customs ? await getAttachmentsByEntity('customs', [Number(customs.id)]) : new Map<number, Record<string, unknown>[]>();
   const productionLogAttachments = productionPlan ? await getAttachmentsByEntity('production_log', productionLogs.map(l => Number(l.id))) : new Map<number, Record<string, unknown>[]>();
+  const productionPhotos = await getAttachmentsByEntity('production_photo', [orderId]);
+  const orderDocuments = await getAttachmentsByEntity('order_document', [orderId]);
+  const followUps = await db.all<Record<string, unknown>[]>(
+    `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC, of.id DESC`,
+    [orderId],
+  );
 
   return {
     order: {
@@ -223,6 +229,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
           inspectionStatus: productionPlan.inspection_status,
           updatedAt: productionPlan.updated_at,
           createdByName: productionPlan.created_by_name || null,
+          photos: productionPhotos.get(orderId) || [],
           logs: productionLogs.map(l => ({
             ...l,
             logDate: l.log_date,
@@ -317,6 +324,13 @@ export async function buildOrderDetail(idOrNo: number | string) {
           attachmentCount: (logisticsAttachments.get(Number(internationalLogisticsRecord.id)) || []).length,
         }
       : null,
+    orderDocuments: orderDocuments.get(orderId) || [],
+    followUps: followUps.map(l => ({
+      id: l.id,
+      content: l.content,
+      createdByName: l.created_by_name,
+      createdAt: l.created_at,
+    })),
     summary: {
       receiptsByCurrency,
       paymentsByCurrency,
@@ -324,7 +338,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
       pendingFinanceCount: pendingFinanceCount?.count || 0,
       latestLogisticsStatus: latestLogistics?.status || null,
       latestShippingDate: latestLogistics?.shipping_date || null,
-      paidAmount: receiptsByCurrency.USD,
+      paidAmount: receiptsByCurrency.USD || 0,
       outstandingAmount,
       paymentStatus,
       settled,

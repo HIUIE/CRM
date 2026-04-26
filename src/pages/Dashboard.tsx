@@ -85,7 +85,7 @@ export default function DashboardView() {
   if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{error || '无法读取控制台数据'}</div>;
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col overflow-hidden space-y-6">
+    <div className="flex flex-col space-y-6">
       {/* Top Indicators */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 shrink-0">
         <StatCard title="订单总数" value={String(data.overview.totalOrders)} subValue={`进行中 ${data.overview.activeOrders}`} icon={<FileText size={16} className="text-blue-500" />} sparklineColor="#3B82F6" sparklineData={[10, 20, 15, 25, 20, 30]} />
@@ -94,11 +94,11 @@ export default function DashboardView() {
         <StatCard title="运输中的订单" value={`${data.overview.activeLogistics} 笔`} subValue="运输中" icon={<Truck size={16} className="text-purple-500" />} sparklineColor="#A855F7" sparklineData={[15, 20, 18, 25, 20, 22]} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[65%_minmax(0,1fr)] flex-1 overflow-hidden min-h-0 items-stretch">
+      <div className="grid gap-6 lg:grid-cols-[65%_minmax(0,1fr)] items-start">
         {/* Left Column: Business Drivers */}
-        <div className="flex flex-col space-y-6 overflow-hidden min-h-0">
-          <section className="flex-1 min-h-0 flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
-            <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between shrink-0">
+        <div className="flex flex-col space-y-6">
+          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
+            <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div>
                 <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">今日待处理 ({data.todos.length})</h2>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">优先处理以下业务阻点</p>
@@ -106,7 +106,7 @@ export default function DashboardView() {
               <button onClick={() => navigate('/orders')} className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看全部 <ChevronRight size={14} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            <div className="p-4 space-y-3">
               {data.todos.length > 0 ? data.todos.map((todo) => (
                 <div key={todo.id} onClick={() => navigate(`/orders/${String(todo.order_display_id).toLowerCase()}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
                   <div className="flex items-center gap-4">
@@ -130,8 +130,8 @@ export default function DashboardView() {
             </div>
           </section>
 
-          <section className="flex-1 min-h-0 flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
-            <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between shrink-0">
+          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
+            <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">最近动态</h2>
                 <div className="hidden sm:flex gap-4 text-[10px] font-bold uppercase tracking-widest">
@@ -143,7 +143,7 @@ export default function DashboardView() {
               <button className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看日志 <ChevronRight size={14} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-0 custom-scrollbar">
+            <div className="p-4 space-y-0">
               {data.activities.length > 0 ? data.activities.map((activity, i) => (
                 <div key={i} onClick={() => navigate(`/orders/${String(activity.order_display_id).toLowerCase()}`)} className="flex items-center justify-between cursor-pointer group py-4 border-b border-slate-100 dark:border-navy-800 last:border-0 hover:bg-slate-50 dark:hover:bg-navy-950/50 px-4 -mx-4 rounded-lg transition-colors">
                   <div className="flex items-start gap-4">
@@ -169,7 +169,7 @@ export default function DashboardView() {
         </div>
 
         {/* Right Column: Tools & Analysis */}
-        <div className="flex flex-col space-y-6 overflow-hidden min-h-0">
+        <div className="flex flex-col space-y-6">
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
             <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
@@ -201,7 +201,7 @@ export default function DashboardView() {
             </div>
           </section>
 
-          <section className="flex-1 min-h-0 flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm overflow-hidden">
+          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
             <div className="mb-8 flex items-center justify-between shrink-0">
               <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">订单状态分布</h2>
               <select className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-[10px] font-bold text-slate-600 dark:text-slate-400 outline-none uppercase">
@@ -210,7 +210,7 @@ export default function DashboardView() {
                 <option>今年</option>
               </select>
             </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <div className="pr-1">
               <div className="flex justify-center mb-8 shrink-0">
                 <DonutChart data={data.statusDistribution} />
               </div>

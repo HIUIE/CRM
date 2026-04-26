@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileText,
@@ -71,8 +71,10 @@ export default function MainLayout() {
   }, [isDark]);
 
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
-  // Standardize detail page recognition to hide global header
-  const isDetailPage = /^\/(orders|customers|tasks|audit)\/detail\/[^/]+$/.test(location.pathname) || 
+
+  // 标准详情页识别：隐藏全局头部
+  const isDetailPage = /^\/(orders|customers|tasks|audit)\/detail\/[^/]+$/.test(location.pathname) ||
+                       /^\/orders\/[^/]+$/.test(location.pathname) ||
                        /^\/(audit|tasks)$/.test(location.pathname);
 
   const getHeaderInfo = () => {
@@ -103,185 +105,100 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="h-screen w-screen bg-background dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300 overflow-hidden">
-      <div className="flex h-full w-full gap-2 p-2 items-stretch">
-        <NotificationDrawer isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
-        <Drawer 
-          isOpen={showFilters} 
-          onClose={() => setShowFilters(false)} 
-          title="高级筛选面板"
-          footer={<button onClick={() => setShowFilters(false)} className="w-full rounded-xl bg-primary-navy py-3 text-sm font-bold text-white uppercase tracking-widest">确认筛选</button>}
-        >
-          <div className="space-y-8 py-4">
-             <div className="p-4 bg-slate-50 dark:bg-navy-950 rounded-xl border border-dashed border-slate-300 dark:border-navy-800 text-center">
-                <Filter size={32} className="mx-auto mb-4 text-slate-300" />
-                <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">此处为全站多维筛选容器。<br/>根据当前页面模块，自动注入不同的筛选器逻辑。</p>
-             </div>
-             
-             <div className="space-y-4 opacity-50 pointer-events-none">
-                <div className="h-10 bg-slate-100 dark:bg-navy-800 rounded-lg animate-pulse" />
-                <div className="h-10 bg-slate-100 dark:bg-navy-800 rounded-lg animate-pulse" />
-                <div className="h-24 bg-slate-100 dark:bg-navy-800 rounded-lg animate-pulse" />
-             </div>
-          </div>
-        </Drawer>
-        <aside className="h-full w-[190px] shrink-0 flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-5 shadow-sm transition-colors z-[100]">
-          <div className="mb-8 flex items-center gap-3 px-1 shrink-0">
-            <img src="/logo.png" alt="SmartTrade AI CRM" className="h-9 w-9 rounded-lg object-contain" />
+    <div className="flex min-h-screen w-full bg-[#F8FAFC] dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300">
+      <NotificationDrawer isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+
+      {/* 1. 全屏垂直侧边栏 - Flush 100vh Sidebar */}
+      <aside className="sticky top-0 self-start flex h-screen w-[240px] shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 z-50">
+        <div className="p-8 border-b border-slate-50 dark:border-navy-800/50">
+          <Link to="/" className="flex items-center gap-3 group">
+            <img src="/logo.png" alt="SmartTrade" className="h-8 w-8 rounded-lg object-contain shadow-md" />
             <div className="min-w-0">
-              <div className="text-[13px] font-bold tracking-tight text-primary-navy dark:text-white truncate">SmartTrade</div>
-              <div className="text-[10px] font-medium text-secondary-slate dark:text-slate-400 leading-none">Management</div>
+              <div className="text-sm font-black tracking-tighter text-primary-navy dark:text-white uppercase leading-none">SmartTrade</div>
+              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Management</div>
             </div>
-          </div>
+          </Link>
+        </div>
 
-          <nav className="flex-1 overflow-y-auto space-y-1 custom-scrollbar">
-            <ul className="space-y-1">
-              <NavItem icon={<LayoutDashboard size={18} />} label="控制台" path="/dashboard" currentPath={location.pathname} />
-              <NavItem icon={<PackageSearch size={18} />} label="客户" path="/customers" currentPath={location.pathname} />
-              <NavItem icon={<Building2 size={18} />} label="伙伴" path="/partners" currentPath={location.pathname} />
-              <NavItem icon={<FileText size={18} />} label="订单" path="/orders" currentPath={location.pathname} />
-              <NavItem icon={<CheckCircle2 size={18} />} label="任务" path="/tasks" currentPath={location.pathname} />
-              <NavItem icon={<DollarSign size={18} />} label="财务" path="/finance" currentPath={location.pathname} />
-              <NavItem icon={<Truck size={18} />} label="物流" path="/logistics" currentPath={location.pathname} />
-              <div className="mx-2 my-4 border-t border-slate-100 dark:border-navy-800" />
-              <NavItem
-                icon={<Bot size={18} />}
-                label="AI 向导"
-                path="/ai"
-                currentPath={location.pathname}
-                customClass="text-tertiary-sage dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-              />
-            </ul>
-          </nav>
+        <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-1 custom-scrollbar">
+          <ul className="space-y-1.5">
+            <NavItem icon={<LayoutDashboard size={18} />} label="业务控制台" path="/dashboard" currentPath={location.pathname} />
+            <NavItem icon={<PackageSearch size={18} />} label="客户档案" path="/customers" currentPath={location.pathname} />
+            <NavItem icon={<Building2 size={18} />} label="合作伙伴" path="/partners" currentPath={location.pathname} />
+            <NavItem icon={<FileText size={18} />} label="订单台" path="/orders" currentPath={location.pathname} />
+            <NavItem icon={<CheckCircle2 size={18} />} label="团队协同" path="/tasks" currentPath={location.pathname} />
+            <NavItem icon={<DollarSign size={18} />} label="财务流水" path="/finance" currentPath={location.pathname} />
+            <NavItem icon={<Truck size={18} />} label="物流打包" path="/logistics" currentPath={location.pathname} />
+            <div className="mx-2 my-6 border-t border-slate-100 dark:border-navy-800" />
+            <NavItem
+              icon={<Bot size={18} />}
+              label="AI 向导"
+              path="/ai"
+              currentPath={location.pathname}
+              customClass="text-tertiary-sage dark:text-emerald-400"
+            />
+          </ul>
+        </nav>
 
-          <div className="mt-auto pt-4 space-y-1 shrink-0">
-            <ul className="space-y-1 border-t border-slate-100 dark:border-navy-800 pt-4 list-none p-0 m-0">
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setIsDark(!isDark)}
-                  className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-xs font-bold text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all"
-                >
-                  <span className="mr-3 flex items-center justify-center shrink-0 opacity-70">
-                    {isDark ? <Sun size={18} /> : <Moon size={18} />}
-                  </span>
-                  <span className="truncate tracking-wide">{isDark ? '浅色模式' : '深色模式'}</span>
-                </button>
-              </li>
-              {user?.role === 'admin' && (
-                <NavItem icon={<Settings size={18} />} label="配置" path="/settings" currentPath={location.pathname} />
-              )}
-              <NavItem icon={<CircleHelp size={18} />} label="帮助" path="/help" currentPath={location.pathname} />
-              {user?.role === 'admin' && (
-                <NavItem icon={<History size={18} />} label="审计" path="/audit" currentPath={location.pathname} />
-              )}
-            </ul>
-          </div>
+        {/* 底部菜单：利用 margin-top: auto 推至左下角 */}
+        <div className="mt-auto space-y-1 px-3 pb-2">
+          <button
+            onClick={() => setIsDark(!isDark)}
+            className="flex w-full items-center rounded-md px-3 py-2 text-xs font-bold transition-all text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white"
+          >
+            <span className="mr-3 flex items-center justify-center shrink-0 text-slate-400 dark:text-slate-500 opacity-70">
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </span>
+            <span className="truncate tracking-wide">{isDark ? '浅色模式' : '深色模式'}</span>
+          </button>
+          <NavItem icon={<Settings size={18} />} label="系统配置" path="/settings" currentPath={location.pathname} />
+          <NavItem icon={<CircleHelp size={18} />} label="帮助中心" path="/help" currentPath={location.pathname} />
+          <NavItem icon={<History size={18} />} label="操作审计" path="/audit" currentPath={location.pathname} />
+        </div>
 
-          <div className="mt-5 relative shrink-0">
-            <button
+        <div className="p-4 border-t border-slate-50 dark:border-navy-800">
+           <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-full rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 p-3 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
+              className="w-full rounded-xl bg-slate-50 dark:bg-navy-950/50 p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-navy-800 transition-all border border-slate-100 dark:border-navy-800"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-navy-800 text-[11px] font-bold text-primary-navy dark:text-white border border-slate-200 dark:border-navy-700 shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-[11px] font-black text-white shadow-lg">
                   {user?.name?.charAt(0) || 'U'}
                 </div>
                 <div className="min-w-0 text-left">
-                  <div className="text-xs font-bold text-primary-navy dark:text-white truncate max-w-[80px]">{user?.name}</div>
-                  <div className="text-[10px] text-secondary-slate dark:text-slate-400 truncate">{user?.role === 'admin' ? '管理员' : '业务员'}</div>
+                  <div className="text-[11px] font-black text-primary-navy dark:text-white truncate uppercase">{user?.name}</div>
+                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">{user?.role}</div>
                 </div>
               </div>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
+        </div>
+      </aside>
 
-            {showUserMenu && (
-              <div className="absolute bottom-full mb-2 w-full rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-lg animate-in fade-in zoom-in-95 duration-200 z-50">
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    void logout();
-                  }}
-                  className="flex w-full items-center px-4 py-3 text-[11px] font-bold text-secondary-slate dark:text-slate-300 hover:text-error hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                >
-                  <LogOut size={14} className="mr-2" />
-                  退出登录
-                </button>
-              </div>
-            )}
-            {/* Click outside overlay for user menu */}
-            {showUserMenu && (
-              <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-            )}
-          </div>
-        </aside>
-
-        <main className="flex h-full flex-1 flex-col min-w-0 overflow-hidden">
-          <CommandPalette />
-          {!isDetailPage && (
-            <header className="mb-2 flex flex-col gap-3 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between transition-colors shrink-0">
-              <div className="flex items-center gap-4">
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight text-primary-navy dark:text-white uppercase tracking-tight">{headerInfo.title}</h1>
-                  <p className="text-xs text-secondary-slate dark:text-slate-400 mt-0.5">{headerInfo.subtitle}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setShowNotifications(true)}
-                  className="relative p-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-colors shadow-sm"
-                >
-                  <Bell size={16} />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-navy-900 animate-in zoom-in duration-300">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-                <div className="w-[1px] h-6 bg-slate-200 dark:bg-navy-800 mx-1"></div>
-                <button 
-                  onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true }))}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-all shadow-sm text-[11px] font-bold"
-                >
-                  <Search size={14} />
-                  <span className="hidden sm:inline">全局搜索 <kbd className="font-sans border rounded px-1 ml-1 opacity-70">⌘K</kbd></span>
-                </button>
-                <button 
-                  onClick={() => setShowFilters(true)}
-                  className="p-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 transition-all shadow-sm" 
-                  title="高级筛选"
-                >
-                  <Filter size={16} />
-                </button>
-                
-                <div className="w-[1px] h-6 bg-slate-200 dark:bg-navy-800 mx-1"></div>
-
-                {activeTab === 'dashboard' && (
-                  <>
-                    <button onClick={() => navigate('/finance')} className="px-4 py-2 rounded-lg bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors flex items-center gap-2 tracking-wide uppercase"><Wallet size={14} /> 收款</button>
-                    <button onClick={() => navigate('/logistics')} className="px-4 py-2 rounded-lg bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors flex items-center gap-2 tracking-wide uppercase"><Truck size={14} /> 创建物流</button>
-                  </>
-                )}
-                <button
-                  onClick={handleHeaderAction}
-                  className={`inline-flex items-center rounded-md px-5 py-2 text-[11px] font-bold transition-all shadow-sm btn-transition tracking-wide uppercase ${
-                    headerInfo.actionPath === 'print'
-                      ? 'bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800'
-                      : 'bg-primary-navy dark:bg-tertiary-sage text-white hover:bg-slate-800 dark:hover:bg-emerald-700'
-                  }`}
-                >
-                  {headerInfo.actionPath === 'print' ? <Printer size={16} className="mr-1.5" /> : <Plus size={16} className="mr-1.5" />}
+      {/* 2. 主内容区 - 原生浏览器滚动 */}
+      <main className="flex-1 flex flex-col min-w-0 relative">
+        <CommandPalette />
+        {!isDetailPage && (
+          <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-5 flex items-center justify-between transition-all shrink-0">
+            <div>
+              <h1 className="text-lg font-black tracking-tight text-primary-navy dark:text-white uppercase">{headerInfo.title}</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{headerInfo.subtitle}</p>
+            </div>
+            <div className="flex items-center gap-4">
+               <button onClick={() => setShowNotifications(true)} className="p-2.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+                  <Bell size={18} />
+               </button>
+               <button onClick={handleHeaderAction} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-xl transition-all active:scale-95">
                   {headerInfo.actionLabel}
-                </button>
-              </div>
-            </header>
-          )}
+               </button>
+            </div>
+          </header>
+        )}
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {<Outlet />}
-          </div>
-        </main>
-      </div>
+        <div className="flex-1">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }

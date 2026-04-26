@@ -2,8 +2,9 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Building2, MapPin, Phone, Share2, Package, Wallet, Clock, 
-  ArrowLeft, ChevronRight, Edit, Mail, Globe, ArrowDownRight, Truck, FileText, ArrowUpRight, Plus, Users, LayoutDashboard, DollarSign, Star, MoreVertical, Pencil, Save, X, Send, History, Check, CheckCircle2, MessageSquare
+  ArrowLeft, ChevronRight, Edit, Mail, Globe, ArrowDownRight, Truck, FileText, ArrowUpRight, Plus, Users, LayoutDashboard, DollarSign, Star, MoreVertical, Pencil, Save, X, Send, History, Check, CheckCircle2, MessageSquare, Eye, EyeOff
 } from 'lucide-react';
+import { maskContact } from '../lib/privacy';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { Chip, EmptyStateBoard, Toast } from '../features/order-detail/components';
 import { formatDateOnly } from '../features/order-detail/utils';
@@ -128,9 +129,9 @@ export default function CustomerDetailPage() {
   if (error || !data) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error || '客户不存在'}</div>;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="flex flex-col">
       {/* Flattened Header: Action Unfold */}
-      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm shrink-0">
+      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/customers')} 
@@ -147,19 +148,19 @@ export default function CustomerDetailPage() {
         </div>
         <div className="flex items-center gap-3">
            <button 
-             onClick={() => setShowFinanceDrawer(true)} 
+             onClick={() => setShowFinanceDrawer(true)}
              className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
            >
              <DollarSign size={14} /> 录入收款
            </button>
            <button 
-             onClick={() => navigate(`/logistics?customerId=${data.id}&create=1`)} 
+             onClick={() => navigate(`/logistics?customerId=${data.id}&create=1`)}
              className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
            >
              <Truck size={14} /> 创建物流
            </button>
            <button 
-             onClick={() => setShowOrderDrawer(true)} 
+             onClick={() => setShowOrderDrawer(true)}
              className="flex items-center gap-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage px-5 py-2 text-[11px] font-bold text-white shadow-md hover:bg-slate-800 dark:hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-widest"
            >
              <Plus size={16} /> 新建订单
@@ -167,7 +168,8 @@ export default function CustomerDetailPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+      <div className="flex-1 p-2">
+
         <div className="grid gap-6 lg:grid-cols-[380px_1fr] items-start pb-12">
           {/* Left Column: Fixed Profile */}
           <div className="space-y-6 lg:sticky lg:top-0">
@@ -460,7 +462,11 @@ export default function CustomerDetailPage() {
                           <div className="flex-1 min-w-0">
                             <div className="text-[14px] font-bold text-primary-navy dark:text-white truncate" title={c.name}>{c.name}</div>
                             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{c.title}</div>
-                            <div className="text-[12px] text-slate-500 font-medium truncate" title={c.contact}>{c.contact}</div>
+                            <div className="flex items-center gap-2">
+                               <div className="text-[12px] text-slate-500 font-medium truncate font-mono" title={c.contact}>{maskContact(c.contact)}</div>
+                               <div className="w-1 h-1 rounded-full bg-slate-300" />
+                               <div className="text-[12px] text-slate-500 font-medium truncate font-mono" title={c.email}>{maskContact(c.email)}</div>
+                            </div>
                           </div>
                         </div>
                       )) : (
@@ -538,9 +544,12 @@ function ActionButton({ icon, label, onClick }: { icon: React.ReactNode; label: 
   );
 }
 
-function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', options = [] }: { icon: React.ReactNode; label: string; value: string; isEditable?: boolean; onSave?: (val: string) => void; type?: 'text' | 'select'; options?: string[] }) {
+function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', options = [], isSensitive }: { icon: React.ReactNode; label: string; value: string; isEditable?: boolean; onSave?: (val: string) => void; type?: 'text' | 'select'; options?: string[]; isSensitive?: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [showSensitive, setShowSensitive] = useState(false);
   const [val, setVal] = useState(value);
+
+  const displayValue = isSensitive && !showSensitive ? maskContact(value) : value;
 
   return (
     <div className="flex items-center gap-4 group">
@@ -571,7 +580,12 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
           )
         ) : (
           <div className="flex items-center gap-2">
-            <div className="text-[13px] font-bold text-primary-navy dark:text-white mt-0.5 truncate" title={value}>{value}</div>
+            <div className={`text-[13px] font-bold text-primary-navy dark:text-white mt-0.5 truncate ${isSensitive && !showSensitive ? 'font-mono' : ''}`} title={value}>{displayValue}</div>
+            {isSensitive && (
+              <button onClick={() => setShowSensitive(!showSensitive)} className="p-1 text-slate-300 hover:text-primary-navy transition-colors">
+                {showSensitive ? <EyeOff size={10} /> : <Eye size={10} />}
+              </button>
+            )}
             {isEditable && (
               <button onClick={() => setIsEditing(true)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-300 hover:text-primary-navy">
                 <Pencil size={10} />

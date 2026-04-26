@@ -64,6 +64,8 @@ export const EMPTY_PRODUCTION_FORM: ProductionFormState = {
   productionStatus: 'not_started',
   inspectionStatus: 'pending',
   remark: '',
+  photos: [],
+  newPhotos: [],
 };
 
 export const EMPTY_LOGISTICS_FORM: LogisticsFormState = {
@@ -159,7 +161,6 @@ export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFor
       imageUrl: asText(it.imageUrl || it.image_url),
       productName: it.product_name,
       specification: asText(it.specification),
-      hsCode: asText(it.hsCode || it.hs_code),
       quantity: String(it.quantity),
       unit: asText(it.unit, 'pcs'),
       unitPrice: String(it.unit_price),
@@ -193,6 +194,8 @@ export function buildProductionForm(plan: ProductionPlan | null): ProductionForm
     productionStatus: plan?.productionStatus || 'not_started',
     inspectionStatus: plan?.inspectionStatus || 'pending',
     remark: asText(plan?.remark),
+    photos: plan?.photos || [],
+    newPhotos: [],
   };
 }
 

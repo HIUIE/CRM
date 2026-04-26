@@ -53,15 +53,19 @@ export function createAttachmentsRouter() {
 
     try {
       const uploaded = [];
+      const entityType = req.body.entityType || null;
+      const entityId = req.body.entityId || null;
+      const remark = req.body.remark || null;
+
       for (const file of files) {
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
         const relativePath = path.posix.join(`customer_${customerId}`, `order_${orderId}`, file.filename);
         const result = await db.run(
           `
-            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, remark)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `,
-          [null, null, originalName, file.filename, file.mimetype, file.size, relativePath],
+          [entityType, entityId, originalName, file.filename, file.mimetype, file.size, relativePath, remark],
         );
         uploaded.push({
           id: result.lastID,
@@ -71,6 +75,7 @@ export function createAttachmentsRouter() {
           url: buildAttachmentUrl(result.lastID as number, file.filename),
           mimeType: file.mimetype,
           fileSize: file.size,
+          remark: remark,
         });
       }
       res.status(201).json(uploaded);

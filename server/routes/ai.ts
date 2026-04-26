@@ -30,7 +30,8 @@ export function createAiRouter() {
       }
 
       // 对话模式不强制要求 JSON 格式，解决 DeepSeek 400 校验报错
-      const prompt = `你是一个外贸实战专家。用户向你咨询业务问题，请给出专业、简练、有针对性的回答。用户消息：\n"""\n${message}\n"""`;
+      const safeMessage = sanitizeOrderData(message);
+      const prompt = `你是一个外贸实战专家。用户向你咨询业务问题，请给出专业、简练、有针对性的回答。用户消息：\n"""\n${safeMessage}\n"""`;
       
       const result = provider === 'gemini'
         ? await runGeminiModel(selectedModel, apiKey, prompt)

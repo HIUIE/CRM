@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { parseJsonObject } from './json.js';
+import { sanitizeForAI } from '../lib/sanitizer.js';
 
 export function resolveAiProvider(model: string) {
   const normalized = model.toLowerCase();
@@ -91,6 +92,9 @@ export async function runOpenAiCompatibleModel({
 }
 
 export function buildOrderParsingPrompt(text: string) {
+  // Pre-sanitize raw text input to prevent leaking contacts in the free-text prompt
+  const safeText = sanitizeForAI(text);
+
   return `你是一个资深外贸业务助理。请从下面这段杂乱的客户消息或邮件中提取关键订单信息。
 请以严格 JSON 格式返回，且只能返回 JSON，不要包含 markdown 代码块或额外说明：
 {
@@ -104,15 +108,18 @@ export function buildOrderParsingPrompt(text: string) {
 }
 需要解析的内容如下：
 """
-${text}
+${safeText}
 """`;
 }
 
 export function buildOrderAnalysisPrompt(data: any) {
-  const dataJson = JSON.stringify(data, null, 2);
+  // Deeply sanitize all fields recursively (names, contacts, precise addresses)
+  const safeData = sanitizeForAI(data);
+  const dataJson = JSON.stringify(safeData, null, 2);
+
   return `你是一个资深的国际贸易与供应链专家。请根据以下订单数据进行深度分析，识别潜在风险并给出执行建议。
 
-数据详情（已脱敏）：
+数据详情（已严格脱敏，不含任何真实姓名、电话或详细门牌）：
 ${dataJson}
 
 请严格按以下 JSON 格式返回分析结果，不要包含任何 Markdown 格式：
@@ -135,39 +142,7 @@ ${dataJson}
 }
 
 export function sanitizeOrderData(data: any) {
-  const s = JSON.parse(JSON.stringify(data));
-  if (s.customer) {
-    s.customer.name = '客户 A (脱敏)';
-    s.customer.contact = 'PII_REMOVED';
-  }
-  if (s.order) {
-    delete s.order.details;
-  }
-  if (s.items) {
-    s.items.forEach((i: any) => {
-      delete i.image_url;
-      delete i.imageUrl;
-    });
-  }
-  if (s.financeRecords) {
-    s.financeRecords.forEach((f: any) => {
-      delete f.remark;
-      delete f.attachments;
-    });
-  }
-  if (s.logisticsRecords) {
-    s.logisticsRecords.forEach((l: any) => {
-      delete l.remark;
-      delete l.trackingNo;
-      delete l.attachments;
-    });
-  }
-  if (s.customs) {
-    delete s.customs.declarationNo;
-    delete s.customs.remark;
-    delete s.customs.attachments;
-  }
-  return s;
+  return sanitizeForAI(data);
 }
 
 export async function runGeminiModel(model: string, apiKey: string, prompt: string) {

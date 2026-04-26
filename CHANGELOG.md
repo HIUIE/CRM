@@ -1,6 +1,57 @@
 # Changelog
 
+## [2026-04-26]
+
+### 第五十九轮：截图拼接撕裂修复与原生 PDF 导出 (Print/Screenshot Fix & PDF Export)
+
+**问题根因**: 引入 `position: sticky` 吸顶效果后，Chrome/Edge 的"捕获全尺寸屏幕截图"功能在滚动拼接时，sticky Header 干扰了视口高度计算，导致画面出现横向断层与拼接撕裂。
+
+**修复清单**:
+- **`@media print` 全局修复**: 在 `src/index.css` 中注入打印媒体查询。当浏览器进入打印流程时，自动将 `position: sticky` 降级为 `position: relative`，隐藏毛玻璃悬浮导航与滚动进度条，解除所有 `overflow` 限制，确保内容完整展开为连续文档流。
+- **`.screenshot-safe` JS 注入类**: 针对不触发 `@media print` 的原生截图工具（如 Edge 捕获全尺寸），提供等效的 JS 注入机制。
+- **打印事件自动触发**: 新增 `beforeprint` / `afterprint` 全局监听，打印对话框打开时自动注入安全模式，关闭后恢复。
+- **手动截图快捷键**: 新增 `Ctrl+Shift+S` 快捷键，可随时手动切换截图安全模式，屏幕右上角弹出 Toast 提示当前状态。
+
+**原生 PDF 导出落地**:
+- **新依赖**: 引入 `html2canvas` (DOM→Canvas 渲染) 与 `jspdf` (PDF 生成)。
+- **新增 `src/lib/pdfExport.ts`**: 封装 `exportElementToPdf()` 核心函数，使用 2x 高清 html2canvas 将订单内容渲染为 Canvas，自动按 A4 竖版多页切片，逐页注入 PDF，导出前自动注入 `.screenshot-safe` 解除 sticky。
+- **按钮升级**: 订单详情页"导出 PDF 报告"按钮由 `window.print()` 替换为 `handleExportPdf`，点击即触发下载。
+
+### 第五十八轮：订单详情页"长文档"重构与悬浮楼层导航 (Long-Scroll Refactoring)
+
+**核心改动**:
+- **长文档布局**: 在 `MainLayout` 中识别订单详情路由 `/orders/:orderNo`，将 `h-screen overflow-hidden` 切换为 `min-h-screen` 自然滚动，侧边栏改为 `sticky top-2 self-start`。
+- **吸顶操作栏**: 订单详情 Header 改为 `position: sticky; top: 0; z-index: 40`，配合滚动进度条，业务员无需回到顶部即可操作。
+- **毛玻璃悬浮楼层导航**: 新增 `.glass-nav` CSS 样式（`backdrop-filter: blur(24px)` + 半透明背景 + 辉光阴影），在详情页右侧固定渲染楼层导航圆点。基于 `IntersectionObserver` 实时追踪当前视口内的业务模块，自动高亮对应导航圆点并以绿色指示条标定位置。
+- **AI 诊断快捷入口**: 悬浮导航底部嵌入 AI 诊断按钮，取消原右侧静态面板中的冗余导航区。
+- **快捷备注移入主内容流**: 订单快捷备注从右侧面板迁移至主内容区"关联协同任务"下方，统一信息流。
+
+### 第五十七轮：项目基础设施与 AI 协同配置
+
+- **CLAUDE.md**: 创建项目级 AI 上下文索引，含技术栈、路由、认证、API 封装等关键路径说明，以及会话启动时的自检清单与持续记录规则。
+- **`.gitignore` 更新**: 新增 `.learnings/` 目录忽略规则，防止 AI 经验记录被提交到版本库。
+- **self-improving-agent 技能**: 安装并配置 Cowork 自进化代理技能，实现跨会话的错误记录、经验沉淀与功能需求追踪。
+
+### 第五十六轮：紧急修复 — 文件损坏导致的全面白屏 (Critical Hotfix)
+
+**根因分析 (Root Cause)**: 在代码编辑过程中，`src/pages/OrderDetail.tsx` 被意外拆分为 `.part1/part2/part3` 分片文件，原始文件被覆盖为不完整版本。组件函数在 643 行提前闭合，导致约 400 行 Drawer 表单代码（订单编辑、财务录入、生产排产、装箱管理、物流报关等）全部脱离函数作用域成为孤儿代码。同时 `src/features/order-detail/types.ts` 混入了残留语法垃圾，造成 TypeScript 解析失败。
+
+**修复清单**:
+- **`src/pages/OrderDetail.tsx` (Critical)**: 从 git HEAD 恢复完整文件（由 741 行→1141 行），重建所有 Drawer 表单的闭合结构
+- **`src/features/order-detail/types.ts`**: 删除第 315-317 行的残留垃圾代码 `}>;` / `summary: string;` / `};`
+- **`src/features/order-detail/components.tsx`**: 补全缺失的 `ChevronRight` 图标导入
+- **`src/features/order-detail/types.ts`**: 为 `AttachmentMeta` 类型补充 `createdAt` 和 `remark` 字段
+- **`server/domain.ts`**: `ATTACHMENT_ENTITY_TYPES` 添加 `'production_photo'` 枚举值，消除类型错误
+
 ## [2026-04-25]
+
+### 第五十五轮：全维度隐私加固与商业合规升级 (Privacy & Compliance)
+- **AI 脱敏网关 (Sanitization Gateway)**: 引入后端 `sanitizeForAI` 核心引擎，自动识别并抹除 PII（个人身份信息）。所有发往 Gemini/DeepSeek 的业务数据现在均已实现“手术级”脱敏，仅保留业务逻辑，彻底隔离客户联系方式。
+- **审计日志深度脱敏**: 重构审计记录逻辑，所有数据的变更快照（Old/New Value）在存入数据库前均经过脱敏处理，杜绝了通过审计后台“倒查”隐私信息的漏洞。
+- **前端隐私盾 (Privacy Shield UI)**:
+  - **默认遮挡机制**: 客户画像及联系人矩阵中的邮箱、电话现在默认显示为 `sa***@domain.com` 格式。
+  - **交互式解锁**: 在关键信息旁增加了“小眼睛”图标，支持点击后二次验证显隐，兼顾了日常操作与资产保护。
+- **系统健壮性加固**: 修复了由于组件重构导致的 `ContactCreateDrawer` 路径引用错误，并清理了列表页残留的语法垃圾。
 
 ### 第五十四轮：Tooltip 层级穿透与边缘避让修复 (Z-Index & Boundary Detection)
 - **Portal 逃逸技术**: 将全局 Tooltip 渲染出口通过 `createPortal` 挂载至 `<body>` 根节点，彻底解决在订单操作栏中被 Header 裁剪、吞噬的问题。

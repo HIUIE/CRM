@@ -16,6 +16,8 @@ export type AttachmentMeta = {
   url: string;
   fileSize?: number | null;
   mimeType?: string | null;
+  createdAt?: string;
+  remark?: string;
 };
 
 export type Partner = {
@@ -121,6 +123,7 @@ export type ProductionPlan = {
   remark?: string | null;
   updatedAt?: string | null;
   createdByName?: string | null;
+  photos?: AttachmentMeta[];
   logs?: ProductionLog[];
 };
 
@@ -177,6 +180,13 @@ export type OrderDetailResponse = {
   domesticLogistics?: LogisticsRecord | null;
   internationalLogistics?: LogisticsRecord | null;
   packingRecords?: PackingRecord[] | null;
+  orderDocuments?: AttachmentMeta[];
+  followUps?: Array<{
+    id: number;
+    content: string;
+    createdByName?: string | null;
+    createdAt?: string;
+  }>;
   summary?: {
     receiptsByCurrency: Record<string, number>;
     paymentsByCurrency: Record<string, number>;
@@ -202,7 +212,6 @@ export type EditableOrderItem = {
   imageUrl: string;
   productName: string;
   specification: string;
-  hsCode: string;
   quantity: string;
   unit: string;
   unitPrice: string;
@@ -233,7 +242,7 @@ export type FinanceFormState = {
   partnerId: string;
   remark: string;
   attachments: AttachmentMeta[];
-  newFiles: File[];
+  newFiles: Array<{ file: File; remark: string }>;
 };
 
 export type ProductionFormState = {
@@ -244,13 +253,15 @@ export type ProductionFormState = {
   productionStatus: ProductionStatus;
   inspectionStatus: InspectionStatus;
   remark: string;
+  photos: AttachmentMeta[];
+  newPhotos: Array<{ file: File; remark: string }>;
 };
 
 export type ProductionLogFormState = {
   logDate: string;
   content: string;
   attachments: AttachmentMeta[];
-  newFiles: File[];
+  newFiles: Array<{ file: File; remark: string }>;
 };
 
 export type LogisticsFormState = {
@@ -271,7 +282,7 @@ export type LogisticsFormState = {
   recipientAddress: string;
   remark: string;
   attachments: AttachmentMeta[];
-  newFiles: File[];
+  newFiles: Array<{ file: File; remark: string }>;
 };
 
 export type PackingFormState = {
@@ -288,7 +299,7 @@ export type CustomsFormState = {
   tradeMode: string;
   remark: string;
   attachments: AttachmentMeta[];
-  newFiles: File[];
+  newFiles: Array<{ file: File; remark: string }>;
 };
 
 export type DrawerState =

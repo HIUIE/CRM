@@ -174,7 +174,7 @@ export default function LogisticsView() {
   }, [formData.orderId, orders]);
 
   return (
-    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+    <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_160px]">
           <div className="relative">
@@ -220,12 +220,12 @@ export default function LogisticsView() {
         </div>
       </section>
 
-      <section className="flex-1 min-h-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col overflow-hidden">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
         {loading ? (
           <div className="text-sm text-slate-500 dark:text-slate-400 p-8 text-center animate-pulse">正在同步物流状态...</div>
         ) : (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+          <div className="flex flex-col">
+            <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>

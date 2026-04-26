@@ -88,7 +88,7 @@ export default function TasksView() {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden">
+    <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
       <section className="shrink-0 flex flex-col gap-4 p-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -113,10 +113,10 @@ export default function TasksView() {
         </div>
       </section>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden items-stretch pb-4 px-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 px-1">
          {columns.map(col => (
-           <div key={col.key} className={`flex flex-col rounded-xl border border-slate-200 dark:border-navy-800 ${col.color} overflow-hidden`}>
-              <div className="px-5 py-4 border-b border-slate-200 dark:border-navy-800 flex items-center justify-between shrink-0 bg-white/60 dark:bg-navy-900/60 backdrop-blur-md">
+           <div key={col.key} className={`flex flex-col rounded-xl border border-slate-200 dark:border-navy-800 ${col.color}`}>
+              <div className="px-5 py-4 border-b border-slate-200 dark:border-navy-800 flex items-center justify-between shrink-0 bg-white/60 dark:bg-navy-900/60 backdrop-blur-md rounded-t-xl">
                  <h3 className="text-[11px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
                     <div className={`h-1.5 w-1.5 rounded-full ${col.key === 'todo' ? 'bg-slate-400' : col.key === 'in_progress' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                     {col.label}
@@ -124,7 +124,7 @@ export default function TasksView() {
                  <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-navy-800 text-[9px] font-bold text-slate-600 dark:text-slate-400">{tasks.filter(t => t.status === col.key).length}</span>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+              <div className="p-3 space-y-3">
                  <AnimatePresence initial={false}>
                     {tasks.filter(t => t.status === col.key).map((task) => (
                       <TaskCard 

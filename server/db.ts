@@ -272,6 +272,15 @@ async function runMigrations() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS order_follow_ups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS task_comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id INTEGER NOT NULL,
@@ -337,6 +346,7 @@ async function runMigrations() {
   await ensureColumn('production_plans', 'created_by', 'INTEGER');
   await ensureColumn('production_plans', 'updated_by', 'INTEGER');
   await ensureColumn('packing_records', 'attachment_id', 'INTEGER');
+  await ensureColumn('attachments', 'remark', 'TEXT');
 
   await db.run(
     `
