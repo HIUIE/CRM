@@ -11,6 +11,7 @@ coverage/
 *.sqlite-journal
 uploads/
 backups/
+data/
 .learnings/
 .gemini/
 *.b
