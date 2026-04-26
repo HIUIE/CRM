@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Edit, ExternalLink, Plus, Search, Trash2, AlertTriangle, Copy, Check, Hash } from 'lucide-react';
+import { Edit, ExternalLink, Plus, Search, Trash2, Hash } from 'lucide-react';
+import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Chip, Toast } from '../features/order-detail/components';
+import ConfirmDeleteModal from './ui/ConfirmDeleteModal';
 import { Drawer } from './ui/Drawer';
 import { Pagination } from './ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
@@ -47,9 +49,7 @@ export default function CustomersView() {
   // Delete Modal States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [customerToDelete, setOrderToDelete] = useState<CustomerListItem | null>(null);
-  const [deleteInput, setDeleteInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const isFormDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
@@ -216,30 +216,21 @@ export default function CustomersView() {
 
   const startDelete = (customer: CustomerListItem) => {
     setOrderToDelete(customer);
-    setDeleteInput('');
-    setCopied(false);
     setIsDeleteModalOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!customerToDelete || deleteInput !== (customerToDelete.display_id || String(customerToDelete.id))) return;
+    if (!customerToDelete) return;
     setIsDeleting(true);
     try {
       await apiFetch(`/api/customers/${customerToDelete.id}`, { method: 'DELETE' });
       setIsDeleteModalOpen(false);
       await loadCustomers();
     } catch (err) {
-      alert(getErrorMessage(err, '删除客户失败'));
+      setToast(getErrorMessage(err, '删除客户失败'));
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const copyId = () => {
-    if (!customerToDelete) return;
-    navigator.clipboard.writeText(customerToDelete.display_id || String(customerToDelete.id));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -420,69 +411,21 @@ export default function CustomersView() {
         </div>
       </Drawer>
 
-      {/* Danger Modal: 客户列表删除二次确认 */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-           <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsDeleteModalOpen(false)} />
-           <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-navy-900 shadow-2xl border border-red-100 dark:border-red-900/30 animate-in zoom-in duration-300">
-              <div className="bg-red-50 dark:bg-red-900/20 px-6 py-4 flex items-center gap-3 border-b border-red-100 dark:border-red-900/30">
-                 <AlertTriangle className="text-red-600 dark:text-red-400" size={20} />
-                 <h3 className="text-sm font-extrabold text-red-700 dark:text-red-400 uppercase tracking-widest">客户档案销毁确认</h3>
-              </div>
-              <div className="p-6 space-y-5">
-                 <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-                        确定要永久删除客户“{customerToDelete?.name}”吗？此操作将同步清除与之关联的所有记录，<span className="text-red-600 font-bold">不可逆转</span>。
-                    </p>
-                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950 rounded-xl border border-slate-100 dark:border-navy-800">
-                       <span className="font-bold text-primary-navy dark:text-white data-field">{customerToDelete?.display_id || customerToDelete?.id}</span>
-                       <button onClick={copyId} className="flex items-center gap-1 text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
-                          {copied ? <><Check size={12} /> 已复制</> : <><Copy size={12} /> 复制编号</>}
-                       </button>
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">请输入编号以确认删除</label>
-                    <input 
-                       value={deleteInput}
-                       onChange={e => setDeleteInput(e.target.value)}
-                       placeholder={`输入 ${customerToDelete?.display_id || customerToDelete?.id}`}
-                       className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-red-500 transition-all data-field shadow-inner"
-                    />
-                 </div>
-                 <div className="flex gap-3 pt-2">
-                    <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 rounded-xl border border-slate-200 dark:border-navy-800 py-3 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all uppercase tracking-widest">取消</button>
-                    <button 
-                       disabled={isDeleting || deleteInput !== (customerToDelete?.display_id || String(customerToDelete?.id))}
-                       onClick={handleConfirmDelete}
-                       className="btn-destructive flex-2 text-xs px-6 py-3"
-                    >
-                       {isDeleting ? '正在注销...' : '确认永久销毁'}
-                    </button>
-                 </div>
-              </div>
-           </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="客户档案销毁确认"
+        warning={
+          <>确定要永久删除客户“{customerToDelete?.name}”吗？此操作将同步清除与之关联的所有记录，<span className="text-red-600 font-bold">不可逆转</span>。</>
+        }
+        entityLabel="编号"
+        entityId={customerToDelete?.display_id || String(customerToDelete?.id || '')}
+        isDeleting={isDeleting}
+      />
 
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <label className="block">
-        <span className="mb-2 block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
-        {children}
-      </label>
-      {error && (
-        <div className="flex items-center gap-1.5 text-xs font-bold text-red-500 animate-in fade-in slide-in-from-top-1 duration-200">
-          <AlertTriangle size={12} />
-          {error}
-        </div>
-      )}
-    </div>
-  );
-}

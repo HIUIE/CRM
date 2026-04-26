@@ -304,6 +304,7 @@ async function runMigrations() {
   await ensureColumn('task_attachments', 'comment_id', 'INTEGER');
   await ensureColumn('tasks', 'comment_count', 'INTEGER DEFAULT 0');
   await ensureColumn('tasks', 'attachment_count', 'INTEGER DEFAULT 0');
+  await ensureColumn('orders', 'quick_notes', 'TEXT');
   await ensureColumn('orders', 'delivery_date', 'TEXT');
   await ensureColumn('orders', 'key_milestone', 'TEXT');
   await ensureColumn('orders', 'freight_amount', 'REAL DEFAULT 0');

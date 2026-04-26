@@ -3,6 +3,7 @@ import { apiFetch, getErrorMessage } from '../../lib/api';
 import { Drawer } from '../ui/Drawer';
 import { Combobox } from '../ui/Combobox';
 import { MentionTextarea } from './MentionTextarea';
+import Field from './Field';
 import type { OrderOption, CustomerListItem } from '../../types/crm';
 
 interface UserOption {
@@ -165,11 +166,3 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</span>
-      {children}
-    </label>
-  );
-}

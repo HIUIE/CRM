@@ -109,6 +109,14 @@ export default function TasksView() {
         </div>
       </section>
 
+      {loading ? (
+        <div className="flex items-center justify-center py-32 col-span-full">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-navy border-t-transparent dark:border-tertiary-sage dark:border-t-transparent" />
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">正在加载任务...</div>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
            {columns.map(col => (
              <div key={col.key} className={`flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm ${col.color}`}>
@@ -141,6 +149,7 @@ export default function TasksView() {
              </div>
            ))}
         </div>
+      )}
 
       <TaskDrawer
         isOpen={showCreateDrawer} 

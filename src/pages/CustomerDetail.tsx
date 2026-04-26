@@ -101,7 +101,7 @@ export default function CustomerDetailPage() {
       setToast('资料已自动保存');
       setTimeout(() => setToast(''), 2000);
     } catch (err) {
-      alert(getErrorMessage(err, '更新失败'));
+      setToast(getErrorMessage(err, '更新失败'));
     }
     setEditingField(null);
   };
@@ -119,7 +119,7 @@ export default function CustomerDetailPage() {
       setToast('跟进记录已发布');
       setTimeout(() => setToast(''), 2000);
     } catch (err) {
-      alert(getErrorMessage(err, '发布失败'));
+      setToast(getErrorMessage(err, '发布失败'));
     } finally {
       setIsSubmittingFollowup(false);
     }

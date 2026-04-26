@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus, X } from 'lucide-react';
+import Field from '../components/ui/Field';
 import { apiDownload, apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { FilterPill } from '../features/order-detail/components';
@@ -526,11 +527,3 @@ export default function SettingsView() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block space-y-2">
-      <span className="block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
-      {children}
-    </label>
-  );
-}

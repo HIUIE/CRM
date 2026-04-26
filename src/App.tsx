@@ -7,6 +7,7 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import MainLayout from './components/layout/MainLayout';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 // --- Static Imports for ALL pages to rule out lazy-load issues ---
 import DashboardView from './pages/Dashboard';
@@ -49,6 +50,7 @@ export default function App() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-navy-950 font-sans text-[11px] font-bold uppercase tracking-widest text-slate-400">系统初始化中...</div>;
 
   return (
+    <ErrorBoundary>
     <Suspense fallback={<PageLoader />}>
       <VersionGuard />
       <Routes>
@@ -75,5 +77,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Suspense>
+    </ErrorBoundary>
   );
 }

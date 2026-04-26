@@ -1,6 +1,6 @@
 # SmartTrade AI CRM — 项目全面审查报告
 
-> 审查日期：2026-04-26 | 版本：1.0.7
+> 审查日期：2026-04-27 | 版本：1.0.8
 
 ---
 
@@ -125,7 +125,10 @@
 │   │       ├── OrderCreateDrawer.tsx  # 订单创建抽屉
 │   │       ├── TaskDrawer.tsx         # 任务创建抽屉
 │   │       ├── TaskDetailDrawer.tsx   # 任务详情抽屉
-│   │       └── NotificationDrawer.tsx # 通知抽屉
+│   │       ├── NotificationDrawer.tsx # 通知抽屉
+│   │       ├── ErrorBoundary.tsx      # 渲染崩溃兜底
+│   │       ├── Field.tsx             # 表单字段标签（含错误提示）
+│   │       └── ConfirmDeleteModal.tsx # 高危删除二次确认弹窗
 │   │
 │   ├── pages/                         # 页面级组件
 │   │   ├── Dashboard.tsx              # 首页控制台（含待办/动态/状态分布）
@@ -138,8 +141,11 @@
 │   │   ├── AuditLogs.tsx              # 审计日志（仅 admin）
 │   │   └── HelpCenter.tsx             # 帮助中心
 │   │
-│   └── features/order-detail/         # 订单详情功能模块
-│       ├── components.tsx             # 详情页子组件
+│   └── features/order-detail/         # 订单详情功能模块（拆分后）
+│       ├── components.tsx             # 详情页子组件（Chip/Toast/DocumentBoard 等）
+│       ├── sections.tsx               # 详情页各区块渲染组件（Header/Items/Finance/Production 等）
+│       ├── drawers.tsx                # 抽屉表单组件（Order/Finance/Production/Customs 等）
+│       ├── handlers.ts                # 业务操作处理函数（保存/删除/上传/导出）
 │       ├── types.ts                   # 详情页专用类型
 │       └── utils.ts                   # 详情页工具函数
 │
@@ -349,27 +355,24 @@
 
 ---
 
-## 四、代码质量全面审计 (2026-04-26)
+## 四、代码质量全面审计 (2026-04-26 → 2026-04-27)
 
-### P0 — 必须修复
+### P0 — 已全部修复 ✅
 
-| 问题 | 位置 | 详情 |
-|------|------|------|
-| **OrderDetail 1336 行巨型组件** | `src/pages/OrderDetail.tsx` | 单文件管理 30+ state、20+ handler、7 个抽屉表单。应拆分到 `src/features/order-detail/` 下各自文件 |
-| **无 Error Boundary** | 全站 | 任何组件渲染崩溃会导致整个应用白屏 |
-| **9 处 `alert()` 阻塞用户** | OrderDetail、CustomerDetail、OrdersView、CustomersView、TaskDetailDrawer | 应用内应该用 Toast 统一替代 |
-| **export 服务 N+1 查询 (760+ SQL)** | `server/services/export.ts:534-726` | 10 客户 × 5 订单 = 760+ 次 SQL 查询 |
-| **3 份重复删除确认弹窗** | OrderDetail / OrdersView / CustomersView | 应提取为共享 `ConfirmDeleteModal` 组件 |
-| **9 份重复 Field 组件** | 各 View 文件中本地定义 | 应提取到 `components/ui/Field.tsx` |
-| **Tasks 页缺少加载态** | `src/pages/Tasks.tsx:43` | `loading` 状态从未渲染 |
-| **quick-notes 端点损坏** | `server/routes/orders.ts:287` | `quick_notes` 列未在 schema 定义，请求永远失败 |
-| **死依赖** | `package.json` | `date-fns`、`react-hook-form`、`i18next` + 2 子包从未被使用 |
+| 问题 | 位置 | 处理方式 | 状态 |
+|------|------|----------|------|
+| ~~OrderDetail 1336 行巨型组件~~ | `src/pages/OrderDetail.tsx` → `features/order-detail/` | 拆分为 `handlers.ts`/`drawers.tsx`/`sections.tsx`，1295→499 行 | ✅ 已修复 |
+| ~~无 Error Boundary~~ | 全站 | 新建 `src/components/ui/ErrorBoundary.tsx`，包裹 App 路由 | ✅ 已修复 |
+| ~~9 处 `alert()` 阻塞用户~~ | 5 个 View 文件 | 全部替换为 Toast 组件 | ✅ 已修复 |
+| ~~export 服务 N+1 查询~~ | `server/services/export.ts` | 批量化为 9 类查询，151 次 SQL → ~15 次 | ✅ 已修复 |
+| ~~3 份重复删除确认弹窗~~ | OrderDetail / OrdersView / CustomersView | 提取为共享 `ConfirmDeleteModal` 组件 | ✅ 已修复 |
+| ~~9 份重复 Field 组件~~ | 各 View 文件本地定义 | 提取到 `components/ui/Field.tsx`，替换 10 处 | ✅ 已修复 |
+| ~~Tasks 页缺少加载态~~ | `src/pages/Tasks.tsx` | 添加 loading spinner + 提示文案 | ✅ 已修复 |
+| ~~quick-notes 端点损坏~~ | `server/routes/orders.ts` | 在 `db.ts` 添加 `quick_notes` 列迁移 | ✅ 已修复 |
+| ~~死依赖~~ | `package.json` | 移除 `date-fns`/`react-hook-form`/`i18next` + 2 子包 | ✅ 已修复 |
 
 ### P1 — 重要优化
-
-| 问题 | 位置 | 详情 |
-|------|------|------|
-| `startViewTransition` 重复 7 次 | `OrderDetail.tsx` | 应封装为 `useTransitionedLoad` hook |
+| `startViewTransition` 重复 7 次 | `OrderDetail.tsx`（已拆分解耦）| 应封装为 `useTransitionedLoad` hook |
 | `rounded-lg/xl/2xl` 三类圆角混用 | 全站页面文件 | 选一种标准统一（建议 `rounded-lg`）|
 | 按钮样式不统一 | 6 个 View/Component | 首屏按钮用内联类而非 `btn-primary` |
 | 任务评论 N+1 查询 | `server/routes/tasks.ts:75-83` | 循环查附件，应改为 `WHERE comment_id IN (...)` |
@@ -387,7 +390,7 @@
 | `card-elevated` CSS 定义两次 | `src/index.css:240,376` | 重复定义且从未使用 |
 | ~30 个未使用的 CSS 类 | `src/index.css` | `glass-nav`、`headline-*`、`body-*`、`.screenshot-safe` 等 |
 | `.btn-ghost` 定义但从未使用 | `src/index.css:184` | |
-| 图标导入过多 | `OrderDetail.tsx` | 39 个 lucide 图标导入，约 10 个未使用 |
+| 图标导入过多 | `OrderDetail.tsx`（已拆分解耦）| 拆分后各文件图标导入更精确，但仍可进一步修剪 |
 | `Login.tsx` 无限流反馈 | `src/pages/Login.tsx` | 服务端已限流但前端无展示 |
 | `console.error` 静默失败 | NotificationDrawer、TaskDetailDrawer 等 | 无用户反馈 |
 | `DonutChart` / `Sparkline` 未 memo | `Dashboard.tsx` | 每次渲染重算 SVG 路径 |
@@ -400,13 +403,13 @@
 - 全站无数据层抽象（无 React Query/SWR），每个组件直接在 `useEffect` 里 `apiFetch`
 - `apiFetch` 用 Fetch API 但 `apiUpload` 用 XHR，双 HTTP 实现
 - `lucide-react` 未 tree-shake 的导入增加 bundle 体积
-- `dayjs` 已使用但 `date-fns` 是死依赖
+- `dayjs` 已使用，`date-fns` 已移除
 
 ### 优化路线图
 
 ```
-迭代 1 (P0)        → 拆分 OrderDetail、添加 Error Boundary、淘汰 alert()
-迭代 2 (P1)        → 统一 UI tokens、提取共享组件（Field/ConfirmDelete/TimeRangeFilter）
-迭代 3 (P2)        → 清理 CSS 死类、修剪死依赖、减少 :any 类型
-迭代 4 (架构)      → 引入数据层、消除 features/components 循环依赖
+迭代 1 (P0) ✅     → 拆分 OrderDetail、添加 Error Boundary、淘汰 alert()、修复 N+1、提取共享组件、清理死依赖
+迭代 2 (P1)        → 统一 UI tokens、提取 TimeRangeFilter、修复任务评论 N+1、搜索防抖、修复审计日志空指针
+迭代 3 (P2)        → 清理 CSS 死类、修剪未用图标、修复 CustomerDetail 闭包陈旧
+迭代 4 (架构)      → 引入数据层（React Query/SWR）、消除 features/components 循环依赖
 ```

@@ -115,7 +115,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
       setToast('进展已同步');
       setTimeout(() => setToast(''), 2000);
     } catch (e) {
-      alert('发送失败');
+      setToast(getErrorMessage(e, '发送失败'));
       setIsUploading(false);
     } finally {
       setIsSubmitting(false);

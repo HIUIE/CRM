@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, Plus, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
+import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -422,15 +423,6 @@ function StatCard({ title, value, icon, currency }: { title: string; value: numb
       </div>
       <div className="h-8 w-8 rounded-lg bg-white dark:bg-navy-800 shadow-sm flex items-center justify-center border border-slate-100 dark:border-navy-700">{icon}</div>
     </div>
-  );
-}
-
-function Field({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="mb-2 block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
-      {children}
-    </label>
   );
 }
 

@@ -3,6 +3,7 @@ import { apiFetch, getErrorMessage } from '../../lib/api';
 import { Drawer } from './Drawer';
 import { Combobox } from './Combobox';
 import { Wallet, BadgeDollarSign } from 'lucide-react';
+import Field from './Field';
 import type { OrderOption, PartnerOption } from '../../types/crm';
 
 interface FinanceCreateDrawerProps {
@@ -173,11 +174,3 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</span>
-      {children}
-    </label>
-  );
-}

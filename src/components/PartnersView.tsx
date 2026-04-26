@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Edit, Plus, Search, Trash2, MapPin, Star, Building2, AlertTriangle } from 'lucide-react';
+import { Edit, Plus, Search, Trash2, MapPin, Star, Building2 } from 'lucide-react';
+import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -425,19 +426,3 @@ export default function PartnersView() {
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <label className="block">
-        <span className="mb-2 block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
-        {children}
-      </label>
-      {error && (
-        <div className="flex items-center gap-1.5 text-xs font-bold text-red-500 animate-in fade-in slide-in-from-top-1 duration-200">
-           <AlertTriangle size={12} />
-           {error}
-        </div>
-      )}
-    </div>
-  );
-}

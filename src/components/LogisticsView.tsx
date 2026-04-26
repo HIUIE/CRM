@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Package, Search, Truck, MapPin, Calendar, Clock, ChevronRight, Box, Plus } from 'lucide-react';
+import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { Chip, Toast } from '../features/order-detail/components';
@@ -377,11 +378,3 @@ export default function LogisticsView() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
-      {children}
-    </label>
-  );
-}

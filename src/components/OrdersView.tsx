@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Edit, Plus, Search, Trash2, AlertTriangle, Copy, Check, Hash } from 'lucide-react';
+import { Edit, Plus, Search, Trash2, Hash } from 'lucide-react';
+import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Chip } from '../features/order-detail/components';
+import { Chip, Toast } from '../features/order-detail/components';
+import ConfirmDeleteModal from './ui/ConfirmDeleteModal';
 import { Drawer } from './ui/Drawer';
 import { Pagination } from './ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
@@ -56,10 +58,9 @@ export default function OrdersView() {
 
   // 删除确认状态
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [toast, setToast] = useState('');
   const [orderToDelete, setOrderToDelete] = useState<OrderSummary | null>(null);
-  const [deleteInput, setDeleteInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const q = searchParams.get('q') || '';
   const status = searchParams.get('status') || '';
@@ -184,30 +185,21 @@ export default function OrdersView() {
 
   const startDelete = (order: OrderSummary) => {
     setOrderToDelete(order);
-    setDeleteInput('');
-    setCopied(false);
     setIsDeleteModalOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!orderToDelete || deleteInput !== orderToDelete.display_id) return;
+    if (!orderToDelete) return;
     setIsDeleting(true);
     try {
       await apiFetch(`/api/orders/${orderToDelete.id}`, { method: 'DELETE' });
       setIsDeleteModalOpen(false);
       await loadData();
     } catch (err) {
-      alert(getErrorMessage(err, '删除订单失败'));
+      setToast(getErrorMessage(err, '删除订单失败'));
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const copyId = () => {
-    if (!orderToDelete) return;
-    navigator.clipboard.writeText(orderToDelete.display_id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -389,60 +381,19 @@ export default function OrdersView() {
         </form>
       </Drawer>
 
-      {/* Danger Modal: 订单列表删除二次确认 */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-           <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsDeleteModalOpen(false)} />
-           <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-navy-900 shadow-2xl border border-red-100 dark:border-red-900/30 animate-in zoom-in duration-300">
-              <div className="bg-red-50 dark:bg-red-900/20 px-6 py-4 flex items-center gap-3 border-b border-red-100 dark:border-red-900/30">
-                 <AlertTriangle className="text-red-600 dark:text-red-400" size={20} />
-                 <h3 className="text-sm font-extrabold text-red-700 dark:text-red-400 uppercase tracking-widest">高危删除确认</h3>
-              </div>
-              <div className="p-6 space-y-5">
-                 <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-                        确定要永久删除订单吗？此操作将同步清除与之关联的所有<span className="text-red-600 font-bold">生产、财务及物流数据</span>。
-                    </p>
-                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950 rounded-xl border border-slate-100 dark:border-navy-800">
-                       <span className="font-bold text-primary-navy dark:text-white data-field">{orderToDelete?.display_id}</span>
-                       <button onClick={copyId} className="flex items-center gap-1 text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
-                          {copied ? <><Check size={12} /> 已复制</> : <><Copy size={12} /> 复制单号</>}
-                       </button>
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">请输入单号以确认删除</label>
-                    <input 
-                       value={deleteInput}
-                       onChange={e => setDeleteInput(e.target.value)}
-                       placeholder={`输入 ${orderToDelete?.display_id}`}
-                       className="w-full rounded-xl border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-red-500 transition-all data-field shadow-inner"
-                    />
-                 </div>
-                 <div className="flex gap-3 pt-2">
-                    <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 rounded-xl border border-slate-200 dark:border-navy-800 py-3 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all uppercase tracking-widest">取消</button>
-                    <button 
-                       disabled={isDeleting || deleteInput !== orderToDelete?.display_id}
-                       onClick={handleConfirmDelete}
-                       className="btn-destructive flex-2 text-xs px-6 py-3"
-                    >
-                       {isDeleting ? '正在销毁...' : '确认永久删除'}
-                    </button>
-                 </div>
-              </div>
-           </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        warning={
+          <>确定要永久删除订单吗？此操作将同步清除与之关联的所有<span className="text-red-600 font-bold">生产、财务及物流数据</span>。</>
+        }
+        entityLabel="单号"
+        entityId={orderToDelete?.display_id || ''}
+        isDeleting={isDeleting}
+      />
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest opacity-70">{label}</span>
-      {children}
-    </label>
   );
 }
 

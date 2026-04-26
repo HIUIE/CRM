@@ -414,6 +414,15 @@ async function getOrdersForCustomer(customerId: number) {
   );
 }
 
+async function getOrdersForCustomers(customerIds: number[]) {
+  if (!customerIds.length) return [];
+  const placeholders = customerIds.map(() => '?').join(', ');
+  return db.all<OrderRow[]>(
+    `SELECT * FROM orders WHERE customer_id IN (${placeholders}) ORDER BY customer_id ASC, datetime(created_at) ASC, id ASC`,
+    customerIds,
+  );
+}
+
 async function getOrderAttachments(orderId: number) {
   const [finance, logistics, customs, production, packing] = await Promise.all([
     db.all<Record<string, unknown>[]>(`
@@ -528,11 +537,382 @@ async function getUnlinkedAttachments() {
   `);
 }
 
+async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> {
+  if (!orderIds.length) return new Map();
+
+  const ph = orderIds.map(() => '?').join(', ');
+
+  // Phase 1: Fetch all batch data that depends on order IDs
+  const [orderRows, itemRows, financeRows, logisticsRows, packingRows, customsRows, planRows, summaryRows, pendingCountRows] =
+    await Promise.all([
+      db.all<Record<string, unknown>[]>(
+        `SELECT o.*, c.name AS customer_name, c.display_id AS customer_display_id, c.country AS customer_country, c.contact AS customer_contact, c.logistics_preference AS customer_logistics_preference, c.payment_terms AS customer_payment_terms, cu.name AS created_by_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN users cu ON cu.id = o.created_by WHERE o.id IN (${ph})`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT * FROM order_items WHERE order_id IN (${ph}) ORDER BY order_id ASC, id ASC`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT f.*, p.name AS partner_name, p.partner_type AS partner_type, u.name AS created_by_name FROM finance_records f LEFT JOIN partners p ON p.id = f.partner_id LEFT JOIN users u ON u.id = f.created_by WHERE f.order_id IN (${ph}) ORDER BY f.order_id ASC, datetime(f.created_at) DESC, f.id DESC`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT l.*, u.name AS created_by_name FROM logistics_records l LEFT JOIN users u ON u.id = l.created_by WHERE l.order_id IN (${ph}) ORDER BY l.order_id ASC, CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC, CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC, l.shipping_date DESC, datetime(l.created_at) DESC, l.id DESC`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT pr.*, a.stored_name, a.file_path FROM packing_records pr LEFT JOIN attachments a ON a.id = pr.attachment_id WHERE pr.order_id IN (${ph}) ORDER BY pr.order_id ASC, pr.id ASC`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT c.*, u.name AS created_by_name FROM customs_records c LEFT JOIN users u ON u.id = c.created_by WHERE c.order_id IN (${ph})`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT pp.*, p.name AS partner_name, p.partner_type AS partner_type, p.country AS partner_country, p.contact AS partner_contact, u.name AS created_by_name FROM production_plans pp LEFT JOIN partners p ON p.id = pp.partner_id LEFT JOIN users u ON u.id = pp.created_by WHERE pp.order_id IN (${ph})`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT order_id, type, currency, payment_category, COALESCE(SUM(amount), 0) AS total FROM finance_records WHERE order_id IN (${ph}) AND status = 'completed' GROUP BY order_id, type, currency, payment_category`,
+        orderIds,
+      ),
+      db.all<Record<string, unknown>[]>(
+        `SELECT order_id, COUNT(*) AS count FROM finance_records WHERE order_id IN (${ph}) AND status = 'pending' GROUP BY order_id`,
+        orderIds,
+      ),
+    ]);
+
+  if (!orderRows.length) return new Map();
+
+  // Phase 2: Production logs (depends on plan IDs from Phase 1)
+  const planIds = planRows.map((r) => Number(r.id)).filter((id) => id > 0);
+  let logRows: Record<string, unknown>[] = [];
+  if (planIds.length) {
+    const planPh = planIds.map(() => '?').join(', ');
+    logRows = await db.all<Record<string, unknown>[]>(
+      `SELECT pl.*, u.name AS created_by_name FROM production_logs pl LEFT JOIN users u ON u.id = pl.created_by WHERE pl.plan_id IN (${planPh}) ORDER BY pl.plan_id ASC, datetime(pl.created_at) DESC`,
+      planIds,
+    );
+  }
+
+  // Phase 3: Group data by order_id
+  const itemsByOrder = new Map<number, Record<string, unknown>[]>();
+  for (const row of itemRows) {
+    const oid = Number(row.order_id);
+    if (!itemsByOrder.has(oid)) itemsByOrder.set(oid, []);
+    itemsByOrder.get(oid)!.push(row);
+  }
+
+  const financeByOrder = new Map<number, Record<string, unknown>[]>();
+  for (const row of financeRows) {
+    const oid = Number(row.order_id);
+    if (!financeByOrder.has(oid)) financeByOrder.set(oid, []);
+    financeByOrder.get(oid)!.push(row);
+  }
+
+  const logisticsByOrder = new Map<number, Record<string, unknown>[]>();
+  for (const row of logisticsRows) {
+    const oid = Number(row.order_id);
+    if (!logisticsByOrder.has(oid)) logisticsByOrder.set(oid, []);
+    logisticsByOrder.get(oid)!.push(row);
+  }
+
+  const packingByOrder = new Map<number, Record<string, unknown>[]>();
+  for (const row of packingRows) {
+    const oid = Number(row.order_id);
+    if (!packingByOrder.has(oid)) packingByOrder.set(oid, []);
+    packingByOrder.get(oid)!.push(row);
+  }
+
+  const customsByOrder = new Map<number, Record<string, unknown>>();
+  for (const row of customsRows) {
+    customsByOrder.set(Number(row.order_id), row);
+  }
+
+  const planByOrder = new Map<number, Record<string, unknown>>();
+  for (const row of planRows) {
+    planByOrder.set(Number(row.order_id), row);
+  }
+
+  const logsByPlanId = new Map<number, Record<string, unknown>[]>();
+  for (const row of logRows) {
+    const pid = Number(row.plan_id);
+    if (!logsByPlanId.has(pid)) logsByPlanId.set(pid, []);
+    logsByPlanId.get(pid)!.push(row);
+  }
+
+  const summaryByOrder = new Map<number, Record<string, unknown>[]>();
+  for (const row of summaryRows) {
+    const oid = Number(row.order_id);
+    if (!summaryByOrder.has(oid)) summaryByOrder.set(oid, []);
+    summaryByOrder.get(oid)!.push(row);
+  }
+
+  const pendingCountByOrder = new Map<number, number>();
+  for (const row of pendingCountRows) {
+    pendingCountByOrder.set(Number(row.order_id), Number(row.count));
+  }
+
+  // Phase 4: Batch attachment queries
+  const allFinanceIds: number[] = [];
+  financeByOrder.forEach((records) => {
+    for (const r of records) allFinanceIds.push(Number(r.id));
+  });
+  const allLogisticsIds: number[] = [];
+  logisticsByOrder.forEach((records) => {
+    for (const r of records) allLogisticsIds.push(Number(r.id));
+  });
+  const allCustomsIds: number[] = [];
+  customsByOrder.forEach((r) => allCustomsIds.push(Number(r.id)));
+  const allLogIds = logRows.map((r) => Number(r.id));
+
+  async function getAttachmentCountMap(entityType: string, entityIds: number[]): Promise<Map<number, number>> {
+    if (!entityIds.length) return new Map();
+    const eph = entityIds.map(() => '?').join(', ');
+    const rows = await db.all<Record<string, unknown>[]>(
+      `SELECT entity_id, COUNT(*) AS count FROM attachments WHERE entity_type = ? AND entity_id IN (${eph}) GROUP BY entity_id`,
+      [entityType, ...entityIds],
+    );
+    const m = new Map<number, number>();
+    for (const row of rows) {
+      m.set(Number(row.entity_id), Number(row.count));
+    }
+    return m;
+  }
+
+  const [financeAttachmentCounts, logisticsAttachmentCounts, customsAttachmentCounts] = await Promise.all([
+    getAttachmentCountMap('finance', allFinanceIds),
+    getAttachmentCountMap('logistics', allLogisticsIds),
+    getAttachmentCountMap('customs', allCustomsIds),
+  ]);
+
+  // Phase 5: Assemble detail objects
+  function normalizeStatus(s: string) {
+    if (s === 'confirmed') return 'production';
+    if (s === 'shipped') return 'shipping';
+    return s;
+  }
+
+  const result = new Map<number, any>();
+
+  for (const order of orderRows) {
+    const orderId = Number(order.id);
+    const orderItems = itemsByOrder.get(orderId) || [];
+    const orderFinanceRecords = financeByOrder.get(orderId) || [];
+    const orderLogisticsRecords = logisticsByOrder.get(orderId) || [];
+    const orderPackingRecords = packingByOrder.get(orderId) || [];
+    const customsRow = customsByOrder.get(orderId) || null;
+    const planRow = planByOrder.get(orderId) || null;
+    const orderSummaryData = summaryByOrder.get(orderId) || [];
+    const pendingCount = pendingCountByOrder.get(orderId) || 0;
+
+    // Compute financial summary
+    const receiptsByCurrency: Record<string, number> = {};
+    const paymentsByCurrency: Record<string, number> = {};
+    const freightByCurrency: Record<string, number> = {};
+
+    for (const row of orderSummaryData) {
+      const cur = String(row.currency || 'USD');
+      if (row.type === 'receipt') {
+        receiptsByCurrency[cur] = (receiptsByCurrency[cur] || 0) + Number(row.total);
+      } else {
+        paymentsByCurrency[cur] = (paymentsByCurrency[cur] || 0) + Number(row.total);
+        if (String(row.payment_category) === 'freight') {
+          freightByCurrency[cur] = (freightByCurrency[cur] || 0) + Number(row.total);
+        }
+      }
+    }
+
+    const orderAmount = Number(order.total_amount) || 0;
+    const receiptTotal = receiptsByCurrency.USD || 0;
+
+    let paymentStatus: string;
+    if (receiptTotal <= 0) {
+      paymentStatus = 'unpaid';
+    } else if (receiptTotal >= orderAmount && orderAmount > 0) {
+      paymentStatus = 'paid';
+    } else {
+      paymentStatus = 'partial';
+    }
+
+    const outstandingAmount = Math.max(orderAmount - receiptTotal, 0);
+    const settled = outstandingAmount <= 0 && orderAmount > 0;
+
+    // Compute latest logistics
+    const getTimelineValue = (rec: Record<string, unknown>) => {
+      const rawValue = String(rec.shipping_date || rec.created_at || '');
+      return rawValue ? new Date(rawValue).getTime() : 0;
+    };
+    const sortedLogistics = [...orderLogisticsRecords].sort((left, right) => getTimelineValue(right) - getTimelineValue(left));
+    const domesticLogisticsRecord = orderLogisticsRecords.find((item) => item.segment_type === 'domestic') || null;
+    const internationalLogisticsRecord = orderLogisticsRecords.find((item) => item.segment_type !== 'domestic') || null;
+    const latestLogistics = sortedLogistics[0] || internationalLogisticsRecord || domesticLogisticsRecord || null;
+
+    // Compute production logs for this order's plan
+    let productionLogs: Record<string, unknown>[] = [];
+    if (planRow) {
+      productionLogs = logsByPlanId.get(Number(planRow.id)) || [];
+    }
+
+    // Finance attachment total
+    let financeAttachmentTotal = 0;
+    for (const rec of orderFinanceRecords) {
+      financeAttachmentTotal += financeAttachmentCounts.get(Number(rec.id)) || 0;
+    }
+
+    // Logistics attachment total
+    let logisticsAttachmentTotal = 0;
+    for (const rec of orderLogisticsRecords) {
+      logisticsAttachmentTotal += logisticsAttachmentCounts.get(Number(rec.id)) || 0;
+    }
+
+    const customsAttachmentCount = customsRow ? customsAttachmentCounts.get(Number(customsRow.id)) || 0 : 0;
+
+    result.set(orderId, {
+      order: {
+        ...order,
+        status: normalizeStatus(String(order.status || 'draft')),
+        deliveryDate: order.delivery_date || null,
+        freightAmount: Number(order.freight_amount) || 0,
+        miscAmount: Number(order.misc_amount) || 0,
+        createdByName: order.created_by_name || null,
+      },
+      customer: {
+        id: order.customer_id,
+        display_id: order.customer_display_id,
+        name: order.customer_name,
+        country: order.customer_country,
+        contact: order.customer_contact,
+        logisticsPreference: order.customer_logistics_preference,
+        paymentTerms: order.customer_payment_terms,
+      },
+      items: orderItems.map((item) => ({
+        ...item,
+        hsCode: item.hs_code || null,
+        imageUrl: item.image_url || null,
+      })),
+      financeRecords: orderFinanceRecords.map((record) => ({
+        ...record,
+        recordCategory: record.record_category || record.payment_category || (record.type === 'receipt' ? 'deposit' : 'other'),
+        partnerId: record.partner_id || null,
+        partnerName: record.partner_name || null,
+        createdAt: record.created_at,
+        createdByName: record.created_by_name || null,
+        attachmentCount: financeAttachmentCounts.get(Number(record.id)) || 0,
+      })),
+      logisticsRecords: orderLogisticsRecords.map((record) => ({
+        ...record,
+        segmentType: record.segment_type || 'international',
+        freightForwarder: record.freight_forwarder || null,
+        trackingNo: record.tracking_no,
+        packingDetails: record.packing_details,
+        shippingDate: record.shipping_date,
+        packageCount: record.package_count,
+        volumeCbm: record.volume_cbm,
+        grossWeightKg: record.gross_weight_kg,
+        transportMode: record.transport_mode,
+        vesselVoyage: record.vessel_voyage,
+        billNo: record.bill_no,
+        etd: record.etd,
+        eta: record.eta,
+        recipientAddress: record.recipient_address,
+        packageSize: record.package_size,
+        remark: record.remark,
+        createdAt: record.created_at,
+        createdByName: record.created_by_name || null,
+        attachmentCount: logisticsAttachmentCounts.get(Number(record.id)) || 0,
+      })),
+      packingRecords: orderPackingRecords.map((record) => {
+        const storedNameVal = String(record.stored_name || '').trim();
+        const displayName = storedNameVal || String(record.file_path || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '';
+        return {
+          id: record.id,
+          packageCount: String(record.package_count || ''),
+          packageSize: String(record.package_size || ''),
+          grossWeight: String(record.gross_weight || ''),
+          netWeight: String(record.net_weight || ''),
+          attachmentId: record.attachment_id,
+          imageUrl: record.attachment_id && displayName
+            ? `/api/files/${Number(record.attachment_id)}/${encodeURIComponent(displayName)}`
+            : null,
+        };
+      }),
+      customs: customsRow
+        ? {
+            ...customsRow,
+            brokerName: customsRow.broker_name,
+            declarationNo: customsRow.declaration_no,
+            declarationDate: customsRow.declaration_date,
+            releaseDate: customsRow.release_date,
+            tradeMode: customsRow.trade_mode,
+            createdAt: customsRow.created_at,
+            updatedAt: customsRow.updated_at,
+            createdByName: customsRow.created_by_name || null,
+            attachmentCount: customsAttachmentCount,
+          }
+        : null,
+      productionPlan: planRow
+        ? {
+            ...planRow,
+            partnerId: planRow.partner_id,
+            partnerName: planRow.partner_name,
+            partnerType: planRow.partner_type,
+            partnerCountry: planRow.partner_country,
+            partnerContact: planRow.partner_contact,
+            orderDate: planRow.order_date,
+            estimatedDeliveryDate: planRow.estimated_delivery_date,
+            productionStatus: planRow.production_status,
+            inspectionStatus: planRow.inspection_status,
+            updatedAt: planRow.updated_at,
+            createdByName: planRow.created_by_name || null,
+            logs: productionLogs.map((l) => ({
+              ...l,
+              logDate: l.log_date,
+              createdByName: l.created_by_name,
+            })),
+          }
+        : null,
+      summary: {
+        receiptsByCurrency,
+        paymentsByCurrency,
+        freightByCurrency,
+        pendingFinanceCount: pendingCount || 0,
+        latestLogisticsStatus: latestLogistics?.status || null,
+        latestShippingDate: latestLogistics?.shipping_date || null,
+        paidAmount: receiptsByCurrency.USD || 0,
+        outstandingAmount,
+        paymentStatus,
+        settled,
+        attachmentsSummary: {
+          finance: financeAttachmentTotal,
+          logistics: logisticsAttachmentTotal,
+          customs: customsAttachmentCount,
+        },
+      },
+    });
+  }
+
+  return result;
+}
+
 async function buildCustomerArchive(writer: ZipStreamWriter) {
   const customers = await getCustomersForArchive();
+  const customerIds = customers.map(c => Number(c.id));
+  const allOrders = await getOrdersForCustomers(customerIds);
+
+  const ordersByCustomer = new Map<number, OrderRow[]>();
+  for (const order of allOrders) {
+    const cid = Number(order.customer_id);
+    if (!ordersByCustomer.has(cid)) ordersByCustomer.set(cid, []);
+    ordersByCustomer.get(cid)!.push(order);
+  }
+
+  const allOrderIds = allOrders.map(o => Number(o.id));
+  const orderDetailsMap = await buildOrderDetails(allOrderIds);
 
   for (const customer of customers) {
-    const orders = await getOrdersForCustomer(Number(customer.id));
+    const orders = ordersByCustomer.get(Number(customer.id)) || [];
     const customerDirName = `customers/${sanitizeArchiveSegment(customer.name, 'customer')}_${customer.id}`;
     const customerJson = {
       exportedAt: new Date().toISOString(),
@@ -560,7 +940,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
     await writer.addBuffer(`${customerDirName}/customer.json`, Buffer.from(`${JSON.stringify(customerJson, null, 2)}\n`, 'utf8'));
 
     for (const order of orders) {
-      const detail = await buildOrderDetail(Number(order.id));
+      const detail = orderDetailsMap.get(Number(order.id));
       if (!detail) {
         continue;
       }

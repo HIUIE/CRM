@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
 import { Drawer } from './Drawer';
 import { Users, Mail, Phone, Briefcase } from 'lucide-react';
+import Field from './Field';
 
 interface ContactCreateDrawerProps {
   isOpen: boolean;
@@ -105,11 +106,3 @@ export function ContactCreateDrawer({ isOpen, onClose, onSuccess, customerId }: 
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</span>
-      {children}
-    </label>
-  );
-}
