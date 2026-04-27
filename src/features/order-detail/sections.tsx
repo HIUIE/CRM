@@ -450,6 +450,20 @@ function SummaryBox({ label, value, color }: { label: string; value: string; col
   );
 }
 
+// Stable InputRow defined OUTSIDE ProfitDrawer to prevent re-mount / focus loss
+function InputRow({ label, value, onChange, suffix, step }: { label: string; value: number; onChange: (v: string) => void; suffix: string; step?: string }) {
+  return (
+    <label className="block space-y-1">
+      <span className="text-xs font-bold text-primary-navy dark:text-white uppercase tracking-wider">{label}</span>
+      <div className="flex items-center gap-2">
+        <input type="number" step={step || '0.01'} value={value || ''} onChange={e => onChange(e.target.value)}
+          className="w-full min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
+        <span className="text-xs font-bold text-slate-400 w-10 shrink-0 text-right">{suffix}</span>
+      </div>
+    </label>
+  );
+}
+
 function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
   const [form, setForm] = useState(data);
   const [saving, setSaving] = useState(false);
@@ -464,7 +478,6 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
   const updReceipt = (i: number, k: keyof typeof receipts[0], v: any) => {
     const next = [...receipts];
     next[i] = { ...next[i], [k]: k === 'currency' ? v : (Number(v) || 0) };
-    // Currency linkage: if CNY, lock exchange rate to 1
     if (k === 'currency' && v === 'CNY') next[i].exchangeRate = 1;
     if (k === 'currency' && v === 'USD' && next[i].exchangeRate <= 1) next[i].exchangeRate = 7.2;
     setForm({ ...form, receipts: next });
@@ -500,17 +513,6 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
   const calcMargin = calcRevenueCny > 0 ? (calcProfit / calcRevenueCny) * 100 : 0;
 
   const hasCnyReceipt = receipts.some(r => r.currency === 'CNY');
-
-  const InputRow = ({ label, value, onChange, suffix, step }: { label: string; value: number; onChange: (v: string) => void; suffix: string; step?: string }) => (
-    <label className="block space-y-1">
-      <span className="text-xs font-bold text-primary-navy dark:text-white uppercase tracking-wider">{label}</span>
-      <div className="flex items-center gap-2">
-        <input type="number" step={step || '0.01'} value={value || ''} onChange={e => onChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
-        <span className="text-xs font-bold text-slate-400 w-12 shrink-0">{suffix}</span>
-      </div>
-    </label>
-  );
 
   return (
     <div className="fixed inset-0 z-[150] flex justify-end">
@@ -574,7 +576,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                 <div className="flex-1">
                   <InputRow label="开票金额 (Invoice)" value={form.invoiceAmount} onChange={v => updN('invoiceAmount', v)} suffix="CNY" />
                 </div>
-                <div className="w-24">
+                <div className="min-w-[100px]">
                   <InputRow label="退税率 %" value={form.refundRate} onChange={v => updN('refundRate', v)} suffix="%" />
                 </div>
               </div>
@@ -613,7 +615,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
             {(form.miscFees || []).map((fee, i) => (
               <div key={i} className="flex items-center gap-2 pl-4 border-l-2 border-tertiary-sage/30">
                 <input value={fee.label} onChange={e => updMisc(i, 'label', e.target.value)} placeholder="费用名称" className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs outline-none text-primary-navy dark:text-white" />
-                <input type="number" step="0.01" value={fee.amount || ''} onChange={e => updMisc(i, 'amount', e.target.value)} className="w-24 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs outline-none data-field text-primary-navy dark:text-white" />
+                <input type="number" step="0.01" value={fee.amount || ''} onChange={e => updMisc(i, 'amount', e.target.value)} className="w-full max-w-[120px] rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs outline-none data-field text-primary-navy dark:text-white" />
                 <span className="text-[10px] font-bold text-slate-400 w-8">CNY</span>
                 <button onClick={() => delMisc(i)} className="text-slate-300 hover:text-error"><X size={14} /></button>
               </div>
