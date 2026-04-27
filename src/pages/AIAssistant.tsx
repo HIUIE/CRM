@@ -51,11 +51,15 @@ export default function AIAssistantPage() {
     setLoading(true);
 
     try {
-      const response = await apiFetch<{ content: string }>('/api/ai/chat', {
+      const response = await apiFetch<{ content: string; action?: { tool: string; result: { message: string } } }>('/api/ai/chat', {
         method: 'POST',
         body: JSON.stringify({ message: input })
       });
-      setMessages(prev => [...prev, { role: 'assistant', content: response.content }]);
+      let msg = response.content;
+      if (response.action) {
+        msg = `✅ ${response.action.result.message}`;
+      }
+      setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
     } catch (err) {
       const detailedError = getErrorMessage(err);
       setMessages(prev => [...prev, { role: 'assistant', content: `诊断反馈：${detailedError}` }]);
