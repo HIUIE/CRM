@@ -1,21 +1,35 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, loadEnv} from 'vite';
+import fs from 'fs';
+import { execSync } from 'child_process';
+import { defineConfig, loadEnv } from 'vite';
 
-export default defineConfig(({mode}) => {
+export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [react(), tailwindcss()],
-    // Note: API keys must be used server-side only via backend proxy, never defined here.
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'version-json',
+        closeBundle() {
+          const hash = (() => {
+            try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'unknown'; }
+          })();
+          const version = { version: '1.1.0', buildTime: new Date().toISOString(), commit: hash };
+          const outDir = path.resolve(__dirname, 'dist');
+          fs.mkdirSync(outDir, { recursive: true });
+          fs.writeFileSync(path.join(outDir, 'version.json'), JSON.stringify(version, null, 2));
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
     },
     build: {
