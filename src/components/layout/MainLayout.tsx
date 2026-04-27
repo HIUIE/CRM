@@ -27,6 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import { CommandPalette } from '../ui/CommandPalette';
 import { NotificationDrawer } from '../ui/NotificationDrawer';
 import { Drawer } from '../ui/Drawer';
+import AIAssistantFloating from '../ui/AIAssistantFloating';
 import { apiFetch } from '../../lib/api';
 
 export default function MainLayout() {
@@ -229,6 +230,7 @@ export default function MainLayout() {
           <Outlet />
         </div>
       </main>
+      <AIAssistantFloating />
     </div>
   );
 }
