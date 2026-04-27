@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronRight, MapPin, Mail, Edit3, DollarSign, Factory, ShieldCheck, Truck, Printer, Trash,
   FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles, Eye, EyeOff,
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
+import { apiFetch } from '../../lib/api';
 import {
   WorkSection, DocumentBoard, EmptyStateBoard, FinanceDashboard, ProductionDashboard,
   Chip, GridItem, StatusFileRow, FileIcon, LightActionButton, FilterPill,
@@ -12,7 +13,7 @@ import {
 import { formatDateOnly, formatDateTime, asNumber, asText, STAGE_STEPS } from './utils';
 import type {
   AttachmentMeta, CustomerInfo, CustomsRecord, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
-  PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType,
+  PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType, ProfitData,
 } from './types';
 
 // ==================== Header Section ====================
@@ -288,12 +289,14 @@ export function FinanceSection({
 
 export function ProfitSection({
   user,
+  orderNo,
   totalAmount,
   freightAmount,
   miscAmount,
   itemsTotal,
 }: {
   user?: { name?: string; role?: string } | null;
+  orderNo: string;
   totalAmount: number;
   freightAmount: number;
   miscAmount: number;
@@ -301,43 +304,162 @@ export function ProfitSection({
 }) {
   const isAdmin = user?.role === 'admin';
   const [revealed, setRevealed] = useState(false);
+  const [profitData, setProfitData] = useState<ProfitData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin || !orderNo) return;
+    setLoading(true);
+    apiFetch<ProfitData>(`/api/orders/${orderNo}/profit`).then(setProfitData).catch(() => {}).finally(() => setLoading(false));
+  }, [isAdmin, orderNo]);
 
   if (!isAdmin) return null;
 
-  // Estimate cost: typically freight + misc + 70% of items (rough COGS estimate)
-  const estimatedCOGS = itemsTotal * 0.7;
-  const totalCost = estimatedCOGS + freightAmount + miscAmount;
-  const grossProfit = totalAmount - totalCost;
-  const margin = totalAmount > 0 ? Math.round((grossProfit / totalAmount) * 100) : 0;
+  const pd = profitData || {
+    grossUsd: totalAmount,
+    bankFees: 0,
+    exchangeRate: 7.2,
+    factoryCostCny: itemsTotal * 7.2 * 0.7,
+    domesticFees: 0,
+    freightUsd: freightAmount,
+    customsMisc: miscAmount,
+  };
 
-  const ProfitRow = ({ label, value, bold }: { label: string; value: string; bold?: boolean }) => (
-    <div className={`flex justify-between items-center py-2 ${bold ? 'border-t border-slate-200 dark:border-navy-700 mt-1 pt-3' : ''}`}>
-      <span className={`text-xs ${bold ? 'font-extrabold text-primary-navy dark:text-white' : 'font-bold text-slate-500 dark:text-slate-400'} uppercase tracking-wider`}>{label}</span>
-      <span className={`text-sm data-field ${bold ? 'font-extrabold text-primary-navy dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300'}`}>{value}</span>
-    </div>
-  );
+  // Calculations
+  const netUsd = pd.grossUsd - pd.bankFees;
+  const netRevenueCny = netUsd * pd.exchangeRate;
+  const totalCost = pd.factoryCostCny + pd.domesticFees + (pd.freightUsd * pd.exchangeRate) + pd.customsMisc;
+  const grossProfitCny = netRevenueCny - totalCost;
+  const margin = netRevenueCny > 0 ? Math.round((grossProfitCny / netRevenueCny) * 100) : 0;
 
-  const formatVal = (v: number) => `USD ${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  const fmt = (v: number, c = 'USD') =>
+    revealed ? `${c} ${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '***';
+  const fmtCny = (v: number) => fmt(v, 'CNY');
+
+  const handleSave = async (data: ProfitData) => {
+    await apiFetch(`/api/orders/${orderNo}/profit`, { method: 'POST', body: JSON.stringify(data) });
+    setProfitData(data);
+    setShowDrawer(false);
+  };
 
   return (
-    <DocumentBoard title="成本与利润核算" action={
-      <button onClick={() => setRevealed(!revealed)} className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest">
-        {revealed ? <><EyeOff size={14} /> 隐藏金额</> : <><Eye size={14} /> 揭示金额</>}
-      </button>
-    }>
-      <div className="space-y-1 max-w-md">
-        <ProfitRow label="订单金额 (Revenue)" value={revealed ? formatVal(totalAmount) : '***'} />
-        <ProfitRow label="预估商品成本 (COGS)" value={revealed ? formatVal(estimatedCOGS) : '***'} />
-        <ProfitRow label="运费支出 (Freight)" value={revealed ? formatVal(freightAmount) : '***'} />
-        <ProfitRow label="其他杂费 (Misc)" value={revealed ? formatVal(miscAmount) : '***'} />
-        <ProfitRow label="总成本 (Total Cost)" value={revealed ? formatVal(totalCost) : '***'} />
-        <ProfitRow label="毛利润 (Gross Profit)" value={revealed ? formatVal(grossProfit) : '***'} bold />
-        <ProfitRow label={`毛利率 (Margin) ${revealed ? `(${margin}%)` : ''}`} value={revealed ? `${margin}%` : '***'} />
-      </div>
-      {!revealed && (
-        <div className="mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">🔒 仅管理员可见，点击"揭示金额"查看</div>
+    <>
+      <DocumentBoard title="外贸利润核算" action={
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowDrawer(true)} className="btn-primary text-[10px] !px-3 !py-1.5"><Edit3 size={12} /> 编辑核算明细</button>
+          <button onClick={() => setRevealed(!revealed)} className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest whitespace-nowrap">
+            {revealed ? <><EyeOff size={13} /> 隐藏</> : <><Eye size={13} /> 揭示</>}
+          </button>
+        </div>
+      }>
+        <div className="grid gap-10 lg:grid-cols-2">
+          {/* Left: Revenue */}
+          <div className="space-y-3">
+            <div className="text-[10px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest pb-1 border-b border-slate-100 dark:border-navy-800">💰 收入 (Revenue)</div>
+            <Row label="外币收款 (Gross USD)" value={fmt(pd.grossUsd)} />
+            <Row label="银行手续费 (Bank Fees)" value={fmt(pd.bankFees)} />
+            <Row label="实际结汇汇率" value={revealed ? String(pd.exchangeRate) : '***'} />
+            <Row label="实际折合本币" value={fmtCny(netRevenueCny)} bold />
+          </div>
+
+          {/* Right: Cost */}
+          <div className="space-y-3">
+            <div className="text-[10px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest pb-1 border-b border-slate-100 dark:border-navy-800">📦 成本 (Costs)</div>
+            <Row label="工厂采购价" value={fmtCny(pd.factoryCostCny)} />
+            <Row label="国内费用 (拖车/入仓)" value={fmtCny(pd.domesticFees)} />
+            <Row label="国际运费" value={fmt(pd.freightUsd)} />
+            <Row label="报关与杂费" value={fmtCny(pd.customsMisc)} />
+            <Row label="成本合计" value={fmtCny(totalCost)} bold />
+          </div>
+        </div>
+
+        {/* Bottom: Summary */}
+        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-navy-800 grid gap-6 lg:grid-cols-3">
+          <SummaryBox label="净利润" value={fmtCny(grossProfitCny)} color={grossProfitCny >= 0 ? 'text-emerald-600' : 'text-red-600'} />
+          <SummaryBox label="毛利率" value={revealed ? `${margin}%` : '***'} color={margin >= 15 ? 'text-emerald-600' : margin >= 5 ? 'text-amber-600' : 'text-red-600'} />
+          <SummaryBox label="结汇汇率" value={revealed ? String(pd.exchangeRate) : '***'} color="text-primary-navy dark:text-white" />
+        </div>
+      </DocumentBoard>
+
+      {/* Profit Edit Drawer */}
+      {showDrawer && (
+        <ProfitDrawer
+          data={pd}
+          onSave={handleSave}
+          onClose={() => setShowDrawer(false)}
+        />
       )}
-    </DocumentBoard>
+    </>
+  );
+}
+
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className="flex justify-between items-center py-1.5">
+      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{label}</span>
+      <span className={`text-xs data-field ${bold ? 'font-extrabold text-primary-navy dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300'}`}>{value}</span>
+    </div>
+  );
+}
+
+function SummaryBox({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className="text-center p-4 rounded-lg bg-slate-50 dark:bg-navy-950 border border-slate-100 dark:border-navy-800">
+      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</div>
+      <div className={`text-lg font-black data-field ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
+  const [form, setForm] = useState(data);
+  const [saving, setSaving] = useState(false);
+
+  const update = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: Number(v) || 0 });
+
+  const Field = ({ label, value, onChange, suffix }: { label: string; value: number; onChange: (v: string) => void; suffix: string }) => (
+    <label className="block space-y-1">
+      <span className="text-xs font-bold text-primary-navy dark:text-white uppercase tracking-wider">{label}</span>
+      <div className="flex items-center gap-2">
+        <input type="number" step="0.01" value={value} onChange={e => onChange(e.target.value)}
+          className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
+        <span className="text-xs font-bold text-slate-400 w-10">{suffix}</span>
+      </div>
+    </label>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[150] flex justify-end">
+      <button onClick={onClose} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm" />
+      <div className="relative z-10 h-full w-full max-w-[500px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-6 bg-slate-50 dark:bg-navy-950/50">
+          <h3 className="text-lg font-bold text-primary-navy dark:text-white tracking-tight uppercase">编辑利润核算</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-primary-navy dark:hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+          <section className="space-y-4">
+            <h4 className="text-xs font-extrabold text-tertiary-sage uppercase tracking-widest">收入 (Revenue)</h4>
+            <Field label="外币收款 Gross USD" value={form.grossUsd} onChange={v => update('grossUsd', v)} suffix="USD" />
+            <Field label="银行手续费 Bank Fees" value={form.bankFees} onChange={v => update('bankFees', v)} suffix="USD" />
+            <Field label="实际结汇汇率" value={form.exchangeRate} onChange={v => update('exchangeRate', v)} suffix="CNY/USD" />
+          </section>
+          <section className="space-y-4">
+            <h4 className="text-xs font-extrabold text-tertiary-sage uppercase tracking-widest">成本 (Costs)</h4>
+            <Field label="工厂采购价" value={form.factoryCostCny} onChange={v => update('factoryCostCny', v)} suffix="CNY" />
+            <Field label="国内费用 (拖车/入仓)" value={form.domesticFees} onChange={v => update('domesticFees', v)} suffix="CNY" />
+            <Field label="国际运费 (Freight)" value={form.freightUsd} onChange={v => update('freightUsd', v)} suffix="USD" />
+            <Field label="报关与杂费" value={form.customsMisc} onChange={v => update('customsMisc', v)} suffix="CNY" />
+          </section>
+        </div>
+        <div className="border-t border-slate-100 dark:border-navy-800 px-8 py-5 flex justify-end gap-3">
+          <button onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-700 px-5 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+          <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false); }} disabled={saving} className="btn-primary shadow-md disabled:opacity-60">
+            {saving ? '保存中...' : '保存核算明细'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

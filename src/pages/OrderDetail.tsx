@@ -378,14 +378,6 @@ export default function OrderDetailPage() {
             onFilterChange={setFinanceFilter}
           />
 
-          <ProfitSection
-            user={user}
-            totalAmount={itemsTotal + freightAmount + miscAmount || 0}
-            freightAmount={freightAmount}
-            miscAmount={miscAmount}
-            itemsTotal={itemsTotal}
-          />
-
           <ProductionSection
             sectionRef={sectionRefs.production}
             productionPlan={productionPlan}
@@ -428,6 +420,14 @@ export default function OrderDetailPage() {
             navigate={navigate}
           />
 
+          <ProfitSection
+            user={user}
+            orderNo={orderNo || ''}
+            totalAmount={itemsTotal + freightAmount + miscAmount || 0}
+            freightAmount={freightAmount}
+            miscAmount={miscAmount}
+            itemsTotal={itemsTotal}
+          />
           <FollowupsSection followUps={followUps} />
         </div>
 

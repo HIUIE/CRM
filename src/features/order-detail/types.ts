@@ -10,6 +10,16 @@ export type PartnerType = 'factory' | 'forwarder' | 'customs_broker' | 'other';
 export type ProductionStatus = 'not_started' | 'scheduled' | 'in_progress' | 'ready';
 export type InspectionStatus = 'pending' | 'passed' | 'failed';
 
+export type ProfitData = {
+  grossUsd: number;
+  bankFees: number;
+  exchangeRate: number;
+  factoryCostCny: number;
+  domesticFees: number;
+  freightUsd: number;
+  customsMisc: number;
+};
+
 export type AttachmentMeta = {
   id: number;
   fileName: string;

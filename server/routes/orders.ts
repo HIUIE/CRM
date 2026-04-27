@@ -294,6 +294,49 @@ export function createOrdersRouter() {
     }
   });
 
+  // ==================== Profit/Margin Data ====================
+
+  router.get('/:id/profit', async (req, res) => {
+    const orderId = Number(req.params.id);
+    try {
+      const row = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [`order_profit_${orderId}`]);
+      const data = row ? JSON.parse(row.value) : {};
+      res.json({
+        grossUsd: data.grossUsd || 0,
+        bankFees: data.bankFees || 0,
+        exchangeRate: data.exchangeRate || 7.2,
+        factoryCostCny: data.factoryCostCny || 0,
+        domesticFees: data.domesticFees || 0,
+        freightUsd: data.freightUsd || 0,
+        customsMisc: data.customsMisc || 0,
+      });
+    } catch (error) {
+      return handleRouteError(res, error, '读取利润数据失败');
+    }
+  });
+
+  router.post('/:id/profit', requireAdmin, async (req: AuthedRequest, res) => {
+    const orderId = Number(req.params.id);
+    const data = {
+      grossUsd: Number(req.body.grossUsd) || 0,
+      bankFees: Number(req.body.bankFees) || 0,
+      exchangeRate: Number(req.body.exchangeRate) || 7.2,
+      factoryCostCny: Number(req.body.factoryCostCny) || 0,
+      domesticFees: Number(req.body.domesticFees) || 0,
+      freightUsd: Number(req.body.freightUsd) || 0,
+      customsMisc: Number(req.body.customsMisc) || 0,
+    };
+    try {
+      await db.run(
+        `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        [`order_profit_${orderId}`, JSON.stringify(data)],
+      );
+      res.json({ success: true, ...data });
+    } catch (error) {
+      return handleRouteError(res, error, '保存利润数据失败');
+    }
+  });
+
   router.patch('/:id/quick-notes', async (req: AuthedRequest, res) => {
     try {
       await db.run(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [req.body.content, req.params.id]);
