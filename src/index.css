@@ -13,7 +13,7 @@
 
   /* Semantic Tokens */
   --color-primary-navy: #0F172A;
-  --color-secondary-slate: #64748B;
+  --color-secondary-slate: #475569;
   --color-tertiary-sage: #059669;
   --color-background: #F8FAFC;
   --color-surface: #FFFFFF;
@@ -44,7 +44,7 @@
   --app-bg: #F8FAFC;
   --app-surface: #FFFFFF;
   --app-text-primary: #0F172A;
-  --app-text-secondary: #475569;
+  --app-text-secondary: #334155;
   --app-border: #E2E8F0;
   --app-divider: #F1F5F9;
   --app-sage: #059669;
@@ -63,7 +63,7 @@
 
 html {
   scroll-behavior: smooth;
-  font-size: 14px;
+  font-size: 14.5px;
 }
 
 body {
@@ -71,8 +71,18 @@ body {
   color: var(--app-text-primary);
   font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   -webkit-font-smoothing: antialiased;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.015em;
+  font-weight: 450;
   transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Improve readability of slate text in light mode */
+:root .text-slate-400,
+:root .text-slate-500 {
+  color: #475569 !important;
+}
+:root .text-secondary-slate {
+  color: #475569 !important;
 }
 
 /* 标题规范：Plus Jakarta Sans */
@@ -80,6 +90,14 @@ h1, h2, h3, h4, .headline {
   font-family: "Plus Jakarta Sans", sans-serif;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+/* Improve readability of small uppercase labels in light mode */
+:root .uppercase.tracking-widest.text-slate-400,
+:root th.text-slate-400,
+:root th.text-slate-500 {
+  color: #475569 !important;
+  font-weight: 700 !important;
 }
 
 /* 数字/数据规范：Fira Code */
