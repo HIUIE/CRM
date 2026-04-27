@@ -20,6 +20,7 @@ CHANGELOG.md
 AI_CONTEXT.md
 test_db.ts
 test_ls.ts
+version.json
 .gemini/
 *.b
 *.c

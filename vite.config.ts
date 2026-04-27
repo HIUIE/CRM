@@ -18,9 +18,11 @@ export default defineConfig(({ mode }) => {
             try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'unknown'; }
           })();
           const version = { version: '1.1.0', buildTime: new Date().toISOString(), commit: hash };
-          const outDir = path.resolve(__dirname, 'dist');
-          fs.mkdirSync(outDir, { recursive: true });
-          fs.writeFileSync(path.join(outDir, 'version.json'), JSON.stringify(version, null, 2));
+          const json = JSON.stringify(version, null, 2);
+          [path.resolve(__dirname, 'dist'), __dirname].forEach(dir => {
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, 'version.json'), json);
+          });
         },
       },
     ],

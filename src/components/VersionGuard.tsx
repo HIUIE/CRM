@@ -5,56 +5,47 @@ import { apiFetch } from '../lib/api';
 const POLLING_INTERVAL = 60 * 1000; // Check every minute
 
 // Set VITE_UPDATE_URL in .env to enable remote version checking.
-// Example: VITE_UPDATE_URL=https://raw.githubusercontent.com/your-org/smarttrade-crm/main/dist/version.json
-// The URL should host a version.json file with { version, commit, buildTime } format.
-// If not set, only local server restart detection is used.
+// GitHub API example: VITE_UPDATE_URL=https://api.github.com/repos/your-org/smarttrade-crm/commits?per_page=1
+// The URL should return an array with a `sha` field (GitHub API) or an object with a `commit` field.
 const REMOTE_UPDATE_URL = import.meta.env.VITE_UPDATE_URL || '';
+
+async function fetchRemoteVersion(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now());
+    if (!res.ok) return null;
+    const data = await res.json();
+    // GitHub API: returns array [{ sha: "abc..." }]
+    if (Array.isArray(data) && data[0]?.sha) return data[0].sha.slice(0, 7);
+    // Standard version.json: returns { commit: "abc..." } or { version: "1.1.0" }
+    if (data.commit) return String(data.commit);
+    if (data.version) return String(data.version);
+    return null;
+  } catch { return null; }
+}
 
 export default function VersionGuard() {
   const [hasUpdate, setHasUpdate] = useState(false);
   const [updateType, setUpdateType] = useState<'restart' | 'remote'>('restart');
   const initialStartupTime = useRef<number | null>(null);
-  const localVersion = useRef<string>('');
+  const localCommit = useRef<string>('');
 
   useEffect(() => {
-    // Read local version from built version.json
-    fetch('/version.json')
-      .then(r => r.json())
-      .then(data => { localVersion.current = data.version || ''; })
-      .catch(() => {});
+    fetch('/version.json').then(r => r.json()).then(d => { localCommit.current = d.commit || ''; }).catch(() => {});
 
     let timer: number;
-
     const checkVersion = async () => {
       try {
-        // 1. Check local server restart (existing behavior)
-        const data = await apiFetch<{ startupTime: number }>('/api/health');
-        if (data?.startupTime) {
-          if (initialStartupTime.current === null) {
-            initialStartupTime.current = data.startupTime;
-          } else if (initialStartupTime.current !== data.startupTime) {
-            setUpdateType('restart');
-            setHasUpdate(true);
-            return;
-          }
+        const health = await apiFetch<{ startupTime: number }>('/api/health');
+        if (health?.startupTime) {
+          if (initialStartupTime.current === null) initialStartupTime.current = health.startupTime;
+          else if (initialStartupTime.current !== health.startupTime) { setUpdateType('restart'); setHasUpdate(true); return; }
         }
-
-        // 2. Check remote version (for distributed users)
-        if (REMOTE_UPDATE_URL && localVersion.current) {
-          const remoteRes = await fetch(REMOTE_UPDATE_URL + '?t=' + Date.now());
-          if (remoteRes.ok) {
-            const remote = await remoteRes.json();
-            if (remote.version && remote.version !== localVersion.current) {
-              setUpdateType('remote');
-              setHasUpdate(true);
-            }
-          }
+        if (REMOTE_UPDATE_URL && localCommit.current) {
+          const remote = await fetchRemoteVersion(REMOTE_UPDATE_URL);
+          if (remote && remote !== localCommit.current) { setUpdateType('remote'); setHasUpdate(true); }
         }
-      } catch {
-        // Ignore network errors
-      }
+      } catch { /* ignore */ }
     };
-
     void checkVersion();
     timer = window.setInterval(checkVersion, POLLING_INTERVAL);
     return () => window.clearInterval(timer);

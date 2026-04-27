@@ -133,10 +133,17 @@ export default function SettingsView() {
     if (!updateUrl) return;
     setCheckingUpdate(true);
     try {
-      const res = await fetch(updateUrl + '?t=' + Date.now());
+      const res = await fetch(updateUrl + (updateUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
       if (res.ok) {
-        const remote = await res.json();
-        setRemoteVersion(remote);
+        const data = await res.json();
+        // GitHub API: [{ sha: "abc...", commit: { author: { date: "..." } } }]
+        if (Array.isArray(data) && data[0]?.sha) {
+          setRemoteVersion({ version: data[0].sha.slice(0, 7), buildTime: data[0].commit?.author?.date || '', commit: data[0].sha.slice(0, 7) });
+        } else if (data.commit) {
+          setRemoteVersion({ version: String(data.commit), buildTime: data.buildTime || '', commit: String(data.commit) });
+        } else {
+          setRemoteVersion(data);
+        }
       }
     } catch { /* ignore */ }
     setCheckingUpdate(false);
@@ -868,8 +875,8 @@ export default function SettingsView() {
                 <div>
                   <div className="text-sm text-amber-600 dark:text-amber-400 font-bold mb-2">未配置更新源</div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    请在 .env 中设置 <code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">VITE_UPDATE_URL</code>，
-                    指向一个托管的 <code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">version.json</code> 文件地址，即可启用远程版本检测。
+                    请在 .env 中设置 <code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">VITE_UPDATE_URL</code>，指向 GitHub API 地址。<br />
+                    例如：<code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">https://api.github.com/repos/用户名/仓库名/commits?per_page=1</code>
                   </p>
                 </div>
               ) : remoteVersion ? (
