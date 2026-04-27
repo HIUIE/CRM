@@ -318,7 +318,9 @@ export function ProfitSection({
 
   const pd = profitData || {
     receipts: [{ amount: totalAmount, currency: 'USD' as const, bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
-    taxRefundCny: 0,
+    invoiceAmount: itemsTotal * 7.2 * 0.7,
+    refundRate: 13,
+    otherIncomeCny: 0,
     factoryCostCny: itemsTotal * 7.2 * 0.7,
     domesticFees: 0,
     freightValue: freightAmount || 0,
@@ -342,7 +344,8 @@ export function ProfitSection({
     }
   }
 
-  const totalRevenueCny = totalCnyFromReceipts + (pd.taxRefundCny || 0);
+  const estimatedRefundCny = pd.invoiceAmount > 0 ? (pd.invoiceAmount / 1.13 * (pd.refundRate / 100)) : 0;
+  const totalRevenueCny = totalCnyFromReceipts + estimatedRefundCny + (pd.otherIncomeCny || 0);
   const miscTotal = (pd.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
   const freightCny = pd.freightCurrency === 'USD' ? (pd.freightValue * (pd.receipts[0]?.exchangeRate || 7.2)) : pd.freightValue;
   const totalCostCny = pd.factoryCostCny + pd.domesticFees + freightCny + pd.customsMisc + miscTotal;
@@ -384,7 +387,8 @@ export function ProfitSection({
                 {r.currency === 'USD' && <Row label="结汇汇率" value={revealed ? String(r.exchangeRate) : '***'} />}
               </div>
             ))}
-            <Row label="退税及其他收入" value={fmtCny(pd.taxRefundCny || 0)} />
+            <Row label={`预估退税额 (退税率 ${pd.refundRate}%)`} value={fmtCny(estimatedRefundCny)} />
+            <Row label="其他收入" value={fmtCny(pd.otherIncomeCny || 0)} />
             <Row label="实际折合本币 (总)" value={fmtCny(totalRevenueCny)} bold />
           </div>
 
@@ -487,7 +491,8 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
       calcTotalCnyFromReceipts += r.amount - r.bankFees - r.platformFees;
     }
   }
-  const calcRevenueCny = calcTotalCnyFromReceipts + (form.taxRefundCny || 0);
+  const calcRefund = form.invoiceAmount > 0 ? (form.invoiceAmount / 1.13 * (form.refundRate / 100)) : 0;
+  const calcRevenueCny = calcTotalCnyFromReceipts + calcRefund + (form.otherIncomeCny || 0);
   const calcMiscTotal = (form.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
   const calcFreightCny = form.freightCurrency === 'USD' ? (form.freightValue * (receipts[0]?.exchangeRate || 7.2)) : form.freightValue;
   const calcTotalCost = form.factoryCostCny + form.domesticFees + calcFreightCny + form.customsMisc + calcMiscTotal;
@@ -562,7 +567,25 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
               <Plus size={12} /> 添加一笔收款
             </button>
 
-            <InputRow label="退税及其他收入" value={form.taxRefundCny} onChange={v => updN('taxRefundCny', v)} suffix="CNY" />
+            {/* Tax Refund Automation */}
+            <div className="p-4 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
+              <div className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest">🧾 退税自动化组件</div>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <InputRow label="开票金额 (Invoice)" value={form.invoiceAmount} onChange={v => updN('invoiceAmount', v)} suffix="CNY" />
+                </div>
+                <div className="w-24">
+                  <InputRow label="退税率 %" value={form.refundRate} onChange={v => updN('refundRate', v)} suffix="%" />
+                </div>
+              </div>
+              {form.invoiceAmount > 0 && (
+                <div className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                  预估退税额：¥{(form.invoiceAmount / 1.13 * (form.refundRate / 100)).toFixed(2)}
+                </div>
+              )}
+            </div>
+
+            <InputRow label="其他收入 (Other Income)" value={form.otherIncomeCny} onChange={v => updN('otherIncomeCny', v)} suffix="CNY" />
           </section>
 
           {/* Costs (unchanged from V3) */}

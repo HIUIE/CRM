@@ -303,7 +303,9 @@ export function createOrdersRouter() {
       const data = row ? JSON.parse(row.value) : {};
       res.json({
         receipts: data.receipts || [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
-        taxRefundCny: data.taxRefundCny || 0,
+        invoiceAmount: data.invoiceAmount || 0,
+        refundRate: data.refundRate ?? 13,
+        otherIncomeCny: data.otherIncomeCny || 0,
         factoryCostCny: data.factoryCostCny || 0,
         domesticFees: data.domesticFees || 0,
         freightValue: data.freightValue || 0,
@@ -326,7 +328,9 @@ export function createOrdersRouter() {
         platformFees: Number(r.platformFees) || 0,
         exchangeRate: Number(r.exchangeRate) || (r.currency === 'CNY' ? 1 : 7.2),
       })) : [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
-      taxRefundCny: Number(req.body.taxRefundCny) || 0,
+      invoiceAmount: Number(req.body.invoiceAmount) || 0,
+      refundRate: Number(req.body.refundRate) || 13,
+      otherIncomeCny: Number(req.body.otherIncomeCny) || 0,
       factoryCostCny: Number(req.body.factoryCostCny) || 0,
       domesticFees: Number(req.body.domesticFees) || 0,
       freightValue: Number(req.body.freightValue) || 0,

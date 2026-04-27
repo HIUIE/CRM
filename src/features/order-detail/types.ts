@@ -22,7 +22,9 @@ export type ReceiptItem = {
 
 export type ProfitData = {
   receipts: ReceiptItem[];
-  taxRefundCny: number;
+  invoiceAmount: number;
+  refundRate: number;
+  otherIncomeCny: number;
   factoryCostCny: number;
   domesticFees: number;
   freightValue: number;
