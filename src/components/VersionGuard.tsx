@@ -4,10 +4,9 @@ import { apiFetch } from '../lib/api';
 
 const POLLING_INTERVAL = 60 * 1000; // Check every minute
 
-// Set VITE_UPDATE_URL in .env to enable remote version checking.
-// GitHub API example: VITE_UPDATE_URL=https://api.github.com/repos/your-org/smarttrade-crm/commits?per_page=1
-// The URL should return an array with a `sha` field (GitHub API) or an object with a `commit` field.
-const REMOTE_UPDATE_URL = import.meta.env.VITE_UPDATE_URL || '';
+// Default: check updates from the official GitHub repo.
+// Override via VITE_UPDATE_URL in .env for self-hosted instances.
+const REMOTE_UPDATE_URL = import.meta.env.VITE_UPDATE_URL || 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
 
 async function fetchRemoteVersion(url: string): Promise<string | null> {
   try {

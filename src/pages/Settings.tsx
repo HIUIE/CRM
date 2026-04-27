@@ -88,7 +88,7 @@ export default function SettingsView() {
   const [localVersion, setLocalVersion] = useState<VersionInfo | null>(null);
   const [remoteVersion, setRemoteVersion] = useState<VersionInfo | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-  const updateUrl = import.meta.env.VITE_UPDATE_URL || '';
+  const updateUrl = import.meta.env.VITE_UPDATE_URL || 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
 
   const isAdmin = user?.role === 'admin';
 
