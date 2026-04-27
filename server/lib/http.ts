@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 
 export class AppError extends Error {
   status: number;
@@ -20,13 +20,19 @@ export function fail(res: Response, status: number, message: string, code = 'REQ
   });
 }
 
-export function handleRouteError(res: Response, error: unknown, fallbackMessage: string) {
+export function handleRouteError(res: Response, error: unknown, fallbackMessage: string, req?: Request) {
   if (error instanceof AppError) {
     return fail(res, error.status, error.message, error.code);
   }
 
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[Route Error] ${fallbackMessage}:`, error);
-  
+  const logMeta = {
+    timestamp: new Date().toISOString(),
+    method: req?.method,
+    path: req?.originalUrl,
+    userId: (req as any)?.user?.id,
+  };
+  console.error(`[Route Error] ${fallbackMessage}`, logMeta, error);
+
   return fail(res, 500, `${fallbackMessage}: ${message}`, 'INTERNAL_ERROR');
 }

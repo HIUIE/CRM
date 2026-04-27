@@ -499,6 +499,7 @@ export async function initDb() {
     driver: sqlite3.Database,
   });
 
+  await db.exec('PRAGMA journal_mode=WAL');
   await runMigrations();
   await seedRootUser();
 }

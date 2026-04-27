@@ -273,10 +273,10 @@
 | 优先级 | 建议 | 文件 | 说明 |
 |--------|------|------|------|
 | **P0** | **迁移 PostgreSQL** | `server/db.ts` | SQLite 不支持并发写入，多用户同时操作会锁库。SQLite 在千级订单后可预见性能问题 |
-| **P0** | **启用 WAL 模式** | `server/db.ts` | 如果暂不迁 Postgres，至少开启 `PRAGMA journal_mode=WAL` |
+| ~~**P0**~~ | ~~**启用 WAL 模式**~~ | ~~`server/db.ts`~~ | ✅ 已添加 `PRAGMA journal_mode=WAL` |
 | **P1** | **前后端类型统一** | `server/domain.ts` vs `src/types/crm.ts` | 两端各自定义 OrderStatus 等类型，容易不同步。建议抽出 shared/types |
 | **P1** | **引入数据请求层** | `src/lib/api.ts` | 建议加入 SWR / TanStack Query 做自动缓存、重新验证、乐观更新 |
-| **P2** | **错误监控** | `server/lib/http.ts:handleRouteError()` | 目前仅 `console.error`，建议集成 Sentry |
+| **P2** | **错误监控** | `server/lib/http.ts:handleRouteError()` | 已添加结构化日志（method/path/userId + timestamp）。建议进一步集成 Sentry |
 | **P2** | **OpenAPI 文档** | — | 15+ 个子路由无 API 文档，不利于前端对接和调试 |
 
 ### 代码质量
