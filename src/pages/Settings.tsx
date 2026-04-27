@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus, X, Globe, DollarSign, AlertCircle, Loader2 } from 'lucide-react';
+import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus, X, Globe, DollarSign, AlertCircle, Loader2, RefreshCw, GitBranch, Clock, ExternalLink } from 'lucide-react';
 import Field from '../components/ui/Field';
 import { apiDownload, apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +21,13 @@ const EMPTY_USER_FORM: UserFormState = {
   password: '',
 };
 
-type SettingsTab = 'general' | 'export' | 'interface' | 'ai';
+type SettingsTab = 'general' | 'export' | 'interface' | 'ai' | 'update';
+
+interface VersionInfo {
+  version: string;
+  buildTime: string;
+  commit: string;
+}
 
 const AI_PROVIDERS = [
   { id: 'deepseek', label: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'], baseUrl: 'https://api.deepseek.com', icon: <BrainCircuit size={20} /> },
@@ -79,6 +85,10 @@ export default function SettingsView() {
   const [testingAi, setTestingAi] = useState(false);
   const [aiTestResult, setAiTestResult] = useState<'idle' | 'success' | 'fail'>('idle');
   const [selectedProvider, setSelectedProvider] = useState('deepseek');
+  const [localVersion, setLocalVersion] = useState<VersionInfo | null>(null);
+  const [remoteVersion, setRemoteVersion] = useState<VersionInfo | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const updateUrl = import.meta.env.VITE_UPDATE_URL || '';
 
   const isAdmin = user?.role === 'admin';
 
@@ -115,7 +125,22 @@ export default function SettingsView() {
 
   useEffect(() => {
     void loadSettings();
+    // Load local version info
+    fetch('/version.json').then(r => r.json()).then(setLocalVersion).catch(() => {});
   }, []);
+
+  const checkForUpdates = async () => {
+    if (!updateUrl) return;
+    setCheckingUpdate(true);
+    try {
+      const res = await fetch(updateUrl + '?t=' + Date.now());
+      if (res.ok) {
+        const remote = await res.json();
+        setRemoteVersion(remote);
+      }
+    } catch { /* ignore */ }
+    setCheckingUpdate(false);
+  };
 
   const handleProviderChange = (providerId: string) => {
     setSelectedProvider(providerId);
@@ -341,6 +366,7 @@ export default function SettingsView() {
          <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'export' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Download size={16} /> 数据导出</button>
          <button onClick={() => setActiveTab('interface')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'interface' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Layout size={16} /> 团队管理</button>
          <button onClick={() => setActiveTab('ai')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'ai' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><BrainCircuit size={16} /> AI 配置</button>
+         <button onClick={() => setActiveTab('update')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'update' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><RefreshCw size={16} /> 版本更新</button>
       </div>
 
       {error ? <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 animate-in fade-in">{error}</div> : null}
@@ -782,6 +808,116 @@ export default function SettingsView() {
               ) : null}
             </div>
           </div>
+        </section>
+      )}
+
+      {/* ===== Version Update Tab ===== */}
+      {activeTab === 'update' && (
+        <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
+          <div className="mb-8">
+            <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
+              <RefreshCw className="mr-2 h-5 w-5 text-primary-navy dark:text-tertiary-sage" />
+              系统版本
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">查看当前版本并检查更新。</p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Current Version */}
+            <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+              <div className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-5">
+                <CheckCircle2 size={16} className="text-emerald-500" />
+                当前版本
+              </div>
+              {localVersion ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-navy-800">
+                    <span className="text-xs font-bold text-slate-500">版本号</span>
+                    <span className="text-sm font-black text-primary-navy dark:text-white data-field">{localVersion.version}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-navy-800">
+                    <span className="text-xs font-bold text-slate-500">构建时间</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(localVersion.buildTime).toLocaleString('zh-CN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-xs font-bold text-slate-500">提交哈希</span>
+                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">{localVersion.commit}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-slate-400">无法读取版本信息</div>
+              )}
+            </div>
+
+            {/* Remote Version / Update Check */}
+            <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white">
+                  <RefreshCw size={16} className="text-blue-500" />
+                  检查更新
+                </div>
+                {updateUrl ? (
+                  <button onClick={checkForUpdates} disabled={checkingUpdate} className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 transition-all disabled:opacity-50">
+                    {checkingUpdate ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                    {checkingUpdate ? '检测中...' : '检测更新'}
+                  </button>
+                ) : null}
+              </div>
+
+              {!updateUrl ? (
+                <div>
+                  <div className="text-sm text-amber-600 dark:text-amber-400 font-bold mb-2">未配置更新源</div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    请在 .env 中设置 <code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">VITE_UPDATE_URL</code>，
+                    指向一个托管的 <code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">version.json</code> 文件地址，即可启用远程版本检测。
+                  </p>
+                </div>
+              ) : remoteVersion ? (
+                remoteVersion.version !== localVersion?.version ? (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 mb-3">
+                      <ExternalLink size={14} /> 新版本可用
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-bold text-slate-500">最新版本</span>
+                        <span className="font-black text-primary-navy dark:text-white data-field">{remoteVersion.version}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="font-bold text-slate-500">发布时间</span>
+                        <span className="font-bold text-slate-700">{new Date(remoteVersion.buildTime).toLocaleString('zh-CN')}</span>
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-900/10 p-4 border border-blue-100 dark:border-blue-900/30">
+                      <p className="text-xs text-blue-700 dark:text-blue-400 font-medium leading-relaxed">
+                        请拉取最新代码并重新构建以更新系统：
+                      </p>
+                      <code className="mt-2 block text-xs bg-white dark:bg-navy-900 px-3 py-2 rounded border border-blue-100 dark:border-blue-900/30 font-mono text-slate-700 dark:text-slate-300">
+                        git pull &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; npm start
+                      </code>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 size={16} /> 已是最新版本
+                  </div>
+                )
+              ) : (
+                <div className="text-sm text-slate-400">点击"检测更新"查看是否有新版本可用。</div>
+              )}
+            </div>
+          </div>
+
+          {localVersion && (
+            <div className="mt-6 rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+              <div className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-3">
+                <Clock size={16} /> 更新指引
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                系统更新需要服务器管理员在终端执行命令。部署完成后，所有在线用户将自动收到"系统已升级"的刷新提示。
+              </p>
+            </div>
+          )}
         </section>
       )}
     </div>
