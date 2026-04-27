@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet, Clock,
-  FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight
+  FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight,
+  Building2
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -177,6 +178,7 @@ export default function DashboardView() {
               <QuickAction icon={<Wallet size={20} />} label="收款登记" onClick={() => navigate('/finance?create=1')} />
               <QuickAction icon={<Truck size={20} />} label="创建物流" onClick={() => navigate('/logistics?create=1')} />
               <QuickAction icon={<FileText size={20} />} label="报关资料" onClick={() => navigate('/orders')} />
+              <QuickAction icon={<Building2 size={20} />} label="合作伙伴" onClick={() => navigate('/partners')} />
               <QuickAction icon={<CreditCard size={20} />} label="费用登记" onClick={() => navigate('/finance?create=1')} />
               <QuickAction icon={<Download size={20} />} label="数据导出" onClick={() => navigate('/settings?tab=export')} />
               <QuickAction icon={<Users size={20} />} label="客户管理" onClick={() => navigate('/customers')} />

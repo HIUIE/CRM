@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MessageCircle,
   ShieldCheck,
@@ -9,7 +10,23 @@ import {
   ExternalLink
 } from 'lucide-react';
 
+const LINK_MAP: Record<string, string> = {
+  '如何创建第一个客户？': '/customers?create=1',
+  '如何录入订单明细？': '/orders',
+  '单据流水号规则说明': '/settings',
+  '财务记账的基本流程': '/finance',
+  '报关资料自动化上传指南': '/orders',
+  '装箱单分拆录入技巧': '/orders',
+  '物流轨迹实时同步逻辑': '/logistics',
+  '生产进度节点看板说明': '/tasks',
+  'AI 向导的指令输入技巧': '/ai',
+  '如何配置自己的 API 密钥？': '/settings',
+  '导出全量业务归档数据': '/settings?tab=export',
+  '团队角色权限管理说明': '/settings',
+};
+
 export default function HelpCenterPage() {
+  const navigate = useNavigate();
   const sections = [
     {
       title: '新手快速入门',
@@ -50,7 +67,10 @@ export default function HelpCenterPage() {
             <ul className="space-y-4">
               {section.links.map((link, lIdx) => (
                 <li key={lIdx}>
-                  <button className="group flex w-full items-center justify-between text-left text-sm font-bold text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-colors">
+                  <button
+                    onClick={() => { const path = LINK_MAP[link]; if (path) navigate(path); }}
+                    className="group flex w-full items-center justify-between text-left text-sm font-bold text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-colors"
+                  >
                     <span>{link}</span>
                     <ChevronRight size={14} className="opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
                   </button>
