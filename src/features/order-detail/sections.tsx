@@ -319,19 +319,28 @@ export function ProfitSection({
   const pd = profitData || {
     grossUsd: totalAmount,
     bankFees: 0,
+    platformFees: 0,
     exchangeRate: 7.2,
+    taxRefundCny: 0,
     factoryCostCny: itemsTotal * 7.2 * 0.7,
     domesticFees: 0,
-    freightUsd: freightAmount,
+    freightValue: freightAmount,
+    freightCurrency: 'USD' as const,
     customsMisc: miscAmount,
+    miscFees: [],
   };
 
-  // Calculations
-  const netUsd = pd.grossUsd - pd.bankFees;
-  const netRevenueCny = netUsd * pd.exchangeRate;
-  const totalCost = pd.factoryCostCny + pd.domesticFees + (pd.freightUsd * pd.exchangeRate) + pd.customsMisc;
-  const grossProfitCny = netRevenueCny - totalCost;
-  const margin = netRevenueCny > 0 ? Math.round((grossProfitCny / netRevenueCny) * 100) : 0;
+  // Calculations with new formula
+  const netUsd = pd.grossUsd - pd.bankFees - pd.platformFees;
+  const totalRevenueCny = (netUsd * pd.exchangeRate) + (pd.taxRefundCny || 0);
+  const miscTotal = (pd.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
+  const freightCny = pd.freightCurrency === 'USD' ? (pd.freightValue * pd.exchangeRate) : pd.freightValue;
+  const totalCostCny = pd.factoryCostCny + pd.domesticFees + freightCny + pd.customsMisc + miscTotal;
+  const netProfitCny = totalRevenueCny - totalCostCny;
+  const margin = totalRevenueCny > 0 ? (netProfitCny / totalRevenueCny) * 100 : 0;
+
+  const freightWarn = freightCny > pd.factoryCostCny;
+  const marginAlert = margin < 8;
 
   const fmt = (v: number, c = 'USD') =>
     revealed ? `${c} ${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '***';
@@ -359,8 +368,10 @@ export function ProfitSection({
             <div className="text-[10px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest pb-1 border-b border-slate-100 dark:border-navy-800">💰 收入 (Revenue)</div>
             <Row label="外币收款 (Gross USD)" value={fmt(pd.grossUsd)} />
             <Row label="银行手续费 (Bank Fees)" value={fmt(pd.bankFees)} />
+            <Row label="平台与信保扣费 (Platform)" value={fmt(pd.platformFees)} />
             <Row label="实际结汇汇率" value={revealed ? String(pd.exchangeRate) : '***'} />
-            <Row label="实际折合本币" value={fmtCny(netRevenueCny)} bold />
+            <Row label="退税及其他收入" value={fmtCny(pd.taxRefundCny || 0)} />
+            <Row label="实际折合本币" value={fmtCny(totalRevenueCny)} bold />
           </div>
 
           {/* Right: Cost */}
@@ -368,18 +379,27 @@ export function ProfitSection({
             <div className="text-[10px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest pb-1 border-b border-slate-100 dark:border-navy-800">📦 成本 (Costs)</div>
             <Row label="工厂采购价" value={fmtCny(pd.factoryCostCny)} />
             <Row label="国内费用 (拖车/入仓)" value={fmtCny(pd.domesticFees)} />
-            <Row label="国际运费" value={fmt(pd.freightUsd)} />
-            <Row label="报关与杂费" value={fmtCny(pd.customsMisc)} />
-            <Row label="成本合计" value={fmtCny(totalCost)} bold />
+            <Row label={`国际运费 (${pd.freightCurrency})`} value={fmt(pd.freightValue, pd.freightCurrency)} />
+            <Row label="报关与杂费 (含偏远/产地证等)" value={fmtCny(pd.customsMisc + (pd.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0))} />
+            <Row label="成本合计" value={fmtCny(totalCostCny)} bold />
           </div>
         </div>
 
         {/* Bottom: Summary */}
         <div className="mt-6 pt-4 border-t border-slate-200 dark:border-navy-800 grid gap-6 lg:grid-cols-3">
-          <SummaryBox label="净利润" value={fmtCny(grossProfitCny)} color={grossProfitCny >= 0 ? 'text-emerald-600' : 'text-red-600'} />
-          <SummaryBox label="毛利率" value={revealed ? `${margin}%` : '***'} color={margin >= 15 ? 'text-emerald-600' : margin >= 5 ? 'text-amber-600' : 'text-red-600'} />
-          <SummaryBox label="结汇汇率" value={revealed ? String(pd.exchangeRate) : '***'} color="text-primary-navy dark:text-white" />
+          <SummaryBox label="净利润" value={fmtCny(netProfitCny)} color={netProfitCny >= 0 ? 'text-emerald-600' : 'text-red-600'} />
+          <SummaryBox label="净利润率" value={revealed ? `${margin.toFixed(2)}%` : '***'}
+            color={marginAlert ? 'text-red-600' : margin >= 15 ? 'text-emerald-600' : 'text-amber-600'} />
+          <SummaryBox label="实收净美金" value={fmt(netUsd)} color="text-primary-navy dark:text-white" />
         </div>
+
+        {/* Risk Alerts */}
+        {revealed && (freightWarn || marginAlert) && (
+          <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 space-y-1.5">
+            {freightWarn && <div className="flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-400"><span>⚠️</span> 警告：国际运费已超过货品成本，请核实物流方案。</div>}
+            {marginAlert && <div className="flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-400"><span>⚠️</span> 警告：该单利润率过低 ({(margin).toFixed(2)}%)，已触及风控红线 (8%)。</div>}
+          </div>
+        )}
       </DocumentBoard>
 
       {/* Profit Edit Drawer */}
@@ -416,15 +436,34 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
   const [form, setForm] = useState(data);
   const [saving, setSaving] = useState(false);
 
-  const update = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: Number(v) || 0 });
+  const updN = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: Number(v) || 0 });
+  const updS = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: v });
 
-  const Field = ({ label, value, onChange, suffix }: { label: string; value: number; onChange: (v: string) => void; suffix: string }) => (
+  const addMisc = () => setForm({ ...form, miscFees: [...(form.miscFees || []), { label: '', amount: 0 }] });
+  const updMisc = (i: number, k: 'label' | 'amount', v: string) => {
+    const next = [...(form.miscFees || [])];
+    next[i] = { ...next[i], [k]: k === 'amount' ? Number(v) || 0 : v };
+    setForm({ ...form, miscFees: next });
+  };
+  const delMisc = (i: number) => setForm({ ...form, miscFees: (form.miscFees || []).filter((_, j) => j !== i) });
+
+  const miscTotal = (form.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
+
+  // Live calculations (same formula as main view)
+  const netUsd = form.grossUsd - form.bankFees - form.platformFees;
+  const totalRevenueCny = (netUsd * form.exchangeRate) + (form.taxRefundCny || 0);
+  const freightCny = form.freightCurrency === 'USD' ? (form.freightValue * form.exchangeRate) : form.freightValue;
+  const totalCostCny = form.factoryCostCny + form.domesticFees + freightCny + form.customsMisc + miscTotal;
+  const netProfitCny = totalRevenueCny - totalCostCny;
+  const marginPct = totalRevenueCny > 0 ? (netProfitCny / totalRevenueCny) * 100 : 0;
+
+  const Field = ({ label, value, onChange, suffix, step }: { label: string; value: number; onChange: (v: string) => void; suffix: string; step?: string }) => (
     <label className="block space-y-1">
       <span className="text-xs font-bold text-primary-navy dark:text-white uppercase tracking-wider">{label}</span>
       <div className="flex items-center gap-2">
-        <input type="number" step="0.01" value={value} onChange={e => onChange(e.target.value)}
+        <input type="number" step={step || '0.01'} value={value || ''} onChange={e => onChange(e.target.value)}
           className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
-        <span className="text-xs font-bold text-slate-400 w-10">{suffix}</span>
+        <span className="text-xs font-bold text-slate-400 w-12 shrink-0">{suffix}</span>
       </div>
     </label>
   );
@@ -432,26 +471,93 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
   return (
     <div className="fixed inset-0 z-[150] flex justify-end">
       <button onClick={onClose} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 h-full w-full max-w-[500px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
+      <div className="relative z-10 h-full w-full max-w-[540px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-6 bg-slate-50 dark:bg-navy-950/50">
           <h3 className="text-lg font-bold text-primary-navy dark:text-white tracking-tight uppercase">编辑利润核算</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-primary-navy dark:hover:text-white"><X size={20} /></button>
         </div>
+
         <div className="flex-1 overflow-y-auto p-8 space-y-8">
+          {/* Revenue */}
           <section className="space-y-4">
-            <h4 className="text-xs font-extrabold text-tertiary-sage uppercase tracking-widest">收入 (Revenue)</h4>
-            <Field label="外币收款 Gross USD" value={form.grossUsd} onChange={v => update('grossUsd', v)} suffix="USD" />
-            <Field label="银行手续费 Bank Fees" value={form.bankFees} onChange={v => update('bankFees', v)} suffix="USD" />
-            <Field label="实际结汇汇率" value={form.exchangeRate} onChange={v => update('exchangeRate', v)} suffix="CNY/USD" />
+            <h4 className="text-xs font-extrabold text-tertiary-sage uppercase tracking-widest">💰 收入 (Revenue)</h4>
+            <Field label="外币收款 Gross USD" value={form.grossUsd} onChange={v => updN('grossUsd', v)} suffix="USD" />
+            <Field label="银行手续费 Bank Fees" value={form.bankFees} onChange={v => updN('bankFees', v)} suffix="USD" />
+            <Field label="平台与信保扣费 Platform Fees" value={form.platformFees} onChange={v => updN('platformFees', v)} suffix="USD" />
+            <Field label="实际结汇汇率" value={form.exchangeRate} onChange={v => updN('exchangeRate', v)} suffix="CNY/USD" step="0.01" />
+            <Field label="退税及其他收入" value={form.taxRefundCny} onChange={v => updN('taxRefundCny', v)} suffix="CNY" />
           </section>
+
+          {/* Costs */}
           <section className="space-y-4">
-            <h4 className="text-xs font-extrabold text-tertiary-sage uppercase tracking-widest">成本 (Costs)</h4>
-            <Field label="工厂采购价" value={form.factoryCostCny} onChange={v => update('factoryCostCny', v)} suffix="CNY" />
-            <Field label="国内费用 (拖车/入仓)" value={form.domesticFees} onChange={v => update('domesticFees', v)} suffix="CNY" />
-            <Field label="国际运费 (Freight)" value={form.freightUsd} onChange={v => update('freightUsd', v)} suffix="USD" />
-            <Field label="报关与杂费" value={form.customsMisc} onChange={v => update('customsMisc', v)} suffix="CNY" />
+            <h4 className="text-xs font-extrabold text-tertiary-sage uppercase tracking-widest">📦 成本 (Costs)</h4>
+            <Field label="工厂采购价" value={form.factoryCostCny} onChange={v => updN('factoryCostCny', v)} suffix="CNY" />
+            <Field label="国内费用 (拖车/入仓)" value={form.domesticFees} onChange={v => updN('domesticFees', v)} suffix="CNY" />
+
+            {/* Freight with currency toggle */}
+            <label className="block space-y-1">
+              <span className="text-xs font-bold text-primary-navy dark:text-white uppercase tracking-wider">国际运费 (Freight)</span>
+              <div className="flex items-center gap-2">
+                <input type="number" step="0.01" value={form.freightValue || ''} onChange={e => updN('freightValue', e.target.value)}
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
+                <div className="flex rounded-lg border border-slate-200 dark:border-navy-800 overflow-hidden shrink-0">
+                  <button type="button" onClick={() => updS('freightCurrency', 'CNY')}
+                    className={`px-3 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'CNY' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-white dark:bg-navy-950 text-slate-400'}`}>CNY</button>
+                  <button type="button" onClick={() => updS('freightCurrency', 'USD')}
+                    className={`px-3 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'USD' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-white dark:bg-navy-950 text-slate-400'}`}>USD</button>
+                </div>
+              </div>
+            </label>
+
+            {/* Customs & Misc with add-line */}
+            <label className="block space-y-1">
+              <span className="text-xs font-bold text-primary-navy dark:text-white uppercase tracking-wider">报关与杂费 (包含偏远/产地证等)</span>
+              <div className="flex items-center gap-2">
+                <input type="number" step="0.01" value={form.customsMisc || ''} onChange={e => updN('customsMisc', e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
+                <span className="text-xs font-bold text-slate-400 w-12 shrink-0">CNY</span>
+              </div>
+            </label>
+
+            {/* Misc fee lines */}
+            {(form.miscFees || []).map((fee, i) => (
+              <div key={i} className="flex items-center gap-2 pl-4 border-l-2 border-tertiary-sage/30">
+                <input value={fee.label} onChange={e => updMisc(i, 'label', e.target.value)} placeholder="费用名称"
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs outline-none text-primary-navy dark:text-white" />
+                <input type="number" step="0.01" value={fee.amount || ''} onChange={e => updMisc(i, 'amount', e.target.value)}
+                  className="w-24 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs outline-none data-field text-primary-navy dark:text-white" />
+                <span className="text-[10px] font-bold text-slate-400 w-8">CNY</span>
+                <button onClick={() => delMisc(i)} className="text-slate-300 hover:text-error transition-colors"><X size={14} /></button>
+              </div>
+            ))}
+            <button onClick={addMisc} className="flex items-center gap-1 text-[11px] font-bold text-tertiary-sage hover:underline">
+              <Plus size={12} /> 添加杂费明细
+            </button>
           </section>
+
+          {/* Live Summary Card */}
+          <div className="rounded-lg bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 p-5 space-y-2.5">
+            <div className="text-[10px] font-extrabold text-primary-navy dark:text-white uppercase tracking-widest mb-3">📊 实时计算结果</div>
+            <div className="flex justify-between text-xs"><span className="font-bold text-slate-500">实收净美金 (Net USD)</span><span className="font-bold data-field text-primary-navy dark:text-white">${netUsd.toFixed(2)}</span></div>
+            <div className="flex justify-between text-xs"><span className="font-bold text-slate-500">总收入 (Total Income)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{totalRevenueCny.toFixed(2)}</span></div>
+            <div className="flex justify-between text-xs"><span className="font-bold text-slate-500">总成本 (Total Cost)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{totalCostCny.toFixed(2)}</span></div>
+            <div className="flex justify-between text-xs pt-2 border-t border-slate-200 dark:border-navy-700">
+              <span className="font-bold text-slate-500">预估净利润 (Net Profit)</span>
+              <span className={`font-black data-field ${netProfitCny >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>¥{netProfitCny.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="font-bold text-slate-500">净利润率 (Margin)</span>
+              <span className={`font-black data-field ${marginPct < 8 ? 'text-red-600' : marginPct >= 15 ? 'text-emerald-600' : 'text-amber-600'}`}>{marginPct.toFixed(2)}%</span>
+            </div>
+            {marginPct < 8 && marginPct > 0 && (
+              <div className="mt-1 text-[10px] font-bold text-red-600">⚠️ 利润率过低，已触及风控红线 (8%)</div>
+            )}
+            {freightCny > form.factoryCostCny && form.factoryCostCny > 0 && (
+              <div className="text-[10px] font-bold text-red-600">⚠️ 国际运费已超过货品成本，请核实物流方案</div>
+            )}
+          </div>
         </div>
+
         <div className="border-t border-slate-100 dark:border-navy-800 px-8 py-5 flex justify-end gap-3">
           <button onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-700 px-5 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
           <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false); }} disabled={saving} className="btn-primary shadow-md disabled:opacity-60">

@@ -10,14 +10,20 @@ export type PartnerType = 'factory' | 'forwarder' | 'customs_broker' | 'other';
 export type ProductionStatus = 'not_started' | 'scheduled' | 'in_progress' | 'ready';
 export type InspectionStatus = 'pending' | 'passed' | 'failed';
 
+export type MiscFee = { label: string; amount: number };
+
 export type ProfitData = {
   grossUsd: number;
   bankFees: number;
+  platformFees: number;
   exchangeRate: number;
+  taxRefundCny: number;
   factoryCostCny: number;
   domesticFees: number;
-  freightUsd: number;
+  freightValue: number;
+  freightCurrency: 'CNY' | 'USD';
   customsMisc: number;
+  miscFees: MiscFee[];
 };
 
 export type AttachmentMeta = {

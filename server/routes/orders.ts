@@ -304,11 +304,15 @@ export function createOrdersRouter() {
       res.json({
         grossUsd: data.grossUsd || 0,
         bankFees: data.bankFees || 0,
+        platformFees: data.platformFees || 0,
         exchangeRate: data.exchangeRate || 7.2,
+        taxRefundCny: data.taxRefundCny || 0,
         factoryCostCny: data.factoryCostCny || 0,
         domesticFees: data.domesticFees || 0,
-        freightUsd: data.freightUsd || 0,
+        freightValue: data.freightValue || 0,
+        freightCurrency: data.freightCurrency || 'CNY',
         customsMisc: data.customsMisc || 0,
+        miscFees: data.miscFees || [],
       });
     } catch (error) {
       return handleRouteError(res, error, '读取利润数据失败');
@@ -320,11 +324,15 @@ export function createOrdersRouter() {
     const data = {
       grossUsd: Number(req.body.grossUsd) || 0,
       bankFees: Number(req.body.bankFees) || 0,
+      platformFees: Number(req.body.platformFees) || 0,
       exchangeRate: Number(req.body.exchangeRate) || 7.2,
+      taxRefundCny: Number(req.body.taxRefundCny) || 0,
       factoryCostCny: Number(req.body.factoryCostCny) || 0,
       domesticFees: Number(req.body.domesticFees) || 0,
-      freightUsd: Number(req.body.freightUsd) || 0,
+      freightValue: Number(req.body.freightValue) || 0,
+      freightCurrency: req.body.freightCurrency === 'USD' ? 'USD' : 'CNY',
       customsMisc: Number(req.body.customsMisc) || 0,
+      miscFees: Array.isArray(req.body.miscFees) ? req.body.miscFees : [],
     };
     try {
       await db.run(
