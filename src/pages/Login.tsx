@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -13,7 +13,22 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [siteName, setSiteName] = useState('SmartTrade AI CRM');
+  const [siteSlogan, setSiteSlogan] = useState('');
+  const [siteLogo, setSiteLogo] = useState('/logo.png');
   const { login } = useAuth();
+
+  useEffect(() => {
+    const fetchBrand = async () => {
+      try {
+        const data = await apiFetch<{ siteName: string; siteSlogan: string; siteLogo: string }>('/api/settings/basic');
+        if (data.siteName) setSiteName(data.siteName);
+        if (data.siteSlogan) setSiteSlogan(data.siteSlogan);
+        if (data.siteLogo) setSiteLogo(data.siteLogo);
+      } catch (e) {}
+    };
+    void fetchBrand();
+  }, []);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -44,10 +59,10 @@ export default function LoginScreen() {
       <div className="relative z-10 w-full max-w-[420px] rounded-[24px] bg-white dark:bg-navy-900 p-10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all animate-in fade-in zoom-in-95 duration-500 mx-4">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-slate-50 dark:bg-navy-950 shadow-inner border border-slate-100 dark:border-navy-800 overflow-hidden p-2">
-            <img src="/logo.png" alt="SmartTrade" className="h-full w-full object-contain" />
+            <img src={siteLogo} alt={siteName} className="h-full w-full object-contain" />
           </div>
-          <h1 className="text-[24px] font-extrabold tracking-tight text-primary-navy dark:text-white uppercase">SmartTrade AI CRM</h1>
-          <p className="mt-2 text-[13px] font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">统一化外贸业务管理与 AI 协同平台</p>
+          <h1 className="text-[24px] font-extrabold tracking-tight text-primary-navy dark:text-white uppercase">{siteName}</h1>
+          <p className="mt-2 text-[13px] font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">{siteSlogan || '统一化外贸业务管理与 AI 协同平台'}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

@@ -44,6 +44,8 @@ export default function MainLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [siteName, setSiteName] = useState('SmartTrade AI CRM');
+  const [siteLogo, setSiteLogo] = useState('/logo.png');
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -52,12 +54,28 @@ export default function MainLayout() {
         setUnreadCount(data.count);
       } catch (e) {}
     };
+    const fetchBrand = async () => {
+      try {
+        const data = await apiFetch<{ siteName: string; siteLogo: string }>('/api/settings/basic');
+        if (data.siteName) setSiteName(data.siteName);
+        if (data.siteLogo) setSiteLogo(data.siteLogo);
+      } catch (e) {}
+    };
     if (user) {
       void fetchUnread();
+      void fetchBrand();
       const timer = setInterval(fetchUnread, 30000); // Check every 30s
       return () => clearInterval(timer);
     }
   }, [user]);
+
+  useEffect(() => {
+    document.title = siteName;
+    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (favicon && siteLogo && siteLogo !== '/logo.png') {
+      favicon.href = siteLogo;
+    }
+  }, [siteName, siteLogo]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -90,7 +108,7 @@ export default function MainLayout() {
       case 'settings': return { title: '系统配置', subtitle: '定制化业务规则，管理团队协作权限。', actionLabel: '保存配置', actionPath: '#' };
       case 'help': return { title: '帮助中心', subtitle: '获取系统操作指南，解决业务流程疑惑。', actionLabel: '联系支持', actionPath: '#' };
       case 'audit': return { title: '操作审计日志', subtitle: '追溯全站核心实体的生命周期与数据变动', actionLabel: '导出报告', actionPath: 'print' };
-      default: return { title: 'SmartTrade AI CRM', subtitle: '专业的外贸业务管理专家。', actionLabel: '返回首页', actionPath: '/dashboard' };
+      default: return { title: siteName, subtitle: '专业的外贸业务管理专家。', actionLabel: '返回首页', actionPath: '/dashboard' };
     }
   };
 
@@ -113,9 +131,9 @@ export default function MainLayout() {
         {/* Logo 区域：pt-8 pb-6 mb-8 确保与主导航视觉隔离 */}
         <div className="pt-8 pb-6 mb-8 border-b border-slate-50 dark:border-navy-800/50">
           <Link to="/" className="flex items-center gap-3 group">
-            <img src="/logo.png" alt="SmartTrade" className="h-8 w-8 rounded-lg object-contain shadow-md" />
+            <img src={siteLogo} alt={siteName} className="h-8 w-8 rounded-lg object-contain shadow-md" />
             <div className="min-w-0">
-              <div className="text-sm font-black tracking-tighter text-primary-navy dark:text-white uppercase leading-none">SmartTrade</div>
+              <div className="text-sm font-black tracking-tighter text-primary-navy dark:text-white uppercase leading-none">{siteName}</div>
               <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Management</div>
             </div>
           </Link>

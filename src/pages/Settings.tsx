@@ -58,6 +58,12 @@ export default function SettingsView() {
   const [baseUrl, setBaseUrl] = useState('');
   const [hasApiKey, setHasApiKey] = useState(false);
   const [orderNumberPrefix, setOrderNumberPrefix] = useState('ORD-');
+  const [siteName, setSiteName] = useState('SmartTrade AI CRM');
+  const [siteSlogan, setSiteSlogan] = useState('');
+  const [siteLogo, setSiteLogo] = useState('');
+  const [siteFavicon, setSiteFavicon] = useState('');
+  const [savedSite, setSavedSite] = useState(false);
+  const [uploadingBrand, setUploadingBrand] = useState(false);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [userForm, setUserForm] = useState<UserFormState>(EMPTY_USER_FORM);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -78,10 +84,11 @@ export default function SettingsView() {
 
   const loadSettings = async () => {
     try {
-      const [aiData, documentData, userData] = await Promise.all([
+      const [aiData, documentData, userData, basicData] = await Promise.all([
         apiFetch<AiSettings>('/api/settings/ai'),
         isAdmin ? apiFetch<DocumentSettings>('/api/settings/document') : Promise.resolve({ orderNumberPrefix: 'ORD-' }),
         isAdmin ? apiFetch<ManagedUser[]>('/api/users') : Promise.resolve([]),
+        apiFetch<{ siteName: string; siteSlogan: string; siteLogo: string; siteFavicon: string }>('/api/settings/basic'),
       ]);
 
       setModel(aiData.model);
@@ -90,6 +97,10 @@ export default function SettingsView() {
       setHasApiKey(aiData.hasApiKey);
       setOrderNumberPrefix(documentData.orderNumberPrefix || 'ORD-');
       setUsers(userData);
+      setSiteName(basicData.siteName || 'SmartTrade AI CRM');
+      setSiteSlogan(basicData.siteSlogan || '');
+      setSiteLogo(basicData.siteLogo || '');
+      setSiteFavicon(basicData.siteFavicon || '');
 
       // Detect provider from model
       for (const p of AI_PROVIDERS) {
@@ -158,6 +169,47 @@ export default function SettingsView() {
     } catch (requestError) {
       setError(getErrorMessage(requestError, '保存单据编码规则失败'));
     }
+  };
+
+  const saveSiteSettings = async () => {
+    setError('');
+    setSavedSite(false);
+    try {
+      await apiFetch('/api/settings/basic', {
+        method: 'POST',
+        body: JSON.stringify({ siteName, siteSlogan, siteLogo, siteFavicon }),
+      });
+      setSavedSite(true);
+      window.setTimeout(() => setSavedSite(false), 1800);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, '保存站点设置失败'));
+    }
+  };
+
+  const uploadBrandFile = async (type: 'logo' | 'favicon') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/gif,image/svg+xml,image/x-icon,.ico';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setUploadingBrand(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const result = await apiFetch<{ url: string }>('/api/settings/brand/upload', {
+          method: 'POST',
+          body: fd,
+        });
+        if (type === 'logo') setSiteLogo(result.url);
+        else setSiteFavicon(result.url);
+      } catch (e) {
+        setError(getErrorMessage(e, '上传失败'));
+      } finally {
+        setUploadingBrand(false);
+      }
+    };
+    input.click();
   };
 
   const startCreateUser = () => {
@@ -308,6 +360,56 @@ export default function SettingsView() {
           </div>
 
           <div className="space-y-8 max-w-3xl">
+            {/* Site Brand Settings */}
+            <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-4">
+                <Globe size={16} /> 站点基本设置
+              </h3>
+              <div className="space-y-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="站点名称">
+                    <input value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="如 SmartTrade AI CRM" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
+                  </Field>
+                  <Field label="站点口号">
+                    <input value={siteSlogan} onChange={e => setSiteSlogan(e.target.value)} placeholder="如 专业的外贸业务管理专家" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
+                  </Field>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="站点 Logo（建议 200×200px PNG）">
+                    <div className="flex items-center gap-3">
+                      {siteLogo ? (
+                        <div className="relative group">
+                          <img src={siteLogo} alt="Logo" className="h-12 w-12 rounded-lg object-contain border border-slate-200 dark:border-navy-700 bg-white" />
+                          <button onClick={() => setSiteLogo('')} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-all">✕</button>
+                        </div>
+                      ) : null}
+                      <button onClick={() => void uploadBrandFile('logo')} disabled={uploadingBrand} className="rounded-lg border border-slate-200 dark:border-navy-700 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 transition-all disabled:opacity-50">
+                        {uploadingBrand ? '上传中...' : '选择图片'}
+                      </button>
+                    </div>
+                  </Field>
+                  <Field label="Favicon（建议 32×32px ICO/PNG）">
+                    <div className="flex items-center gap-3">
+                      {siteFavicon ? (
+                        <div className="relative group">
+                          <img src={siteFavicon} alt="Favicon" className="h-8 w-8 rounded object-contain border border-slate-200 dark:border-navy-700 bg-white" />
+                          <button onClick={() => setSiteFavicon('')} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-all">✕</button>
+                        </div>
+                      ) : null}
+                      <button onClick={() => void uploadBrandFile('favicon')} disabled={uploadingBrand} className="rounded-lg border border-slate-200 dark:border-navy-700 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 transition-all disabled:opacity-50">
+                        {uploadingBrand ? '上传中...' : '选择文件'}
+                      </button>
+                    </div>
+                  </Field>
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button onClick={saveSiteSettings} className="btn-primary shadow-md">
+                    {savedSite ? <><CheckCircle2 className="mr-2 h-4 w-4" />已保存</> : '保存站点设置'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Order Number Prefix */}
             <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
               <h3 className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-4">

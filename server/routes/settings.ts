@@ -1,14 +1,71 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
 import { requireAdmin, requireAuth } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
+import { PROJECT_ROOT } from '../paths.js';
 import { buildLegacyExportZip, getExportFileName, streamCustomerArchiveZip } from '../services/export.js';
 import { buildExcelWorkbook } from '../services/excel-export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
 import { resolveAiProvider, runGeminiModel, runOpenAiCompatibleModel } from '../services/ai.js';
 
+const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
+const brandUpload = multer({
+  storage: multer.diskStorage({
+    destination: async (_req, _file, cb) => {
+      await fs.mkdir(BRAND_DIR, { recursive: true });
+      cb(null, BRAND_DIR);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.png';
+      cb(null, `${file.fieldname}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon'];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
+
 export function createSettingsRouter() {
   const router = Router();
+
+  router.post('/brand/upload', requireAdmin, brandUpload.single('file'), async (req, res) => {
+    if (!req.file) return fail(res, 400, '请上传图片文件', 'NO_FILE');
+    const fileUrl = `/brand/${req.file.filename}`;
+    res.json({ url: fileUrl, filename: req.file.filename });
+  });
+
+  router.get('/basic', requireAuth, async (_req, res) => {
+    try {
+      const siteName = await getSettingValue('site_name', 'SmartTrade AI CRM');
+      const siteSlogan = await getSettingValue('site_slogan', '专业的外贸业务管理专家');
+      const siteLogo = await getSettingValue('site_logo', '');
+      const siteFavicon = await getSettingValue('site_favicon', '');
+      res.json({ siteName, siteSlogan, siteLogo, siteFavicon });
+    } catch (error) {
+      return handleRouteError(res, error, '读取站点设置失败');
+    }
+  });
+
+  router.post('/basic', requireAdmin, async (req, res) => {
+    const siteName = readString(req.body?.siteName) || 'SmartTrade AI CRM';
+    const siteSlogan = readString(req.body?.siteSlogan) || '专业的外贸业务管理专家';
+    const siteLogo = readString(req.body?.siteLogo);
+    const siteFavicon = readString(req.body?.siteFavicon);
+    try {
+      await setSettingValue('site_name', siteName);
+      await setSettingValue('site_slogan', siteSlogan);
+      if (siteLogo) await setSettingValue('site_logo', siteLogo);
+      if (siteFavicon) await setSettingValue('site_favicon', siteFavicon);
+      res.json({ success: true, siteName, siteSlogan });
+    } catch (error) {
+      return handleRouteError(res, error, '保存站点设置失败');
+    }
+  });
 
   router.get('/ai', requireAuth, async (_req, res) => {
     try {

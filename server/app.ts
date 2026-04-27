@@ -10,6 +10,8 @@ import apiRouter from './api.js';
 import { blockSensitivePaths } from './lib/security.js';
 import { PROJECT_ROOT, UPLOADS_DIR } from './paths.js';
 
+const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
+
 export async function createApp() {
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
 
@@ -23,6 +25,7 @@ export async function createApp() {
   app.use(express.json());
   app.use(cookieParser());
   app.use('/api', apiRouter);
+  app.use('/brand', express.static(BRAND_DIR));
 
   // Global error handler for uncaught async errors (Express 4 does not catch promise rejections).
   // express-async-errors patches route handlers so rejected promises land here.
