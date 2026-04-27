@@ -31,7 +31,23 @@ router.get('/health', (_req, res) => {
   });
 });
 
+import { getSettingValue } from './services/settings.js';
+
 router.use('/auth', createAuthRouter());
+
+// Public settings endpoint for login page (site name, logo, etc.)
+router.get('/settings/basic', async (_req, res) => {
+  try {
+    const siteName = await getSettingValue('site_name', 'SmartTrade AI CRM');
+    const siteSlogan = await getSettingValue('site_slogan', '');
+    const siteLogo = await getSettingValue('site_logo', '');
+    const siteFavicon = await getSettingValue('site_favicon', '');
+    res.json({ siteName, siteSlogan, siteLogo, siteFavicon });
+  } catch (error) {
+    res.json({ siteName: 'SmartTrade AI CRM', siteSlogan: '', siteLogo: '/logo.png', siteFavicon: '' });
+  }
+});
+
 router.use(requireAuth);
 router.use('/dashboard', createDashboardRouter());
 router.use('/settings', createSettingsRouter());

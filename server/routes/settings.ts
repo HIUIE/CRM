@@ -39,18 +39,6 @@ export function createSettingsRouter() {
     res.json({ url: fileUrl, filename: req.file.filename });
   });
 
-  router.get('/basic', requireAuth, async (_req, res) => {
-    try {
-      const siteName = await getSettingValue('site_name', 'SmartTrade AI CRM');
-      const siteSlogan = await getSettingValue('site_slogan', '专业的外贸业务管理专家');
-      const siteLogo = await getSettingValue('site_logo', '');
-      const siteFavicon = await getSettingValue('site_favicon', '');
-      res.json({ siteName, siteSlogan, siteLogo, siteFavicon });
-    } catch (error) {
-      return handleRouteError(res, error, '读取站点设置失败');
-    }
-  });
-
   router.post('/basic', requireAdmin, async (req, res) => {
     const siteName = readString(req.body?.siteName) || 'SmartTrade AI CRM';
     const siteSlogan = readString(req.body?.siteSlogan) || '专业的外贸业务管理专家';
