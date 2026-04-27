@@ -27,7 +27,7 @@
 
 ### 概述
 
-**SmartTrade AI CRM** — 外贸 CRM/ERP 系统，技术栈为 **React 19 + Express + SQLite**，含 AI 助手（Gemini/DeepSeek/OpenAI 兼容 API）。版本 v1.0.5。
+**SmartTrade AI CRM** — 外贸 CRM/ERP 系统，技术栈为 **React 19 + Express + SQLite**，含 AI 助手（Gemini/DeepSeek/OpenAI 兼容 API）。版本 v1.1.0。
 
 ### 目录结构速查
 
@@ -253,7 +253,7 @@
 | 严重度 | 问题 | 位置 | 说明 | 状态 |
 |--------|------|------|------|------|
 | ~~**高危**~~ | ~~**JWT 密钥硬编码默认值**~~ | ~~`server/lib/auth.ts:18`~~ | ~~`JWT_SECRET` 默认值为 `'super-secret-key-for-preview-only'`。开发模式下若忘设环境变量，任何人都可伪造 JWT~~ | ✅ 已修复 |
-| **高危** | **CSRF 无防护** | 全站 | 全部使用 cookie 认证但无 CSRF token。sameSite:'lax' 对 POST/DELETE 保护不足 | ⏳ 待处理 |
+| ~~**高危**~~ | ~~**CSRF 无防护**~~ | ~~全站~~ | ✅ 已修复 — double-submit cookie 模式，apiFetch/apiUpload 自动携带 X-CSRF-Token | ✅ 已修复 |
 | ~~**中危**~~ | ~~**登录无速率限制**~~ | ~~`server/routes/auth.ts:11`~~ | ~~`/api/auth/login` 无 brute-force 防护，可暴力枚举密码~~ | ✅ 已修复 |
 | ~~**中危**~~ | ~~**密码重置无限流**~~ | ~~`server/routes/users.ts:101`~~ | ~~admin 可直接重置任意用户密码，无二次确认（如输入旧密码）~~ | ✅ 已修复 |
 | ~~**中危**~~ | ~~**审计日志无限增长**~~ | ~~`server/routes/audit.ts:13-15`~~ | ~~LIMIT 200 但无自动清理机制，数据库无限膨胀~~ | ✅ 已修复 |
@@ -262,7 +262,7 @@
 | ~~**低危**~~ | ~~**前端暴露 API Key**~~ | ~~`vite.config.ts:12`~~ | ~~`GEMINI_API_KEY` 编译进前端 JS 包，用户可查看~~ | ✅ 已修复 |
 | ~~**低危**~~ | ~~**密码重置不含审计**~~ | ~~`users.ts:101`~~ | ~~重置密码操作未写入 audit_logs~~ | ✅ 已修复 |
 
-> 注：已修复 8/9 项安全风险。CSRF 防护因涉及全站架构调整，暂搁置。
+> 注：已修复 9/9 项安全风险。全部完成。
 
 ---
 
@@ -272,8 +272,8 @@
 
 | 优先级 | 建议 | 文件 | 说明 |
 |--------|------|------|------|
-| **P0** | **迁移 PostgreSQL** | `server/db.ts` | SQLite 不支持并发写入，多用户同时操作会锁库。SQLite 在千级订单后可预见性能问题 |
-| ~~**P0**~~ | ~~**启用 WAL 模式**~~ | ~~`server/db.ts`~~ | ✅ 已添加 `PRAGMA journal_mode=WAL` |
+| **P0** | **迁移 PostgreSQL** | `server/db.ts` | SQLite 不支持并发写入，多用户同时操作会锁库。SQLite 在千级订单后可预见性能问题 | ⏳ 待处理 |
+| ~~**P0**~~ | ~~**启用 WAL 模式**~~ | ~~`server/db.ts`~~ | ✅ 已添加 `PRAGMA journal_mode=WAL` | ✅ 已修复 |
 | **P1** | **前后端类型统一** | `server/domain.ts` vs `src/types/crm.ts` | 两端各自定义 OrderStatus 等类型，容易不同步。建议抽出 shared/types |
 | **P1** | **引入数据请求层** | `src/lib/api.ts` | 建议加入 SWR / TanStack Query 做自动缓存、重新验证、乐观更新 |
 | **P2** | **错误监控** | `server/lib/http.ts:handleRouteError()` | 已添加结构化日志（method/path/userId + timestamp）。建议进一步集成 Sentry |
@@ -395,13 +395,13 @@
 | ~~`CustomerDetail` val 闭包陈旧~~ | `CustomerDetail.tsx:558` | 添加 `useEffect` 同步 `val` 状态 | ✅ 已修复 |
 | ~~`CustomerDetail` onSave 重复触发~~ | `CustomerDetail.tsx:567` | `onChange` 只更新本地 state，`onBlur` 触发保存 | ✅ 已修复 |
 
-### 架构观察
+### 架构观察（已修复项 ✅）
 
-- `features/order-detail/components.tsx` 的 `Chip`、`EmptyStateBoard`、`Toast` 被 10+ 个外部文件引用，违背 Feature Module 边界
-- 全站无数据层抽象（无 React Query/SWR），每个组件直接在 `useEffect` 里 `apiFetch`
-- `apiFetch` 用 Fetch API 但 `apiUpload` 用 XHR，双 HTTP 实现
-- `lucide-react` 导入已修剪，但按需 tree-shake 仍需关注
-- `dayjs` 已使用，`date-fns` 已移除
+- ~~`features/order-detail/components.tsx` 共享组件被 10+ 外部文件引用~~ → Chip/Toast/EmptyStateBoard/FilterPill 已迁移至 `components/ui/`
+- ~~`apiFetch` 用 Fetch 但 `apiUpload` 用 XHR~~ → apiUpload 无进度时走 fetch，XHR 仅在有 onProgress 时使用
+- ~~`dayjs` 已使用，`date-fns` 是死依赖~~ → 已移除
+- `lucide-react` 导入已修剪
+- 全站无数据层抽象（无 React Query/SWR）— 待后续引入
 
 ### 五、全面代码审查 (2026-04-27)
 
@@ -436,7 +436,9 @@
 迭代 4 (架构) ✅   → 共享组件迁移至 components/ui/、apiUpload 统一 fetch/XHR、CSRF 防护
 迭代 5 (功能) ✅   → 合作伙伴 360° 页面、Excel 多 Sheet 导出、站点品牌定制、全局悬浮 AI 助手
 迭代 6 (AI) ✅     → AI 工具调用（7 种业务操作）、聊天支持图片上传
-迭代 7 (利润) ✅   → 外贸利润核算 V4.0（多期收款/结汇/退税自动化/运费倒挂预警）
-迭代 8 (体验) ✅   → 浅色模式字体优化、导航高亮修复、订单结算明细行
+迭代 7 (利润) ✅   → 外贸利润核算 V4.0（多期收款/结汇/退税自动化/运费倒挂预警）+ V3 平台扣费+退税组件
+迭代 8 (体验) ✅   → 浅色模式字体优化、导航高亮修复、订单结算明细行、利润核算输入框失焦修复
+迭代 9 (运维) ✅   → 构建版本号自动注入、GitHub API 远程版本检测、设置页版本更新标签
+迭代 10 (安全) ✅  → CSRF double-submit cookie 全站防护
 迭代 4 (架构)      → 引入数据层（React Query/SWR）、消除 features/components 循环依赖
 ```
