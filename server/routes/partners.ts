@@ -96,6 +96,92 @@ export function createPartnersRouter() {
     }
   });
 
+  router.get('/:id', async (req: AuthedRequest, res) => {
+    const partnerId = Number(req.params.id);
+    if (!Number.isInteger(partnerId) || partnerId <= 0) {
+      return fail(res, 400, '伙伴编号无效', 'INVALID_PARTNER_ID');
+    }
+
+    try {
+      const partner = await db.get(`
+        SELECT p.*, u.name AS created_by_name
+        FROM partners p LEFT JOIN users u ON u.id = p.created_by
+        WHERE p.id = ?
+      `, [partnerId]);
+
+      if (!partner) {
+        return fail(res, 404, '伙伴不存在', 'PARTNER_NOT_FOUND');
+      }
+
+      // Orders linked via production_plans (factory)
+      const productionOrders = await db.all(`
+        SELECT o.id, o.display_id, o.status, o.total_amount, o.product_summary, o.created_at,
+               pp.production_status, pp.inspection_status, pp.order_date AS prod_order_date,
+               pp.estimated_delivery_date
+        FROM production_plans pp
+        JOIN orders o ON o.id = pp.order_id
+        WHERE pp.partner_id = ?
+        ORDER BY datetime(pp.created_at) DESC
+      `, [partnerId]);
+
+      // Finance records linked to this partner
+      const financeRecords = await db.all(`
+        SELECT fr.*, o.display_id AS order_display_id
+        FROM finance_records fr
+        LEFT JOIN orders o ON o.id = fr.order_id
+        WHERE fr.partner_id = ?
+        ORDER BY datetime(fr.created_at) DESC
+      `, [partnerId]);
+
+      // Orders linked via finance_records (forwarder/customs_broker)
+      const financeOrderIds = [...new Set(financeRecords.map((r: any) => r.order_id).filter(Boolean))];
+      let financeOrders: any[] = [];
+      if (financeOrderIds.length) {
+        financeOrders = await db.all(
+          `SELECT id, display_id, status, total_amount, product_summary, created_at FROM orders WHERE id IN (${financeOrderIds.join(',')})`
+        );
+      }
+
+      // Monthly order counts (this year)
+      const thisMonth = new Date().toISOString().slice(0, 7);
+      const lastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 7);
+
+      const monthlyStats = await db.all(`
+        SELECT strftime('%Y-%m', pp.created_at) AS month, COUNT(*) AS count
+        FROM production_plans pp
+        WHERE pp.partner_id = ?
+        GROUP BY month ORDER BY month DESC LIMIT 12
+      `, [partnerId]);
+
+      const thisMonthCount = monthlyStats.find((m: any) => m.month === thisMonth)?.count || 0;
+      const lastMonthCount = monthlyStats.find((m: any) => m.month === lastMonth)?.count || 0;
+
+      // Combine all orders (production + finance-linked), deduplicate
+      const allOrderMap = new Map<number, any>();
+      for (const o of productionOrders) { allOrderMap.set(o.id, { ...o, linkType: 'production' }); }
+      for (const o of financeOrders) {
+        if (!allOrderMap.has(o.id)) {
+          allOrderMap.set(o.id, { ...o, linkType: 'finance' });
+        }
+      }
+
+      res.json({
+        partner,
+        orders: [...allOrderMap.values()],
+        financeRecords,
+        summary: {
+          totalOrders: allOrderMap.size,
+          thisMonthCount,
+          lastMonthCount,
+          totalFinanceAmount: financeRecords.reduce((s: number, r: any) => s + Number(r.amount || 0), 0),
+          productionCount: productionOrders.length,
+        },
+      });
+    } catch (error) {
+      return handleRouteError(res, error, '读取伙伴详情失败');
+    }
+  });
+
   router.delete('/:id', requireAdmin, async (req, res) => {
     const partnerId = Number(req.params.id);
     if (!Number.isInteger(partnerId) || partnerId <= 0) {

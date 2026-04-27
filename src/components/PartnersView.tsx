@@ -275,7 +275,8 @@ export default function PartnersView() {
                     currentItems.map((partner) => (
                       <tr
                         key={partner.id}
-                        className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors"
+                        onClick={() => navigate(`/partners/detail/${partner.id}`)}
+                        className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                       >
                         <td className="px-4 py-4 text-left">
                           <div className="flex items-center gap-3">

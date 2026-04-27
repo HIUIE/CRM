@@ -23,6 +23,7 @@ import CustomersView from './components/CustomersView';
 import CustomerDetailPage from './pages/CustomerDetail';
 import AuditLogsPage from './pages/AuditLogs';
 import PartnersView from './components/PartnersView';
+import PartnerDetailPage from './pages/PartnerDetail';
 import TasksView from './pages/Tasks';
 import VersionGuard from './components/VersionGuard';
 
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/customers/:id" element={<CustomerRedirect />} />
           <Route path="/customers/detail/:id" element={<CustomerDetailPage />} />
           <Route path="/partners" element={<PartnersView />} />
+          <Route path="/partners/detail/:id" element={<PartnerDetailPage />} />
           <Route path="/ai" element={<AIAssistantView />} />
           <Route path="/help" element={<HelpCenterPage />} />
           <Route path="/audit" element={user?.role === 'admin' ? <AuditLogsPage /> : <Navigate to="/dashboard" replace />} />
