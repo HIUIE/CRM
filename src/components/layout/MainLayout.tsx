@@ -84,7 +84,7 @@ export default function MainLayout() {
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
 
   // 标准详情页识别：隐藏全局头部
-  const isDetailPage = /^\/(orders|customers|tasks|audit)\/detail\/[^/]+$/.test(location.pathname) ||
+  const isDetailPage = /^\/(orders|customers|partners|tasks|audit)\/detail\/[^/]+$/.test(location.pathname) ||
                        /^\/orders\/[^/]+$/.test(location.pathname) ||
                        /^\/(audit|tasks)$/.test(location.pathname);
 
@@ -98,6 +98,7 @@ export default function MainLayout() {
       case 'logistics': return { title: '物流打包', subtitle: '追踪货运状态，确保交付流程准时合规。', actionLabel: '创建物流', actionPath: '/logistics?create=1' };
       case 'tasks': return { title: '团队协同', subtitle: '跨部门高效协作，确保任务不落地。', actionLabel: '指派任务', actionPath: '/tasks?create=1' };
       case 'ai': return { title: 'AI 向导', subtitle: '利用智能化引擎，挖掘数据背后的增长机会。', actionLabel: '发起咨询', actionPath: '/ai' };
+      case 'partners': return { title: '合作伙伴', subtitle: '管理供应商与物流伙伴，优化供应链协同。', actionLabel: '新增伙伴', actionPath: '/partners?create=1' };
       case 'settings': return { title: '系统配置', subtitle: '定制化业务规则，管理团队协作权限。', actionLabel: '保存配置', actionPath: '#' };
       case 'help': return { title: '帮助中心', subtitle: '获取系统操作指南，解决业务流程疑惑。', actionLabel: '联系支持', actionPath: '#' };
       case 'audit': return { title: '操作审计日志', subtitle: '追溯全站核心实体的生命周期与数据变动', actionLabel: '导出报告', actionPath: 'print' };
@@ -249,7 +250,7 @@ function NavItem({
   customClass?: string;
 }) {
   const navigate = useNavigate();
-  const isActive = currentPath === path || (path === '/dashboard' && currentPath === '/');
+  const isActive = currentPath === path || (path === '/dashboard' && currentPath === '/') || currentPath.startsWith(path + '/');
 
   return (
     <li>
