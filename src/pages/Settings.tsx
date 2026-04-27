@@ -88,6 +88,8 @@ export default function SettingsView() {
   const [localVersion, setLocalVersion] = useState<VersionInfo | null>(null);
   const [remoteVersion, setRemoteVersion] = useState<VersionInfo | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [updateLog, setUpdateLog] = useState<string[]>([]);
   const updateUrl = import.meta.env.VITE_UPDATE_URL || 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
 
   const isAdmin = user?.role === 'admin';
@@ -136,7 +138,6 @@ export default function SettingsView() {
       const res = await fetch(updateUrl + (updateUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
       if (res.ok) {
         const data = await res.json();
-        // GitHub API: [{ sha: "abc...", commit: { author: { date: "..." } } }]
         if (Array.isArray(data) && data[0]?.sha) {
           setRemoteVersion({ version: data[0].sha.slice(0, 7), buildTime: data[0].commit?.author?.date || '', commit: data[0].sha.slice(0, 7) });
         } else if (data.commit) {
@@ -147,6 +148,23 @@ export default function SettingsView() {
       }
     } catch { /* ignore */ }
     setCheckingUpdate(false);
+  };
+
+  const doUpdate = async () => {
+    if (!window.confirm('确定要执行系统更新吗？服务将在更新完成后自动重启，耗时约 1-2 分钟。')) return;
+    setUpdating(true);
+    setUpdateLog([]);
+    try {
+      const res = await fetch('/api/settings/system/update', { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      setUpdateLog(prev => [...prev, data.message || '更新命令已发送...']);
+      if (data.success) {
+        setTimeout(() => window.location.reload(), 3000);
+      }
+    } catch (e) {
+      setUpdateLog(prev => [...prev, `错误: ${getErrorMessage(e)}`]);
+      setUpdating(false);
+    }
   };
 
   const handleProviderChange = (providerId: string) => {
@@ -911,6 +929,21 @@ export default function SettingsView() {
                 )
               ) : (
                 <div className="text-sm text-slate-400">点击"检测更新"查看是否有新版本可用。</div>
+              )}
+
+              {/* Update trigger */}
+              {remoteVersion && remoteVersion.version !== localVersion?.version && (
+                <div className="mt-5 pt-5 border-t border-slate-200 dark:border-navy-800">
+                  <button onClick={doUpdate} disabled={updating} className="btn-primary w-full justify-center shadow-md disabled:opacity-60">
+                    {updating ? <Loader2 size={16} className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />}
+                    {updating ? '正在更新...' : '一键更新系统'}
+                  </button>
+                  {updateLog.length > 0 && (
+                    <div className="mt-3 p-3 rounded-lg bg-slate-100 dark:bg-navy-800 text-xs font-mono text-slate-600 dark:text-slate-400 space-y-1 max-h-24 overflow-y-auto">
+                      {updateLog.map((log, i) => <div key={i}>{log}</div>)}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

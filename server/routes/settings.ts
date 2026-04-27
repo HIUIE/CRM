@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { execSync } from 'child_process';
 import { requireAdmin, requireAuth } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
@@ -137,6 +138,30 @@ export function createSettingsRouter() {
       }
     } catch (error) {
       return fail(res, 502, `连接测试失败: ${error instanceof Error ? error.message : String(error)}`, 'AI_TEST_FAILED');
+    }
+  });
+
+  router.post('/system/update', requireAdmin, async (_req, res) => {
+    try {
+      const steps: string[] = [];
+      const run = (cmd: string) => { execSync(cmd, { cwd: PROJECT_ROOT, timeout: 120000, stdio: 'pipe' }); };
+
+      steps.push('正在拉取最新代码...');
+      run('git pull origin main 2>&1');
+
+      steps.push('正在安装依赖...');
+      run('npm install 2>&1');
+
+      steps.push('正在构建前端...');
+      run('npm run build 2>&1');
+
+      steps.push('更新完成，正在重启服务...');
+      res.json({ success: true, message: '更新成功，服务正在重启...', steps });
+
+      // Restart after responding
+      setTimeout(() => process.exit(0), 1000);
+    } catch (error: any) {
+      return handleRouteError(res, error, '系统更新失败');
     }
   });
 
