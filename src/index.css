@@ -58,6 +58,7 @@
   --app-border: #1E293B;
   --app-divider: #1E293B;
   --app-sage: #10B981;
+  --color-tertiary-sage: #10B981;
 }
 
 html {
@@ -138,11 +139,11 @@ h1, h2, h3, h4, .headline {
     pointer-events: none;
   }
   .dark .btn-primary {
-    background-color: #059669;
+    background-color: #10B981;
     color: #FFFFFF;
   }
   .dark .btn-primary:hover {
-    background-color: #047857;
+    background-color: #059669;
   }
 
   /* Secondary: transparent fill, Navy text, Navy border */

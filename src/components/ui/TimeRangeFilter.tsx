@@ -15,7 +15,7 @@ export default function TimeRangeFilter({ value, onChange }: TimeRangeFilterProp
           onClick={() => onChange(chip.key)}
           className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
             value === chip.key
-              ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm'
+              ? 'bg-primary-navy dark:bg-navy-900 text-white shadow-sm'
               : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'
           }`}
         >

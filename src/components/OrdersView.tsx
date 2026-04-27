@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Edit, Plus, Search, Trash2, Hash } from 'lucide-react';
+import { Edit, Search, Trash2, Hash } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -204,7 +204,7 @@ export default function OrdersView() {
   return (
     <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_160px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
@@ -228,10 +228,6 @@ export default function OrdersView() {
                <option value="completed">已完成</option>
              </select>
           </div>
-          <button onClick={openCreateForm} className="btn-primary shadow-md active:scale-95">
-            <Plus className="mr-2 h-4 w-4" />
-            新建订单
-          </button>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">

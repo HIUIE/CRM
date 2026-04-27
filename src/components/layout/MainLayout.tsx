@@ -199,13 +199,13 @@ export default function MainLayout() {
       <main className="ml-[240px] min-h-screen flex flex-col relative">
         <CommandPalette />
         {!isDetailPage && (
-          <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-5 flex items-center justify-between transition-all shrink-0">
+          <header className="sticky top-0 z-40 bg-white/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-8 py-5 flex items-center justify-between transition-all shrink-0">
             <div>
               <h1 className="text-lg font-black tracking-tight text-primary-navy dark:text-white uppercase">{headerInfo.title}</h1>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{headerInfo.subtitle}</p>
             </div>
             <div className="flex items-center gap-4">
-               <button onClick={() => setShowNotifications(true)} className="p-2.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+               <button onClick={() => setShowNotifications(true)} className="p-2.5 rounded-lg border border-slate-200 dark:border-navy-800 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm">
                   <Bell size={18} />
                </button>
                <button onClick={handleHeaderAction} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-xl transition-all active:scale-95">
