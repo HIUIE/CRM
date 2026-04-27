@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, Send, Sparkles, Zap, ShieldCheck, Database, LayoutDashboard, FileText, Trash2 } from 'lucide-react';
+import { Bot, Send, Sparkles, Zap, ShieldCheck, Database, LayoutDashboard, Trash2 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
 
 interface Message {

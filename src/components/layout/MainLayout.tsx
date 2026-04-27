@@ -53,7 +53,7 @@ export default function MainLayout() {
       } catch (e) {}
     };
     if (user) {
-      fetchUnread();
+      void fetchUnread();
       const timer = setInterval(fetchUnread, 30000); // Check every 30s
       return () => clearInterval(timer);
     }

@@ -368,7 +368,7 @@ export default function OrderDetailPage() {
             onPreview={setPreviewAttachment}
             onEdit={openFinanceDrawer}
             onAdd={() => openFinanceDrawer()}
-            onDelete={(r: FinanceRecord) => { if(confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>loadDetail({showLoading:false})) }}
+            onDelete={(r: FinanceRecord) => { if(window.confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>loadDetail({showLoading:false})) }}
             financeFilter={financeFilter}
             onFilterChange={setFinanceFilter}
           />

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet, Clock, 
-  ArrowUpCircle, FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight, CheckCircle2 
+import {
+  ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet, Clock,
+  FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -77,7 +77,7 @@ export default function DashboardView() {
         if (mounted) setLoading(false);
       }
     };
-    loadDashboard();
+    void loadDashboard();
     return () => { mounted = false; };
   }, []);
 

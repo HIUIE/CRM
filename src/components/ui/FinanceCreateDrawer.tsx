@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
 import { Drawer } from './Drawer';
 import { Combobox } from './Combobox';
-import { Wallet, BadgeDollarSign } from 'lucide-react';
 import Field from './Field';
 import type { FinanceCategory, OrderOption, PartnerOption } from '../../types/crm';
 

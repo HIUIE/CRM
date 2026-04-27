@@ -1,12 +1,9 @@
 import React from 'react';
-import { 
-  BookOpen, 
-  HelpCircle, 
-  MessageCircle, 
-  ShieldCheck, 
-  Zap, 
-  FileText, 
-  Settings, 
+import {
+  MessageCircle,
+  ShieldCheck,
+  Zap,
+  FileText,
   Bot,
   ChevronRight,
   ExternalLink

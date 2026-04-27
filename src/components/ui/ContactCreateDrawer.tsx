@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
 import { Drawer } from './Drawer';
-import { Users, Mail, Phone, Briefcase } from 'lucide-react';
+import { Users, Phone, Briefcase } from 'lucide-react';
 import Field from './Field';
 
 interface ContactCreateDrawerProps {

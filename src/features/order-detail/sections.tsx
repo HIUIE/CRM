@@ -368,7 +368,7 @@ export function PackingSection({
                   <td className="px-5 py-3">{r.grossWeight} / {r.netWeight}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex h-9 w-9 aspect-square shrink-0 rounded border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && onPreview({ id: -1, fileName: `序号 ${i+1} 装箱实拍.jpg`, url: r.imageUrl })}>
-                      {r.imageUrl ? <img src={r.imageUrl} className="h-full w-full object-cover" /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
+                      {r.imageUrl ? <img src={r.imageUrl} alt="" className="h-full w-full object-cover" /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
                     </div>
                   </td>
                 </tr>

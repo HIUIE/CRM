@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, X, CheckCircle2, Info, ArrowRight, Trash2 } from 'lucide-react';
+import { Bell, X, ArrowRight } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
 import { Toast } from '../../features/order-detail/components';
 import { useNavigate } from 'react-router-dom';

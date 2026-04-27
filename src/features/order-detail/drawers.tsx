@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash, Plus, Clock, Upload, Box, Sparkles, X } from 'lucide-react';
+import { Trash, Plus, Clock, Upload } from 'lucide-react';
 import { Field, AttachmentEditor } from './components';
 import { asNumber, formatDateOnly } from './utils';
 import type {
@@ -274,7 +274,7 @@ export function PackingForm({
               </div>
               <div className="flex flex-col items-center gap-2">
                 <label className="h-14 w-14 rounded-lg border-2 border-dashed border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-950 flex items-center justify-center cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage hover:bg-slate-50 transition-all overflow-hidden shadow-sm">
-                  {item.imageUrl ? <img src={item.imageUrl} className="h-full w-full object-cover" /> : <Upload size={20} className="text-slate-200 dark:text-navy-800" />}
+                  {item.imageUrl ? <img src={item.imageUrl} alt="" className="h-full w-full object-cover" /> : <Upload size={20} className="text-slate-200 dark:text-navy-800" />}
                   <input type="file" className="hidden" onChange={e => e.target.files?.[0] && onUploadPhoto(idx, e.target.files[0])} />
                 </label>
                 <span className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">箱体实拍</span>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Search, X, Package, ArrowRight, Users, Building2 } from 'lucide-react';
+import { Search, X, Package, ArrowRight, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../lib/api';
 import type { OrderSummary, CustomerListItem } from '../../types/crm';
