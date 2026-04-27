@@ -367,7 +367,7 @@ export function ProfitSection({
 
   return (
     <>
-      <DocumentBoard title="外贸利润核算" action={
+      <DocumentBoard title="外贸利润核算" id="profit-section" action={
         <div className="flex items-center gap-2">
           <button onClick={() => setShowDrawer(true)} className="btn-primary text-[10px] !px-3 !py-1.5"><Edit3 size={12} /> 编辑核算明细</button>
           <button onClick={() => setRevealed(!revealed)} className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest whitespace-nowrap">
@@ -954,6 +954,7 @@ export function NavRailSection({
           { section: 'customs', label: '报关资料' },
           { section: 'packing', label: '装箱明细' },
           { section: 'logistics', label: '运输轨迹' },
+          { section: 'profit', label: '利润核算' },
           { section: 'followups', label: '跟进时间轴' },
         ].map(item => (
           <button key={item.section} onClick={() => scrollToSection(item.section)} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-bold text-sm transition-all ${activeSection === item.section ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}>

@@ -244,13 +244,14 @@ export default function OrderDetailPage() {
 
   // 5. Scroll / Drawer
   const scrollToSection = (section: string) => {
-    if (section === 'documents' || section === 'followups') {
-      const id = section === 'documents' ? 'documents-vault' : 'followups-timeline';
+    if (section === 'documents' || section === 'followups' || section === 'profit') {
+      const id = section === 'documents' ? 'documents-vault' : section === 'profit' ? 'profit-section' : 'followups-timeline';
       const el = document.getElementById(id);
       if (el) {
         const top = el.getBoundingClientRect().top + window.pageYOffset - 24;
         window.scrollTo({ top, behavior: 'smooth' });
       }
+      if (section !== 'followups') setActiveSection(section as SectionKey);
       return;
     }
     const ref = sectionRefs[section as keyof typeof sectionRefs];
