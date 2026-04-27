@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { apiFetch, apiUpload, getErrorMessage } from '../../lib/api';
 import { Drawer } from './Drawer';
-import { Chip, Toast, AttachmentEditor, StatusFileRow, PreviewModal } from '../../features/order-detail/components';
+import Chip from './Chip';
+import Toast from './Toast';
+import { AttachmentEditor, StatusFileRow, PreviewModal } from '../../features/order-detail/components';
 import {
   Clock, User, Package, Calendar, AlertCircle, MessageSquare,
   Send, CheckCircle2, ChevronRight, History, Trash2, Edit3, X, Paperclip, Upload

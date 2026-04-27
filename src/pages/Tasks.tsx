@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Chip, Toast } from '../features/order-detail/components';
+import Chip from '../components/ui/Chip';
+import Toast from '../components/ui/Toast';
 import { TaskDrawer } from '../components/ui/TaskDrawer';
 import { TaskDetailDrawer } from '../components/ui/TaskDetailDrawer';
 import { AnimatePresence, motion } from 'motion/react';

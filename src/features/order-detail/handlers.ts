@@ -1,5 +1,5 @@
 import React from 'react';
-import { apiFetch, apiUpload, getErrorMessage } from '../../lib/api';
+import { apiFetch, apiUpload, apiUploadSimple, getErrorMessage } from '../../lib/api';
 import { exportElementToPdf } from '../../lib/pdfExport';
 import { withTransition } from '../../lib/transition';
 import type {
@@ -396,7 +396,7 @@ export async function handleUploadOrderDocument(
     fd.append('entityType', 'order_document');
     fd.append('entityId', String(order.id));
     Array.from(files).forEach(f => fd.append('files', f));
-    await apiUpload('/api/attachments', fd);
+    await apiUploadSimple('/api/attachments', fd);
     showToast('凭证已上传');
     await loadDetail({ showLoading: false });
   } catch (err) {

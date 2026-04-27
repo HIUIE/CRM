@@ -3,7 +3,8 @@ import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Toast, PreviewModal } from '../features/order-detail/components';
+import Toast from '../components/ui/Toast';
+import { PreviewModal } from '../features/order-detail/components';
 import { TaskDrawer } from '../components/ui/TaskDrawer';
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 import type {

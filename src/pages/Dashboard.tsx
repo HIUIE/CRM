@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
-import { Chip } from '../features/order-detail/components';
+import Chip from '../components/ui/Chip';
 
 interface DashboardData {
   overview: {

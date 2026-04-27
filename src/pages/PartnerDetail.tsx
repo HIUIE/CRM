@@ -6,7 +6,9 @@ import {
   Factory, ShieldCheck, Hash, Calendar, BarChart3
 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
-import { Chip, EmptyStateBoard, Toast } from '../features/order-detail/components';
+import Chip from '../components/ui/Chip';
+import EmptyStateBoard from '../components/ui/EmptyStateBoard';
+import Toast from '../components/ui/Toast';
 import { formatDateOnly } from '../features/order-detail/utils';
 
 interface PartnerDetail {

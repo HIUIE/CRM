@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch, getErrorMessage } from '../lib/api';
-import { Chip, EmptyStateBoard } from '../features/order-detail/components';
+import Chip from '../components/ui/Chip';
+import EmptyStateBoard from '../components/ui/EmptyStateBoard';
 import { Clock, User, Box, ArrowLeft, Printer, History, Eye, X, FileJson, Copy, Check } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Pagination } from '../components/ui/Pagination';

@@ -3,7 +3,7 @@ import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Sett
 import Field from '../components/ui/Field';
 import { apiDownload, apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { FilterPill } from '../features/order-detail/components';
+import FilterPill from '../components/ui/FilterPill';
 import type { UserRole } from '../types/auth';
 import type { AiSettings, DocumentSettings, ManagedUser } from '../types/crm';
 

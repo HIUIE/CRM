@@ -100,38 +100,42 @@ export async function apiDownload(input: string, init: RequestInit = {}) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
 }
 
+export async function apiUploadSimple<T>(url: string, formData: FormData): Promise<T> {
+  const response = await fetch(url, { method: 'POST', body: formData, credentials: 'include' });
+  if (!response.ok) {
+    let msg = '上传失败';
+    try { const res = await response.json(); msg = res.error || res.message || msg; } catch (e) { /* ignore */ }
+    throw new ApiError(response.status, msg);
+  }
+  return response.json() as Promise<T>;
+}
+
 export function apiUpload<T>(url: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {
+  if (!onProgress) {
+    return apiUploadSimple(url, formData);
+  }
+  // XHR is used specifically for upload progress tracking (Fetch API lacks native upload progress)
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.withCredentials = true;
 
-    if (onProgress) {
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = Math.round((e.loaded / e.total) * 100);
-          onProgress(percentComplete);
-        }
-      };
-    }
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText) as T);
-        } catch (e) {
-          resolve(xhr.responseText as unknown as T);
-        }
-      } else {
-        let msg = '上传失败';
-        try {
-          const res = JSON.parse(xhr.responseText);
-          msg = res.error || res.message || msg;
-        } catch (e) { /* ignore */ }
-        reject(new ApiError(xhr.status, msg));
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
       }
     };
 
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText) as T); }
+        catch { resolve(xhr.responseText as unknown as T); }
+      } else {
+        let msg = '上传失败';
+        try { const res = JSON.parse(xhr.responseText); msg = res.error || res.message || msg; } catch { /* ignore */ }
+        reject(new ApiError(xhr.status, msg));
+      }
+    };
     xhr.onerror = () => reject(new ApiError(0, '网络连接错误'));
     xhr.send(formData);
   });

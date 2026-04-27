@@ -40,6 +40,8 @@ import type {
   InspectionStatus
 } from './types';
 import { formatDateOnly, formatDateTime, getProductionStatusLabel, getInspectionStatusLabel } from './utils';
+import Chip from '../../components/ui/Chip';
+import EmptyStateBoard from '../../components/ui/EmptyStateBoard';
 
 // --- Atomic Components ---
 
@@ -62,11 +64,7 @@ export const LightActionButton = ({ children, onClick, className = '' }: { child
   </button>
 );
 
-export const Chip = ({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'success' | 'warning' | 'error' | 'info' | 'neutral' }) => (
-  <span className={`chip-base ${tone === 'success' ? 'chip-success' : tone === 'warning' ? 'chip-warning' : tone === 'error' ? 'chip-error' : tone === 'info' ? 'chip-info' : 'chip-neutral'}`}>
-    {children}
-  </span>
-);
+export { default as Chip } from '../../components/ui/Chip';
 
 export const GridItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="space-y-1">
@@ -84,29 +82,9 @@ export const Field = ({ label, children }: { label: string; children: React.Reac
   </label>
 );
 
-export const FilterPill = ({ children, active, onClick }: { children: React.ReactNode; active: boolean; onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    className={`rounded px-3 py-1 text-xs font-semibold uppercase tracking-wider transition-all ${
-      active
-        ? 'bg-primary-navy dark:bg-tertiary-sage text-white'
-        : 'bg-background text-primary-navy border border-[#E2E8F0] dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700'
-    }`}
-  >
-    {children}
-  </button>
-);
+export { default as FilterPill } from '../../components/ui/FilterPill';
 
-export const Toast = ({ message, onClose }: { message: string; onClose: () => void }) => (
-  <div 
-    onClick={onClose}
-    className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[200] flex cursor-pointer items-center rounded-lg bg-slate-900 dark:bg-navy-800 px-8 py-4 text-sm font-semibold text-white shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-8 uppercase tracking-widest border border-white/10 dark:border-navy-700 hover:scale-105 transition-transform"
-  >
-    <CheckCircle2 size={20} className="mr-4 text-emerald-400" />
-    {message}
-    <X size={14} className="ml-6 opacity-40 hover:opacity-100 transition-opacity" />
-  </div>
-);
+export { default as Toast } from '../../components/ui/Toast';
 
 // --- Content Boards ---
 
@@ -423,31 +401,7 @@ export function StatusFileRow({
   );
 }
 
-export function EmptyStateBoard({ title, description, actionLabel, onAction, icon: Icon = Truck }: { title: string; description: string; actionLabel?: string; onAction?: () => void; icon?: React.ComponentType<{ size?: number }> | React.ReactNode }) {
-  const renderIcon = () => {
-    if (!Icon) return null;
-    if (React.isValidElement(Icon)) return Icon;
-    const IconComp = Icon;
-    return <IconComp size={24} className="text-slate-300 dark:text-navy-800" />;
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-navy-950/30 rounded-lg border border-dashed border-slate-200 dark:border-navy-800 transition-colors">
-      <div className="h-12 w-12 rounded-full bg-white dark:bg-navy-900 flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-navy-800">
-        {renderIcon()}
-      </div>
-      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-1">{title}</h4>
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider max-w-[280px] text-center leading-relaxed">
-        {description}
-      </p>
-      {actionLabel && onAction && (
-        <button onClick={onAction} className="btn-primary text-xs px-6 py-2 mt-6">
-          {actionLabel}
-        </button>
-      )}
-    </div>
-  );
-}
+export { default as EmptyStateBoard } from '../../components/ui/EmptyStateBoard';
 
 export function AttachmentEditor({
   title,

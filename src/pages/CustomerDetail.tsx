@@ -7,7 +7,9 @@ import {
 import { maskContact } from '../lib/privacy';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import type { OrderSummary, FinanceListRecord } from '../types/crm';
-import { Chip, EmptyStateBoard, Toast } from '../features/order-detail/components';
+import Chip from '../components/ui/Chip';
+import EmptyStateBoard from '../components/ui/EmptyStateBoard';
+import Toast from '../components/ui/Toast';
 import { formatDateOnly } from '../features/order-detail/utils';
 import { TaskDrawer } from '../components/ui/TaskDrawer';
 import { OrderCreateDrawer } from '../components/ui/OrderCreateDrawer';
