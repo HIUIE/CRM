@@ -473,7 +473,7 @@ async function getOrdersForCustomers(customerIds: number[]) {
 }
 
 async function getOrderAttachments(orderId: number) {
-  const [finance, logistics, customs, production, packing] = await Promise.all([
+  const [finance, logistics, customs, production, packing, orderDocuments, productionPhotos] = await Promise.all([
     db.all<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
@@ -555,9 +555,39 @@ async function getOrderAttachments(orderId: number) {
       WHERE pr.order_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
+    db.all<Record<string, unknown>[]>(`
+      SELECT
+        a.id AS attachmentId,
+        'order_document' AS sourceModule,
+        a.entity_id AS sourceRecordId,
+        a.file_name AS originalFileName,
+        a.stored_name AS storedName,
+        a.mime_type AS mimeType,
+        a.file_size AS fileSize,
+        a.file_path AS filePath,
+        a.created_at AS createdAt
+      FROM attachments a
+      WHERE a.entity_type = 'order_document' AND a.entity_id = ?
+      ORDER BY a.id ASC
+    `, [orderId]),
+    db.all<Record<string, unknown>[]>(`
+      SELECT
+        a.id AS attachmentId,
+        'production_photo' AS sourceModule,
+        a.entity_id AS sourceRecordId,
+        a.file_name AS originalFileName,
+        a.stored_name AS storedName,
+        a.mime_type AS mimeType,
+        a.file_size AS fileSize,
+        a.file_path AS filePath,
+        a.created_at AS createdAt
+      FROM attachments a
+      WHERE a.entity_type = 'production_photo' AND a.entity_id = ?
+      ORDER BY a.id ASC
+    `, [orderId]),
   ]);
 
-  return [...finance, ...logistics, ...customs, ...production, ...packing] as AttachmentExportRow[];
+  return [...finance, ...logistics, ...customs, ...production, ...packing, ...orderDocuments, ...productionPhotos] as AttachmentExportRow[];
 }
 
 async function getUnlinkedAttachments() {
