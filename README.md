@@ -1,317 +1,183 @@
 # SmartTrade AI CRM
 
-SmartTrade AI CRM 是一个面向小团队协作的外贸订单与流程工作台，适合 2-5 人在单机或局域网环境中共享使用。当前版本把重点收敛在一条稳定主链上：
+SmartTrade AI CRM 是一个面向小团队协作的外贸订单与利润管理工作台，适合 2-10 人在单机或局域网环境中共享使用。
 
-- 客户
-- 订单
-- 生产安排
-- 财务
-- 报关
-- 物流
+核心业务链路：
 
-AI 1保留为辅助能力，只负责把文本整理成订单草稿，以及辅助做订单风险诊断，不作为日常业务主流程的依赖。
-
-## 系统功能结构
-
-本项目以订单为核心，向外辐射各类外贸业务节点，形成闭环工作台：
-
-1. **业务控制台 (Dashboard)**
-   - 全局数据面板（订单数、收付款金额、订单状态分布）
-   - 今日待办与阻点预警（逾期未收款、缺失报关单、缺物流单）
-   - 业务流转动态追踪与快捷操作入口
-2. **客户 360° 全景 (CRM & 360 Profile)**
-   - 客户档案：基于 ISO 3166 标准的国家/地区选择器（带国旗 emoji）
-   - **联系人矩阵**: 维护企业内部关键对接人的层级与权限
-   - **跟进记录**: 社交媒体风格的跟进流记录，追踪客户全生命周期互动
-   - **安全脱敏**: 基于 `display_id` (如 CUST-2026-XXXXXX) 的 URL 路由与 IDOR 防护
-   - 合作伙伴：合作厂商、货代、报关行等供应链节点管理
-3. **订单主工作台 (Order Workspace)**
-   - **基础订单**: 商品明细、HS 编码、总价与交期
-   - **生产排产**: 生产节点追踪（待产/排产/生产中/完工）、质检状态机、生产日志与关联工厂
-   - **财务流水**: 多币种收付款记录、分类账务、回款进度条及水单凭证归档
-   - **装箱与物流**: 装箱参数计算、货运代理指派、运输轨迹跟踪（国内/国际）及运单存档
-   - **报关追踪**: 报关单据预录、放行状态追踪
-4. **智能化辅助 (AI Assistant)**
-   - 非结构化业务文本智能解析，一键生成订单草稿
-   - 订单全案健康诊断与风险阻点分析
-5. **系统与安全**
-   - 基于角色的访问控制（管理员/普通业务员）
-   - 本地沙箱化的鉴权附件存储，避免机密文件泄露
-
-## 当前技术栈
-
-- 前端：React 19 + Vite + Tailwind CSS
-- 后端：Express
-- 数据库：SQLite
-- 认证：JWT + HttpOnly Cookie
-- 存储：本地目录附件，统一经鉴权文件接口访问
-- AI：Gemini / DeepSeek
-
-## 团队协作模型
-
-- 角色：
-  - `admin`
-  - `staff`
-- `admin` 可以：
-  - 管理系统设置
-  - 管理 AI 配置
-  - 管理团队账号
-  - 删除关键业务记录
-- `staff` 可以：
-  - 查看和编辑业务数据
-  - 使用订单工作台维护主链业务
-  - 不能进入系统设置
-  - 不能删除关键记录
-
-首次部署仍会自动创建初始化管理员 `root`，生产环境必须通过 `INITIAL_ADMIN_PASSWORD` 指定临时密码。上线后请立即创建个人管理员账号，并修改或停用默认账号。
-
-## 本地运行
-
-### 1. 安装依赖
-
-```bash
-npm install
-```
-
-### 2. 启动开发环境
-
-```bash
-npm run dev
-```
-
-默认访问地址：
-
-- [http://localhost:3000](http://localhost:3000)
-
-### 3. 常用命令
-
-```bash
-npm run dev
-npm run lint
-npm test
-npm run build
-npm run start
-npm run smoke:ui
-npm run release:check
-npm run backup
-npm run seed:demo
-```
-
-## 第一版生产部署
-
-### 1. 准备环境文件
-
-复制 `.env.example` 为 `.env`，至少确认这些值：
-
-```bash
-NODE_ENV=production
-HOST=0.0.0.0
-PORT=3000
-CRM_DB_PATH=/absolute/path/to/erp_database_v2.sqlite
-UPLOADS_DIR=/absolute/path/to/uploads
-JWT_SECRET=replace-with-a-long-random-secret
-INITIAL_ADMIN_PASSWORD=replace-with-a-temporary-root-password
-COOKIE_SECURE=false
-```
-
-请确保 `CRM_DB_PATH` 和 `UPLOADS_DIR` 都位于前端静态目录 `dist/`、`public/` 之外的绝对路径，避免数据库、附件和环境文件被静态路由误暴露。
-
-局域网 HTTP 部署时保持 `COOKIE_SECURE=false`。只有放到 HTTPS 后面时才改成 `true`。
-
-### 2. 构建与上线前检查
-
-```bash
-npm install
-npm run release:check
-```
-
-`release:check` 会执行类型检查、后端测试、前端生产构建和生产 smoke 检查。smoke 检查使用临时数据库，不会改动正式数据。
-
-### 3. 启动生产服务
-
-```bash
-npm run start
-```
-
-启动后终端会打印本机地址、局域网访问提示、数据库路径、上传目录和运行模式。局域网成员使用部署机器的 IP 访问，例如：
-
-```text
-http://192.168.1.20:3000
-```
-
-### 4. 首次登录后
-
-1. 使用 `root` 和 `INITIAL_ADMIN_PASSWORD` 登录。
-2. 在系统设置里创建个人管理员和业务员账号。
-3. 修改 root 密码，或保留 root 作为紧急账号但不要日常共用。
-4. 配置 DeepSeek 或 Gemini；AI 不影响客户、订单、财务、物流主流程。
-
-## 数据与环境变量
-
-### 数据库
-
-默认数据库文件：
-
-- `erp_database_v2.sqlite`
-
-可通过环境变量指定数据库路径：
-
-```bash
-CRM_DB_PATH=/absolute/path/to/team.sqlite
-```
-
-服务启动时会打印当前实际使用的数据库路径。
-
-### 附件目录
-
-开发环境下，本地附件默认保存到项目根目录下：
-
-- `uploads/`
-
-也可以通过环境变量指定：
-
-```bash
-UPLOADS_DIR=/absolute/path/to/uploads
-```
-
-附件不再通过静态目录公开访问。浏览器预览和下载统一走登录态保护的文件接口：
-
-- `GET /api/files/:id/:storedName`
-
-### 其他常用环境变量
-
-- `CRM_DB_PATH`
-- `UPLOADS_DIR`
-- `JWT_SECRET`
-- `INITIAL_ADMIN_PASSWORD`
-- `COOKIE_SECURE`
-- `HOST`
-- `PORT`
-- `GEMINI_API_KEY`
-- `DEEPSEEK_API_KEY`
-- `OPENAI_API_KEY`
-
-## 健康检查
-
-系统提供健康检查接口：
-
-- `GET /api/health`
-
-返回内容包含：
-
-- 服务是否可用
-- 当前数据库模式
-- 运行模式
-- 服务器时间
-
-## 演示数据
-
-如果你需要一套固定演示环境，可以执行：
-
-```bash
-npm run seed:demo
-```
-
-这会补齐一套演示客户、伙伴、订单、财务、生产、报关和物流数据，并创建一个演示业务账号：
-
-- 用户名：`staff.demo`
-- 密码：`staff123`
-
-如果数据已存在，脚本会尽量复用，不会重复创建同一条演示订单。
-
-## 局域网部署建议
-
-适合 2-5 人共享使用的推荐方式：
-
-1. 在一台固定机器上部署并保持服务常驻。
-2. 数据库路径和 `uploads/` 使用固定目录，且必须放在 `dist/`、`public/` 之外。
-3. 局域网成员通过部署机器的局域网 IP 访问。
-4. 使用管理员账号创建团队成员，而不是共用 root。
-
-## 备份与恢复
-
-最小备份范围：
-
-- SQLite 数据库文件
-- `uploads/` 附件目录
-
-建议：
-
-- 每天至少备份一次数据库文件
-- 每周备份一次附件目录
-- 恢复时同时恢复数据库和附件目录，避免业务记录和附件引用不一致
-
-执行备份：
-
-```bash
-npm run backup
-```
-
-默认备份到项目内 `backups/`，也可以指定：
-
-```bash
-BACKUP_DIR=/absolute/path/to/backups npm run backup
-```
-
-恢复步骤：
-
-1. 停止服务。
-2. 用备份里的 SQLite 文件替换 `CRM_DB_PATH` 指向的数据库。
-3. 用备份里的 `uploads/` 替换当前 `UPLOADS_DIR`。
-4. 重新执行 `npm run start`。
-5. 打开 `GET /api/health`，确认路径和状态正常。
-
-## 当前验收重点
-
-当前版本重点保证：
-
-- 团队账号可独立登录
-- 订单详情页作为唯一主工作台
-- 列表页与详情页口径一致
-- 附件、生产、财务、报关、物流都围绕订单统一维护
-- 切换 Gemini / DeepSeek 后 AI 页面仍可正常使用
-
-## 说明
-
-如果仓库中仍保留一些早期实验脚本或旧说明文档，它们不属于当前正式运行入口。请以以下目录为准：
-
-- `server.ts`
-- `server/`
-- `src/`
-- `scripts/seed-demo.ts`
-- `scripts/backup.ts`
-- `scripts/smoke-ui.ts`
-
-## 系统维护与更新指南 (Maintenance & Updates)
-
-本系统内置了前端热更新探测机制，确保在服务端版本升级时，所有在线客户端都能即时感知并引导用户刷新。
-
-### 1. 管理员：如何发布更新 (For Admin/Developer)
-当您需要将新功能或修复发布给客户时，请在服务器执行以下标准操作：
-
-```bash
-# 1. 拉取最新代码
-git pull
-
-# 2. 重新编译前端静态资源 (必须执行)
-npm run build
-
-# 3. 重启后端服务进程 (以触发版本指纹变更)
-# 如果使用 pm2:
-pm2 restart all
-# 如果直接运行脚本:
-npm start
-```
-
-### 2. 业务员：如何应用更新 (For End-Users)
-系统采用 **“静默探测 + 交互刷新”** 的策略，避免强制刷新导致正在填写的表单数据丢失：
-
-- **探测机制**：客户端每隔 60 秒会在后台自动比对服务器的“启动指纹”。
-- **更新提醒**：若发现服务器已发版，系统右下角会弹出蓝色通知卡片，提示“系统已升级”。
-- **操作方式**：点击卡片上的 **[一键刷新并应用]** 按钮，系统将自动重载并运行最新版本。
+- 客户 → 订单 → 生产 → 财务 → 报关 → 物流 → **利润核算**
 
 ---
 
-## 🤖 For AI Agents
+## 系统功能结构
 
-If you are an AI assistant working on this repository, please refer to **[AI_CONTEXT.md](./AI_CONTEXT.md)** for a deep dive into the architectural patterns, database schema, identity masking logic, and technical constraints of this project. It will help you understand the "Source of Truth" and the premium minimalist design language used throughout the application.
+### 业务控制台 (Dashboard)
+- 全局数据面板（订单数、收付款金额、订单状态分布）
+- 今日待办与阻点预警（逾期未收款、缺失报关单、缺物流单）
+- 业务流转动态追踪与快捷操作入口
+
+### 客户 360° 全景
+- 客户档案（ISO 3166 国家选择器、国旗显示）
+- 联系人矩阵、跟进记录流、系统动态
+- 安全脱敏：display_id 路由与 IDOR 防护
+
+### 订单主工作台 (Order Detail)
+- **基础信息**：商品明细、总价、交期
+- **生产排产**：节点追踪、质检状态机、生产日志
+- **财务流水**：多币种收付款、回款进度、水单凭证
+- **装箱物流**：装箱参数、货运代理、轨迹跟踪
+- **报关追踪**：单据预录、放行状态
+- **核心单据库**：统一凭证上传与管理
+
+### 外贸利润核算 (Profit Module) 🆕
+- **多期收款**：支持定金/尾款多笔录入，USD/CNY 币种切换
+- **结汇逻辑**：银行手续费 → 平台扣费 → 汇率换算 → 人民币到账
+- **退税自动化**：开票金额 × 退税率 / 1.13 自动计算
+- **成本明细**：工厂采购价、国内费用、国际运费(CNY/USD切换)、报关杂费
+- **风控预警**：运费倒挂警告、利润率 < 8% 红线提醒
+- **收益总览**：Net USD / 总收入 / 总成本 / 净利润 / 利润率
+
+### 合作伙伴 360° 🆕
+- 伙伴画像卡片、合作概览（月度订单数）
+- 关联订单、财务流水双标签查看
+
+### 财务流水
+- 多币种收付款汇总、分页、时间筛选
+
+### 物流打包
+- 国内/国际段物流记录跟踪
+
+### 团队协同看板 (Tasks)
+- 三列看板（待处理 / 进行中 / 已完成）
+- 任务指派、优先级、评论与附件
+
+### AI 助手
+- 全局悬浮 AI 助手按钮 🆕（任意页面右下角）
+- **工具调用** 🆕：创建任务、查询订单、查看逾期、添加跟进
+- 多模型支持（DeepSeek / OpenAI / Gemini）
+- 聊天记录本地持久化
+
+### 系统设置
+- **站点品牌** 🆕：自定义站点名称、口号、Logo、Favicon
+- 单据编码规则、默认币种
+- **团队管理**：创建/编辑/停用账号
+- **AI 配置**：提供商选择、API Key、连接测试
+- **数据导出**：Excel 工作簿(12 Sheet) / 客户归档(ZIP+附件+Excel) / CSV
+- **版本更新** 🆕：一键检测并自动更新系统
+
+---
+
+## 安全架构
+
+| 措施 | 说明 |
+|------|------|
+| JWT 认证 | 24h 过期 httpOnly cookie |
+| CSRF 防护 🆕 | double-submit cookie 全站保护 |
+| 角色权限 | admin / staff 两级 |
+| 密码加密 | bcrypt 10 轮 |
+| 敏感路径保护 | 阻止直接访问 .env/.git/.db |
+| 附件安全 | UUID 重命名、路径 containment |
+| 前端隐私盾 | 默认掩码邮箱/电话 |
+| 登录限流 | 5 次/15 分钟 |
+| 审计日志 | 所有 C/U/D 记录，30 天自动清理 |
+| 全局错误处理 | express-async-errors + 统一中间件 |
+
+---
+
+## 快速部署
+
+### 前置要求
+- Node.js ≥ 18（推荐 20 LTS）
+- npm ≥ 9
+
+### 安装步骤
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/HIUIE/CRM.git
+cd CRM
+
+# 2. 安装依赖
+npm install
+
+# 3. 配置环境变量
+cp .env.example .env
+# 编辑 .env，至少修改 JWT_SECRET 和 INITIAL_ADMIN_PASSWORD
+
+# 4. 构建前端
+npm run build
+
+# 5. 启动服务
+npm start
+```
+
+默认访问：`http://localhost:3000`
+管理员账号：`root` / `.env` 中的 `INITIAL_ADMIN_PASSWORD` 值
+
+### 私有仓库更新配置
+如果仓库是私有的，需要在 `.env` 中配置 GitHub Token：
+
+```bash
+# 1. 访问 https://github.com/settings/tokens → Generate new token → 勾选 repo
+# 2. 复制 token 到 .env
+GITHUB_TOKEN=ghp_你的token
+```
+
+配置后，设置页 → 版本更新 → 即可一键检测并更新系统。
+
+---
+
+## 自动更新机制 🆕
+
+系统内置了完整的自动更新链路：
+
+1. **检测更新**：每 60 秒自动检测 GitHub 是否有新提交
+2. **通知用户**：发现新版时右下角弹出蓝色提示
+3. **一键更新**：管理员在设置页点击「一键更新系统」
+4. **自动执行**：git pull → npm install → npm run build → 服务重启
+5. **全员同步**：重启后所有在线用户收到刷新提示
+
+---
+
+## 常用命令
+
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 开发模式（热重载） |
+| `npm run build` | 构建前端 |
+| `npm start` | 生产模式 |
+| `npm test` | 运行测试 |
+| `npm run lint` | TypeScript 类型检查 |
+| `npm run backup` | 备份数据库和附件 |
+| `npm run seed:demo` | 填充演示数据 |
+
+---
+
+## 技术栈
+
+- **前端**：React 19 + TypeScript + Tailwind CSS v4 + Vite
+- **后端**：Express 4 + SQLite (WAL 模式)
+- **图表**：纯 SVG（无第三方图表库）
+- **AI**：Google GenAI SDK / OpenAI 兼容 API / DeepSeek
+- **导出**：ExcelJS (多 Sheet) / archiver (ZIP) / 纯 JS CSV
+- **安全**：JWT + bcrypt + CSRF double-submit cookie + Helmet
+
+---
+
+## 数据备份
+
+```bash
+npm run backup
+```
+
+备份范围：SQLite 数据库 + uploads 附件目录
+默认路径：`data/backups/`
+
+---
+
+## 健康检查
+
+```
+GET /api/health
+```
+
+返回服务状态、数据库模式、运行模式、启动时间。
