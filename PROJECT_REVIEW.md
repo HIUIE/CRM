@@ -1,6 +1,6 @@
 # SmartTrade AI CRM — 项目全面审查报告
 
-> 审查日期：2026-04-27 | 版本：1.0.8
+> 审查日期：2026-04-27 | 版本：1.0.9 | P0/P1/P2 全部修复，暗黑模式适配完成
 
 ---
 
@@ -400,8 +400,32 @@
 - `features/order-detail/components.tsx` 的 `Chip`、`EmptyStateBoard`、`Toast` 被 10+ 个外部文件引用，违背 Feature Module 边界
 - 全站无数据层抽象（无 React Query/SWR），每个组件直接在 `useEffect` 里 `apiFetch`
 - `apiFetch` 用 Fetch API 但 `apiUpload` 用 XHR，双 HTTP 实现
-- `lucide-react` 未 tree-shake 的导入增加 bundle 体积
+- `lucide-react` 导入已修剪，但按需 tree-shake 仍需关注
 - `dayjs` 已使用，`date-fns` 已移除
+
+### 五、全面代码审查 (2026-04-27)
+
+#### 暗黑模式适配 ✅
+
+| 文件 | 状态 |
+|------|------|
+| Login.tsx | ✅ 已修复 — 完整适配（16 处颜色类添加 `dark:` 变体）|
+| 其余 39 个页面/组件 | ✅ 已有基础支持，少量零散标签/图标的 `dark:` 变体 |
+| ErrorBoundary.tsx / Field.tsx / Drawer.tsx 等 UI 组件 | ✅ 覆盖率良好 |
+
+修复明细：`src/pages/Login.tsx` 完全无暗黑模式支持（白色背景卡片、深色文本在暗色模式下不可读），已全部添加 `dark:` 对应变体。
+
+#### 代码质量检查 ✅
+
+| 类别 | 发现 | 处理 |
+|------|------|------|
+| 未用导入 | 13 个文件中 ~20 个未使用的 lucide 图标导入 | 全部移除 |
+| `confirm()` 不一致 | handlers.ts / OrderDetail.tsx 中 2 处 `confirm(...)` | 统一为 `window.confirm(...)` |
+| `useEffect` 异步 | MainLayout.tsx / Dashboard.tsx 中 2 处缺 `void` | 统一添加 |
+| `<img>` 缺失 alt | sections.tsx / drawers.tsx 中 2 处 | 添加 `alt=""` |
+| TypeScript 错误 | ErrorBoundary.tsx 5 处 TS 错误 | 添加 `declare` 声明修复 |
+| 全局 TS 状态 | `npx tsc --noEmit` | ✅ 零错误 |
+| 构建状态 | `npm run build` | ✅ 通过 |
 
 ### 优化路线图
 
