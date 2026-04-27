@@ -20,7 +20,7 @@ export function createCustomersRouter() {
     const endDate = readString(req.query.end_date);
 
     let whereSql = 'WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number | null | undefined)[] = [];
 
     if (q) {
       whereSql += ` AND (c.name LIKE ? OR c.country LIKE ? OR c.contact LIKE ?)`;
@@ -274,8 +274,8 @@ export function createCustomersRouter() {
 
       if (oldVal) {
         await logAction({
-          userId: (req as any).user?.id || null,
-          userName: (req as any).user?.name || null,
+          userId: req.user?.id ?? null,
+          userName: req.user?.name ?? null,
           action: 'DELETE',
           entityType: 'CUSTOMER',
           entityId: customer.id,

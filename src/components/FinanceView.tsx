@@ -10,9 +10,9 @@ import { Pagination } from './ui/Pagination';
 import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
-import { getRangeDates } from '../lib/date';
+import { getRangeDates, type StandardTimeRange } from '../lib/date';
 import { withTransition } from '../lib/transition';
-import type { FinanceListRecord, OrderOption, PartnerOption, PartnerRecord } from '../types/crm';
+import type { FinanceCategory, FinanceListRecord, OrderOption, PartnerOption, PartnerRecord } from '../types/crm';
 
 type FinanceFormState = {
   orderId: string;
@@ -81,7 +81,7 @@ export default function FinanceView() {
     if (val) next.set(key, val); else next.delete(key);
 
     if (key === 'timeRange') {
-      const dates = getRangeDates(val as any);
+      const dates = getRangeDates(val as StandardTimeRange);
       if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
       if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
     }
@@ -167,7 +167,7 @@ export default function FinanceView() {
       target: record.target || '',
       partnerId: record.partnerId ? String(record.partnerId) : '',
       status: record.status,
-      recordCategory: (record.recordCategory as any) || (record.type === 'payment' ? 'goods' : 'deposit'),
+      recordCategory: (record.recordCategory as FinanceCategory) || (record.type === 'payment' ? 'goods' : 'deposit'),
       remark: record.remark || '',
     };
     setFormData(newForm);
@@ -359,7 +359,7 @@ export default function FinanceView() {
               />
             </Field>
             <Field label="流水类型 *">
-              <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as any })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+              <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as 'receipt' | 'payment' })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
                 <option value="receipt">收款 (In)</option>
                 <option value="payment">付款 (Out)</option>
               </select>
@@ -369,7 +369,7 @@ export default function FinanceView() {
                 <div className="flex-1"><Field label="金额 *"><input required type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field" /></Field></div>
             </div>
             <Field label="款项用途">
-              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
                 <option value="deposit">首付款 / 定金</option>
                 <option value="balance">尾款</option>
                 <option value="goods">货款</option>
@@ -378,7 +378,7 @@ export default function FinanceView() {
                 <option value="other">其他</option>
             </select></Field>
             <Field label="核销状态">
-              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
+              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as 'pending' | 'completed'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
             </Field>
             <Field label="对方/合作伙伴">
               <Combobox

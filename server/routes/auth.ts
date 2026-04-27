@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
-import { clearAuthCookie, getCookieOptions, requireAuth, signAuthToken } from '../lib/auth.js';
+import { clearAuthCookie, getCookieOptions, requireAuth, signAuthToken, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError, fail } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 
@@ -96,8 +96,8 @@ export function createAuthRouter() {
     }
 
     try {
-      requireAuth(req as any, res, async () => {
-        const userId = (req as any).user.id;
+      requireAuth(req as AuthedRequest, res, async () => {
+        const userId = (req as AuthedRequest).user!.id;
         const user = await db.get<{
           id: number;
           username: string;

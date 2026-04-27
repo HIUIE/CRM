@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { maskContact } from '../lib/privacy';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import type { OrderSummary, FinanceListRecord } from '../types/crm';
 import { Chip, EmptyStateBoard, Toast } from '../features/order-detail/components';
 import { formatDateOnly } from '../features/order-detail/utils';
 import { TaskDrawer } from '../components/ui/TaskDrawer';
@@ -13,6 +14,40 @@ import { OrderCreateDrawer } from '../components/ui/OrderCreateDrawer';
 import { FinanceCreateDrawer } from '../components/ui/FinanceCreateDrawer';
 import { ContactCreateDrawer } from '../components/ui/ContactCreateDrawer';
 import CountryDisplay from '../components/ui/CountryDisplay';
+
+interface SystemActivity {
+  type: string;
+  title: string;
+  order_display_id?: string;
+  created_at: string;
+  desc?: string;
+  value?: string;
+  valueColor?: string;
+}
+
+interface CustomerFollowup {
+  created_by_name?: string;
+  created_at: string;
+  source_order_display_id?: string;
+  content: string;
+}
+
+interface CustomerContact {
+  id: number;
+  name: string;
+  title: string;
+  contact: string;
+  email: string;
+}
+
+interface CustomerTask {
+  id: number;
+  title: string;
+  assignee_name: string;
+  due_date: string;
+  priority: string;
+  status: string;
+}
 
 interface CustomerDetailData {
   id: number;
@@ -24,12 +59,12 @@ interface CustomerDetailData {
   intent_products?: string;
   created_by_name?: string;
   created_at: string;
-  orders: any[];
-  finance_records: any[];
-  system_activities: any[];
-  followups: any[];
-  contacts: any[];
-  tasks: any[];
+  orders: OrderSummary[];
+  finance_records: FinanceListRecord[];
+  system_activities: SystemActivity[];
+  followups: CustomerFollowup[];
+  contacts: CustomerContact[];
+  tasks: CustomerTask[];
 }
 
 type TabKey = 'followups' | 'orders' | 'finance' | 'tasks' | 'contacts' | 'system_activities';
@@ -83,7 +118,7 @@ export default function CustomerDetailPage() {
   const totalAmount = useMemo(() => data?.orders?.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) || 0, [data]);
   const pendingAmount = totalAmount - totalPaid;
 
-  const handleInlineSave = async (field: keyof CustomerDetailData, value: any) => {
+  const handleInlineSave = async (field: keyof CustomerDetailData, value: string) => {
     if (!data) return;
     try {
       const payload = { ...data, [field]: value };

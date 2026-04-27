@@ -25,7 +25,7 @@ function scrubText(text: string): string {
 /**
  * Recursively sanitizes objects/arrays for AI consumption
  */
-export function sanitizeForAI(data: any): any {
+export function sanitizeForAI(data: unknown): unknown {
   if (data === null || data === undefined) return data;
 
   // Handle Arrays
@@ -35,7 +35,7 @@ export function sanitizeForAI(data: any): any {
 
   // Handle Objects
   if (typeof data === 'object') {
-    const sanitized: any = {};
+    const sanitized: Record<string, unknown> = {};
     for (const key in data) {
       const lowerKey = key.toLowerCase();
       

@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
   const endDate = readString(req.query.end_date);
 
   let whereSql = 'WHERE 1=1';
-  const params: any[] = [];
+  const params: (string | number | null | undefined)[] = [];
 
   if (q) {
     whereSql += ` AND (o.display_id LIKE ? OR l.carrier LIKE ? OR l.tracking_no LIKE ? OR c.name LIKE ?)`;

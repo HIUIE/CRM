@@ -289,6 +289,7 @@ export function ProductionDashboard({
   plan,
   onEditLink,
   onPreview,
+  onUpdateInspection,
 }: {
   plan: ProductionPlan | null;
   onEditLink: () => void;
@@ -422,7 +423,7 @@ export function StatusFileRow({
   );
 }
 
-export function EmptyStateBoard({ title, description, actionLabel, onAction, icon: Icon = Truck }: { title: string; description: string; actionLabel?: string; onAction?: () => void; icon?: any }) {
+export function EmptyStateBoard({ title, description, actionLabel, onAction, icon: Icon = Truck }: { title: string; description: string; actionLabel?: string; onAction?: () => void; icon?: React.ComponentType<{ size?: number }> | React.ReactNode }) {
   const renderIcon = () => {
     if (!Icon) return null;
     if (React.isValidElement(Icon)) return Icon;

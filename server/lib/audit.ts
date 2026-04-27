@@ -10,8 +10,8 @@ export async function logAction(params: {
   action: AuditAction;
   entityType: AuditEntity;
   entityId: string | number;
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
 }) {
   try {
     // 【核心加固】在存入审计数据库前，强制对快照进行脱敏处理，防止 PII（个人身份信息）永久固化在日志中

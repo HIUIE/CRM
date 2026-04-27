@@ -1,4 +1,6 @@
+import 'express-async-errors';
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs/promises';
@@ -21,6 +23,14 @@ export async function createApp() {
   app.use(express.json());
   app.use(cookieParser());
   app.use('/api', apiRouter);
+
+  // Global error handler for uncaught async errors (Express 4 does not catch promise rejections).
+  // express-async-errors patches route handlers so rejected promises land here.
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('[Unhandled Route Error]', err);
+    const status = err.status || 500;
+    res.status(status).json({ error: err.message || 'Internal Server Error' });
+  });
 
   if (process.env.NODE_ENV === 'test') {
     return app;

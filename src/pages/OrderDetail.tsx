@@ -16,9 +16,11 @@ import type {
   FinanceRecord,
   FinanceType,
   LogisticsFormState,
+  LogisticsRecord,
   OrderDetailResponse,
   OrderFormState,
   Partner,
+  ProductionLog,
   ProductionLogFormState,
   ProductionFormState,
   PackingFormState,
@@ -280,7 +282,7 @@ export default function OrderDetailPage() {
     setDrawer({ mode: 'production' });
   };
 
-  const openProductionLogDrawer = (log: any = null) => {
+  const openProductionLogDrawer = (log: Partial<ProductionLog> | null = null) => {
     setProductionLogForm(buildProductionLogForm(log));
     setDrawer({ mode: 'production-log' });
   };
@@ -290,7 +292,7 @@ export default function OrderDetailPage() {
     setDrawer({ mode: 'customs' });
   };
 
-  const openLogisticsDrawer = (record: any = null) => {
+  const openLogisticsDrawer = (record: LogisticsRecord | null = null) => {
     setLogisticsForm(buildLogisticsForm(record));
     setDrawer({ mode: 'logistics' });
   };

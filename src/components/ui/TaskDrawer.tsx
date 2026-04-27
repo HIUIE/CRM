@@ -114,7 +114,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
              <Field label="优先级 *">
                 <select 
                   value={formData.priority} 
-                  onChange={e => setFormData({...formData, priority: e.target.value as any})}
+                  onChange={e => setFormData({...formData, priority: e.target.value as 'P0' | 'P1' | 'P2'})}
                   className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
                 >
                   <option value="P0">P0 - 紧急 (红色)</option>

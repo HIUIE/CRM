@@ -120,7 +120,7 @@ export function apiUpload<T>(url: string, formData: FormData, onProgress?: (perc
         try {
           resolve(JSON.parse(xhr.responseText) as T);
         } catch (e) {
-          resolve(xhr.responseText as any);
+          resolve(xhr.responseText as unknown as T);
         }
       } else {
         let msg = '上传失败';

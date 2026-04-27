@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import type { Response } from 'express';
 import { db } from '../db.js';
 import { resolveAttachmentAbsolutePath } from '../lib/files.js';
-import { ZipStreamWriter, createZipBuffer } from '../lib/zip.js';
+import { ZipStreamWriter, createZipBuffer, type ZipSink } from '../lib/zip.js';
 import { buildOrderDetail } from './order-detail.js';
 
 type LegacyExportDefinition = {
@@ -300,7 +300,20 @@ function uniqueFileName(preferredName: string, usedNames: Set<string>) {
   }
 }
 
-function orderJsonForExport(detail: any) {
+interface ExportOrderDetail {
+  order?: Record<string, unknown>;
+  customer?: Record<string, unknown>;
+  summary?: Record<string, unknown>;
+  customs?: Record<string, unknown>;
+  items?: Array<Record<string, unknown>>;
+  financeRecords?: Array<Record<string, unknown>>;
+  logisticsRecords?: Array<Record<string, unknown>>;
+  productionPlan?: Record<string, unknown> & { logs?: Array<Record<string, unknown>> };
+  packingRecords?: Array<Record<string, unknown>>;
+  orderDocuments?: Array<Record<string, unknown>>;
+}
+
+function orderJsonForExport(detail: ExportOrderDetail) {
   return {
     exportedAt: new Date().toISOString(),
     order: detail.order,
@@ -944,7 +957,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
       if (!detail) {
         continue;
       }
-      const exportDetail = detail as any;
+      const exportDetail = detail as ExportOrderDetail;
 
       const orderDirName = `${customerDirName}/orders/${sanitizeArchiveSegment(order.display_id, 'order')}_${order.id}`;
       await writer.addBuffer(`${orderDirName}/order.json`, Buffer.from(`${JSON.stringify(orderJsonForExport(exportDetail), null, 2)}\n`, 'utf8'));
@@ -953,7 +966,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
         `${orderDirName}/order_items.csv`,
         buildCsvBufferFromRows(
           ORDER_ITEMS_HEADERS,
-          (exportDetail.items || []).map((item: any) => ({
+          (exportDetail.items || []).map((item) => ({
             id: item.id,
             product_name: item.product_name,
             specification: item.specification || '',
@@ -971,7 +984,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
         `${orderDirName}/finance_records.csv`,
         buildCsvBufferFromRows(
           FINANCE_HEADERS,
-          (exportDetail.financeRecords || []).map((record: any) => ({
+          (exportDetail.financeRecords || []).map((record) => ({
             id: record.id,
             type: record.type,
             recordCategory: record.recordCategory || '',
@@ -992,7 +1005,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
         `${orderDirName}/logistics_records.csv`,
         buildCsvBufferFromRows(
           LOGISTICS_HEADERS,
-          (exportDetail.logisticsRecords || []).map((record: any) => ({
+          (exportDetail.logisticsRecords || []).map((record) => ({
             id: record.id,
             segmentType: record.segmentType,
             carrier: record.carrier,
@@ -1038,7 +1051,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
           `${orderDirName}/production_logs.csv`,
           buildCsvBufferFromRows(
             PRODUCTION_LOG_HEADERS,
-            exportDetail.productionPlan.logs.map((log: any) => ({
+            exportDetail.productionPlan.logs.map((log) => ({
               id: log.id,
               planId: log.planId,
               content: log.content,
@@ -1055,7 +1068,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
           `${orderDirName}/packing_records.csv`,
           buildCsvBufferFromRows(
             PACKING_HEADERS,
-            exportDetail.packingRecords.map((record: any) => ({
+            exportDetail.packingRecords.map((record) => ({
               id: record.id || '',
               packageCount: record.packageCount || '',
               packageSize: record.packageSize || '',
@@ -1143,7 +1156,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
 }
 
 export async function streamCustomerArchiveZip(res: Response) {
-  const writer = new ZipStreamWriter(res as any);
+  const writer = new ZipStreamWriter(res as unknown as ZipSink);
   await buildCustomerArchive(writer);
   await writer.finalize();
 }

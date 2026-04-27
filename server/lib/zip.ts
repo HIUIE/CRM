@@ -7,7 +7,7 @@ type ZipEntry = {
   data: Buffer;
 };
 
-type ZipSink = {
+export type ZipSink = {
   write: (chunk: Buffer) => boolean | void;
   end?: (chunk?: Buffer) => void;
   once?: (event: string, listener: () => void) => void;
@@ -157,7 +157,7 @@ export class ZipStreamWriter {
     const result = this.sink.write(chunk);
     this.offset += chunk.length;
     if (result === false && typeof this.sink.once === 'function') {
-      await once(this.sink as any, 'drain');
+      await once(this.sink as unknown as NodeJS.EventEmitter, 'drain');
     }
   }
 

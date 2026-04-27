@@ -1,6 +1,11 @@
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (cb: () => void) => void;
+};
+
 export function withTransition(cb: () => void) {
-  if ((document as any).startViewTransition) {
-    (document as any).startViewTransition(cb);
+  const doc = document as DocumentWithViewTransition;
+  if (doc.startViewTransition) {
+    doc.startViewTransition(cb);
   } else {
     cb();
   }

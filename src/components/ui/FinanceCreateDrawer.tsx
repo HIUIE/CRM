@@ -4,7 +4,7 @@ import { Drawer } from './Drawer';
 import { Combobox } from './Combobox';
 import { Wallet, BadgeDollarSign } from 'lucide-react';
 import Field from './Field';
-import type { OrderOption, PartnerOption } from '../../types/crm';
+import type { FinanceCategory, OrderOption, PartnerOption } from '../../types/crm';
 
 interface FinanceCreateDrawerProps {
   isOpen: boolean;
@@ -111,7 +111,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
           </Field>
 
           <Field label="流水类型 *">
-            <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as any })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
+            <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as 'receipt' | 'payment' })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
               <option value="receipt">收款 (In)</option>
               <option value="payment">付款 (Out)</option>
             </select>
@@ -136,7 +136,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="款项用途">
-              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
+              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
                 <option value="deposit">首付款 / 定金</option>
                 <option value="balance">尾款</option>
                 <option value="goods">货款</option>
@@ -146,7 +146,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
               </select>
             </Field>
             <Field label="核销状态">
-              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
+              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as 'pending' | 'completed'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
                 <option value="pending">待核销</option>
                 <option value="completed">已完成</option>
               </select>

@@ -12,6 +12,7 @@ import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates } from '../lib/date';
+import type { StandardTimeRange } from '../lib/date';
 import { withTransition } from '../lib/transition';
 import type { CustomerListItem, OrderSummary } from '../types/crm';
 
@@ -73,7 +74,7 @@ export default function OrdersView() {
     if (val) next.set(key, val); else next.delete(key);
 
     if (key === 'timeRange') {
-      const dates = getRangeDates(val as any);
+      const dates = getRangeDates(val as StandardTimeRange);
       if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
       if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
     }

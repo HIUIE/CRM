@@ -11,7 +11,7 @@ import {
 } from './components';
 import { formatDateOnly, formatDateTime, asNumber, asText, STAGE_STEPS } from './utils';
 import type {
-  AttachmentMeta, CustomerInfo, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
+  AttachmentMeta, CustomerInfo, CustomsRecord, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
   PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType,
 } from './types';
 
@@ -298,7 +298,7 @@ export function CustomsSection({
   user,
 }: {
   sectionRef: React.RefObject<HTMLDivElement | null>;
-  customs: any;
+  customs: CustomsRecord | null;
   onEditCustoms: () => void;
   onDeleteAttachment: (id: number) => Promise<void>;
   onPreview: (att: AttachmentMeta | null) => void;
@@ -414,8 +414,8 @@ export function LogisticsSection({
   sectionRef: React.RefObject<HTMLDivElement | null>;
   logisticsRecords: LogisticsRecord[];
   hasAnyLogistics: boolean;
-  onAddLogistics: (record?: any) => void;
-  onEditLogistics: (record: any) => void;
+  onAddLogistics: (record?: LogisticsRecord) => void;
+  onEditLogistics: (record: LogisticsRecord) => void;
   onDeleteAttachment: (id: number) => Promise<void>;
   onPreview: (att: AttachmentMeta | null) => void;
   user?: { name?: string; role?: string } | null;
@@ -424,7 +424,7 @@ export function LogisticsSection({
     <DocumentBoard ref={sectionRef} title="运输轨迹" action={logisticsRecords.length ? <LightActionButton onClick={() => onAddLogistics()} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 录入运单</LightActionButton> : null}>
       {!hasAnyLogistics ? <EmptyStateBoard title="等待货件发运" description="当前订单尚未关联物流记录，请在发货后及时同步单号。" actionLabel="录入物流单号" onAction={() => onAddLogistics()} icon={Truck} /> :
         <div className="grid gap-5 md:grid-cols-2">
-          {logisticsRecords.map((l: any) => (
+          {logisticsRecords.map((l) => (
             <div key={l.id} className="p-6 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 transition-all group relative shadow-sm hover:shadow-md">
               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
                 <button onClick={() => onEditLogistics(l)} className="p-2 bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 rounded-md text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm"><Edit3 size={16} /></button>
@@ -455,7 +455,7 @@ export function LogisticsSection({
               </div>
               {l.attachments && l.attachments.length > 0 && (
                 <div className="mt-5 flex flex-wrap gap-2">
-                  {l.attachments.map((att: any) => (
+                  {l.attachments.map((att: AttachmentMeta) => (
                     <div key={att.id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-navy-950 rounded border border-slate-100 dark:border-navy-800 text-primary-navy dark:text-white hover:bg-white dark:hover:bg-navy-800 transition-all shadow-sm">
                       <button onClick={() => onPreview(att)} className="flex items-center gap-1.5">
                         <FileIcon fileName={att.fileName} size={12} />
@@ -480,7 +480,7 @@ export function TasksSection({
   onAddTask,
   navigate,
 }: {
-  tasks: Array<any>;
+  tasks: Array<{ id: number; title: string; status: string; assignee_name: string; due_date: string; priority: string }>;
   onAddTask: () => void;
   navigate: (path: string) => void;
 }) {

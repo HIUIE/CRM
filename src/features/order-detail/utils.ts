@@ -100,27 +100,27 @@ export const EMPTY_CUSTOMS_FORM: CustomsFormState = {
   newFiles: [],
 };
 
-export function asNumber(val: any): number {
+export function asNumber(val: unknown): number {
   if (val === null || val === undefined || val === '') return 0;
   const n = Number(val);
   return isNaN(n) ? 0 : n;
 }
 
-export function asText(val: any, fallback = ''): string {
+export function asText(val: unknown, fallback = ''): string {
   if (val === null || val === undefined) return fallback;
   return String(val);
 }
 
-export function formatDateTime(val: any): string {
+export function formatDateTime(val: unknown): string {
   if (!val) return '-';
-  const d = dayjs(val);
+  const d = dayjs(val as string | number | Date);
   if (!d.isValid()) return String(val);
   return d.format('YYYY-MM-DD HH:mm');
 }
 
-export function formatDateOnly(val: any, fallback = '-'): string {
+export function formatDateOnly(val: unknown, fallback = '-'): string {
   if (!val) return fallback;
-  const d = dayjs(val);
+  const d = dayjs(val as string | number | Date);
   if (!d.isValid()) return String(val).split('T')[0];
   return d.format('YYYY-MM-DD');
 }
@@ -176,7 +176,7 @@ export function buildFinanceForm(record: FinanceRecord | null, customerName: str
     amount: record ? String(record.amount) : '',
     currency: record?.currency || 'USD',
     status: record?.status || 'completed',
-    recordCategory: (record?.recordCategory as any) || (record?.type === 'payment' ? 'goods' : 'deposit'),
+    recordCategory: (record?.recordCategory as FinanceCategory) || (record?.type === 'payment' ? 'goods' : 'deposit'),
     target: record?.target || (record?.type === 'receipt' ? customerName : ''),
     partnerId: record?.partnerId ? String(record.partnerId) : '',
     remark: record?.remark || '',

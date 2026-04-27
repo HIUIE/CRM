@@ -10,6 +10,7 @@ import { usePagination } from '../hooks/usePagination';
 import { Drawer } from './ui/Drawer';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates } from '../lib/date';
+import type { StandardTimeRange } from '../lib/date';
 import { withTransition } from '../lib/transition';
 import type { OrderOption } from '../types/crm';
 
@@ -80,7 +81,7 @@ export default function LogisticsView() {
     if (val) next.set(key, val); else next.delete(key);
 
     if (key === 'timeRange') {
-      const dates = getRangeDates(val as any);
+      const dates = getRangeDates(val as StandardTimeRange);
       if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
       if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
     }
@@ -334,7 +335,7 @@ export default function LogisticsView() {
             )}
 
             <Field label="段落类型 *">
-              <select value={formData.segmentType} onChange={e=>setFormData({...formData, segmentType:e.target.value as any})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
+              <select value={formData.segmentType} onChange={e=>setFormData({...formData, segmentType:e.target.value as 'domestic' | 'international'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
                 <option value="international">国际段</option>
                 <option value="domestic">国内段</option>
               </select>

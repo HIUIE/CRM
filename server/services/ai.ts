@@ -41,7 +41,7 @@ export async function runOpenAiCompatibleModel({
   const timeoutId = setTimeout(() => controller.abort(), 60000);
 
   try {
-    const body: any = {
+    const body: Record<string, unknown> = {
       model,
       temperature: 0.1,
       messages: [{ role: 'user', content: prompt }],
@@ -76,7 +76,7 @@ export async function runOpenAiCompatibleModel({
       throw new Error(`AI 服务端返回错误 (${errorMessage})`);
     }
 
-    const data = (await response.json()) as any;
+    const data = (await response.json()) as Record<string, unknown>;
     const content = data?.choices?.[0]?.message?.content || '';
     
     // 如果不是 JSON 模式，直接返回文字内容，不要尝试解析
@@ -112,7 +112,7 @@ ${safeText}
 """`;
 }
 
-export function buildOrderAnalysisPrompt(data: any) {
+export function buildOrderAnalysisPrompt(data: unknown) {
   // Deeply sanitize all fields recursively (names, contacts, precise addresses)
   const safeData = sanitizeForAI(data);
   const dataJson = JSON.stringify(safeData, null, 2);
@@ -141,7 +141,7 @@ ${dataJson}
 4. 生产进度：工厂交期是否正常。`;
 }
 
-export function sanitizeOrderData(data: any) {
+export function sanitizeOrderData(data: unknown) {
   return sanitizeForAI(data);
 }
 

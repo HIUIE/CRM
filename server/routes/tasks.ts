@@ -16,7 +16,7 @@ export function createTasksRouter() {
     const role = req.user?.role;
 
     let whereSql = 'WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number | null | undefined)[] = [];
 
     if (view === 'assigned') {
       whereSql += ' AND t.assignee_id = ?';

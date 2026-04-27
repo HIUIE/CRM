@@ -382,8 +382,8 @@
 | ~~任务卡片未 memo~~ | `src/pages/Tasks.tsx` | 使用 `React.memo` 包裹 `TaskCard` | ✅ 已修复 |
 | ~~搜索无防抖~~ | `CustomersView.tsx` | 添加 300ms 防抖（`inputValue` 本地状态 + setTimeout） | ✅ 已修复 |
 | ~~审计日志空指针风险~~ | `AuditLogs.tsx:185` | 添加 `created_at?.replace(...)` 可选链 | ✅ 已修复 |
-| 40+ 处 `:any` 类型 | 全栈各处 | 应用具体类型替换 | ⏳ 待处理 |
-| 未捕获的异步错误 | 各 Express route | v4 需手动 catch，v5 自动处理 | ⏳ 待处理 |
+| ~~40+ 处 `:any` 类型~~ | 全栈各处（30 个文件） | 替换为具体类型（`OrderSummary`/`unknown`/`Record`/函数重载等）| ✅ 已修复 |
+| ~~未捕获的异步错误~~ | `server/app.ts` | 安装 `express-async-errors` + 全局错误处理中间件 | ✅ 已修复 |
 
 ### P2 — 代码卫生
 
@@ -411,7 +411,7 @@
 
 ```
 迭代 1 (P0) ✅     → 拆分 OrderDetail、添加 Error Boundary、淘汰 alert()、修复 N+1、提取共享组件、清理死依赖
-迭代 2 (P1) ✅     → 统一 UI tokens（圆角/按钮）、提取 TimeRangeFilter 与 withTransition、修复任务评论 N+1、搜索防抖、修复审计日志空指针、memoize TaskCard
+迭代 2 (P1) ✅     → 统一 UI tokens（圆角/按钮/类型）、提取 TimeRangeFilter 与 withTransition、修复任务评论 N+1、搜索防抖、修复审计日志空指针、memoize TaskCard、替换 :any 类型、全局异步错误处理
 迭代 3 (P2)        → 清理 CSS 死类、修剪未用图标、修复 CustomerDetail 闭包陈旧
 迭代 4 (架构)      → 引入数据层（React Query/SWR）、消除 features/components 循环依赖
 ```

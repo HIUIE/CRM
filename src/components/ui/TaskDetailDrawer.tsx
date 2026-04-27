@@ -80,7 +80,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus })
       });
-      setTask({ ...task, status: newStatus as any });
+      setTask({ ...task, status: newStatus as 'todo' | 'in_progress' | 'done' });
       onUpdate();
       setToast('状态已更新');
       setTimeout(() => setToast(''), 2000);

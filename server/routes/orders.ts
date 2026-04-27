@@ -68,7 +68,7 @@ export function createOrdersRouter() {
       LEFT JOIN customers c ON o.customer_id = c.id
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: (string | number | null | undefined)[] = [];
 
     if (customerId) {
       sql += ` AND o.customer_id = ?`;
@@ -179,7 +179,17 @@ export function createOrdersRouter() {
         await db.run(`DELETE FROM order_items WHERE id IN (${deletedIds.map(() => '?').join(',')})`, deletedIds);
       }
 
-      const items = (req.body.items || []) as any[];
+      const items = (req.body.items || []) as Array<{
+        id?: number;
+        productName: string;
+        specification: string;
+        hsCode?: string;
+        quantity: number;
+        unit: string;
+        unitPrice: number;
+        subtotal: number;
+        imageUrl?: string;
+      }>;
       for (const item of items) {
         if (item.id) {
           await db.run(`UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ? WHERE id = ?`,

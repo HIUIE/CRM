@@ -353,7 +353,7 @@ export default function PartnersView() {
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={() => void handleSubmit(null as any)} type="button" className="btn-primary shadow-md active:scale-95">保存伙伴</button>
+            <button onClick={() => void handleSubmit(null as unknown as React.FormEvent<HTMLFormElement>)} type="button" className="btn-primary shadow-md active:scale-95">保存伙伴</button>
           </div>
         }
       >

@@ -142,7 +142,7 @@ export default function AIAssistantPage() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  sendMessage(e as any);
+                  sendMessage(e as unknown as React.FormEvent);
                 }
               }}
               placeholder="在这里输入业务咨询或指令 (Shift + Enter 换行)..."

@@ -11,6 +11,7 @@ import { Pagination } from './ui/Pagination';
 import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { getRangeDates } from '../lib/date';
+import type { StandardTimeRange } from '../lib/date';
 import { withTransition } from '../lib/transition';
 import CountrySelect from './ui/CountrySelect';
 import CountryDisplay from './ui/CountryDisplay';
@@ -82,7 +83,7 @@ export default function CustomersView() {
     if (val) next.set(key, val); else next.delete(key);
 
     if (key === 'timeRange') {
-      const dates = getRangeDates(val as any);
+      const dates = getRangeDates(val as StandardTimeRange);
       if (dates.start) next.set('start_date', dates.start); else next.delete('start_date');
       if (dates.end) next.set('end_date', dates.end); else next.delete('end_date');
     }
@@ -369,7 +370,7 @@ export default function CustomersView() {
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={() => void handleSubmit(null as any)} type="button" className="btn-primary shadow-md active:scale-95">保存客户</button>
+            <button onClick={() => void handleSubmit(null as unknown as React.FormEvent<HTMLFormElement>)} type="button" className="btn-primary shadow-md active:scale-95">保存客户</button>
           </div>
         }
       >
