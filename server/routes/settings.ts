@@ -141,6 +141,25 @@ export function createSettingsRouter() {
     }
   });
 
+  router.get('/check-update', async (_req, res) => {
+    try {
+      const token = process.env.GITHUB_TOKEN || '';
+      const url = 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
+      const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const ghRes = await fetch(url, { headers });
+      if (!ghRes.ok) return res.json({ error: `GitHub API: ${ghRes.status}` });
+      const data = await ghRes.json();
+      if (Array.isArray(data) && data[0]?.sha) {
+        res.json({ version: data[0].sha.slice(0, 7), buildTime: data[0].commit?.author?.date || '', commit: data[0].sha.slice(0, 7) });
+      } else {
+        res.json({ error: '无法解析版本信息' });
+      }
+    } catch (error) {
+      return handleRouteError(res, error, '检查更新失败');
+    }
+  });
+
   router.post('/system/update', requireAdmin, async (_req, res) => {
     try {
       const steps: string[] = [];

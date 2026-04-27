@@ -4,18 +4,13 @@ import { apiFetch } from '../lib/api';
 
 const POLLING_INTERVAL = 60 * 1000; // Check every minute
 
-// Default: check updates from the official GitHub repo.
-// Override via VITE_UPDATE_URL in .env for self-hosted instances.
-const REMOTE_UPDATE_URL = import.meta.env.VITE_UPDATE_URL || 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
+// Uses server-side proxy /api/settings/check-update to check GitHub for updates.
 
-async function fetchRemoteVersion(url: string): Promise<string | null> {
+async function fetchRemoteVersion(): Promise<string | null> {
   try {
-    const res = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now());
+    const res = await fetch('/api/settings/check-update?_t=' + Date.now());
     if (!res.ok) return null;
     const data = await res.json();
-    // GitHub API: returns array [{ sha: "abc..." }]
-    if (Array.isArray(data) && data[0]?.sha) return data[0].sha.slice(0, 7);
-    // Standard version.json: returns { commit: "abc..." } or { version: "1.1.0" }
     if (data.commit) return String(data.commit);
     if (data.version) return String(data.version);
     return null;
@@ -39,8 +34,8 @@ export default function VersionGuard() {
           if (initialStartupTime.current === null) initialStartupTime.current = health.startupTime;
           else if (initialStartupTime.current !== health.startupTime) { setUpdateType('restart'); setHasUpdate(true); return; }
         }
-        if (REMOTE_UPDATE_URL && localCommit.current) {
-          const remote = await fetchRemoteVersion(REMOTE_UPDATE_URL);
+        if (localCommit.current) {
+          const remote = await fetchRemoteVersion();
           if (remote && remote !== localCommit.current) { setUpdateType('remote'); setHasUpdate(true); }
         }
       } catch { /* ignore */ }

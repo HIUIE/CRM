@@ -90,7 +90,6 @@ export default function SettingsView() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updateLog, setUpdateLog] = useState<string[]>([]);
-  const updateUrl = import.meta.env.VITE_UPDATE_URL || 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
 
   const isAdmin = user?.role === 'admin';
 
@@ -132,19 +131,12 @@ export default function SettingsView() {
   }, []);
 
   const checkForUpdates = async () => {
-    if (!updateUrl) return;
     setCheckingUpdate(true);
     try {
-      const res = await fetch(updateUrl + (updateUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
+      const res = await fetch('/api/settings/check-update?_t=' + Date.now());
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data[0]?.sha) {
-          setRemoteVersion({ version: data[0].sha.slice(0, 7), buildTime: data[0].commit?.author?.date || '', commit: data[0].sha.slice(0, 7) });
-        } else if (data.commit) {
-          setRemoteVersion({ version: String(data.commit), buildTime: data.buildTime || '', commit: String(data.commit) });
-        } else {
-          setRemoteVersion(data);
-        }
+        setRemoteVersion(data);
       }
     } catch { /* ignore */ }
     setCheckingUpdate(false);
@@ -881,23 +873,13 @@ export default function SettingsView() {
                   <RefreshCw size={16} className="text-blue-500" />
                   检查更新
                 </div>
-                {updateUrl ? (
-                  <button onClick={checkForUpdates} disabled={checkingUpdate} className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 transition-all disabled:opacity-50">
-                    {checkingUpdate ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                    {checkingUpdate ? '检测中...' : '检测更新'}
-                  </button>
-                ) : null}
+                <button onClick={checkForUpdates} disabled={checkingUpdate} className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 transition-all disabled:opacity-50">
+                  {checkingUpdate ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                  {checkingUpdate ? '检测中...' : '检测更新'}
+                </button>
               </div>
 
-              {!updateUrl ? (
-                <div>
-                  <div className="text-sm text-amber-600 dark:text-amber-400 font-bold mb-2">未配置更新源</div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    请在 .env 中设置 <code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">VITE_UPDATE_URL</code>，指向 GitHub API 地址。<br />
-                    例如：<code className="bg-slate-200 dark:bg-navy-800 px-1 rounded font-mono">https://api.github.com/repos/用户名/仓库名/commits?per_page=1</code>
-                  </p>
-                </div>
-              ) : remoteVersion ? (
+              {remoteVersion ? (
                 remoteVersion.version !== localVersion?.version ? (
                   <div>
                     <div className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 mb-3">
@@ -927,6 +909,8 @@ export default function SettingsView() {
                     <CheckCircle2 size={16} /> 已是最新版本
                   </div>
                 )
+              ) : remoteVersion?.error ? (
+                <div className="text-sm text-amber-600 dark:text-amber-400">{remoteVersion.error}。请确保已执行 git push，或设置 GITHUB_TOKEN (私有仓库需要)。</div>
               ) : (
                 <div className="text-sm text-slate-400">点击"检测更新"查看是否有新版本可用。</div>
               )}
