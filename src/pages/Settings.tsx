@@ -31,8 +31,14 @@ const AI_PROVIDERS = [
 
 const EXPORT_FORMATS = [
   {
+    id: 'xlsx',
+    title: 'Excel 工作簿（推荐）',
+    desc: '单个 XLSX 文件，包含 12 个 Sheet：订单、商品明细、财务流水、物流、报关、生产、装箱、客户、合作伙伴、任务、客户跟进、订单跟进。带自动筛选和表头样式。',
+    icon: <FileDigit size={20} />,
+  },
+  {
     id: 'customer-archive',
-    title: '客户订单归档（推荐）',
+    title: '客户订单归档（ZIP）',
     desc: '按客户分目录、按订单分子目录导出，含订单摘要、商品明细、财务流水、物流、报关、生产、装箱及附件原文件。',
     icon: <Download size={20} />,
   },
@@ -63,7 +69,7 @@ export default function SettingsView() {
   const [userMessage, setUserMessage] = useState('');
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'customer-archive' | 'zip-csv'>('customer-archive');
+  const [exportFormat, setExportFormat] = useState<'xlsx' | 'customer-archive' | 'zip-csv'>('xlsx');
   const [testingAi, setTestingAi] = useState(false);
   const [aiTestResult, setAiTestResult] = useState<'idle' | 'success' | 'fail'>('idle');
   const [selectedProvider, setSelectedProvider] = useState('deepseek');
@@ -253,8 +259,9 @@ export default function SettingsView() {
     setUserMessage('');
     setExporting(true);
     try {
-      await apiDownload(`/api/settings/export?format=${exportFormat}`);
-      const labels: Record<string, string> = { 'customer-archive': '客户订单归档', 'zip-csv': 'CSV 表格' };
+      const url = exportFormat === 'xlsx' ? '/api/settings/export/xlsx' : `/api/settings/export?format=${exportFormat}`;
+      await apiDownload(url);
+      const labels: Record<string, string> = { 'xlsx': 'Excel 工作簿', 'customer-archive': '客户订单归档', 'zip-csv': 'CSV 表格' };
       setUserMessage(`${labels[exportFormat] || '数据'}导出已开始下载`);
     } catch (requestError) {
       setError(getErrorMessage(requestError, '导出数据失败'));
@@ -362,7 +369,7 @@ export default function SettingsView() {
             {EXPORT_FORMATS.map(fmt => (
               <div
                 key={fmt.id}
-                onClick={() => setExportFormat(fmt.id as 'customer-archive' | 'zip-csv')}
+                onClick={() => setExportFormat(fmt.id as typeof exportFormat)}
                 className={`flex items-start gap-4 p-5 rounded-lg border cursor-pointer transition-all ${
                   exportFormat === fmt.id
                     ? 'border-primary-navy dark:border-tertiary-sage bg-primary-navy/5 dark:bg-tertiary-sage/10'

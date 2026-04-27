@@ -3,6 +3,7 @@ import { requireAdmin, requireAuth } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 import { buildLegacyExportZip, getExportFileName, streamCustomerArchiveZip } from '../services/export.js';
+import { buildExcelWorkbook } from '../services/excel-export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
 import { resolveAiProvider, runGeminiModel, runOpenAiCompatibleModel } from '../services/ai.js';
 
@@ -91,6 +92,19 @@ export function createSettingsRouter() {
       }
     } catch (error) {
       return fail(res, 502, `连接测试失败: ${error instanceof Error ? error.message : String(error)}`, 'AI_TEST_FAILED');
+    }
+  });
+
+  router.get('/export/xlsx', requireAdmin, async (_req, res) => {
+    try {
+      const wb = await buildExcelWorkbook();
+      const fileName = `SmartTrade_CRM_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      await wb.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      return handleRouteError(res, error, '导出 Excel 失败');
     }
   });
 
