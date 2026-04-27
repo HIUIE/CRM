@@ -5,6 +5,7 @@ import { db } from '../db.js';
 import { resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { ZipStreamWriter, createZipBuffer, type ZipSink } from '../lib/zip.js';
 import { buildOrderDetail } from './order-detail.js';
+import { buildCustomerXlsx, buildOrderXlsx } from './excel-export.js';
 
 type LegacyExportDefinition = {
   table: string;
@@ -272,11 +273,6 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
   },
 ];
 
-const ORDER_ITEMS_HEADERS = ['id', 'product_name', 'specification', 'quantity', 'unit', 'unit_price', 'subtotal', 'image_url', 'created_at'];
-const FINANCE_HEADERS = ['id', 'type', 'recordCategory', 'amount', 'currency', 'status', 'target', 'remark', 'partnerId', 'partnerName', 'createdAt', 'createdByName'];
-const LOGISTICS_HEADERS = ['id', 'segmentType', 'carrier', 'trackingNo', 'status', 'shippingDate', 'packingDetails', 'packageCount', 'volumeCbm', 'grossWeightKg', 'incoterm', 'transportMode', 'vesselVoyage', 'billNo', 'etd', 'eta', 'recipientAddress', 'packageSize', 'remark', 'createdAt', 'createdByName'];
-const PRODUCTION_LOG_HEADERS = ['id', 'planId', 'content', 'logDate', 'createdByName', 'createdAt'];
-const PACKING_HEADERS = ['id', 'packageCount', 'packageSize', 'grossWeight', 'netWeight', 'attachmentId', 'imageUrl'];
 const ATTACHMENT_MANIFEST_HEADERS = ['attachmentId', 'sourceModule', 'sourceRecordId', 'originalFileName', 'exportedFileName', 'mimeType', 'fileSize', 'createdAt', 'missing'];
 const UNLINKED_HEADERS = ['attachmentId', 'entityType', 'entityId', 'originalFileName', 'storedName', 'mimeType', 'fileSize', 'createdAt', 'missing'];
 
@@ -347,57 +343,6 @@ interface ExportOrderDetail {
   productionPlan?: Record<string, unknown> & { logs?: Array<Record<string, unknown>> };
   packingRecords?: Array<Record<string, unknown>>;
   orderDocuments?: Array<Record<string, unknown>>;
-}
-
-function orderJsonForExport(detail: ExportOrderDetail) {
-  return {
-    exportedAt: new Date().toISOString(),
-    order: detail.order,
-    customer: detail.customer,
-    summary: detail.summary,
-    customs: detail.customs
-      ? {
-          id: detail.customs.id,
-          status: detail.customs.status,
-          brokerName: detail.customs.brokerName,
-          declarationNo: detail.customs.declarationNo,
-          declarationDate: detail.customs.declarationDate,
-          releaseDate: detail.customs.releaseDate,
-          tradeMode: detail.customs.tradeMode,
-          remark: detail.customs.remark,
-          updatedAt: detail.customs.updatedAt,
-          createdByName: detail.customs.createdByName,
-          attachmentCount: detail.customs.attachmentCount || 0,
-        }
-      : null,
-    productionPlan: detail.productionPlan
-      ? {
-          id: detail.productionPlan.id,
-          partnerId: detail.productionPlan.partnerId,
-          partnerName: detail.productionPlan.partnerName,
-          partnerType: detail.productionPlan.partnerType,
-          partnerCountry: detail.productionPlan.partnerCountry,
-          partnerContact: detail.productionPlan.partnerContact,
-          orderDate: detail.productionPlan.orderDate,
-          estimatedDeliveryDate: detail.productionPlan.estimatedDeliveryDate,
-          productionStatus: detail.productionPlan.productionStatus,
-          inspectionStatus: detail.productionPlan.inspectionStatus,
-          remark: detail.productionPlan.remark,
-          updatedAt: detail.productionPlan.updatedAt,
-          createdByName: detail.productionPlan.createdByName,
-          logCount: detail.productionPlan.logs?.length || 0,
-        }
-      : null,
-    logisticsOverview: (detail.logisticsRecords || []).map((record) => ({
-      id: record.id,
-      segmentType: record.segmentType,
-      carrier: record.carrier,
-      trackingNo: record.trackingNo,
-      status: record.status,
-      shippingDate: record.shippingDate,
-      attachmentCount: record.attachmentCount || 0,
-    })),
-  };
 }
 
 async function resolveExistingAttachmentPath(filePath: string) {
@@ -993,53 +938,9 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
   for (const customer of customers) {
     const orders = ordersByCustomer.get(Number(customer.id)) || [];
     const customerDirName = `customers/${sanitizeArchiveSegment(customer.name, 'customer')}_${customer.id}`;
-    // Customer contacts and followups
-    const customerContacts = await db.all(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [customer.id]);
-    const customerFollowups = await db.all(`SELECT cf.*, u.name AS created_by_name FROM customer_followups cf LEFT JOIN users u ON u.id = cf.created_by WHERE cf.customer_id = ? ORDER BY datetime(cf.created_at) DESC`, [customer.id]);
-
-    const customerJson = {
-      exportedAt: new Date().toISOString(),
-      customer: {
-        id: customer.id,
-        displayId: customer.display_id || null,
-        name: customer.name,
-        country: customer.country || null,
-        contact: customer.contact || null,
-        sourceChannel: customer.source_channel || null,
-        intentProducts: customer.intent_products || null,
-        logisticsPreference: customer.logistics_preference || null,
-        paymentTerms: customer.payment_terms || null,
-        createdAt: customer.created_at || null,
-        contactCount: customerContacts.length,
-        followupCount: customerFollowups.length,
-      },
-      summary: {
-        orderCount: Number(customer.order_count) || 0,
-        orders: orders.map((order) => ({
-          id: order.id,
-          displayId: order.display_id,
-          status: order.status || null,
-          totalAmount: order.total_amount || 0,
-          createdAt: order.created_at || null,
-        })),
-      },
-    };
-
-    await writer.addBuffer(`${customerDirName}/customer.json`, Buffer.from(`${JSON.stringify(customerJson, null, 2)}\n`, 'utf8'));
-
-    if (customerContacts.length) {
-      await writer.addBuffer(
-        `${customerDirName}/customer_contacts.csv`,
-        buildCsvBufferFromRows(['id', 'name', 'title', 'email', 'contact', 'is_primary', 'created_at'], customerContacts),
-      );
-    }
-
-    if (customerFollowups.length) {
-      await writer.addBuffer(
-        `${customerDirName}/customer_followups.csv`,
-        buildCsvBufferFromRows(['id', 'content', 'channel', 'created_by_name', 'created_at'], customerFollowups),
-      );
-    }
+    // Customer XLSX (customer overview + contacts + followups + order list)
+    const customerXlsx = await buildCustomerXlsx(customer, orders, orderDetailsMap);
+    await writer.addBuffer(`${customerDirName}/客户信息.xlsx`, await customerXlsx.xlsx.writeBuffer() as unknown as Buffer);
 
     for (const order of orders) {
       const detail = orderDetailsMap.get(Number(order.id));
@@ -1049,150 +950,10 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
       const exportDetail = detail as ExportOrderDetail;
 
       const orderDirName = `${customerDirName}/orders/${sanitizeArchiveSegment(order.display_id, 'order')}_${order.id}`;
-      await writer.addBuffer(`${orderDirName}/order.json`, Buffer.from(`${JSON.stringify(orderJsonForExport(exportDetail), null, 2)}\n`, 'utf8'));
 
-      await writer.addBuffer(
-        `${orderDirName}/order_items.csv`,
-        buildCsvBufferFromRows(
-          ORDER_ITEMS_HEADERS,
-          (exportDetail.items || []).map((item) => ({
-            id: item.id,
-            product_name: item.product_name,
-            specification: item.specification || '',
-            quantity: item.quantity,
-            unit: item.unit || '',
-            unit_price: item.unit_price,
-            subtotal: item.subtotal,
-            image_url: item.imageUrl || '',
-            created_at: item.created_at || '',
-          })),
-        ),
-      );
-
-      await writer.addBuffer(
-        `${orderDirName}/finance_records.csv`,
-        buildCsvBufferFromRows(
-          FINANCE_HEADERS,
-          (exportDetail.financeRecords || []).map((record) => ({
-            id: record.id,
-            type: record.type,
-            recordCategory: record.recordCategory || '',
-            amount: record.amount,
-            currency: record.currency,
-            status: record.status,
-            target: record.target || '',
-            remark: record.remark || '',
-            partnerId: record.partnerId || '',
-            partnerName: record.partnerName || '',
-            createdAt: record.createdAt || '',
-            createdByName: record.createdByName || '',
-          })),
-        ),
-      );
-
-      await writer.addBuffer(
-        `${orderDirName}/logistics_records.csv`,
-        buildCsvBufferFromRows(
-          LOGISTICS_HEADERS,
-          (exportDetail.logisticsRecords || []).map((record) => ({
-            id: record.id,
-            segmentType: record.segmentType,
-            carrier: record.carrier,
-            trackingNo: record.trackingNo,
-            status: record.status,
-            shippingDate: record.shippingDate || '',
-            packingDetails: record.packingDetails || '',
-            packageCount: record.packageCount || '',
-            volumeCbm: record.volumeCbm || '',
-            grossWeightKg: record.grossWeightKg || '',
-            incoterm: record.incoterm || '',
-            transportMode: record.transportMode || '',
-            vesselVoyage: record.vesselVoyage || '',
-            billNo: record.billNo || '',
-            etd: record.etd || '',
-            eta: record.eta || '',
-            recipientAddress: record.recipientAddress || '',
-            packageSize: record.packageSize || '',
-            remark: record.remark || '',
-            createdAt: record.createdAt || '',
-            createdByName: record.createdByName || '',
-          })),
-        ),
-      );
-
-      if (exportDetail.customs) {
-        await writer.addBuffer(
-          `${orderDirName}/customs_record.json`,
-          Buffer.from(`${JSON.stringify(exportDetail.customs, null, 2)}\n`, 'utf8'),
-        );
-      }
-
-      if (exportDetail.productionPlan) {
-        const { logs = [], ...planWithoutLogs } = exportDetail.productionPlan;
-        await writer.addBuffer(
-          `${orderDirName}/production_plan.json`,
-          Buffer.from(`${JSON.stringify({ ...planWithoutLogs, logCount: logs.length }, null, 2)}\n`, 'utf8'),
-        );
-      }
-
-      if (exportDetail.productionPlan?.logs?.length) {
-        await writer.addBuffer(
-          `${orderDirName}/production_logs.csv`,
-          buildCsvBufferFromRows(
-            PRODUCTION_LOG_HEADERS,
-            exportDetail.productionPlan.logs.map((log) => ({
-              id: log.id,
-              planId: log.planId,
-              content: log.content,
-              logDate: log.logDate || '',
-              createdByName: log.createdByName || '',
-              createdAt: log.createdAt || '',
-            })),
-          ),
-        );
-      }
-
-      if (exportDetail.packingRecords?.length) {
-        await writer.addBuffer(
-          `${orderDirName}/packing_records.csv`,
-          buildCsvBufferFromRows(
-            PACKING_HEADERS,
-            exportDetail.packingRecords.map((record) => ({
-              id: record.id || '',
-              packageCount: record.packageCount || '',
-              packageSize: record.packageSize || '',
-              grossWeight: record.grossWeight || '',
-              netWeight: record.netWeight || '',
-              attachmentId: record.attachmentId || '',
-              imageUrl: record.imageUrl || '',
-            })),
-          ),
-        );
-      }
-
-      // Order follow-ups (timeline)
-      const orderFollowups = await db.all(
-        `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC`,
-        [order.id],
-      );
-      if (orderFollowups.length) {
-        await writer.addBuffer(
-          `${orderDirName}/order_followups.csv`,
-          buildCsvBufferFromRows(['id', 'content', 'created_by_name', 'created_at'], orderFollowups),
-        );
-      }
-
-      // Order tasks
-      const orderTasks = await db.all(
-        `SELECT t.*, u.name AS assignee_name, cu.name AS created_by_name FROM tasks t LEFT JOIN users u ON u.id = t.assignee_id LEFT JOIN users cu ON cu.id = t.created_by WHERE t.entity_type = 'ORDER' AND t.entity_id = ? ORDER BY datetime(t.created_at) DESC`,
-        [String(order.display_id)],
-      );
-      if (orderTasks.length) {
-        await writer.addBuffer(
-          `${orderDirName}/order_tasks.csv`,
-          buildCsvBufferFromRows(['id', 'title', 'assignee_name', 'due_date', 'priority', 'status', 'description', 'created_by_name', 'created_at'], orderTasks),
-        );
-      }
+      // Single XLSX per order with all details
+      const orderXlsx = await buildOrderXlsx(exportDetail);
+      await writer.addBuffer(`${orderDirName}/订单详情.xlsx`, await orderXlsx.xlsx.writeBuffer() as unknown as Buffer);
 
       const attachmentRows = await getOrderAttachments(Number(order.id));
       const manifestRows: Record<string, unknown>[] = [];
