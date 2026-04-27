@@ -267,7 +267,7 @@ function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: s
   );
 }
 
-function Sparkline({ color, data }: { color: string, data: number[] }) {
+const Sparkline = React.memo(function Sparkline({ color, data }: { color: string, data: number[] }) {
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
@@ -277,9 +277,9 @@ function Sparkline({ color, data }: { color: string, data: number[] }) {
       <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-}
+});
 
-function DonutChart({ data }: { data: { status: string, count: number, percentage: number, color: string }[] }) {
+const DonutChart = React.memo(function DonutChart({ data }: { data: { status: string, count: number, percentage: number, color: string }[] }) {
   const total = data.reduce((acc, curr) => acc + curr.count, 0);
   let cumulativePercent = 0;
 
@@ -312,7 +312,7 @@ function DonutChart({ data }: { data: { status: string, count: number, percentag
       </div>
     </div>
   );
-}
+});
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (

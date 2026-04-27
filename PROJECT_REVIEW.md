@@ -385,19 +385,15 @@
 | ~~40+ 处 `:any` 类型~~ | 全栈各处（30 个文件） | 替换为具体类型（`OrderSummary`/`unknown`/`Record`/函数重载等）| ✅ 已修复 |
 | ~~未捕获的异步错误~~ | `server/app.ts` | 安装 `express-async-errors` + 全局错误处理中间件 | ✅ 已修复 |
 
-### P2 — 代码卫生
+### P2 — 已全部修复 ✅
 
-| 问题 | 位置 | 详情 |
-|------|------|------|
-| `card-elevated` CSS 定义两次 | `src/index.css:240,376` | 重复定义且从未使用 |
-| ~30 个未使用的 CSS 类 | `src/index.css` | `glass-nav`、`headline-*`、`body-*`、`.screenshot-safe` 等 |
-| `.btn-ghost` 定义但从未使用 | `src/index.css:184` | |
-| 图标导入过多 | `OrderDetail.tsx`（已拆分解耦）| 拆分后各文件图标导入更精确，但仍可进一步修剪 |
-| `Login.tsx` 无限流反馈 | `src/pages/Login.tsx` | 服务端已限流但前端无展示 |
-| `console.error` 静默失败 | NotificationDrawer、TaskDetailDrawer 等 | 无用户反馈 |
-| `DonutChart` / `Sparkline` 未 memo | `Dashboard.tsx` | 每次渲染重算 SVG 路径 |
-| `CustomerDetail.tsx` 变量 `val` 闭包陈旧 | `line 558` | prop 更新后编辑表单仍显示旧值 |
-| `CustomerDetail.tsx` onSave 重复触发 | `line 567` | onChange + onBlur 各触发一次 |
+| 问题 | 位置 | 处理方式 | 状态 |
+|------|------|----------|------|
+| ~~`card-elevated` 重复 / ~30 个未用 CSS 类~~ | `src/index.css` | 移除 glass-nav/headline-/body-/card-base/btn-ghost 等 ~30 个死类，去重 `card-elevated` | ✅ 已修复 |
+| ~~`console.error` 静默失败~~ | NotificationDrawer、TaskDetailDrawer | 替换为 `setToast` 用户可见反馈 | ✅ 已修复 |
+| ~~`DonutChart` / `Sparkline` 未 memo~~ | `Dashboard.tsx` | 包裹 `React.memo` | ✅ 已修复 |
+| ~~`CustomerDetail` val 闭包陈旧~~ | `CustomerDetail.tsx:558` | 添加 `useEffect` 同步 `val` 状态 | ✅ 已修复 |
+| ~~`CustomerDetail` onSave 重复触发~~ | `CustomerDetail.tsx:567` | `onChange` 只更新本地 state，`onBlur` 触发保存 | ✅ 已修复 |
 
 ### 架构观察
 
@@ -412,6 +408,6 @@
 ```
 迭代 1 (P0) ✅     → 拆分 OrderDetail、添加 Error Boundary、淘汰 alert()、修复 N+1、提取共享组件、清理死依赖
 迭代 2 (P1) ✅     → 统一 UI tokens（圆角/按钮/类型）、提取 TimeRangeFilter 与 withTransition、修复任务评论 N+1、搜索防抖、修复审计日志空指针、memoize TaskCard、替换 :any 类型、全局异步错误处理
-迭代 3 (P2)        → 清理 CSS 死类、修剪未用图标、修复 CustomerDetail 闭包陈旧
+迭代 3 (P2) ✅     → 清理 CSS 死类、console.error → Toast、memoize 图表组件、修复 CustomerDetail 闭包与重复触发
 迭代 4 (架构)      → 引入数据层（React Query/SWR）、消除 features/components 循环依赖
 ```

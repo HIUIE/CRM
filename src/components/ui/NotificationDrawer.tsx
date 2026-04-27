@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, X, CheckCircle2, Info, ArrowRight, Trash2 } from 'lucide-react';
-import { apiFetch } from '../../lib/api';
+import { apiFetch, getErrorMessage } from '../../lib/api';
+import { Toast } from '../../features/order-detail/components';
 import { useNavigate } from 'react-router-dom';
 
 interface Notification {
@@ -15,6 +16,7 @@ interface Notification {
 export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState('');
   const navigate = useNavigate();
 
   const loadNotifications = async () => {
@@ -23,7 +25,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
       const data = await apiFetch<Notification[]>('/api/notifications');
       setNotifications(data);
     } catch (e) {
-      console.error(e);
+      setToast(getErrorMessage(e, '加载通知失败'));
     } finally {
       setLoading(false);
     }
@@ -38,7 +40,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
       await apiFetch('/api/notifications/read-all', { method: 'POST' });
       setNotifications(notifications.map(n => ({ ...n, is_read: 1 })));
     } catch (e) {
-      console.error(e);
+      setToast(getErrorMessage(e, '操作失败'));
     }
   };
 
@@ -101,6 +103,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
           </div>
         )}
       </div>
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }

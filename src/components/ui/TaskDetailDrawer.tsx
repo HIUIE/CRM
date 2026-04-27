@@ -58,7 +58,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
       const data = await apiFetch<TaskDetail>(`/api/tasks/${taskId}`);
       setTask(data);
     } catch (e) {
-      console.error(e);
+      setToast(getErrorMessage(e, '加载任务失败'));
     } finally {
       setLoading(false);
     }

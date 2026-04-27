@@ -591,6 +591,7 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
   const [isEditing, setIsEditing] = useState(false);
   const [showSensitive, setShowSensitive] = useState(false);
   const [val, setVal] = useState(value);
+  useEffect(() => { setVal(value); }, [value]);
 
   const displayValue = isSensitive && !showSensitive ? maskContact(value) : value;
 
@@ -604,8 +605,8 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
             <select
               autoFocus
               value={val}
-              onChange={(e) => { setVal(e.target.value); onSave?.(e.target.value); setIsEditing(false); }}
-              onBlur={() => setIsEditing(false)}
+              onChange={(e) => setVal(e.target.value)}
+              onBlur={() => { setIsEditing(false); if (val !== value) onSave?.(val); }}
               className="text-sm font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-white dark:bg-navy-900 border border-slate-200 rounded p-1 outline-none"
             >
                <option value="">请选择...</option>
@@ -617,7 +618,7 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
               value={val}
               onChange={(e) => setVal(e.target.value)}
               onBlur={() => { setIsEditing(false); if (val !== value) onSave?.(val); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { setIsEditing(false); if (val !== value) onSave?.(val); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }}
               className="text-sm font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-transparent border-b border-primary-navy/20 outline-none"
             />
           )
@@ -644,6 +645,7 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
 function EditableField({ value, onSave, className }: { value: string; onSave: (val: string) => void; className: string }) {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(value);
+  useEffect(() => { setVal(value); }, [value]);
 
   if (isEditing) {
     return (
@@ -652,7 +654,7 @@ function EditableField({ value, onSave, className }: { value: string; onSave: (v
         value={val}
         onChange={(e) => setVal(e.target.value)}
         onBlur={() => { setIsEditing(false); if (val !== value) onSave(val); }}
-        onKeyDown={(e) => { if (e.key === 'Enter') { setIsEditing(false); if (val !== value) onSave(val); } }}
+        onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }}
         className={`${className} bg-transparent border-b-2 border-primary-navy/20 outline-none w-fit`}
       />
     );
