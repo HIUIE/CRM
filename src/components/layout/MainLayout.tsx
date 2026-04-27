@@ -70,14 +70,6 @@ export default function MainLayout() {
   }, [user]);
 
   useEffect(() => {
-    document.title = siteName;
-    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (favicon && siteLogo && siteLogo !== '/logo.png') {
-      favicon.href = siteLogo;
-    }
-  }, [siteName, siteLogo]);
-
-  useEffect(() => {
     const root = document.documentElement;
     if (isDark) {
       root.classList.add('dark');
