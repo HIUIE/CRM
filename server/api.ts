@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from './lib/auth.js';
+import { csrfProtection, requireAuth } from './lib/auth.js';
 import { createAiRouter } from './routes/ai.js';
 import { createAttachmentsRouter } from './routes/attachments.js';
 import { createAuthRouter } from './routes/auth.js';
@@ -49,6 +49,7 @@ router.get('/settings/basic', async (_req, res) => {
 });
 
 router.use(requireAuth);
+router.use(csrfProtection);
 router.use('/dashboard', createDashboardRouter());
 router.use('/settings', createSettingsRouter());
 router.use('/audit', createAuditRouter());

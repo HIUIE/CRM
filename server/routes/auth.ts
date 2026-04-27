@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
-import { clearAuthCookie, getCookieOptions, requireAuth, signAuthToken, type AuthedRequest } from '../lib/auth.js';
+import { clearAuthCookie, clearCsrfCookie, getCookieOptions, requireAuth, setCsrfCookie, signAuthToken, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError, fail } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 
@@ -70,6 +70,7 @@ export function createAuthRouter() {
 
       const token = signAuthToken({ id: user.id, role: user.role, username: user.username, name: user.name });
       res.cookie('token', token, getCookieOptions());
+      setCsrfCookie(res);
       res.json({
         user: {
           id: user.id,
@@ -86,6 +87,7 @@ export function createAuthRouter() {
 
   router.post('/logout', (_req, res) => {
     clearAuthCookie(res);
+    clearCsrfCookie(res);
     res.json({ success: true });
   });
 

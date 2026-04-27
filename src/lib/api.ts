@@ -11,8 +11,18 @@ export class ApiError extends Error {
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null;
 
+function getCsrfToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
 export async function apiFetch<T>(input: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
+  const isStateChanging = init.method && !['GET', 'HEAD'].includes(init.method.toUpperCase());
+  if (isStateChanging) {
+    const csrf = getCsrfToken();
+    if (csrf) headers.set('X-CSRF-Token', csrf);
+  }
   const isJsonBody = init.body && !(init.body instanceof FormData);
 
   if (isJsonBody && !headers.has('Content-Type')) {
@@ -57,9 +67,15 @@ export async function apiFetch<T>(input: string, init: RequestInit = {}) {
 }
 
 export async function apiDownload(input: string, init: RequestInit = {}) {
+  const csrf = getCsrfToken();
+  const headers = new Headers(init.headers);
+  if (csrf && (init.method && !['GET', 'HEAD'].includes(init.method.toUpperCase()))) {
+    headers.set('X-CSRF-Token', csrf);
+  }
   const response = await fetch(input, {
     ...init,
     credentials: 'include',
+    headers,
   });
 
   if (response.status === 401) {
@@ -101,7 +117,11 @@ export async function apiDownload(input: string, init: RequestInit = {}) {
 }
 
 export async function apiUploadSimple<T>(url: string, formData: FormData): Promise<T> {
-  const response = await fetch(url, { method: 'POST', body: formData, credentials: 'include' });
+  const csrf = getCsrfToken();
+  const response = await fetch(url, {
+    method: 'POST', body: formData, credentials: 'include',
+    headers: csrf ? { 'X-CSRF-Token': csrf } : undefined,
+  } as RequestInit);
   if (!response.ok) {
     let msg = '上传失败';
     try { const res = await response.json(); msg = res.error || res.message || msg; } catch (e) { /* ignore */ }
@@ -119,6 +139,8 @@ export function apiUpload<T>(url: string, formData: FormData, onProgress?: (perc
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.withCredentials = true;
+    const csrf = getCsrfToken();
+    if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
