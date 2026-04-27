@@ -12,11 +12,16 @@ export type InspectionStatus = 'pending' | 'passed' | 'failed';
 
 export type MiscFee = { label: string; amount: number };
 
-export type ProfitData = {
-  grossUsd: number;
+export type ReceiptItem = {
+  amount: number;
+  currency: 'USD' | 'CNY';
   bankFees: number;
   platformFees: number;
   exchangeRate: number;
+};
+
+export type ProfitData = {
+  receipts: ReceiptItem[];
   taxRefundCny: number;
   factoryCostCny: number;
   domesticFees: number;

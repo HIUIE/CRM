@@ -302,15 +302,12 @@ export function createOrdersRouter() {
       const row = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [`order_profit_${orderId}`]);
       const data = row ? JSON.parse(row.value) : {};
       res.json({
-        grossUsd: data.grossUsd || 0,
-        bankFees: data.bankFees || 0,
-        platformFees: data.platformFees || 0,
-        exchangeRate: data.exchangeRate || 7.2,
+        receipts: data.receipts || [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
         taxRefundCny: data.taxRefundCny || 0,
         factoryCostCny: data.factoryCostCny || 0,
         domesticFees: data.domesticFees || 0,
         freightValue: data.freightValue || 0,
-        freightCurrency: data.freightCurrency || 'CNY',
+        freightCurrency: data.freightCurrency || 'USD',
         customsMisc: data.customsMisc || 0,
         miscFees: data.miscFees || [],
       });
@@ -322,15 +319,18 @@ export function createOrdersRouter() {
   router.post('/:id/profit', requireAdmin, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     const data = {
-      grossUsd: Number(req.body.grossUsd) || 0,
-      bankFees: Number(req.body.bankFees) || 0,
-      platformFees: Number(req.body.platformFees) || 0,
-      exchangeRate: Number(req.body.exchangeRate) || 7.2,
+      receipts: Array.isArray(req.body.receipts) ? req.body.receipts.map((r: any) => ({
+        amount: Number(r.amount) || 0,
+        currency: r.currency === 'CNY' ? 'CNY' : 'USD',
+        bankFees: Number(r.bankFees) || 0,
+        platformFees: Number(r.platformFees) || 0,
+        exchangeRate: Number(r.exchangeRate) || (r.currency === 'CNY' ? 1 : 7.2),
+      })) : [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
       taxRefundCny: Number(req.body.taxRefundCny) || 0,
       factoryCostCny: Number(req.body.factoryCostCny) || 0,
       domesticFees: Number(req.body.domesticFees) || 0,
       freightValue: Number(req.body.freightValue) || 0,
-      freightCurrency: req.body.freightCurrency === 'USD' ? 'USD' : 'CNY',
+      freightCurrency: req.body.freightCurrency === 'CNY' ? 'CNY' : 'USD',
       customsMisc: Number(req.body.customsMisc) || 0,
       miscFees: Array.isArray(req.body.miscFees) ? req.body.miscFees : [],
     };
