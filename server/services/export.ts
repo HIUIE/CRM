@@ -234,6 +234,42 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
     `,
     extraColumns: ['order_display_id', 'customer_name'],
   },
+  {
+    table: 'order_items',
+    fileName: 'order_items.csv',
+    query: `SELECT oi.*, o.display_id AS order_display_id FROM order_items oi LEFT JOIN orders o ON o.id = oi.order_id ORDER BY oi.id ASC`,
+    extraColumns: ['order_display_id'],
+  },
+  {
+    table: 'packing_records',
+    fileName: 'packing_records.csv',
+    query: `SELECT pr.*, o.display_id AS order_display_id FROM packing_records pr LEFT JOIN orders o ON o.id = pr.order_id ORDER BY pr.id ASC`,
+    extraColumns: ['order_display_id'],
+  },
+  {
+    table: 'tasks',
+    fileName: 'tasks.csv',
+    query: `SELECT t.*, u.name AS assignee_name, cu.name AS created_by_name FROM tasks t LEFT JOIN users u ON u.id = t.assignee_id LEFT JOIN users cu ON cu.id = t.created_by ORDER BY t.id ASC`,
+    extraColumns: ['assignee_name', 'created_by_name'],
+  },
+  {
+    table: 'customer_contacts',
+    fileName: 'customer_contacts.csv',
+    query: `SELECT cc.*, c.name AS customer_name FROM customer_contacts cc LEFT JOIN customers c ON c.id = cc.customer_id ORDER BY cc.id ASC`,
+    extraColumns: ['customer_name'],
+  },
+  {
+    table: 'customer_followups',
+    fileName: 'customer_followups.csv',
+    query: `SELECT cf.*, c.name AS customer_name, u.name AS created_by_name FROM customer_followups cf LEFT JOIN customers c ON c.id = cf.customer_id LEFT JOIN users u ON u.id = cf.created_by ORDER BY cf.id ASC`,
+    extraColumns: ['customer_name', 'created_by_name'],
+  },
+  {
+    table: 'order_follow_ups',
+    fileName: 'order_followups.csv',
+    query: `SELECT ofu.*, o.display_id AS order_display_id, u.name AS created_by_name FROM order_follow_ups ofu LEFT JOIN orders o ON o.id = ofu.order_id LEFT JOIN users u ON u.id = ofu.created_by ORDER BY ofu.id ASC`,
+    extraColumns: ['order_display_id', 'created_by_name'],
+  },
 ];
 
 const ORDER_ITEMS_HEADERS = ['id', 'product_name', 'specification', 'quantity', 'unit', 'unit_price', 'subtotal', 'image_url', 'created_at'];
@@ -927,16 +963,25 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
   for (const customer of customers) {
     const orders = ordersByCustomer.get(Number(customer.id)) || [];
     const customerDirName = `customers/${sanitizeArchiveSegment(customer.name, 'customer')}_${customer.id}`;
+    // Customer contacts and followups
+    const customerContacts = await db.all(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [customer.id]);
+    const customerFollowups = await db.all(`SELECT cf.*, u.name AS created_by_name FROM customer_followups cf LEFT JOIN users u ON u.id = cf.created_by WHERE cf.customer_id = ? ORDER BY datetime(cf.created_at) DESC`, [customer.id]);
+
     const customerJson = {
       exportedAt: new Date().toISOString(),
       customer: {
         id: customer.id,
+        displayId: customer.display_id || null,
         name: customer.name,
         country: customer.country || null,
         contact: customer.contact || null,
+        sourceChannel: customer.source_channel || null,
+        intentProducts: customer.intent_products || null,
         logisticsPreference: customer.logistics_preference || null,
         paymentTerms: customer.payment_terms || null,
         createdAt: customer.created_at || null,
+        contactCount: customerContacts.length,
+        followupCount: customerFollowups.length,
       },
       summary: {
         orderCount: Number(customer.order_count) || 0,
@@ -951,6 +996,20 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
     };
 
     await writer.addBuffer(`${customerDirName}/customer.json`, Buffer.from(`${JSON.stringify(customerJson, null, 2)}\n`, 'utf8'));
+
+    if (customerContacts.length) {
+      await writer.addBuffer(
+        `${customerDirName}/customer_contacts.csv`,
+        buildCsvBufferFromRows(['id', 'name', 'title', 'email', 'contact', 'is_primary', 'created_at'], customerContacts),
+      );
+    }
+
+    if (customerFollowups.length) {
+      await writer.addBuffer(
+        `${customerDirName}/customer_followups.csv`,
+        buildCsvBufferFromRows(['id', 'content', 'channel', 'created_by_name', 'created_at'], customerFollowups),
+      );
+    }
 
     for (const order of orders) {
       const detail = orderDetailsMap.get(Number(order.id));
@@ -1078,6 +1137,30 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
               imageUrl: record.imageUrl || '',
             })),
           ),
+        );
+      }
+
+      // Order follow-ups (timeline)
+      const orderFollowups = await db.all(
+        `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC`,
+        [order.id],
+      );
+      if (orderFollowups.length) {
+        await writer.addBuffer(
+          `${orderDirName}/order_followups.csv`,
+          buildCsvBufferFromRows(['id', 'content', 'created_by_name', 'created_at'], orderFollowups),
+        );
+      }
+
+      // Order tasks
+      const orderTasks = await db.all(
+        `SELECT t.*, u.name AS assignee_name, cu.name AS created_by_name FROM tasks t LEFT JOIN users u ON u.id = t.assignee_id LEFT JOIN users cu ON cu.id = t.created_by WHERE t.entity_type = 'ORDER' AND t.entity_id = ? ORDER BY datetime(t.created_at) DESC`,
+        [String(order.display_id)],
+      );
+      if (orderTasks.length) {
+        await writer.addBuffer(
+          `${orderDirName}/order_tasks.csv`,
+          buildCsvBufferFromRows(['id', 'title', 'assignee_name', 'due_date', 'priority', 'status', 'description', 'created_by_name', 'created_at'], orderTasks),
         );
       }
 
