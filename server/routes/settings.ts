@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { requireAdmin, requireAuth } from '../lib/auth.js';
-import { handleRouteError } from '../lib/http.js';
+import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 import { buildLegacyExportZip, getExportFileName, streamCustomerArchiveZip } from '../services/export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
+import { resolveAiProvider, runGeminiModel, runOpenAiCompatibleModel } from '../services/ai.js';
 
 export function createSettingsRouter() {
   const router = Router();
@@ -58,6 +59,38 @@ export function createSettingsRouter() {
       res.json({ success: true, orderNumberPrefix: prefix });
     } catch (error) {
       return handleRouteError(res, error, '保存单据编码规则失败');
+    }
+  });
+
+  router.post('/ai/test', requireAdmin, async (_req, res) => {
+    try {
+      const selectedModel = (await getSettingValue('current_ai_model', 'deepseek-v4-flash')).trim();
+      const provider = resolveAiProvider(selectedModel);
+      const apiKey = (await getSettingValue('ai_api_key')) || process.env.AI_API_KEY;
+      const configuredBaseUrl = await getSettingValue('ai_base_url');
+
+      if (!apiKey && provider !== 'gemini') {
+        return fail(res, 400, '未配置 API 密钥，无法测试连接', 'AI_KEY_MISSING');
+      }
+
+      const testMessage = 'Respond with only the word "ok" if you can read this.';
+
+      if (provider === 'gemini') {
+        const result = await runGeminiModel(selectedModel, apiKey || '', testMessage);
+        res.json({ success: true, response: String(result).slice(0, 100) });
+      } else {
+        const compatBaseUrl = configuredBaseUrl || (provider === 'deepseek' ? 'https://api.deepseek.com' : '');
+        const result = await runOpenAiCompatibleModel({
+          model: selectedModel,
+          apiKey: apiKey || '',
+          baseUrl: compatBaseUrl,
+          prompt: testMessage,
+          jsonMode: false,
+        });
+        res.json({ success: true, response: String(result).slice(0, 100) });
+      }
+    } catch (error) {
+      return fail(res, 502, `连接测试失败: ${error instanceof Error ? error.message : String(error)}`, 'AI_TEST_FAILED');
     }
   });
 
