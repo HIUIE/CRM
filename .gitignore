@@ -12,6 +12,7 @@ coverage/
 uploads/
 backups/
 data/
+.claude/
 .learnings/
 .gemini/
 *.b
