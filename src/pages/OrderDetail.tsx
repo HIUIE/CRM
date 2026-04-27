@@ -48,6 +48,7 @@ import {
   ItemsSection,
   DocumentsVaultSection,
   FinanceSection,
+  ProfitSection,
   ProductionSection,
   CustomsSection,
   PackingSection,
@@ -349,6 +350,9 @@ export default function OrderDetailPage() {
             items={items}
             openOrderDrawer={openOrderDrawer}
             grandTotal={grandTotal}
+            itemsTotal={itemsTotal}
+            freightAmount={freightAmount}
+            miscAmount={miscAmount}
           />
 
           <DocumentsVaultSection
@@ -372,6 +376,14 @@ export default function OrderDetailPage() {
             onDelete={(r: FinanceRecord) => { if(window.confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>loadDetail({showLoading:false})) }}
             financeFilter={financeFilter}
             onFilterChange={setFinanceFilter}
+          />
+
+          <ProfitSection
+            user={user}
+            totalAmount={itemsTotal + freightAmount + miscAmount || 0}
+            freightAmount={freightAmount}
+            miscAmount={miscAmount}
+            itemsTotal={itemsTotal}
           />
 
           <ProductionSection

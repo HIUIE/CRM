@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronRight, MapPin, Mail, Edit3, DollarSign, Factory, ShieldCheck, Truck, Printer, Trash,
-  FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles,
+  FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles, Eye, EyeOff,
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
 import {
@@ -121,6 +121,9 @@ export function ItemsSection({
   items,
   openOrderDrawer,
   grandTotal,
+  itemsTotal = 0,
+  freightAmount = 0,
+  miscAmount = 0,
 }: {
   sectionRef: React.RefObject<HTMLDivElement | null>;
   collapsed: boolean;
@@ -128,6 +131,9 @@ export function ItemsSection({
   items: OrderItem[];
   openOrderDrawer: () => void;
   grandTotal: number;
+  itemsTotal?: number;
+  freightAmount?: number;
+  miscAmount?: number;
 }) {
   return (
     <WorkSection ref={sectionRef} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed} onToggle={onToggle} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!text-xs !px-3"><Plus size={12} className="mr-1" /> 编辑清单</LightActionButton> : null}>
@@ -149,8 +155,27 @@ export function ItemsSection({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-[#F1F5F9] dark:bg-navy-950 text-primary-navy dark:text-white font-extrabold border-t border-slate-200 dark:border-navy-800">
-              <tr><td colSpan={5} className="px-5 py-5 text-right text-xs uppercase tracking-widest opacity-70">合计总值 (估算)</td><td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td></tr>
+            <tfoot className="bg-[#F1F5F9] dark:bg-navy-950 border-t border-slate-200 dark:border-navy-800">
+              <tr className="text-secondary-slate dark:text-slate-400">
+                <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">商品小计 (Subtotal)</td>
+                <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {itemsTotal.toLocaleString()}</td>
+              </tr>
+              {freightAmount > 0 && (
+                <tr className="text-secondary-slate dark:text-slate-400">
+                  <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">运费估算 (Freight)</td>
+                  <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {freightAmount.toLocaleString()}</td>
+                </tr>
+              )}
+              {miscAmount > 0 && (
+                <tr className="text-secondary-slate dark:text-slate-400">
+                  <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">其他杂费 (Misc)</td>
+                  <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {miscAmount.toLocaleString()}</td>
+                </tr>
+              )}
+              <tr className="text-primary-navy dark:text-white font-extrabold border-t border-slate-200 dark:border-navy-700">
+                <td colSpan={5} className="px-5 py-5 text-right text-xs uppercase tracking-widest">合计总值 (Grand Total)</td>
+                <td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td>
+              </tr>
             </tfoot>
           </table>
         </div>
@@ -254,6 +279,63 @@ export function FinanceSection({
         <FinanceDashboard totalAmount={grandTotal} records={filteredRecords} receiptsByCurrency={summary.receiptsByCurrency} onPreview={onPreview} onEdit={onEdit} onDelete={onDelete} />
       ) : (
         <EmptyStateBoard title="暂无账务往来" description="该订单目前尚无收付款记录。请及时登记预付、尾款或运费流水。" icon={Wallet} actionLabel="+ 登记第一笔收支" onAction={onAdd} />
+      )}
+    </DocumentBoard>
+  );
+}
+
+// ==================== Profit Section ====================
+
+export function ProfitSection({
+  user,
+  totalAmount,
+  freightAmount,
+  miscAmount,
+  itemsTotal,
+}: {
+  user?: { name?: string; role?: string } | null;
+  totalAmount: number;
+  freightAmount: number;
+  miscAmount: number;
+  itemsTotal: number;
+}) {
+  const isAdmin = user?.role === 'admin';
+  const [revealed, setRevealed] = useState(false);
+
+  if (!isAdmin) return null;
+
+  // Estimate cost: typically freight + misc + 70% of items (rough COGS estimate)
+  const estimatedCOGS = itemsTotal * 0.7;
+  const totalCost = estimatedCOGS + freightAmount + miscAmount;
+  const grossProfit = totalAmount - totalCost;
+  const margin = totalAmount > 0 ? Math.round((grossProfit / totalAmount) * 100) : 0;
+
+  const ProfitRow = ({ label, value, bold }: { label: string; value: string; bold?: boolean }) => (
+    <div className={`flex justify-between items-center py-2 ${bold ? 'border-t border-slate-200 dark:border-navy-700 mt-1 pt-3' : ''}`}>
+      <span className={`text-xs ${bold ? 'font-extrabold text-primary-navy dark:text-white' : 'font-bold text-slate-500 dark:text-slate-400'} uppercase tracking-wider`}>{label}</span>
+      <span className={`text-sm data-field ${bold ? 'font-extrabold text-primary-navy dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300'}`}>{value}</span>
+    </div>
+  );
+
+  const formatVal = (v: number) => `USD ${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+  return (
+    <DocumentBoard title="成本与利润核算" action={
+      <button onClick={() => setRevealed(!revealed)} className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest">
+        {revealed ? <><EyeOff size={14} /> 隐藏金额</> : <><Eye size={14} /> 揭示金额</>}
+      </button>
+    }>
+      <div className="space-y-1 max-w-md">
+        <ProfitRow label="订单金额 (Revenue)" value={revealed ? formatVal(totalAmount) : '***'} />
+        <ProfitRow label="预估商品成本 (COGS)" value={revealed ? formatVal(estimatedCOGS) : '***'} />
+        <ProfitRow label="运费支出 (Freight)" value={revealed ? formatVal(freightAmount) : '***'} />
+        <ProfitRow label="其他杂费 (Misc)" value={revealed ? formatVal(miscAmount) : '***'} />
+        <ProfitRow label="总成本 (Total Cost)" value={revealed ? formatVal(totalCost) : '***'} />
+        <ProfitRow label="毛利润 (Gross Profit)" value={revealed ? formatVal(grossProfit) : '***'} bold />
+        <ProfitRow label={`毛利率 (Margin) ${revealed ? `(${margin}%)` : ''}`} value={revealed ? `${margin}%` : '***'} />
+      </div>
+      {!revealed && (
+        <div className="mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">🔒 仅管理员可见，点击"揭示金额"查看</div>
       )}
     </DocumentBoard>
   );

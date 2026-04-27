@@ -243,7 +243,7 @@ export function FinanceDashboard({
                             title={att.fileName}
                           >
                             {getFileIcon(att.fileName, 12)}
-                            <span className="max-w-[80px] truncate">{att.fileName}</span>
+                            <span className="truncate max-w-[200px]">{att.fileName}</span>
                           </button>
                         ))}
                         <button type="button" onClick={() => onEdit?.(record)} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-slate-200"><Edit3 size={14} /></button>
@@ -332,17 +332,24 @@ export function ProductionDashboard({
           <div className="mt-6 pt-6 border-t border-slate-100 dark:border-navy-800">
             <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">计划单附件 ({plan.photos.length})</div>
             <div className="flex flex-wrap gap-3">
-              {plan.photos.map(att => (
+              {plan.photos.map(att => {
+                const isImage = att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.fileName || '');
+                return (
                 <button key={att.id} onClick={() => onPreview?.(att)} className="group relative w-20 h-20 rounded-lg border border-slate-200 dark:border-navy-700 overflow-hidden bg-slate-50 dark:bg-navy-950 hover:ring-2 hover:ring-primary-navy/20 dark:hover:ring-tertiary-sage/20 transition-all shrink-0">
-                  {att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.fileName) ? (
-                    <img src={att.url} alt={att.fileName} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center">
-                      <FileText size={20} className="text-slate-300" />
-                    </div>
-                  )}
+                  {isImage ? (
+                    <img
+                      src={att.url}
+                      alt={att.fileName}
+                      className="h-full w-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+                    />
+                  ) : null}
+                  <div className={`h-full w-full flex items-center justify-center ${isImage ? 'hidden' : ''}`}>
+                    {att.fileName ? getFileIcon(att.fileName, 24) : <FileText size={24} className="text-slate-300" />}
+                  </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -577,7 +584,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
                   {log.attachments.map(att => (
                     <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-white hover:border-slate-200 transition-all shadow-sm">
                       <div className="text-slate-400 group-hover:text-slate-900">{getFileIcon(att.fileName, 12)}</div>
-                      <span className="text-xs font-semibold text-slate-900 truncate max-w-[140px]">{att.fileName}</span>
+                      <span className="text-xs font-semibold text-slate-900 truncate max-w-[240px]">{att.fileName}</span>
                     </button>
                   ))}
                 </div>
