@@ -112,7 +112,7 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F8FAFC] dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300">
+    <div className="min-h-screen w-full bg-[#F0F2F5] dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300">
       <NotificationDrawer isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
 
       {/* Mobile sidebar overlay */}
