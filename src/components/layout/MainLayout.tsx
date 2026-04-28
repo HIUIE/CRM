@@ -21,7 +21,9 @@ import {
   History,
   Printer,
   CheckCircle2,
-  Bell
+  Bell,
+  Menu,
+  X as XIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CommandPalette } from '../ui/CommandPalette';
@@ -44,6 +46,7 @@ export default function MainLayout() {
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { data: brand } = useSiteBrand();
@@ -112,8 +115,13 @@ export default function MainLayout() {
     <div className="min-h-screen w-full bg-[#F8FAFC] dark:bg-navy-950 text-primary-navy dark:text-white transition-colors duration-300">
       <NotificationDrawer isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
 
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
+      )}
+
       {/* 1. 固定侧边栏 - position: fixed, 脱离文档流 */}
-      <aside className="fixed left-0 top-0 flex h-screen w-[240px] flex-col border-r border-slate-200 bg-white shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 z-50 px-6">
+      <aside className={`fixed left-0 top-0 flex h-screen w-[240px] flex-col border-r border-slate-200 bg-white shadow-sm transition-all duration-300 dark:border-navy-800 dark:bg-navy-900 z-50 px-6 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         {/* Logo 区域：pt-8 pb-6 mb-8 确保与主导航视觉隔离 */}
         <div className="pt-8 pb-6 mb-8 border-b border-slate-50 dark:border-navy-800/50">
           <Link to="/" className="flex items-center gap-3 group">
@@ -200,7 +208,20 @@ export default function MainLayout() {
       </aside>
 
       {/* 2. 主内容区 - margin-left 避开固定侧边栏，自然撑开文档流 */}
-      <main className="ml-[240px] min-h-screen flex flex-col relative">
+      <main className="lg:ml-[240px] min-h-screen flex flex-col relative">
+        {/* Mobile header with hamburger */}
+        <div className="sticky top-0 z-40 flex items-center justify-between bg-white/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-4 py-3 lg:hidden">
+          <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 transition-all">
+            <Menu size={20} />
+          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowNotifications(true)} className="p-2 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all relative">
+              <Bell size={18} />
+              {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-error text-white text-[8px] font-bold flex items-center justify-center">{unreadCount}</span>}
+            </button>
+            <span className="text-xs font-bold text-primary-navy dark:text-white truncate max-w-[120px]">{siteName}</span>
+          </div>
+        </div>
         <CommandPalette />
         {!isDetailPage && (
           <header className="sticky top-0 z-40 bg-white/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-8 py-5 flex items-center justify-between transition-all shrink-0">
@@ -219,7 +240,7 @@ export default function MainLayout() {
           </header>
         )}
 
-        <div className="flex-1 px-8 py-6">
+        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <Outlet />
         </div>
       </main>
