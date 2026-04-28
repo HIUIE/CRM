@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2 } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -39,9 +40,7 @@ export default function CustomersView() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
@@ -92,22 +91,11 @@ export default function CustomersView() {
     setSearchParams(next);
   };
 
-  const loadCustomers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await apiFetch<CustomerListItem[]>(`/api/customers?${searchParams.toString()}`);
-      setCustomers(data);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, '读取客户数据失败'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadCustomers();
-  }, [searchParams]);
+  const { data: customers = [], isLoading: loading, error: queryError } = useQuery<CustomerListItem[]>({
+    queryKey: ['customers', searchParams.toString()],
+    queryFn: () => apiFetch<CustomerListItem[]>(`/api/customers?${searchParams.toString()}`),
+  });
+  const error = queryError ? getErrorMessage(queryError, '读取客户数据失败') : '';
 
   const countryOptions = useMemo(
     () =>
@@ -213,7 +201,7 @@ export default function CustomersView() {
         setToast('客户资料已更新');
         setTimeout(() => setToast(''), 3000);
         closeForm();
-        await loadCustomers();
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
       } else {
         const result = await apiFetch<{ id: number, displayId: string }>('/api/customers', {
           method: 'POST',
@@ -242,7 +230,7 @@ export default function CustomersView() {
     try {
       await apiFetch(`/api/customers/${customerToDelete.id}`, { method: 'DELETE' });
       setIsDeleteModalOpen(false);
-      await loadCustomers();
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     } catch (err) {
       setToast(getErrorMessage(err, '删除客户失败'));
     } finally {

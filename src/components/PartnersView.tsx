@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, MapPin, Star, Building2 } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -52,9 +53,7 @@ export default function PartnersView() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [partners, setPartners] = useState<PartnerRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
@@ -74,22 +73,11 @@ export default function PartnersView() {
     setSearchParams(next);
   };
 
-  const loadPartners = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await apiFetch<PartnerRecord[]>('/api/partners');
-      setPartners(data);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, '读取伙伴数据失败'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadPartners();
-  }, []);
+  const { data: partners = [], isLoading: loading, error: queryError } = useQuery<PartnerRecord[]>({
+    queryKey: ['partners'],
+    queryFn: () => apiFetch<PartnerRecord[]>('/api/partners'),
+  });
+  const error = queryError ? getErrorMessage(queryError, '读取伙伴数据失败') : '';
 
   const filteredPartners = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -200,7 +188,7 @@ export default function PartnersView() {
       }
       setTimeout(() => setToast(''), 3000);
       closeForm();
-      await loadPartners();
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, '保存伙伴失败'));
     }
@@ -213,9 +201,9 @@ export default function PartnersView() {
 
     try {
       await apiFetch(`/api/partners/${partner.id}`, { method: 'DELETE' });
-      await loadPartners();
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
     } catch (requestError) {
-      setError(getErrorMessage(requestError, '删除伙伴失败'));
+      console.error(getErrorMessage(requestError, '删除伙伴失败'));
     }
   };
 

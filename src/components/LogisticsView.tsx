@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Truck } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -61,10 +62,7 @@ function getStatusLabel(status: LogisticsSummary['status']) {
 export default function LogisticsView() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [records, setRecords] = useState<LogisticsSummary[]>([]);
-  const [orders, setOrders] = useState<OrderOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<LogisticsFormState>(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState<LogisticsFormState>(EMPTY_FORM);
@@ -90,25 +88,16 @@ export default function LogisticsView() {
     setSearchParams(next);
   };
 
-  const loadLogistics = async () => {
-    setLoading(true);
-    try {
-      const [data, orderData] = await Promise.all([
-        apiFetch<LogisticsSummary[]>(`/api/logistics?${searchParams.toString()}`),
-        apiFetch<OrderOption[]>('/api/orders')
-      ]);
-      setRecords(data);
-      setOrders(orderData);
-    } catch (err) {
-      setError(getErrorMessage(err, '读取物流列表失败'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadLogistics();
-  }, [searchParams]);
+  const { data: records = [], isLoading: recordsLoading, error: recordsError } = useQuery<LogisticsSummary[]>({
+    queryKey: ['logistics', searchParams.toString()],
+    queryFn: () => apiFetch<LogisticsSummary[]>(`/api/logistics?${searchParams.toString()}`),
+  });
+  const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery<OrderOption[]>({
+    queryKey: ['orders'],
+    queryFn: () => apiFetch<OrderOption[]>('/api/orders'),
+  });
+  const loading = recordsLoading || ordersLoading;
+  const error = recordsError ? getErrorMessage(recordsError, '读取物流列表失败') : ordersError ? getErrorMessage(ordersError, '读取物流列表失败') : '';
 
   useEffect(() => {
     if (searchParams.get('create') === '1') {
@@ -166,7 +155,7 @@ export default function LogisticsView() {
       setToast('创建物流成功');
       setTimeout(() => setToast(''), 3000);
       closeForm();
-      await loadLogistics();
+      queryClient.invalidateQueries({ queryKey: ['logistics'] });
     } catch (err) {
       setFormError(getErrorMessage(err, '创建物流失败'));
     }

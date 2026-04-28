@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  Building2, MapPin, Phone, Share2, Package, Wallet, Clock, 
+import {
+  Building2, MapPin, Phone, Share2, Package, Wallet, Clock,
   ArrowLeft, ChevronRight, Edit, Mail, Globe, ArrowDownRight, Truck, FileText, ArrowUpRight, Plus, Users, LayoutDashboard, DollarSign, Star, MoreVertical, Pencil, Save, X, Send, History, Check, CheckCircle2, MessageSquare, Eye, EyeOff
 } from 'lucide-react';
 import { maskContact } from '../lib/privacy';
@@ -61,7 +62,7 @@ interface CustomerDetailData {
   intent_products?: string;
   created_by_name?: string;
   created_at: string;
-  orders: OrderSummary[];
+  orders: any[];
   finance_records: FinanceListRecord[];
   system_activities: SystemActivity[];
   followups: CustomerFollowup[];
@@ -83,9 +84,6 @@ const LEAD_SOURCE_OPTIONS = [
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [data, setData] = useState<CustomerDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('followups');
   const [toast, setToast] = useState('');
   const [followupInput, setFollowupInput] = useState('');
@@ -98,23 +96,18 @@ export default function CustomerDetailPage() {
   // Inline Editing State
   const [editingField, setEditingField] = useState<string | null>(null);
 
+  const { data, isLoading, error: queryError, refetch } = useQuery<CustomerDetailData>({
+    queryKey: ['customer-detail', id],
+    queryFn: () => apiFetch<CustomerDetailData>(`/api/customers/${id}`),
+    enabled: !!id,
+  });
+  const loading = isLoading;
+  const error = queryError ? getErrorMessage(queryError, '读取客户画像失败') : '';
+
   const loadDetail = async () => {
     if (!id) return;
-    setLoading(true);
-    setError('');
-    try {
-      const result = await apiFetch<CustomerDetailData>(`/api/customers/${id}`);
-      setData(result);
-    } catch (err) {
-      setError(getErrorMessage(err, '读取客户画像失败'));
-    } finally {
-      setLoading(false);
-    }
+    await refetch();
   };
-
-  useEffect(() => {
-    void loadDetail();
-  }, [id]);
 
   const totalPaid = useMemo(() => data?.orders?.reduce((sum, o) => sum + (Number(o.paid_amount) || 0), 0) || 0, [data]);
   const totalAmount = useMemo(() => data?.orders?.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) || 0, [data]);
@@ -134,7 +127,7 @@ export default function CustomerDetailPage() {
           intentProducts: payload.intent_products,
         }),
       });
-      setData(payload);
+      await refetch();
       setToast('资料已自动保存');
       setTimeout(() => setToast(''), 2000);
     } catch (err) {

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet, Clock,
   FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight,
@@ -61,29 +62,15 @@ function formatActivityValue(val?: string) {
 }
 
 export default function DashboardView() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { data, isLoading, error } = useQuery<DashboardData>({
+    queryKey: ['dashboard'],
+    queryFn: () => apiFetch<DashboardData>('/api/dashboard'),
+    staleTime: 60 * 1000,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    const loadDashboard = async () => {
-      try {
-        const nextData = await apiFetch<DashboardData>('/api/dashboard');
-        if (mounted) setData(nextData);
-      } catch (requestError) {
-        if (mounted) setError(getErrorMessage(requestError, '读取控制台数据失败'));
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    void loadDashboard();
-    return () => { mounted = false; };
-  }, []);
-
-  if (loading) return <div className="p-8 text-sm text-slate-500 dark:text-slate-400 animate-pulse font-bold uppercase tracking-widest text-center">正在加载数字化指挥舱...</div>;
-  if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{error || '无法读取控制台数据'}</div>;
+  if (isLoading) return <div className="p-8 text-sm text-slate-500 dark:text-slate-400 animate-pulse font-bold uppercase tracking-widest text-center">正在加载数字化指挥舱...</div>;
+  if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{getErrorMessage(error, '无法读取控制台数据')}</div>;
 
   return (
     <div className="flex flex-col space-y-8">

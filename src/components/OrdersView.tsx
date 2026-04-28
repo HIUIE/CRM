@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, Hash } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -48,10 +49,7 @@ export default function OrdersView() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
-  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderSummary | null>(null);
@@ -83,25 +81,16 @@ export default function OrdersView() {
     setSearchParams(next);
   };
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [orderData, customerData] = await Promise.all([
-        apiFetch<OrderSummary[]>(`/api/orders?${searchParams.toString()}`),
-        apiFetch<CustomerListItem[]>('/api/customers'),
-      ]);
-      setOrders(orderData);
-      setCustomers(customerData);
-    } catch (err) {
-      setError(getErrorMessage(err, '读取数据失败'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadData();
-  }, [searchParams]);
+  const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery<OrderSummary[]>({
+    queryKey: ['orders', searchParams.toString()],
+    queryFn: () => apiFetch<OrderSummary[]>(`/api/orders?${searchParams.toString()}`),
+  });
+  const { data: customers = [], isLoading: customersLoading, error: customersError } = useQuery<CustomerListItem[]>({
+    queryKey: ['customers'],
+    queryFn: () => apiFetch<CustomerListItem[]>('/api/customers'),
+  });
+  const loading = ordersLoading || customersLoading;
+  const error = ordersError ? getErrorMessage(ordersError, '读取数据失败') : customersError ? getErrorMessage(customersError, '读取数据失败') : '';
 
   const {
     currentPage,
@@ -171,7 +160,7 @@ export default function OrdersView() {
       if (editingOrder) {
         await apiFetch(`/api/orders/${editingOrder.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
         closeForm();
-        await loadData();
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
       } else {
         const created = await apiFetch<{ display_id: string }>('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
         closeForm();
@@ -194,7 +183,7 @@ export default function OrdersView() {
     try {
       await apiFetch(`/api/orders/${orderToDelete.id}`, { method: 'DELETE' });
       setIsDeleteModalOpen(false);
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     } catch (err) {
       setToast(getErrorMessage(err, '删除订单失败'));
     } finally {

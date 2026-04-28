@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Building2, MapPin, Phone, Package, Wallet, Clock,
@@ -86,27 +87,16 @@ function getStatusMeta(status: string) {
 export default function PartnerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [data, setData] = useState<PartnerDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('orders');
   const [toast, setToast] = useState('');
 
-  const loadDetail = async () => {
-    if (!id) return;
-    setLoading(true);
-    setError('');
-    try {
-      const result = await apiFetch<PartnerDetail>(`/api/partners/${id}`);
-      setData(result);
-    } catch (err) {
-      setError(getErrorMessage(err, '读取伙伴画像失败'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { void loadDetail(); }, [id]);
+  const { data, isLoading, error: queryError } = useQuery<PartnerDetail>({
+    queryKey: ['partner-detail', id],
+    queryFn: () => apiFetch<PartnerDetail>(`/api/partners/${id}`),
+    enabled: !!id,
+  });
+  const loading = isLoading;
+  const error = queryError ? getErrorMessage(queryError, '读取伙伴画像失败') : '';
 
   if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-sm text-slate-500 animate-pulse uppercase tracking-widest font-bold">正在加载伙伴数据...</div>;
   if (error || !data) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error || '伙伴不存在'}</div>;

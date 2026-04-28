@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -216,7 +217,14 @@ export default function OrderDetailPage() {
     }
   };
 
-  useEffect(() => { void loadDetail(); }, [orderNo]);
+  useQuery({
+    queryKey: ['order-detail', orderNo],
+    queryFn: async () => {
+      await loadDetail();
+      return null;
+    },
+    enabled: !!orderNo,
+  });
 
   useEffect(() => {
     const handleScroll = () => {

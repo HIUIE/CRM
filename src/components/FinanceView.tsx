@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -59,11 +60,7 @@ export default function FinanceView() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [records, setRecords] = useState<FinanceListRecord[]>([]);
-  const [orders, setOrders] = useState<OrderOption[]>([]);
-  const [partners, setPartners] = useState<PartnerOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinanceListRecord | null>(null);
@@ -90,28 +87,20 @@ export default function FinanceView() {
     setSearchParams(next);
   };
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const [financeData, orderData, partnerData] = await Promise.all([
-        apiFetch<FinanceListRecord[]>(`/api/finance?${searchParams.toString()}`),
-        apiFetch<OrderOption[]>('/api/orders'),
-        apiFetch<PartnerOption[]>('/api/partners'),
-      ]);
-      setRecords(financeData);
-      setOrders(orderData);
-      setPartners(partnerData);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, '读取财务数据失败'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void fetchData();
-  }, [searchParams]);
+  const { data: records = [], isLoading: recordsLoading, error: recordsError } = useQuery<FinanceListRecord[]>({
+    queryKey: ['finance', searchParams.toString()],
+    queryFn: () => apiFetch<FinanceListRecord[]>(`/api/finance?${searchParams.toString()}`),
+  });
+  const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery<OrderOption[]>({
+    queryKey: ['orders'],
+    queryFn: () => apiFetch<OrderOption[]>('/api/orders'),
+  });
+  const { data: partners = [], isLoading: partnersLoading, error: partnersError } = useQuery<PartnerOption[]>({
+    queryKey: ['partners'],
+    queryFn: () => apiFetch<PartnerOption[]>('/api/partners'),
+  });
+  const loading = recordsLoading || ordersLoading || partnersLoading;
+  const error = recordsError ? getErrorMessage(recordsError, '读取财务数据失败') : ordersError ? getErrorMessage(ordersError, '读取财务数据失败') : partnersError ? getErrorMessage(partnersError, '读取财务数据失败') : '';
 
   const filteredRecords = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -198,7 +187,7 @@ export default function FinanceView() {
       }
       setTimeout(() => setToast(''), 3000);
       closeForm();
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, '保存财务记录失败'));
     }
@@ -208,9 +197,9 @@ export default function FinanceView() {
     if (!window.confirm(`确定删除这条记录吗？`)) return;
     try {
       await apiFetch(`/api/finance/${record.id}`, { method: 'DELETE' });
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
     } catch (requestError) {
-      setError(getErrorMessage(requestError, '删除财务记录失败'));
+      console.error(getErrorMessage(requestError, '删除财务记录失败'));
     }
   };
 
