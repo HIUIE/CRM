@@ -1,6 +1,6 @@
 # SmartTrade AI CRM — 项目全面审查报告
 
-> 审查日期：2026-04-27 | 版本：1.1.0 | 全栈优化完毕 + 自动更新 + 一键部署
+> 审查日期：2026-04-29 | 版本：1.1.0 | 全栈优化完毕 + 自动更新 + 一键部署
 
 ---
 
@@ -264,6 +264,22 @@
 
 > 注：已修复 9/9 项安全风险。全部完成。
 
+### 📋 新增安全风险 (2026-04-29)
+
+| 严重度 | 问题 | 位置 | 说明 |
+|--------|------|------|------|
+| 🔴 CRITICAL | PostgreSQL 默认 root 密码为 'root' | `server/db-pg.ts:291` | PG 初始化缺少生产环境的三目检查，默认弱密码 |
+| 🔴 CRITICAL | SQL 字符串拼接 | `server/routes/partners.ts:142` | `WHERE id IN (\${...})` 使用字符串拼接而非参数化查询 |
+| 🟠 HIGH | CSP 安全头被禁用 | `server/app.ts:49` | `contentSecurityPolicy: false` 暴露 XSS 风险 |
+| 🟠 HIGH | 文件上传无类型验证 | 多处 multer 配置 | 无 `fileFilter`，可上传任意文件类型（含 .html/.svg XSS 向量）|
+| 🟠 HIGH | 品牌 URL 未转义注入 HTML | `server/app.ts:36` | `brand.siteFavicon` 直接嵌入 HTML |
+| 🟠 HIGH | ZIP 提取无路径穿越防护 | `server/routes/import.ts:24,158` | ZIP 入口名未检查 `../`，存在 Zip Slip 风险 |
+| 🟠 HIGH | 系统更新 `process.exit(0)` 强制重启 | `server/routes/settings.ts:178-199` | 不等待现有请求处理完毕，构建失败可能宕机 |
+| 🟡 MEDIUM | API 密钥明文存储于数据库 | `server/routes/settings.ts:82-85` | AI API Key 以明文存 settings 表 |
+| 🟡 MEDIUM | 默认监听 0.0.0.0 | `server.ts:23` | 默认暴露所有网络接口 |
+| 🟡 MEDIUM | 导入临时文件不清理 | `server/routes/import.ts:11` | 文件处理完成后不删除，磁盘持续消耗 |
+| 🟡 MEDIUM | 导出无数据脱敏 | `server/services/export.ts` | 所有字段完整导出，含 PII 及内部注释 |
+
 ---
 
 ## 三、功能优化建议
@@ -443,7 +459,124 @@
 迭代 11 (更新) ✅  → 后端代理 GitHub API、一键自动更新(git pull→npm i→build→restart)
 迭代 12 (审计) ✅  → 全站代码审计：TS 零错误、构建通过、零 XSS、零密钥泄露、README 全面更新
 迭代 13 (部署) ✅  → README 新增快速部署/自动更新/安全架构/功能清单
+迭代 14 (体验) ✅  → 系统配置页拓宽（max-w: 1440px）、输入框限宽防面条排版
+迭代 15 (暗黑) ✅  → 暗黑模式层级重构：画布/卡片色阶拉开、次级文本提亮、边界线强化、品牌绿色校准
 ```
+
+### 六、全站代码质量深度审计 (2026-04-29)
+
+#### CRITICAL
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| `tsconfig.json` 缺 `strict: true` | `tsconfig.json` | 无 `noImplicitAny`/`strictNullChecks`，TypeScript 安全保证全部失效 |
+| `import.ts` 全文件滥用 `any` | `server/routes/import.ts` | 几乎所有函数签名和变量使用 `any` 类型 |
+
+#### HIGH
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| `sections.tsx` 达 1024 行 | `src/features/order-detail/sections.tsx` | 强烈建议拆分为更小的聚焦组件 |
+| DB 函数默认 `any` 回退 | `server/lib/db.ts:14,46,52,58` | `dbAll<T=any[]>`/`dbGet<T=any>` 失去类型安全 |
+| `excel-export.ts` 全文件滥用 `any` | `server/services/excel-export.ts` | 所有数据转换函数参数为 `: any` |
+
+#### MEDIUM
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| 无 `unhandledRejection` 处理器 | `server.ts` | 后台 Promise 拒绝静默失败 |
+| `getCountryDisplay` 未使用 import | `CustomersView.tsx:20` | 函数已导入但从未调用 |
+| `formatDateOnly` 影子定义 | `CustomerDetail.tsx:14,375` | import 被本地函数 shadow，重复代码 |
+| `useEffect` 缺 `updateParam` 依赖 | `CustomersView.tsx:73-81` | 防抖 useEffect 缺失依赖项 |
+| 订单写操作缺 `requireAdmin` | `orders.ts` 多处 | 生产/装箱等写操作仅靠全局 auth 保护 |
+| SQL 拼接非参数化 | `partners.ts:142` | `WHERE id IN (\${...})` |
+| 两处 `catch (error: any)` 不一致 | `ai.ts:75`, `settings.ts:197` | 与其余 15 个 route 文件模式不统一 |
+
+### 七、全站功能审计 (2026-04-29)
+
+#### HIGH — 功能缺陷
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| `order_items` 缺 `hs_code` 列 | `server/db.ts`, `server/db-pg.ts` | route 代码 INSERT/UPDATE 该字段，将导致 SQL 运行时错误 |
+| `production_logs` 缺 `log_date` 列 | `server/db.ts`, `server/db-pg.ts` | 同上，运行时 SQL 错误 |
+| PG 缺 `trade_mode` 列 | `server/db-pg.ts:147-152` | customs_records CREATE TABLE 缺少该列 |
+| PG 缺 `freight_forwarder`/`recipient_address`/`package_size` | `server/db-pg.ts:114-137` | logistics_records CREATE TABLE 缺少这三列 |
+| 财务列表未过滤 `deleted_at` | `server/routes/finance.ts:13-66` | 软删除记录仍然显示在列表中 |
+| 物流列表未过滤 `deleted_at` | `server/routes/logistics.ts:39-104` | 同上 |
+| 审计日志清理用 PG 语法 | `server/routes/audit.ts:12` | `NOW() - INTERVAL '30 days'` 在 SQLite 上失败 |
+| 导出 ZIP 重复定义 | `server/services/export.ts:103-117,239-243` | 第二个 `order_items` 定义覆盖第一个 |
+| 健康检查硬编码 `sqlite` | `server/api.ts:31` | 使用 PG 时仍显示 `database: 'sqlite'` |
+
+#### MEDIUM — 功能缺失
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| 任务无法删除 | `server/db*.ts` tasks 表 | 无 `deleted_at` 列，无 DELETE 端点 |
+| 合作伙伴搜索无效 | `server/routes/partners.ts:10-25` | GET /partners 忽略 `?q` 参数 |
+| 订单软删除子记录成孤儿 | `server/routes/orders.ts:220-224` | 未级联标记子表 deleted_at |
+| `initPgTables()` 名不副实 | `server/db-pg.ts:305-313` | 实际为 no-op，仅执行 SELECT 1 |
+
+### 八、全站性能审计 (2026-04-29)
+
+#### 🔴 CRITICAL
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| 数据库零索引 | `server/db-pg.ts` 全部表 | 无任何 `CREATE INDEX`，所有 JOIN 和 WHERE 触发顺序扫描 |
+| 客户端分页 | 全部 list 视图（Customers/Orders/Finance/Logistics/Partners） | 全量数据预取后在内存中 slice，万条记录时 O(n) |
+| 后端无 LIMIT/OFFSET | 全部 list 端点 | 所有记录一次性返回，数据量大时内存暴涨 |
+
+#### 🟠 HIGH
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| 仪表盘 8+ 串行 DB 查询 | `server/routes/dashboard.ts:8-244` | 每次加载执行 8 次以上独立全表扫描查询 |
+| 订单详情 ~15 次独立查询 | `server/services/order-detail.ts:12-369` | 每次加载执行约 15 次独立 round-trip |
+| logo.png 达 2MB | `public/logo.png` | 含作为 favicon 使用，建议压缩至 <100KB |
+| 缺少外键索引 | 13+ 个外键列 | orders.customer_id, finance_records.order_id 等全部无索引 |
+
+#### 🟡 MEDIUM
+
+| 问题 | 位置 | 说明 |
+|------|------|------|
+| jspdf(29MB)+html2canvas(4.4MB) 未分包 | `vite.config.ts` | 前端包体积大增，建议加 `vendor-pdf` manual chunk |
+| 订单搜索未防抖 | `src/components/OrdersView.tsx` | 每次击键触发服务端查询 |
+| 品牌缓存 TTL 仅 5 秒 | `server/app.ts:18` | `BRAND_CACHE_TTL = 5000`，建议至少 5 分钟 |
+| 缺失 `Cache-Control: immutable` | `server/app.ts:96-108` | 哈希化 Vite 资源可设置一年缓存 |
+
+#### 推荐缺失索引（共 13 个）
+
+```sql
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_deleted_at ON orders(deleted_at);
+CREATE INDEX idx_orders_created_at ON orders(created_at);
+CREATE INDEX idx_finance_records_order_id ON finance_records(order_id);
+CREATE INDEX idx_finance_records_type_status ON finance_records(type, status);
+CREATE INDEX idx_logistics_records_order_id ON logistics_records(order_id);
+CREATE INDEX idx_customers_deleted_at ON customers(deleted_at);
+CREATE INDEX idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX idx_attachments_entity ON attachments(entity_type, entity_id);
+CREATE INDEX idx_tasks_entity ON tasks(entity_type, entity_id);
+CREATE INDEX idx_finance_records_created_at ON finance_records(created_at);
+CREATE INDEX idx_orders_display_id ON orders(display_id);
+```
+
+#### Top 10 跨领域修复优先级
+
+| 优先级 | 类型 | 问题 | 文件 |
+|--------|------|------|------|
+| 1 | 安全 | PG 默认弱密码 | `server/db-pg.ts:291` |
+| 2 | 功能 | 缺失列导致 SQL 错误 | `server/db*.ts` 多处 |
+| 3 | 安全+质量 | SQL 字符串拼接 | `server/routes/partners.ts:142` |
+| 4 | 性能 | 数据库零索引 | `server/db-pg.ts` 全部表 |
+| 5 | 性能 | 客户端分页 + 后端无 LIMIT | 全部 list 视图 + API |
+| 6 | 安全 | 文件上传无类型验证 | 多处 multer 配置 |
+| 7 | 功能 | 财务/物流列表未过滤软删除 | `finance.ts`, `logistics.ts` |
+| 8 | 质量 | 无 `strict: true` | `tsconfig.json` |
+| 9 | 性能 | 仪表盘 8+ 串行查询 | `dashboard.ts` |
+| 10 | 安全 | CSP 被禁用 | `server/app.ts:49` |
 
 ### 最终全量审计结果 (2026-04-27)
 
@@ -460,6 +593,13 @@
 | 审计日志 | ✅ 30 天自动清理 |
 | 敏感路径保护 | ✅ /dist/ 外存储断言 |
 | 附件安全 | ✅ UUID 重命名 + 路径 containment |
+| 安全审计 (2026-04-29) | 🔴 2 CRITICAL / 🟠 5 HIGH / 🟡 4 MEDIUM |
+| 代码质量审计 (2026-04-29) | 🔴 2 CRITICAL / 🟠 3 HIGH / 🟡 6 MEDIUM |
+| 功能审计 (2026-04-29) | 🟠 9 HIGH / 🟡 5 MEDIUM / 🔵 10 LOW |
+| 性能审计 (2026-04-29) | 🔴 3 CRITICAL / 🟠 5 HIGH / 🟡 6 MEDIUM |
+| 暗黑模式优化 (2026-04-29) | ✅ 分层/对比度/边框/品牌色全面校准 |
+| 设置页 UI 拓宽 (2026-04-29) | ✅ max-w 1440px + 输入框限宽 |
+| 导入导出集中管理 (2026-04-29) | ✅ 合并至系统配置「数据管理」标签页 |
 
 ---
 ### 后续优化方向
