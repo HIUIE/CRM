@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Lock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import { useSiteBrand } from '../hooks/useSiteBrand';
 import type { AuthUser } from '../types/auth';
 
 interface LoginResponse {
@@ -13,22 +14,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [siteName, setSiteName] = useState('SmartTrade AI CRM');
-  const [siteSlogan, setSiteSlogan] = useState('');
-  const [siteLogo, setSiteLogo] = useState('/logo.png');
+  const { data: brand } = useSiteBrand();
+  const siteName = brand?.siteName || 'SmartTrade AI CRM';
+  const siteSlogan = brand?.siteSlogan || '';
+  const siteLogo = brand?.siteLogo || '/logo.png';
   const { login } = useAuth();
-
-  useEffect(() => {
-    const fetchBrand = async () => {
-      try {
-        const data = await apiFetch<{ siteName: string; siteSlogan: string; siteLogo: string }>('/api/settings/basic');
-        if (data.siteName) setSiteName(data.siteName);
-        if (data.siteSlogan) setSiteSlogan(data.siteSlogan);
-        if (data.siteLogo) setSiteLogo(data.siteLogo);
-      } catch (e) {}
-    };
-    void fetchBrand();
-  }, []);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();

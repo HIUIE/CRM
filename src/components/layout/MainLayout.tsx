@@ -29,6 +29,7 @@ import { NotificationDrawer } from '../ui/NotificationDrawer';
 import { Drawer } from '../ui/Drawer';
 import AIAssistantFloating from '../ui/AIAssistantFloating';
 import { apiFetch } from '../../lib/api';
+import { useSiteBrand } from '../../hooks/useSiteBrand';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -45,9 +46,9 @@ export default function MainLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [siteName, setSiteName] = useState('SmartTrade AI CRM');
-  const [siteLogo, setSiteLogo] = useState('/logo.png');
-
+  const { data: brand } = useSiteBrand();
+  const siteName = brand?.siteName || 'SmartTrade AI CRM';
+  const siteLogo = brand?.siteLogo || '/logo.png';
   useEffect(() => {
     const fetchUnread = async () => {
       try {
@@ -55,17 +56,9 @@ export default function MainLayout() {
         setUnreadCount(data.count);
       } catch (e) {}
     };
-    const fetchBrand = async () => {
-      try {
-        const data = await apiFetch<{ siteName: string; siteLogo: string }>('/api/settings/basic');
-        if (data.siteName) setSiteName(data.siteName);
-        if (data.siteLogo) setSiteLogo(data.siteLogo);
-      } catch (e) {}
-    };
     if (user) {
       void fetchUnread();
-      void fetchBrand();
-      const timer = setInterval(fetchUnread, 30000); // Check every 30s
+      const timer = setInterval(fetchUnread, 30000);
       return () => clearInterval(timer);
     }
   }, [user]);
