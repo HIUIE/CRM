@@ -18,6 +18,7 @@ import type { StandardTimeRange } from '../lib/date';
 import { withTransition } from '../lib/transition';
 import type { CustomerListItem, OrderSummary } from '../types/crm';
 
+
 type OrderFormState = {
   displayId: string;
   customerId: string;
@@ -365,6 +366,7 @@ export default function OrdersView() {
         entityId={orderToDelete?.display_id || ''}
         isDeleting={isDeleting}
       />
+
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );

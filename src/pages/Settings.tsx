@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus, X, Globe, DollarSign, AlertCircle, Loader2, RefreshCw, GitBranch, Clock, ExternalLink, Bell } from 'lucide-react';
+import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus, X, Globe, DollarSign, AlertCircle, Loader2, RefreshCw, GitBranch, Clock, ExternalLink, Bell, Upload, DatabaseBackup, PackageSearch } from 'lucide-react';
 import Field from '../components/ui/Field';
 import { apiDownload, apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import FilterPill from '../components/ui/FilterPill';
+import ImportModal from '../components/ui/ImportModal';
 import type { UserRole } from '../types/auth';
 import type { AiSettings, DocumentSettings, ManagedUser } from '../types/crm';
 
@@ -21,7 +22,7 @@ const EMPTY_USER_FORM: UserFormState = {
   password: '',
 };
 
-type SettingsTab = 'general' | 'export' | 'interface' | 'ai' | 'update';
+type SettingsTab = 'general' | 'data' | 'interface' | 'ai' | 'update';
 
 interface VersionInfo {
   version: string;
@@ -84,6 +85,7 @@ export default function SettingsView() {
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<'xlsx' | 'customer-archive' | 'zip-csv'>('xlsx');
+  const [importEntityType, setImportEntityType] = useState<'CUSTOMER' | 'ORDER' | null>(null);
   const [testingAi, setTestingAi] = useState(false);
   const [aiTestResult, setAiTestResult] = useState<'idle' | 'success' | 'fail'>('idle');
   const [selectedProvider, setSelectedProvider] = useState('deepseek');
@@ -396,7 +398,7 @@ export default function SettingsView() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex bg-white dark:bg-navy-900 p-1 rounded-lg border border-slate-200 dark:border-navy-800 w-fit transition-colors">
          <button onClick={() => setActiveTab('general')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Settings size={16} /> 常规配置</button>
-         <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'export' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Download size={16} /> 数据导出</button>
+         <button onClick={() => setActiveTab('data')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'data' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Download size={16} /> 数据管理</button>
          <button onClick={() => setActiveTab('interface')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'interface' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Layout size={16} /> 团队管理</button>
          <button onClick={() => setActiveTab('ai')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'ai' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><BrainCircuit size={16} /> AI 配置</button>
          <button onClick={() => setActiveTab('update')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'update' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><RefreshCw size={16} /> 版本更新</button>
@@ -529,54 +531,103 @@ export default function SettingsView() {
         </section>
       )}
 
-      {/* ===== Export Tab ===== */}
-      {activeTab === 'export' && (
+      {/* ===== Data Tab (Import + Export) ===== */}
+      {activeTab === 'data' && (
         <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 transition-colors">
-          <div className="mb-8">
-            <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
-              <Download className="mr-2 h-5 w-5 text-primary-navy dark:text-tertiary-sage" />
-              数据导出
-            </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">选择导出格式，一键归档业务数据。</p>
-          </div>
-
-          <div className="space-y-4 mb-8">
-            {EXPORT_FORMATS.map(fmt => (
-              <div
-                key={fmt.id}
-                onClick={() => setExportFormat(fmt.id as typeof exportFormat)}
-                className={`flex items-start gap-4 p-5 rounded-lg border cursor-pointer transition-all ${
-                  exportFormat === fmt.id
-                    ? 'border-primary-navy dark:border-tertiary-sage bg-primary-navy/5 dark:bg-tertiary-sage/10'
-                    : 'border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 hover:border-slate-300 dark:hover:border-navy-700'
-                }`}
-              >
-                <div className={`p-2 rounded-lg ${exportFormat === fmt.id ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-100 dark:bg-navy-800 text-slate-500'}`}>
-                  {fmt.icon}
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-bold text-primary-navy dark:text-white">{fmt.title}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{fmt.desc}</div>
-                </div>
-                {exportFormat === fmt.id && <CheckCircle2 size={18} className="text-primary-navy dark:text-tertiary-sage shrink-0 mt-1" />}
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4 p-5 rounded-lg bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800">
-            <div className="flex-1">
-              <div className="text-sm font-bold text-primary-navy dark:text-white">仅管理员可操作</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">导出包包含所有业务数据，请妥善保管。</div>
+          {/* Import Section */}
+          <div className="mb-10">
+            <div className="mb-6">
+              <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
+                <Upload className="mr-2 h-5 w-5 text-primary-navy dark:text-tertiary-sage" />
+                数据导入
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">批量导入客户或订单数据，支持 XLSX、CSV 及系统备份 ZIP。</p>
             </div>
-            <button
-              type="button"
-              onClick={() => void exportData()}
-              disabled={exporting}
-              className="btn-primary shadow-md disabled:opacity-60"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {exporting ? '正在导出...' : `立即导出`}
-            </button>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <button
+                onClick={() => setImportEntityType('CUSTOMER')}
+                className="flex items-start gap-4 p-5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 hover:border-primary-navy dark:hover:border-tertiary-sage transition-all text-left"
+              >
+                <div className="p-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shrink-0">
+                  <PackageSearch size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-primary-navy dark:text-white mb-1">导入客户数据</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">从 XLSX/CSV 文件中批量导入客户资料，支持自动匹配字段。</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setImportEntityType('ORDER')}
+                className="flex items-start gap-4 p-5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 hover:border-primary-navy dark:hover:border-tertiary-sage transition-all text-left"
+              >
+                <div className="p-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shrink-0">
+                  <FileDigit size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-primary-navy dark:text-white mb-1">导入订单数据</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">从 XLSX/CSV 文件中批量导入订单，需确保客户名称匹配已有客户。</div>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-4 p-4 rounded-lg bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 flex items-start gap-3">
+              <DatabaseBackup size={16} className="text-slate-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                也支持上传系统导出的 ZIP 备份包直接还原，系统会自动识别客户和订单数据。
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200 dark:border-navy-800 pt-10">
+            {/* Export Section (existing) */}
+            <div className="mb-6">
+              <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
+                <Download className="mr-2 h-5 w-5 text-primary-navy dark:text-tertiary-sage" />
+                数据导出
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">选择导出格式，一键归档业务数据。</p>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              {EXPORT_FORMATS.map(fmt => (
+                <div
+                  key={fmt.id}
+                  onClick={() => setExportFormat(fmt.id as typeof exportFormat)}
+                  className={`flex items-start gap-4 p-5 rounded-lg border cursor-pointer transition-all ${
+                    exportFormat === fmt.id
+                      ? 'border-primary-navy dark:border-tertiary-sage bg-primary-navy/5 dark:bg-tertiary-sage/10'
+                      : 'border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 hover:border-slate-300 dark:hover:border-navy-700'
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg ${exportFormat === fmt.id ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-100 dark:bg-navy-800 text-slate-500'}`}>
+                    {fmt.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-bold text-primary-navy dark:text-white">{fmt.title}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{fmt.desc}</div>
+                  </div>
+                  {exportFormat === fmt.id && <CheckCircle2 size={18} className="text-primary-navy dark:text-tertiary-sage shrink-0 mt-1" />}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-4 p-5 rounded-lg bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800">
+              <div className="flex-1">
+                <div className="text-sm font-bold text-primary-navy dark:text-white">仅管理员可操作</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">导出包包含所有业务数据，请妥善保管。</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void exportData()}
+                disabled={exporting}
+                className="btn-primary shadow-md disabled:opacity-60"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? '正在导出...' : `立即导出`}
+              </button>
+            </div>
           </div>
         </section>
       )}
@@ -857,6 +908,14 @@ export default function SettingsView() {
           </div>
         </section>
       )}
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={importEntityType !== null}
+        onClose={() => setImportEntityType(null)}
+        onSuccess={() => setImportEntityType(null)}
+        entityType={importEntityType || 'CUSTOMER'}
+      />
 
       {/* ===== Version Update Tab ===== */}
       {activeTab === 'update' && (

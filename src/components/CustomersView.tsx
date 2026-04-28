@@ -20,6 +20,7 @@ import CountryDisplay from './ui/CountryDisplay';
 import { getCountryDisplay } from '../lib/countries';
 import type { CustomerListItem } from '../types/crm';
 
+
 type CustomerForm = {
   name: string;
   country: string;
@@ -48,6 +49,7 @@ export default function CustomersView() {
   const [form, setForm] = useState<CustomerForm>(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState<CustomerForm>(EMPTY_FORM);
   const [toast, setToast] = useState('');
+
 
   // Delete Modal States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -133,6 +135,7 @@ export default function CustomersView() {
       openCreate();
       updateParam('create', '');
     }
+
   }, [searchParams]);
 
   const openCreate = () => {
@@ -414,7 +417,8 @@ export default function CustomersView() {
         isDeleting={isDeleting}
       />
 
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
+
+{toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }

@@ -9,7 +9,6 @@ import {
   Building2,
   Bot,
   Settings,
-  Plus,
   LogOut,
   CircleHelp,
   Sun,
@@ -87,8 +86,18 @@ export default function MainLayout() {
   const getHeaderInfo = () => {
     switch (activeTab) {
       case 'dashboard': return { title: '业务控制台', subtitle: '实时掌握业务全局，快速处理关键任务', actionLabel: '新建订单', actionPath: '/orders?create=1' };
-      case 'orders': return { title: '订单台', subtitle: '稳定推进团队日常协作与订单流转。', actionLabel: '新建订单', actionPath: '/orders?create=1' };
-      case 'customers': return { title: '客户档案', subtitle: '统一管理客户资料，沉淀高价值商业线索。', actionLabel: '新建客户', actionPath: '/customers?create=1' };
+      case 'orders': return {
+        title: '订单台',
+        subtitle: '稳定推进团队日常协作与订单流转。',
+        actionLabel: '新建订单',
+        actionPath: '/orders?create=1',
+      };
+      case 'customers': return {
+        title: '客户档案',
+        subtitle: '统一管理客户资料，沉淀高价值商业线索。',
+        actionLabel: '新建客户',
+        actionPath: '/customers?create=1',
+      };
       case 'partners': return { title: '合作伙伴', subtitle: '管理供应商与物流伙伴，优化供应链协同。', actionLabel: '新增伙伴', actionPath: '/partners?create=1' };
       case 'finance': return { title: '财务流水', subtitle: '监控收支状态，保障业务资金链安全。', actionLabel: '录入收支', actionPath: '/finance?create=1' };
       case 'logistics': return { title: '物流打包', subtitle: '追踪货运状态，确保交付流程准时合规。', actionLabel: '创建物流', actionPath: '/logistics?create=1' };
