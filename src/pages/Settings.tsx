@@ -395,7 +395,7 @@ export default function SettingsView() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto w-[85%] max-w-[1440px] space-y-6">
       <div className="flex bg-white dark:bg-navy-900 p-1 rounded-lg border border-slate-200 dark:border-navy-800 w-fit transition-colors">
          <button onClick={() => setActiveTab('general')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Settings size={16} /> 常规配置</button>
          <button onClick={() => setActiveTab('data')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'data' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><Download size={16} /> 数据管理</button>
@@ -420,7 +420,7 @@ export default function SettingsView() {
             </div>
           </div>
 
-          <div className="space-y-8 max-w-3xl">
+          <div className="space-y-8 max-w-4xl">
             {/* Site Brand Settings */}
             <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
               <h3 className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-4">
@@ -429,10 +429,10 @@ export default function SettingsView() {
               <div className="space-y-5">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="站点名称">
-                    <input value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="如 SmartTrade AI CRM" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
+                    <input value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="如 SmartTrade AI CRM" className="w-full max-w-md rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
                   </Field>
                   <Field label="站点口号">
-                    <input value={siteSlogan} onChange={e => setSiteSlogan(e.target.value)} placeholder="如 专业的外贸业务管理专家" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
+                    <input value={siteSlogan} onChange={e => setSiteSlogan(e.target.value)} placeholder="如 专业的外贸业务管理专家" className="w-full max-w-md rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
                   </Field>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -482,7 +482,7 @@ export default function SettingsView() {
                     value={orderNumberPrefix}
                     onChange={(event) => setOrderNumberPrefix(event.target.value)}
                     placeholder="如 ORD- / PO-"
-                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+                    className="w-full max-w-xs rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
                   />
                 </Field>
                 <button
@@ -521,7 +521,7 @@ export default function SettingsView() {
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-medium">配置后，新订单创建时将自动推送通知到企业微信群。</p>
               <div className="flex gap-3 items-end">
-                <div className="flex-1">
+                <div className="flex-1 max-w-xl">
                   <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
                 </div>
                 <button onClick={saveWebhook} className="btn-primary shadow-md shrink-0">{savedWebhook ? '已保存' : '保存'}</button>
@@ -649,7 +649,7 @@ export default function SettingsView() {
             </div>
           </div>
 
-          <div className="space-y-8 max-w-3xl">
+          <div className="space-y-8 max-w-4xl">
             {/* Provider Selection */}
             <div>
               <label className="text-xs font-bold text-primary-navy dark:text-white uppercase tracking-widest mb-3 block">选择 AI 服务商</label>
@@ -701,13 +701,13 @@ export default function SettingsView() {
               </Field>
             </div>
 
-            <Field label="API 访问密钥 (API Key)">
+            <Field label="API 访问密钥 (API Key)" className="max-w-lg">
               <div className="flex gap-3">
                 <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="留空表示沿用现有密钥" className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white" />
               </div>
             </Field>
 
-            <Field label="自定义 API 代理地址 (Base URL)">
+            <Field label="自定义 API 代理地址 (Base URL)" className="max-w-lg">
               <input type="text" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder={AI_PROVIDERS.find(p => p.id === selectedProvider)?.baseUrl || 'https://api.deepseek.com'} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white" />
             </Field>
 
@@ -825,7 +825,7 @@ export default function SettingsView() {
 
               <div className="space-y-5">
                 {!editingUser ? (
-                  <Field label="用户名">
+                  <Field label="用户名" className="max-w-sm">
                     <input
                       value={userForm.username}
                       onChange={(event) => setUserForm((current) => ({ ...current, username: event.target.value }))}
@@ -838,7 +838,7 @@ export default function SettingsView() {
                   </Field>
                 )}
 
-                <Field label="成员真实姓名">
+                <Field label="成员真实姓名" className="max-w-sm">
                   <input
                     value={userForm.name}
                     onChange={(event) => setUserForm((current) => ({ ...current, name: event.target.value }))}
@@ -846,7 +846,7 @@ export default function SettingsView() {
                   />
                 </Field>
 
-                <Field label="角色权限">
+                <Field label="角色权限" className="max-w-sm">
                   <select
                     value={userForm.role}
                     onChange={(event) => setUserForm((current) => ({ ...current, role: event.target.value as UserRole }))}
@@ -858,7 +858,7 @@ export default function SettingsView() {
                 </Field>
 
                 {!editingUser ? (
-                  <Field label="初始访问密码">
+                  <Field label="初始访问密码" className="max-w-sm">
                     <input
                       type="password"
                       value={userForm.password}
@@ -896,7 +896,7 @@ export default function SettingsView() {
                       value={resetPassword}
                       onChange={(event) => setResetPassword(event.target.value)}
                       placeholder="新密码(至少6位)"
-                      className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white"
+                      className="flex-1 max-w-xs rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white"
                     />
                     <button onClick={submitResetPassword} className="rounded-lg bg-slate-900 dark:bg-tertiary-sage px-6 py-3 text-sm font-bold text-white hover:bg-black dark:hover:bg-emerald-700 transition-all shadow-md">
                       提交
