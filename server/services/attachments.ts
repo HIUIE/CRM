@@ -1,5 +1,5 @@
 import fs from 'fs/promises';
-import { db } from '../db.js';
+import { dbAll, dbRun } from '../lib/db.js';
 import type { AttachmentEntityType } from '../domain.js';
 import { buildAttachmentUrl, getStoredNameFromRecord, resolveAttachmentAbsolutePath } from '../lib/files.js';
 
@@ -9,7 +9,7 @@ export async function getAttachmentsByEntity(entityType: AttachmentEntityType, e
   }
 
   const placeholders = entityIds.map(() => '?').join(', ');
-  const rows = await db.all<Record<string, unknown>[]>(
+  const rows = await dbAll<Record<string, unknown>[]>(
     `
       SELECT id, entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, created_at
       FROM attachments
@@ -48,7 +48,7 @@ export async function bindAttachmentsToEntity(entityType: AttachmentEntityType, 
   }
 
   const placeholders = attachmentIds.map(() => '?').join(', ');
-  await db.run(
+  await dbRun(
     `
       UPDATE attachments
       SET entity_type = ?, entity_id = ?
@@ -59,7 +59,7 @@ export async function bindAttachmentsToEntity(entityType: AttachmentEntityType, 
 }
 
 export async function deleteAttachmentRows(entityType: AttachmentEntityType, entityId: number) {
-  const attachments = await db.all<{ id: number; file_path: string }[]>(
+  const attachments = await dbAll<{ id: number; file_path: string }[]>(
     `SELECT id, file_path FROM attachments WHERE entity_type = ? AND entity_id = ?`,
     [entityType, entityId],
   );
@@ -78,5 +78,5 @@ export async function deleteAttachmentRows(entityType: AttachmentEntityType, ent
     }
   }
 
-  await db.run(`DELETE FROM attachments WHERE entity_type = ? AND entity_id = ?`, [entityType, entityId]);
+  await dbRun(`DELETE FROM attachments WHERE entity_type = ? AND entity_id = ?`, [entityType, entityId]);
 }

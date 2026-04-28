@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { db } from '../db.js';
+import { dbGet } from '../lib/db.js';
 import { clearAuthCookie, clearCsrfCookie, getCookieOptions, requireAuth, setCsrfCookie, signAuthToken, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError, fail } from '../lib/http.js';
 import { readString } from '../lib/values.js';
@@ -47,7 +47,7 @@ export function createAuthRouter() {
     }
 
     try {
-      const user = await db.get<{
+      const user = await dbGet<{
         id: number;
         username: string;
         role: 'admin' | 'staff';
@@ -100,7 +100,7 @@ export function createAuthRouter() {
     try {
       requireAuth(req as AuthedRequest, res, async () => {
         const userId = (req as AuthedRequest).user!.id;
-        const user = await db.get<{
+        const user = await dbGet<{
           id: number;
           username: string;
           role: 'admin' | 'staff';

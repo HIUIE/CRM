@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbGet, SQL } from '../lib/db.js';
 import { handleRouteError } from '../lib/http.js';
 
 export function createDashboardRouter() {
@@ -7,7 +7,7 @@ export function createDashboardRouter() {
 
   router.get('/', async (_req, res) => {
     try {
-      const overview = await db.get<{
+      const overview = await dbGet<{
         totalOrders: number;
         activeOrders: number;
       }>(`
@@ -17,7 +17,7 @@ export function createDashboardRouter() {
         FROM orders
       `);
 
-      const financeStats = await db.get<{
+      const financeStats = await dbGet<{
         receiptUsd: number;
         pendingReceiptUsd: number;
         pendingCount: number;
@@ -29,11 +29,11 @@ export function createDashboardRouter() {
         FROM finance_records
       `);
 
-      const activeLogistics = await db.get<{ count: number }>(
+      const activeLogistics = await dbGet<{ count: number }>(
         `SELECT COUNT(*) AS count FROM logistics_records WHERE status != 'arrived'`,
       );
 
-      const overduePayments = await db.all<{
+      const overduePayments = await dbAll<{
         id: number;
         order_display_id: string;
         customer_name: string;
@@ -44,7 +44,7 @@ export function createDashboardRouter() {
       }[]>(`
         SELECT
           f.id, o.display_id as order_display_id, c.name as customer_name, f.amount, f.currency, f.created_at,
-          CAST((julianday('now') - julianday(f.created_at)) AS INTEGER) as days_pending
+          ${SQL.daysBetween('f.created_at')} as days_pending
         FROM finance_records f
         JOIN orders o ON f.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
@@ -53,7 +53,7 @@ export function createDashboardRouter() {
         LIMIT 3
       `);
 
-      const missingCustoms = await db.all<{
+      const missingCustoms = await dbAll<{
         id: number;
         order_display_id: string;
         customer_name: string;
@@ -67,7 +67,7 @@ export function createDashboardRouter() {
         LIMIT 2
       `);
 
-      const missingLogistics = await db.all<{
+      const missingLogistics = await dbAll<{
         id: number;
         order_display_id: string;
         customer_name: string;
@@ -114,7 +114,7 @@ export function createDashboardRouter() {
         }))
       ].slice(0, 5);
 
-      const activitiesRows = await db.all<{
+      const activitiesRows = await dbAll<{
         type: string;
         id: number;
         display_id: string;
@@ -158,7 +158,7 @@ export function createDashboardRouter() {
         order_display_id: a.display_id
       }));
 
-      const statusRows = await db.all<{ status: string, count: number }[]>(`
+      const statusRows = await dbAll<{ status: string, count: number }[]>(`
         SELECT status, COUNT(*) as count FROM orders GROUP BY status
       `);
 
@@ -189,9 +189,9 @@ export function createDashboardRouter() {
       })).sort((a, b) => b.count - a.count);
 
       // Monthly trends (last 6 months)
-      const monthlyTrends = await db.all<{ month: string; orders: number; revenue: number }[]>(`
+      const monthlyTrends = await dbAll<{ month: string; orders: number; revenue: number }[]>(`
         SELECT
-          strftime('%Y-%m', created_at) AS month,
+          ${SQL.date('created_at', '%Y-%m')} AS month,
           COUNT(*) AS orders,
           COALESCE(SUM(total_amount), 0) AS revenue
         FROM orders
@@ -200,7 +200,7 @@ export function createDashboardRouter() {
       `);
 
       // Total customer count
-      const customerCount = await db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL`);
+      const customerCount = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL`);
 
       res.json({
         overview: {

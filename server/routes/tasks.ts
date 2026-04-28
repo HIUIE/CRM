@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun, dbBegin, dbCommit, dbRollback } from '../lib/db.js';
 import { requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString, readNumber } from '../lib/values.js';
@@ -33,7 +33,7 @@ export function createTasksRouter() {
     }
 
     try {
-      const tasks = await db.all(`
+      const tasks = await dbAll(`
         SELECT t.*, u.name as assignee_name, u2.name as creator_name
         FROM tasks t
         JOIN users u ON t.assignee_id = u.id
@@ -54,7 +54,7 @@ export function createTasksRouter() {
   router.get('/:id', requireAuth, async (req, res) => {
     const taskId = Number(req.params.id);
     try {
-      const task = await db.get(`
+      const task = await dbGet(`
         SELECT t.*, u.name as assignee_name, u2.name as creator_name
         FROM tasks t
         JOIN users u ON t.assignee_id = u.id
@@ -64,7 +64,7 @@ export function createTasksRouter() {
 
       if (!task) return fail(res, 404, '任务不存在');
 
-      const comments = await db.all(`
+      const comments = await dbAll(`
         SELECT c.*, u.name as creator_name
         FROM task_comments c
         JOIN users u ON c.created_by = u.id
@@ -75,7 +75,7 @@ export function createTasksRouter() {
       if (comments.length > 0) {
         const commentIds = comments.map(c => c.id);
         const placeholders = commentIds.map(() => '?').join(',');
-        const allAttachments = await db.all(`
+        const allAttachments = await dbAll(`
           SELECT a.*, ta.comment_id
           FROM attachments a
           JOIN task_attachments ta ON a.id = ta.attachment_id
@@ -113,12 +113,12 @@ export function createTasksRouter() {
     if (!content) return fail(res, 400, '请输入评论内容');
 
     try {
-      const task = await db.get(`SELECT * FROM tasks WHERE id = ?`, [taskId]);
+      const task = await dbGet(`SELECT * FROM tasks WHERE id = ?`, [taskId]);
       if (!task) return fail(res, 404, '任务不存在');
 
-      await db.run('BEGIN TRANSACTION');
+      await dbBegin();
 
-      const result = await db.run(
+      const result = await dbRun(
         `INSERT INTO task_comments (task_id, content, created_by) VALUES (?, ?, ?)`,
         [taskId, content, req.user?.id]
       );
@@ -128,22 +128,22 @@ export function createTasksRouter() {
       const attachmentIds = Array.isArray(req.body?.attachmentIds) ? req.body.attachmentIds : [];
       if (attachmentIds.length > 0) {
         for (const aid of attachmentIds) {
-          await db.run(
+          await dbRun(
             `INSERT INTO task_attachments (task_id, attachment_id, comment_id) VALUES (?, ?, ?)`,
             [taskId, aid, commentId]
           );
         }
-        await db.run(`UPDATE tasks SET attachment_count = attachment_count + ? WHERE id = ?`, [attachmentIds.length, taskId]);
+        await dbRun(`UPDATE tasks SET attachment_count = attachment_count + ? WHERE id = ?`, [attachmentIds.length, taskId]);
       }
 
-      await db.run(`UPDATE tasks SET comment_count = comment_count + 1 WHERE id = ?`, [taskId]);
+      await dbRun(`UPDATE tasks SET comment_count = comment_count + 1 WHERE id = ?`, [taskId]);
 
       // Parse mentions like @Carlos
       const mentions = content.match(/@([^ ]+)/g);
       if (mentions) {
         for (const m of mentions) {
           const name = m.slice(1);
-          const mentionedUser = await db.get(`SELECT id FROM users WHERE name = ?`, [name]);
+          const mentionedUser = await dbGet(`SELECT id FROM users WHERE name = ?`, [name]);
           if (mentionedUser && mentionedUser.id !== req.user?.id) {
             await notifyMention(mentionedUser.id, req.user?.name || '有人', 'TASK', String(taskId));
           }
@@ -160,10 +160,10 @@ export function createTasksRouter() {
          });
       }
 
-      await db.run('COMMIT');
+      await dbCommit();
       res.status(201).json({ success: true });
     } catch (error) {
-      await db.run('ROLLBACK');
+      await dbRollback();
       return handleRouteError(res, error, '发表评论失败');
     }
   });
@@ -183,7 +183,7 @@ export function createTasksRouter() {
     }
 
     try {
-      const result = await db.run(`
+      const result = await dbRun(`
         INSERT INTO tasks (title, assignee_id, due_date, priority, entity_type, entity_id, description, created_by)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [title, assigneeId, dueDate, priority, entityType?.toUpperCase(), entityId, description, req.user?.id]);
@@ -224,7 +224,7 @@ export function createTasksRouter() {
     }
 
     try {
-      await db.run(`UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [status, taskId]);
+      await dbRun(`UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [status, taskId]);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新任务状态失败');
@@ -240,7 +240,7 @@ export function createTasksRouter() {
     const title = readString(req.body?.title);
 
     try {
-      await db.run(`
+      await dbRun(`
         UPDATE tasks 
         SET assignee_id = COALESCE(?, assignee_id),
             due_date = COALESCE(?, due_date),

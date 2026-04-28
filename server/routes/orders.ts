@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun, dbBegin, dbCommit, dbRollback, SQL } from '../lib/db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { logAction } from '../lib/audit.js';
 import { fail, handleRouteError } from '../lib/http.js';
@@ -20,7 +20,7 @@ async function generateNextDisplayId() {
   const datePart = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const pattern = `CQBX-${now.getFullYear()}-${datePart}%`;
 
-  const lastOrder = await db.get<{ display_id: string }>(
+  const lastOrder = await dbGet<{ display_id: string }>(
     `SELECT display_id FROM orders WHERE display_id LIKE ? ORDER BY display_id DESC LIMIT 1`,
     [pattern]
   );
@@ -35,13 +35,13 @@ async function generateNextDisplayId() {
 }
 
 async function syncOrderProductSummary(orderId: number) {
-  const items = await db.all<{ subtotal: number }[]>(`SELECT subtotal FROM order_items WHERE order_id = ?`, [orderId]);
+  const items = await dbAll<{ subtotal: number }[]>(`SELECT subtotal FROM order_items WHERE order_id = ?`, [orderId]);
   const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
-  const productSummary = (await db.all<{ product_name: string }[]>(`SELECT product_name FROM order_items WHERE order_id = ?`, [orderId]))
+  const productSummary = (await dbAll<{ product_name: string }[]>(`SELECT product_name FROM order_items WHERE order_id = ?`, [orderId]))
     .map(i => i.product_name)
     .join(', ');
   
-  await db.run(`UPDATE orders SET total_amount = ?, product_summary = ? WHERE id = ?`, [totalAmount, productSummary, orderId]);
+  await dbRun(`UPDATE orders SET total_amount = ?, product_summary = ? WHERE id = ?`, [totalAmount, productSummary, orderId]);
 }
 
 export function createOrdersRouter() {
@@ -96,7 +96,7 @@ export function createOrdersRouter() {
     sql += ` ORDER BY datetime(o.created_at) DESC, o.id DESC`;
 
     try {
-      const orders = await db.all(sql, params);
+      const orders = await dbAll(sql, params);
       res.json(orders);
     } catch (error) {
       return handleRouteError(res, error, '读取订单列表失败');
@@ -131,7 +131,7 @@ export function createOrdersRouter() {
     if ('error' in result) return fail(res, 400, result.error);
 
     try {
-      await db.run('BEGIN TRANSACTION');
+      await dbBegin();
 
       // 逻辑升级：优先使用前端传来的 displayId，如果没有（或为空）再自动生成
       let displayId = result.payload.displayId;
@@ -139,24 +139,24 @@ export function createOrdersRouter() {
         displayId = await generateNextDisplayId();
       } else {
         // 检查用户手动输入的单号是否冲突
-        const existing = await db.get(`SELECT id FROM orders WHERE display_id = ?`, [displayId]);
+        const existing = await dbGet(`SELECT id FROM orders WHERE display_id = ?`, [displayId]);
         if (existing) {
-          await db.run('ROLLBACK');
+          await dbRollback();
           return fail(res, 400, `创建失败：单号 ${displayId} 已存在，请核对后重新输入！`, 'ORDER_ID_CONFLICT');
         }
       }
 
-      const created = await db.run(
+      const created = await dbRun(
         `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?)`,
         [displayId, result.payload.customerId, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null]
       );
 
-      await db.run('COMMIT');
+      await dbCommit();
       // Fire-and-forget webhook notification
       notifyOrderCreated(displayId, String(result.payload.customerId));
       res.status(201).json({ id: created.lastID, display_id: displayId });
     } catch (error) {
-      await db.run('ROLLBACK');
+      await dbRollback();
       // 捕获 SQLite 唯一索引冲突（双保险）
       if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
         return fail(res, 400, '创建失败：该订单单号已存在，请核对！', 'ORDER_ID_CONFLICT');
@@ -171,15 +171,15 @@ export function createOrdersRouter() {
     if ('error' in result) return fail(res, 400, result.error);
 
     try {
-      await db.run('BEGIN TRANSACTION');
-      await db.run(
+      await dbBegin();
+      await dbRun(
         `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, updated_by = ? WHERE id = ?`,
         [result.payload.customerId, result.payload.status, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, orderId]
       );
 
       const deletedIds = (req.body.deletedItemIds || []) as number[];
       if (deletedIds.length > 0) {
-        await db.run(`DELETE FROM order_items WHERE id IN (${deletedIds.map(() => '?').join(',')})`, deletedIds);
+        await dbRun(`DELETE FROM order_items WHERE id IN (${deletedIds.map(() => '?').join(',')})`, deletedIds);
       }
 
       const items = (req.body.items || []) as Array<{
@@ -195,18 +195,18 @@ export function createOrdersRouter() {
       }>;
       for (const item of items) {
         if (item.id) {
-          await db.run(`UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ? WHERE id = ?`,
+          await dbRun(`UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ? WHERE id = ?`,
             [item.productName, item.specification, item.hsCode, item.quantity, item.unit, item.unitPrice, item.subtotal, item.imageUrl, item.id]);
         } else {
-          await db.run(`INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          await dbRun(`INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [orderId, item.productName, item.specification, item.hsCode, item.quantity, item.unit, item.unitPrice, item.subtotal, item.imageUrl]);
         }
       }
 
-      await db.run('COMMIT');
+      await dbCommit();
       res.json({ success: true });
     } catch (error) {
-      await db.run('ROLLBACK');
+      await dbRollback();
       return handleRouteError(res, error, '更新订单失败');
     }
   });
@@ -214,14 +214,14 @@ export function createOrdersRouter() {
   router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     try {
-      const order = await db.get<{ display_id: string }>(`SELECT display_id FROM orders WHERE id = ?`, [orderId]);
+      const order = await dbGet<{ display_id: string }>(`SELECT display_id FROM orders WHERE id = ?`, [orderId]);
       if (!order) return fail(res, 404, '订单不存在');
 
-      await db.run('BEGIN TRANSACTION');
-      await db.run(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
+      await dbBegin();
+      await dbRun(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
 
-      await db.run(`UPDATE orders SET deleted_at = datetime("now") WHERE id = ?`, [orderId]);
-      await db.run('COMMIT');
+      await dbRun(`UPDATE orders SET deleted_at = ${SQL.now()} WHERE id = ?`, [orderId]);
+      await dbCommit();
 
       await logAction({
         userId: req.user?.id || null,
@@ -234,17 +234,17 @@ export function createOrdersRouter() {
 
       res.json({ success: true });
     } catch (error) {
-      await db.run('ROLLBACK');
+      await dbRollback();
       return handleRouteError(res, error, '删除订单失败');
     }
   });
 
   router.delete('/items/:id', requireAdmin, async (req, res) => {
     const itemId = Number(req.params.id);
-    const existing = await db.get<{ order_id: number }>(`SELECT order_id FROM order_items WHERE id = ?`, [itemId]);
+    const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM order_items WHERE id = ?`, [itemId]);
     if (!existing) return fail(res, 404, '条目不存在');
     try {
-      await db.run(`DELETE FROM order_items WHERE id = ?`, [itemId]);
+      await dbRun(`DELETE FROM order_items WHERE id = ?`, [itemId]);
       await syncOrderProductSummary(existing.order_id);
       res.json({ success: true });
     } catch (error) {
@@ -257,8 +257,8 @@ export function createOrdersRouter() {
     if (!ids.length) return fail(res, 400, '请选择要删除的订单', 'INVALID_BATCH');
     try {
       for (const id of ids) {
-        await db.run(`DELETE FROM order_items WHERE order_id = ?`, [id]);
-        await db.run(`UPDATE orders SET deleted_at = datetime("now") WHERE id = ?`, [id]);
+        await dbRun(`DELETE FROM order_items WHERE order_id = ?`, [id]);
+        await dbRun(`UPDATE orders SET deleted_at = ${SQL.now()} WHERE id = ?`, [id]);
       }
       res.json({ success: true, deletedCount: ids.length });
     } catch (error) {
@@ -269,9 +269,9 @@ export function createOrdersRouter() {
   router.get('/:id/production', async (req, res) => {
     const orderId = Number(req.params.id);
     try {
-      const record = await db.get<any>(`SELECT pp.*, p.name AS partner_name FROM production_plans pp LEFT JOIN partners p ON p.id = pp.partner_id WHERE pp.order_id = ?`, [orderId]);
+      const record = await dbGet<any>(`SELECT pp.*, p.name AS partner_name FROM production_plans pp LEFT JOIN partners p ON p.id = pp.partner_id WHERE pp.order_id = ?`, [orderId]);
       if (!record) return res.json(null);
-      const logs = await db.all(`SELECT pl.*, u.name as created_by_name FROM production_logs pl LEFT JOIN users u ON u.id = pl.created_by WHERE pl.plan_id = ? ORDER BY pl.created_at DESC`, [record.id]);
+      const logs = await dbAll(`SELECT pl.*, u.name as created_by_name FROM production_logs pl LEFT JOIN users u ON u.id = pl.created_by WHERE pl.plan_id = ? ORDER BY pl.created_at DESC`, [record.id]);
       res.json({ ...record, partnerId: record.partner_id, partnerName: record.partner_name, logs: logs.map(l => ({ ...l, createdByName: l.created_by_name })) });
     } catch (error) {
       return handleRouteError(res, error, '读取失败');
@@ -283,7 +283,7 @@ export function createOrdersRouter() {
     const result = await readProductionLogPayload(req.body || {});
     if ('error' in result) return fail(res, 400, result.error);
     try {
-      const created = await db.run(`INSERT INTO production_logs (plan_id, content, log_date, created_by) VALUES (?, ?, ?, ?)`, [planId, result.payload.content, result.payload.logDate || null, req.user?.id || null]);
+      const created = await dbRun(`INSERT INTO production_logs (plan_id, content, log_date, created_by) VALUES (?, ?, ?, ?)`, [planId, result.payload.content, result.payload.logDate || null, req.user?.id || null]);
       await bindAttachmentsToEntity('production_log', created.lastID as number, result.payload.attachmentIds);
       res.status(201).json({ success: true });
     } catch (error) {
@@ -295,9 +295,9 @@ export function createOrdersRouter() {
     const orderId = Number(req.params.id);
     const items = req.body.items || [];
     try {
-      await db.run(`DELETE FROM packing_records WHERE order_id = ?`, [orderId]);
+      await dbRun(`DELETE FROM packing_records WHERE order_id = ?`, [orderId]);
       for (const item of items) {
-        await db.run(`INSERT INTO packing_records (order_id, package_count, package_size, gross_weight, net_weight, attachment_id) VALUES (?, ?, ?, ?, ?, ?)`,
+        await dbRun(`INSERT INTO packing_records (order_id, package_count, package_size, gross_weight, net_weight, attachment_id) VALUES (?, ?, ?, ?, ?, ?)`,
           [orderId, Number(item.packageCount), item.packageSize, item.grossWeight, item.netWeight, item.attachmentId || null]);
       }
       res.json({ success: true });
@@ -311,7 +311,7 @@ export function createOrdersRouter() {
   router.get('/:id/profit', async (req, res) => {
     const orderId = Number(req.params.id);
     try {
-      const row = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [`order_profit_${orderId}`]);
+      const row = await dbGet<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [`order_profit_${orderId}`]);
       const data = row ? JSON.parse(row.value) : {};
       res.json({
         receipts: data.receipts || [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
@@ -351,7 +351,7 @@ export function createOrdersRouter() {
       miscFees: Array.isArray(req.body.miscFees) ? req.body.miscFees : [],
     };
     try {
-      await db.run(
+      await dbRun(
         `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
         [`order_profit_${orderId}`, JSON.stringify(data)],
       );
@@ -363,7 +363,7 @@ export function createOrdersRouter() {
 
   router.patch('/:id/quick-notes', async (req: AuthedRequest, res) => {
     try {
-      await db.run(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [req.body.content, req.params.id]);
+      await dbRun(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [req.body.content, req.params.id]);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新失败');
@@ -374,7 +374,7 @@ export function createOrdersRouter() {
   router.get('/:id/follow-ups', async (req, res) => {
     const orderId = Number(req.params.id);
     try {
-      const rows = await db.all(
+      const rows = await dbAll(
         `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC, of.id DESC`,
         [orderId],
       );
@@ -391,7 +391,7 @@ export function createOrdersRouter() {
       return fail(res, 400, '内容不能为空');
     }
     try {
-      await db.run(
+      await dbRun(
         `INSERT INTO order_follow_ups (order_id, content, created_by) VALUES (?, ?, ?)`,
         [orderId, content, req.user?.id || null],
       );
@@ -406,7 +406,7 @@ export function createOrdersRouter() {
     const result = await readProductionPayload(req.body || {}, orderId);
     if ('error' in result) return fail(res, 400, result.error);
     try {
-      const created = await db.run(`INSERT INTO production_plans (order_id, partner_id, order_date, estimated_delivery_date, production_status, inspection_status, remark, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      const created = await dbRun(`INSERT INTO production_plans (order_id, partner_id, order_date, estimated_delivery_date, production_status, inspection_status, remark, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [orderId, result.payload.partnerId, result.payload.orderDate || null, result.payload.estimatedDeliveryDate || null, result.payload.productionStatus, result.payload.inspectionStatus, result.payload.remark, req.user?.id || null, req.user?.id || null]);
       res.status(201).json({ id: created.lastID });
     } catch (error) {
@@ -417,7 +417,7 @@ export function createOrdersRouter() {
   router.patch('/production/:id', async (req: AuthedRequest, res) => {
     const productionId = Number(req.params.id);
     try {
-      const existing = await db.get<{ order_id: number }>(
+      const existing = await dbGet<{ order_id: number }>(
         `SELECT order_id FROM production_plans WHERE id = ?`,
         [productionId]
       );
@@ -428,7 +428,7 @@ export function createOrdersRouter() {
       const result = await readProductionPayload(req.body || {}, existing.order_id);
       if ('error' in result) return fail(res, 400, result.error);
 
-      await db.run(
+      await dbRun(
         `UPDATE production_plans SET partner_id = ?, order_date = ?, estimated_delivery_date = ?, production_status = ?, inspection_status = ?, remark = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         [
           result.payload.partnerId,

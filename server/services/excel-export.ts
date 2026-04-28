@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { db } from '../db.js';
+import { dbAll } from '../lib/db.js';
 
 const HEADER_STYLE: Partial<ExcelJS.Style> = {
   font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
@@ -17,7 +17,7 @@ const ALT_ROW_FILL: Partial<ExcelJS.Style> = {
 async function addDataSheet<T extends Record<string, unknown>>(
   wb: ExcelJS.Workbook, name: string, query: string, params: unknown[] = [],
 ) {
-  const rows = await db.all<T[]>(query, params);
+  const rows = await dbAll<T[]>(query, params);
   if (!rows.length) return;
   const ws = wb.addWorksheet(name, { properties: { tabColor: { argb: 'FF0F172A' } } });
   const columns = Object.keys(rows[0]);
@@ -130,7 +130,7 @@ export async function buildCustomerXlsx(customer: Record<string, unknown>, order
   });
 
   // Customer contacts
-  const contacts = await db.all(`SELECT cc.*, c.name AS customer_name FROM customer_contacts cc LEFT JOIN customers c ON c.id = cc.customer_id WHERE cc.customer_id = ?`, [customer.id]);
+  const contacts = await dbAll(`SELECT cc.*, c.name AS customer_name FROM customer_contacts cc LEFT JOIN customers c ON c.id = cc.customer_id WHERE cc.customer_id = ?`, [customer.id]);
   if (contacts.length) {
     const ws = wb.addWorksheet('联系人', { properties: { tabColor: { argb: 'FF0F172A' } } });
     const cols = Object.keys(contacts[0]);
@@ -143,7 +143,7 @@ export async function buildCustomerXlsx(customer: Record<string, unknown>, order
   }
 
   // Customer followups
-  const followups = await db.all(`SELECT cf.*, u.name AS created_by_name FROM customer_followups cf LEFT JOIN users u ON u.id = cf.created_by WHERE cf.customer_id = ? ORDER BY datetime(cf.created_at) DESC`, [customer.id]);
+  const followups = await dbAll(`SELECT cf.*, u.name AS created_by_name FROM customer_followups cf LEFT JOIN users u ON u.id = cf.created_by WHERE cf.customer_id = ? ORDER BY datetime(cf.created_at) DESC`, [customer.id]);
   if (followups.length) {
     const ws = wb.addWorksheet('跟进记录', { properties: { tabColor: { argb: 'FF0F172A' } } });
     const cols = ['content', 'channel', 'created_by_name', 'created_at'];
@@ -289,7 +289,7 @@ export async function buildOrderXlsx(detail: any) {
   }
 
   // Order followups
-  const followups = await db.all(
+  const followups = await dbAll(
     `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC`,
     [order.id],
   );

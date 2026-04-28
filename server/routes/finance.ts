@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows, getAttachmentsByEntity } from '../services/attachments.js';
@@ -33,7 +33,7 @@ export function createFinanceRouter() {
     }
 
     try {
-      const records = await db.all<Record<string, unknown>[]>(`
+      const records = await dbAll<Record<string, unknown>[]>(`
         SELECT
           f.*,
           p.name AS partner_name,
@@ -72,7 +72,7 @@ export function createFinanceRouter() {
     }
 
     try {
-      const created = await db.run(
+      const created = await dbRun(
         `
           INSERT INTO finance_records (order_id, type, amount, target, status, remark, currency, payment_category, record_category, partner_id, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -121,7 +121,7 @@ export function createFinanceRouter() {
     }
 
     try {
-      const updated = await db.run(
+      const updated = await dbRun(
         `
           UPDATE finance_records
           SET order_id = ?, type = ?, amount = ?, target = ?, status = ?, remark = ?, currency = ?, payment_category = ?, record_category = ?, partner_id = ?, updated_by = ?
@@ -159,11 +159,11 @@ export function createFinanceRouter() {
     }
 
     try {
-      const record = await db.get(`SELECT id, type, amount, currency FROM finance_records WHERE id = ?`, [recordId]);
+      const record = await dbGet(`SELECT id, type, amount, currency FROM finance_records WHERE id = ?`, [recordId]);
       if (!record) return fail(res, 404, '财务记录不存在', 'FINANCE_NOT_FOUND');
 
       await deleteAttachmentRows('finance', recordId);
-      const result = await db.run(`DELETE FROM finance_records WHERE id = ?`, [recordId]);
+      const result = await dbRun(`DELETE FROM finance_records WHERE id = ?`, [recordId]);
       if (!result.changes) {
         return fail(res, 404, '财务记录不存在', 'FINANCE_NOT_FOUND');
       }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun, SQL } from '../lib/db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readPartnerPayload } from '../services/payloads.js';
@@ -9,7 +9,7 @@ export function createPartnersRouter() {
 
   router.get('/', async (_req, res) => {
     try {
-      const partners = await db.all(`
+      const partners = await dbAll(`
         SELECT
           p.*,
           u.name AS created_by_name
@@ -31,7 +31,7 @@ export function createPartnersRouter() {
     }
 
     try {
-      const created = await db.run(
+      const created = await dbRun(
         `
           INSERT INTO partners (name, partner_type, country, contact, contact_person, address, rating, payment_terms, remark, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -68,7 +68,7 @@ export function createPartnersRouter() {
     }
 
     try {
-      const updated = await db.run(
+      const updated = await dbRun(
         `
           UPDATE partners
           SET name = ?, partner_type = ?, country = ?, contact = ?, contact_person = ?, address = ?, rating = ?, payment_terms = ?, remark = ?, updated_by = ?
@@ -104,7 +104,7 @@ export function createPartnersRouter() {
     }
 
     try {
-      const partner = await db.get(`
+      const partner = await dbGet(`
         SELECT p.*, u.name AS created_by_name
         FROM partners p LEFT JOIN users u ON u.id = p.created_by
         WHERE p.id = ?
@@ -115,7 +115,7 @@ export function createPartnersRouter() {
       }
 
       // Orders linked via production_plans (factory)
-      const productionOrders = await db.all(`
+      const productionOrders = await dbAll(`
         SELECT o.id, o.display_id, o.status, o.total_amount, o.product_summary, o.created_at,
                pp.production_status, pp.inspection_status, pp.order_date AS prod_order_date,
                pp.estimated_delivery_date
@@ -126,7 +126,7 @@ export function createPartnersRouter() {
       `, [partnerId]);
 
       // Finance records linked to this partner
-      const financeRecords = await db.all(`
+      const financeRecords = await dbAll(`
         SELECT fr.*, o.display_id AS order_display_id
         FROM finance_records fr
         LEFT JOIN orders o ON o.id = fr.order_id
@@ -138,7 +138,7 @@ export function createPartnersRouter() {
       const financeOrderIds = [...new Set(financeRecords.map((r: any) => r.order_id).filter(Boolean))];
       let financeOrders: any[] = [];
       if (financeOrderIds.length) {
-        financeOrders = await db.all(
+        financeOrders = await dbAll(
           `SELECT id, display_id, status, total_amount, product_summary, created_at FROM orders WHERE id IN (${financeOrderIds.join(',')})`
         );
       }
@@ -147,8 +147,8 @@ export function createPartnersRouter() {
       const thisMonth = new Date().toISOString().slice(0, 7);
       const lastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 7);
 
-      const monthlyStats = await db.all(`
-        SELECT strftime('%Y-%m', pp.created_at) AS month, COUNT(*) AS count
+      const monthlyStats = await dbAll(`
+        SELECT ${SQL.date('pp.created_at', '%Y-%m')} AS month, COUNT(*) AS count
         FROM production_plans pp
         WHERE pp.partner_id = ?
         GROUP BY month ORDER BY month DESC LIMIT 12
@@ -190,14 +190,14 @@ export function createPartnersRouter() {
     }
 
     try {
-      const linkedFinance = await db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM finance_records WHERE partner_id = ?`, [partnerId]);
-      const linkedProduction = await db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM production_plans WHERE partner_id = ?`, [partnerId]);
+      const linkedFinance = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM finance_records WHERE partner_id = ?`, [partnerId]);
+      const linkedProduction = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM production_plans WHERE partner_id = ?`, [partnerId]);
 
       if ((linkedFinance?.count || 0) > 0 || (linkedProduction?.count || 0) > 0) {
         return fail(res, 409, '该伙伴已被财务或生产安排引用，暂时不能删除', 'PARTNER_IN_USE');
       }
 
-      const deleted = await db.run(`UPDATE partners SET deleted_at = datetime("now") WHERE id = ?`, [partnerId]);
+      const deleted = await dbRun(`UPDATE partners SET deleted_at = ${SQL.now()} WHERE id = ?`, [partnerId]);
       if (!deleted.changes) {
         return fail(res, 404, '伙伴不存在', 'PARTNER_NOT_FOUND');
       }

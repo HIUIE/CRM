@@ -24,7 +24,7 @@ import {
   type ProductionStatus,
   type RecordCategory,
 } from '../domain.js';
-import { db } from '../db.js';
+import { dbGet } from '../lib/db.js';
 import { ensureOrderExists, ensurePartnerExists } from './entities.js';
 import { isOneOf, readAttachmentIds, readNumber, readOptionalDate, readString } from '../lib/values.js';
 
@@ -135,7 +135,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
     return { error: '杂费必须大于或等于 0' };
   }
 
-  const customer = await db.get<{ id: number }>(`SELECT id FROM customers WHERE id = ?`, [customerId]);
+  const customer = await dbGet<{ id: number }>(`SELECT id FROM customers WHERE id = ?`, [customerId]);
   if (!customer) {
     return { error: '客户不存在，请先创建客户档案' };
   }

@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbGet } from '../lib/db.js';
 import { getStoredNameFromRecord, isSafeStoredName, resolveAttachmentAbsolutePath, sanitizeDownloadFilename } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 
@@ -19,7 +19,7 @@ export function createFilesRouter() {
     }
 
     try {
-      const attachment = await db.get<{
+      const attachment = await dbGet<{
         file_name: string;
         stored_name: string | null;
         mime_type: string | null;

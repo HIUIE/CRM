@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import { USER_ROLES } from '../domain.js';
 import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
@@ -12,7 +12,7 @@ export function createUsersRouter() {
 
   router.get('/', requireAuth, async (_req, res) => {
     try {
-      const users = await db.all(`
+      const users = await dbAll(`
         SELECT id, username, role, name, active, created_at
         FROM users
         ORDER BY role = 'admin' DESC, datetime(created_at) DESC, id DESC
@@ -48,13 +48,13 @@ export function createUsersRouter() {
     }
 
     try {
-      const existing = await db.get<{ id: number }>(`SELECT id FROM users WHERE username = ?`, [username]);
+      const existing = await dbGet<{ id: number }>(`SELECT id FROM users WHERE username = ?`, [username]);
       if (existing) {
         return fail(res, 409, '用户名已存在', 'USERNAME_EXISTS');
       }
 
       const hash = await bcrypt.hash(password, 10);
-      const created = await db.run(
+      const created = await dbRun(
         `INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, 1)`,
         [username, hash, role, name],
       );
@@ -81,7 +81,7 @@ export function createUsersRouter() {
     }
 
     try {
-      const existing = await db.get<{ id: number; username: string }>(`SELECT id, username FROM users WHERE id = ?`, [userId]);
+      const existing = await dbGet<{ id: number; username: string }>(`SELECT id, username FROM users WHERE id = ?`, [userId]);
       if (!existing) {
         return fail(res, 404, '用户不存在', 'USER_NOT_FOUND');
       }
@@ -89,7 +89,7 @@ export function createUsersRouter() {
         return fail(res, 409, '默认管理员账号不能停用', 'ROOT_PROTECTED');
       }
 
-      await db.run(
+      await dbRun(
         `UPDATE users SET name = ?, role = ?, active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         [name, role, active, userId],
       );
@@ -114,18 +114,18 @@ export function createUsersRouter() {
     if (!confirmPassword) {
       return fail(res, 400, '请输入您的当前密码以确认此操作', 'CONFIRM_PASSWORD_REQUIRED');
     }
-    const admin = await db.get<{ password: string }>(`SELECT password FROM users WHERE id = ?`, [req.user?.id]);
+    const admin = await dbGet<{ password: string }>(`SELECT password FROM users WHERE id = ?`, [req.user?.id]);
     if (!admin || !(await bcrypt.compare(confirmPassword, admin.password))) {
       return fail(res, 403, '当前密码验证失败，无权限执行此操作', 'ADMIN_CONFIRM_FAILED');
     }
 
     try {
-      const existing = await db.get<{ id: number; name: string }>(`SELECT id, name FROM users WHERE id = ?`, [userId]);
+      const existing = await dbGet<{ id: number; name: string }>(`SELECT id, name FROM users WHERE id = ?`, [userId]);
       if (!existing) {
         return fail(res, 404, '用户不存在', 'USER_NOT_FOUND');
       }
       const hash = await bcrypt.hash(password, 10);
-      await db.run(`UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hash, userId]);
+      await dbRun(`UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hash, userId]);
       await logAction({
         userId: req.user?.id || null,
         userName: req.user?.name || null,

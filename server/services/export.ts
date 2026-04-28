@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import fs from 'node:fs/promises';
 import type { Response } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbTableInfo } from '../lib/db.js';
 import { resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { ZipStreamWriter, createZipBuffer, type ZipSink } from '../lib/zip.js';
 import { buildOrderDetail } from './order-detail.js';
@@ -360,14 +360,14 @@ async function resolveExistingAttachmentPath(filePath: string) {
 }
 
 async function getTableColumns(table: string) {
-  const rows = await db.all<{ name: string }[]>(`PRAGMA table_info(${table})`);
+  const rows = await dbTableInfo(table);
   return rows.map((row) => row.name);
 }
 
 async function buildLegacyCsvBuffer(definition: LegacyExportDefinition) {
   const [columns, rows] = await Promise.all([
     getTableColumns(definition.table),
-    db.all<Record<string, unknown>[]>(definition.query),
+    dbAll<Record<string, unknown>[]>(definition.query),
   ]);
   const headers = [...columns, ...(definition.extraColumns || [])];
   return buildCsvBufferFromRows(headers, rows);
@@ -385,7 +385,7 @@ export async function buildLegacyExportZip() {
 }
 
 async function getCustomersForArchive() {
-  return db.all<CustomerRow[]>(`
+  return dbAll<CustomerRow[]>(`
     SELECT
       c.*,
       COUNT(o.id) AS order_count
@@ -397,7 +397,7 @@ async function getCustomersForArchive() {
 }
 
 async function getOrdersForCustomer(customerId: number) {
-  return db.all<OrderRow[]>(
+  return dbAll<OrderRow[]>(
     `
       SELECT *
       FROM orders
@@ -411,7 +411,7 @@ async function getOrdersForCustomer(customerId: number) {
 async function getOrdersForCustomers(customerIds: number[]) {
   if (!customerIds.length) return [];
   const placeholders = customerIds.map(() => '?').join(', ');
-  return db.all<OrderRow[]>(
+  return dbAll<OrderRow[]>(
     `SELECT * FROM orders WHERE customer_id IN (${placeholders}) ORDER BY customer_id ASC, datetime(created_at) ASC, id ASC`,
     customerIds,
   );
@@ -419,7 +419,7 @@ async function getOrdersForCustomers(customerIds: number[]) {
 
 async function getOrderAttachments(orderId: number) {
   const [finance, logistics, customs, production, packing, orderDocuments, productionPhotos] = await Promise.all([
-    db.all<Record<string, unknown>[]>(`
+    dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
         'finance' AS sourceModule,
@@ -435,7 +435,7 @@ async function getOrderAttachments(orderId: number) {
       WHERE f.order_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
-    db.all<Record<string, unknown>[]>(`
+    dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
         'logistics' AS sourceModule,
@@ -451,7 +451,7 @@ async function getOrderAttachments(orderId: number) {
       WHERE l.order_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
-    db.all<Record<string, unknown>[]>(`
+    dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
         'customs' AS sourceModule,
@@ -467,7 +467,7 @@ async function getOrderAttachments(orderId: number) {
       WHERE c.order_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
-    db.all<Record<string, unknown>[]>(`
+    dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
         'production' AS sourceModule,
@@ -484,7 +484,7 @@ async function getOrderAttachments(orderId: number) {
       WHERE pp.order_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
-    db.all<Record<string, unknown>[]>(`
+    dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
         'packing' AS sourceModule,
@@ -500,7 +500,7 @@ async function getOrderAttachments(orderId: number) {
       WHERE pr.order_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
-    db.all<Record<string, unknown>[]>(`
+    dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
         'order_document' AS sourceModule,
@@ -515,7 +515,7 @@ async function getOrderAttachments(orderId: number) {
       WHERE a.entity_type = 'order_document' AND a.entity_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
-    db.all<Record<string, unknown>[]>(`
+    dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
         'production_photo' AS sourceModule,
@@ -536,7 +536,7 @@ async function getOrderAttachments(orderId: number) {
 }
 
 async function getUnlinkedAttachments() {
-  return db.all<AttachmentExportRow[]>(`
+  return dbAll<AttachmentExportRow[]>(`
     SELECT DISTINCT
       a.id AS attachmentId,
       COALESCE(a.entity_type, 'unlinked') AS sourceModule,
@@ -569,39 +569,39 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
   // Phase 1: Fetch all batch data that depends on order IDs
   const [orderRows, itemRows, financeRows, logisticsRows, packingRows, customsRows, planRows, summaryRows, pendingCountRows] =
     await Promise.all([
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT o.*, c.name AS customer_name, c.display_id AS customer_display_id, c.country AS customer_country, c.contact AS customer_contact, c.logistics_preference AS customer_logistics_preference, c.payment_terms AS customer_payment_terms, cu.name AS created_by_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN users cu ON cu.id = o.created_by WHERE o.id IN (${ph})`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT * FROM order_items WHERE order_id IN (${ph}) ORDER BY order_id ASC, id ASC`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT f.*, p.name AS partner_name, p.partner_type AS partner_type, u.name AS created_by_name FROM finance_records f LEFT JOIN partners p ON p.id = f.partner_id LEFT JOIN users u ON u.id = f.created_by WHERE f.order_id IN (${ph}) ORDER BY f.order_id ASC, datetime(f.created_at) DESC, f.id DESC`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT l.*, u.name AS created_by_name FROM logistics_records l LEFT JOIN users u ON u.id = l.created_by WHERE l.order_id IN (${ph}) ORDER BY l.order_id ASC, CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC, CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC, l.shipping_date DESC, datetime(l.created_at) DESC, l.id DESC`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT pr.*, a.stored_name, a.file_path FROM packing_records pr LEFT JOIN attachments a ON a.id = pr.attachment_id WHERE pr.order_id IN (${ph}) ORDER BY pr.order_id ASC, pr.id ASC`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT c.*, u.name AS created_by_name FROM customs_records c LEFT JOIN users u ON u.id = c.created_by WHERE c.order_id IN (${ph})`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT pp.*, p.name AS partner_name, p.partner_type AS partner_type, p.country AS partner_country, p.contact AS partner_contact, u.name AS created_by_name FROM production_plans pp LEFT JOIN partners p ON p.id = pp.partner_id LEFT JOIN users u ON u.id = pp.created_by WHERE pp.order_id IN (${ph})`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT order_id, type, currency, payment_category, COALESCE(SUM(amount), 0) AS total FROM finance_records WHERE order_id IN (${ph}) AND status = 'completed' GROUP BY order_id, type, currency, payment_category`,
         orderIds,
       ),
-      db.all<Record<string, unknown>[]>(
+      dbAll<Record<string, unknown>[]>(
         `SELECT order_id, COUNT(*) AS count FROM finance_records WHERE order_id IN (${ph}) AND status = 'pending' GROUP BY order_id`,
         orderIds,
       ),
@@ -614,7 +614,7 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
   let logRows: Record<string, unknown>[] = [];
   if (planIds.length) {
     const planPh = planIds.map(() => '?').join(', ');
-    logRows = await db.all<Record<string, unknown>[]>(
+    logRows = await dbAll<Record<string, unknown>[]>(
       `SELECT pl.*, u.name AS created_by_name FROM production_logs pl LEFT JOIN users u ON u.id = pl.created_by WHERE pl.plan_id IN (${planPh}) ORDER BY pl.plan_id ASC, datetime(pl.created_at) DESC`,
       planIds,
     );
@@ -694,7 +694,7 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
   async function getAttachmentCountMap(entityType: string, entityIds: number[]): Promise<Map<number, number>> {
     if (!entityIds.length) return new Map();
     const eph = entityIds.map(() => '?').join(', ');
-    const rows = await db.all<Record<string, unknown>[]>(
+    const rows = await dbAll<Record<string, unknown>[]>(
       `SELECT entity_id, COUNT(*) AS count FROM attachments WHERE entity_type = ? AND entity_id IN (${eph}) GROUP BY entity_id`,
       [entityType, ...entityIds],
     );

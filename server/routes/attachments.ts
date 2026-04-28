@@ -4,7 +4,7 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { db } from '../db.js';
+import { dbGet, dbRun } from '../lib/db.js';
 import { requireAdmin } from '../lib/auth.js';
 import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
@@ -60,7 +60,7 @@ export function createAttachmentsRouter() {
       for (const file of files) {
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
         const relativePath = path.posix.join(`customer_${customerId}`, `order_${orderId}`, file.filename);
-        const result = await db.run(
+        const result = await dbRun(
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, remark)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -91,7 +91,7 @@ export function createAttachmentsRouter() {
     }
 
     try {
-      const existing = await db.get<{ file_path: string }>(`SELECT file_path FROM attachments WHERE id = ?`, [attachmentId]);
+      const existing = await dbGet<{ file_path: string }>(`SELECT file_path FROM attachments WHERE id = ?`, [attachmentId]);
       if (!existing) {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
       }
@@ -103,7 +103,7 @@ export function createAttachmentsRouter() {
           // ignore missing physical file
         }
       }
-      await db.run(`DELETE FROM attachments WHERE id = ?`, [attachmentId]);
+      await dbRun(`DELETE FROM attachments WHERE id = ?`, [attachmentId]);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '删除附件失败');

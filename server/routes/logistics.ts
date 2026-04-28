@@ -4,7 +4,7 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
   }
 
     try {
-      const records = await db.all<Record<string, unknown>[]>(`
+      const records = await dbAll<Record<string, unknown>[]>(`
         SELECT
           l.*,
           o.display_id AS order_display_id,
@@ -110,7 +110,7 @@ router.get('/', async (req, res) => {
     }
 
     try {
-      const created = await db.run(
+      const created = await dbRun(
         `
           INSERT INTO logistics_records (
             order_id, tracking_no, carrier, freight_forwarder, packing_details, status, shipping_date, segment_type,
@@ -163,7 +163,7 @@ router.get('/', async (req, res) => {
     }
 
     try {
-      const updated = await db.run(
+      const updated = await dbRun(
         `
           UPDATE logistics_records
           SET order_id = ?, tracking_no = ?, carrier = ?, freight_forwarder = ?, packing_details = ?, status = ?, shipping_date = ?, segment_type = ?,
@@ -218,7 +218,7 @@ router.get('/', async (req, res) => {
     }
 
     try {
-      const result = await db.run(`UPDATE logistics_records SET status = ?, updated_by = ? WHERE id = ?`, [
+      const result = await dbRun(`UPDATE logistics_records SET status = ?, updated_by = ? WHERE id = ?`, [
         status,
         req.user?.id || null,
         recordId,
@@ -241,7 +241,7 @@ router.get('/', async (req, res) => {
     try {
       const uploaded = [];
       for (const file of files) {
-        const result = await db.run(
+        const result = await dbRun(
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -271,7 +271,7 @@ router.get('/', async (req, res) => {
     }
 
     try {
-      const existing = await db.get<{ file_path: string }>(`SELECT file_path FROM attachments WHERE id = ?`, [attachmentId]);
+      const existing = await dbGet<{ file_path: string }>(`SELECT file_path FROM attachments WHERE id = ?`, [attachmentId]);
       if (!existing) {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
       }
@@ -283,7 +283,7 @@ router.get('/', async (req, res) => {
           // ignore missing physical file
         }
       }
-      await db.run(`DELETE FROM attachments WHERE id = ?`, [attachmentId]);
+      await dbRun(`DELETE FROM attachments WHERE id = ?`, [attachmentId]);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '删除附件失败');
@@ -297,13 +297,13 @@ router.get('/', async (req, res) => {
     }
 
     try {
-      const existing = await db.get<{ id: number }>(`SELECT id FROM logistics_records WHERE id = ?`, [recordId]);
+      const existing = await dbGet<{ id: number }>(`SELECT id FROM logistics_records WHERE id = ?`, [recordId]);
       if (!existing) {
         return fail(res, 404, '物流记录不存在', 'LOGISTICS_NOT_FOUND');
       }
 
       await deleteAttachmentRows('logistics', recordId);
-      await db.run(`DELETE FROM logistics_records WHERE id = ?`, [recordId]);
+      await dbRun(`DELETE FROM logistics_records WHERE id = ?`, [recordId]);
 
       res.json({ success: true });
     } catch (error) {

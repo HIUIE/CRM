@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import { requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError } from '../lib/http.js';
 
@@ -9,7 +9,7 @@ export function createNotificationsRouter() {
   // Get unread count
   router.get('/unread-count', requireAuth, async (req: AuthedRequest, res) => {
     try {
-      const result = await db.get<{ count: number }>(
+      const result = await dbGet<{ count: number }>(
         `SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read = 0`,
         [req.user?.id]
       );
@@ -22,7 +22,7 @@ export function createNotificationsRouter() {
   // Get all for user
   router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     try {
-      const logs = await db.all(`
+      const logs = await dbAll(`
         SELECT * FROM notifications
         WHERE user_id = ?
         ORDER BY created_at DESC
@@ -37,7 +37,7 @@ export function createNotificationsRouter() {
   // Mark all as read
   router.post('/read-all', requireAuth, async (req: AuthedRequest, res) => {
     try {
-      await db.run(`UPDATE notifications SET is_read = 1 WHERE user_id = ?`, [req.user?.id]);
+      await dbRun(`UPDATE notifications SET is_read = 1 WHERE user_id = ?`, [req.user?.id]);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '标记消息失败');

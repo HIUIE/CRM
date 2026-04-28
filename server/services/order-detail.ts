@@ -1,5 +1,5 @@
 import type { Currency, FinanceType, PaymentCategory } from '../domain.js';
-import { db } from '../db.js';
+import { dbAll, dbGet } from '../lib/db.js';
 import { buildAttachmentUrl, getStoredNameFromRecord } from '../lib/files.js';
 import { normalizeOrderStatus } from '../lib/values.js';
 import { getAttachmentsByEntity } from './attachments.js';
@@ -27,21 +27,21 @@ export async function buildOrderDetail(idOrNo: number | string) {
     WHERE ${isId ? 'o.id' : 'LOWER(o.display_id)'} = ?
   `;
 
-  const order = await db.get<Record<string, unknown>>(sql, [isId ? idOrNo : String(idOrNo).toLowerCase()]);
+  const order = await dbGet<Record<string, unknown>>(sql, [isId ? idOrNo : String(idOrNo).toLowerCase()]);
   if (!order) {
     return null;
   }
 
   const orderId = Number(order.id);
 
-  const items = await db.all<Record<string, unknown>[]>(`
+  const items = await dbAll<Record<string, unknown>[]>(`
     SELECT *
     FROM order_items
     WHERE order_id = ?
     ORDER BY id ASC
   `, [orderId]);
 
-  const financeRecords = await db.all<Record<string, unknown>[]>(`
+  const financeRecords = await dbAll<Record<string, unknown>[]>(`
     SELECT
       f.*,
       p.name AS partner_name,
@@ -54,7 +54,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     ORDER BY datetime(f.created_at) DESC, f.id DESC
   `, [orderId]);
 
-  const logisticsRecords = await db.all<Record<string, unknown>[]>(`
+  const logisticsRecords = await dbAll<Record<string, unknown>[]>(`
     SELECT
       l.*,
       u.name AS created_by_name
@@ -69,7 +69,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
       id DESC
     `, [orderId]);
 
-  const packingRecords = await db.all<Record<string, unknown>[]>(
+  const packingRecords = await dbAll<Record<string, unknown>[]>(
     `
       SELECT pr.*, a.stored_name, a.file_path
       FROM packing_records pr
@@ -80,7 +80,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     [orderId],
   );
 
-  const customs = await db.get<Record<string, unknown>>(
+  const customs = await dbGet<Record<string, unknown>>(
     `
       SELECT
         c.*,
@@ -93,7 +93,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     [orderId],
   );
 
-  const productionPlan = await db.get<Record<string, unknown>>(
+  const productionPlan = await dbGet<Record<string, unknown>>(
     `
       SELECT
         pp.*,
@@ -113,7 +113,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
 
   let productionLogs: Record<string, unknown>[] = [];
   if (productionPlan) {
-    productionLogs = await db.all(
+    productionLogs = await dbAll(
       `
         SELECT pl.*, u.name as created_by_name
         FROM production_logs pl
@@ -125,7 +125,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     );
   }
 
-  const summaryRows = await db.all<{ type: FinanceType; currency: string; payment_category: PaymentCategory; total: number }[]>(`
+  const summaryRows = await dbAll<{ type: FinanceType; currency: string; payment_category: PaymentCategory; total: number }[]>(`
     SELECT type, currency, payment_category, COALESCE(SUM(amount), 0) AS total
     FROM finance_records
     WHERE order_id = ? AND status = 'completed'
@@ -148,7 +148,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     }
   }
 
-  const pendingFinanceCount = await db.get<{ count: number }>(
+  const pendingFinanceCount = await dbGet<{ count: number }>(
     `SELECT COUNT(*) AS count FROM finance_records WHERE order_id = ? AND status = 'pending'`,
     [orderId],
   );
@@ -177,12 +177,12 @@ export async function buildOrderDetail(idOrNo: number | string) {
   const productionLogAttachments = productionPlan ? await getAttachmentsByEntity('production_log', productionLogs.map(l => Number(l.id))) : new Map<number, Record<string, unknown>[]>();
   const productionPhotos = await getAttachmentsByEntity('production_photo', [orderId]);
   const orderDocuments = await getAttachmentsByEntity('order_document', [orderId]);
-  const followUps = await db.all<Record<string, unknown>[]>(
+  const followUps = await dbAll<Record<string, unknown>[]>(
     `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC, of.id DESC`,
     [orderId],
   );
 
-  const tasks = await db.all<Record<string, unknown>[]>(
+  const tasks = await dbAll<Record<string, unknown>[]>(
     `SELECT t.*, u.name as assignee_name
      FROM tasks t
      LEFT JOIN users u ON t.assignee_id = u.id

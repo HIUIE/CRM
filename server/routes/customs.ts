@@ -4,7 +4,7 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import type { AuthedRequest } from '../lib/auth.js';
 import { buildAttachmentUrl } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
@@ -40,7 +40,7 @@ export function createCustomsRouter() {
     }
 
     try {
-      const record = await db.get<Record<string, unknown>>(
+      const record = await dbGet<Record<string, unknown>>(
         `
           SELECT
             c.*,
@@ -75,11 +75,11 @@ export function createCustomsRouter() {
     }
 
     try {
-      const existing = await db.get<{ id: number }>(`SELECT id FROM customs_records WHERE order_id = ?`, [orderId]);
+      const existing = await dbGet<{ id: number }>(`SELECT id FROM customs_records WHERE order_id = ?`, [orderId]);
       if (existing) {
         return fail(res, 409, '该订单已有报关信息，请直接编辑', 'CUSTOMS_ALREADY_EXISTS');
       }
-      const created = await db.run(
+      const created = await dbRun(
         `
           INSERT INTO customs_records (order_id, status, broker_name, declaration_no, declaration_date, release_date, trade_mode, remark, created_by, updated_by, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -110,7 +110,7 @@ export function createCustomsRouter() {
       return fail(res, 400, '报关记录编号无效', 'INVALID_CUSTOMS_ID');
     }
 
-    const existing = await db.get<{ order_id: number }>(`SELECT order_id FROM customs_records WHERE id = ?`, [customsId]);
+    const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM customs_records WHERE id = ?`, [customsId]);
     if (!existing) {
       return fail(res, 404, '报关记录不存在', 'CUSTOMS_NOT_FOUND');
     }
@@ -121,7 +121,7 @@ export function createCustomsRouter() {
     }
 
     try {
-      await db.run(
+      await dbRun(
         `
           UPDATE customs_records
           SET status = ?, broker_name = ?, declaration_no = ?, declaration_date = ?, release_date = ?, trade_mode = ?, remark = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
@@ -152,7 +152,7 @@ export function createCustomsRouter() {
       return fail(res, 400, '报关记录编号无效', 'INVALID_CUSTOMS_ID');
     }
 
-    const existing = await db.get<{ id: number }>(`SELECT id FROM customs_records WHERE id = ?`, [customsId]);
+    const existing = await dbGet<{ id: number }>(`SELECT id FROM customs_records WHERE id = ?`, [customsId]);
     if (!existing) {
       return fail(res, 404, '报关记录不存在', 'CUSTOMS_NOT_FOUND');
     }
@@ -166,7 +166,7 @@ export function createCustomsRouter() {
       const uploaded = [];
       for (const file of files) {
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
-        const result = await db.run(
+        const result = await dbRun(
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
             VALUES (?, ?, ?, ?, ?, ?, ?)

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { dbAll, dbGet, dbRun, SQL } from '../lib/db.js';
 import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
@@ -37,7 +37,7 @@ export function createCustomersRouter() {
     }
 
     try {
-      const customers = await db.all(`
+      const customers = await dbAll(`
         SELECT
           c.*,
           u.name AS created_by_name,
@@ -59,7 +59,7 @@ export function createCustomersRouter() {
     const customerIdOrDisplay = req.params.id;
     
     try {
-      const customer = await db.get(`
+      const customer = await dbGet(`
         SELECT c.*, u.name AS created_by_name
         FROM customers c
         LEFT JOIN users u ON u.id = c.created_by
@@ -72,7 +72,7 @@ export function createCustomersRouter() {
 
       const actualId = customer.id;
 
-      const orders = await db.all(`
+      const orders = await dbAll(`
         SELECT 
           id, display_id, status, total_amount, product_summary, created_at,
           (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed') as paid_amount
@@ -81,7 +81,7 @@ export function createCustomersRouter() {
         ORDER BY created_at DESC
       `, [actualId]);
 
-      const finance_records = await db.all(`
+      const finance_records = await dbAll(`
         SELECT
           f.id, f.type, f.amount, f.currency, f.status, f.target, f.created_at, f.remark,
           o.display_id as order_display_id, o.product_summary
@@ -91,7 +91,7 @@ export function createCustomersRouter() {
         ORDER BY f.created_at DESC
       `, [actualId]);
 
-      const followups = await db.all(`
+      const followups = await dbAll(`
         SELECT f.id, f.content, f.created_at, f.created_by, f.created_by_name,
                NULL as source_order_id, NULL as source_order_display_id
         FROM customer_followups f
@@ -107,7 +107,7 @@ export function createCustomersRouter() {
         ORDER BY created_at DESC
       `, [actualId, actualId]);
 
-      const system_activities = await db.all(`
+      const system_activities = await dbAll(`
         SELECT 'finance' as type, f.id, o.display_id as order_display_id, 
           CASE WHEN f.type = 'receipt' THEN '收款完成' ELSE '付款完成' END as title,
           '' as desc, f.created_at,
@@ -139,7 +139,7 @@ export function createCustomersRouter() {
         LIMIT 20
       `, [actualId, actualId, actualId, actualId]);
       
-      const tasks = await db.all(`
+      const tasks = await dbAll(`
         SELECT t.*, u.name as assignee_name
         FROM tasks t
         JOIN users u ON t.assignee_id = u.id
@@ -147,7 +147,7 @@ export function createCustomersRouter() {
         ORDER BY t.due_date ASC
       `, [actualId]);
 
-      const contacts = await db.all(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId]);
+      const contacts = await dbAll(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId]);
 
       res.json({ ...customer, orders, finance_records, system_activities, followups, contacts, tasks });
     } catch (error) {
@@ -168,7 +168,7 @@ export function createCustomersRouter() {
 
     try {
       const displayId = generateCustomerDisplayId();
-      const result = await db.run(
+      const result = await dbRun(
         `
           INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -200,10 +200,10 @@ export function createCustomersRouter() {
     if (!content) return fail(res, 400, '请输入跟进内容');
 
     try {
-      const customer = await db.get(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      const customer = await dbGet(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
       if (!customer) return fail(res, 404, '客户不存在');
 
-      await db.run(
+      await dbRun(
         `INSERT INTO customer_followups (customer_id, content, created_by, created_by_name) VALUES (?, ?, ?, ?)`,
         [customer.id, content, req.user?.id, req.user?.name]
       );
@@ -227,10 +227,10 @@ export function createCustomersRouter() {
     }
 
     try {
-      const oldVal = await db.get(`SELECT * FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      const oldVal = await dbGet(`SELECT * FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
       if (!oldVal) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
 
-      await db.run(
+      await dbRun(
         `
           UPDATE customers
           SET name = ?, country = ?, contact = ?, source_channel = ?, intent_products = ?, updated_by = ?
@@ -258,16 +258,16 @@ export function createCustomersRouter() {
   router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
     const customerId = req.params.id;
     try {
-      const customer = await db.get(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      const customer = await dbGet(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
       if (!customer) return fail(res, 404, '客户不存在');
 
-      const linkedOrders = await db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM orders WHERE customer_id = ?`, [customer.id]);
+      const linkedOrders = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM orders WHERE customer_id = ?`, [customer.id]);
       if ((linkedOrders?.count || 0) > 0) {
         return fail(res, 409, '该客户下仍有关联订单，不能删除', 'CUSTOMER_HAS_ORDERS');
       }
 
-      const oldVal = await db.get(`SELECT * FROM customers WHERE id = ?`, [customer.id]);
-      const result = await db.run(`UPDATE customers SET deleted_at = datetime("now") WHERE id = ?`, [customer.id]);
+      const oldVal = await dbGet(`SELECT * FROM customers WHERE id = ?`, [customer.id]);
+      const result = await dbRun(`UPDATE customers SET deleted_at = ${SQL.now()} WHERE id = ?`, [customer.id]);
       if (!result.changes) {
         return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
       }
