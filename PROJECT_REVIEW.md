@@ -277,7 +277,7 @@
 | **P1** | **前后端类型统一** | `server/domain.ts` vs `src/types/crm.ts` | 两端各自定义 OrderStatus 等类型，容易不同步。建议抽出 shared/types |
 | **P1** | **引入数据请求层** | `src/lib/api.ts` | 建议加入 SWR / TanStack Query 做自动缓存、重新验证、乐观更新 |
 | **P2** | **错误监控** | `server/lib/http.ts:handleRouteError()` | 已添加结构化日志（method/path/userId + timestamp）。建议进一步集成 Sentry |
-| **P2** | **OpenAPI 文档** | — | 15+ 个子路由无 API 文档，不利于前端对接和调试 |
+| ~~**P2**~~ | ~~**OpenAPI 文档**~~ | ~~—~~ | ✅ swagger-jsdoc + swagger-ui，访问 /api/api-docs |
 
 ### 代码质量
 
@@ -498,7 +498,7 @@
 | **~~搜索索引优化~~** ✅ | 为 orders/customers/finance/logistics 等表添加 14 个数据库索引 | ✅ 已完成 |
 | **~~OpenAPI 文档~~** ✅ | swagger-jsdoc + swagger-ui-express，访问 /api/api-docs | ✅ 已完成 |
 | **~~批量操作~~** ✅ | 新增 POST /api/orders/batch-delete 批量删除端点 | ✅ 已完成 |
-| **移动端适配** | 当前 UI 定位桌面，手机浏览器体验较差 | 低 |
+| **~~移动端适配~~** ✅ | 响应式侧栏（汉堡菜单）+ 移动端导航栏 + 内容区自适应间距 | ✅ 已完成 |
 | **~~软删除~~** ✅ | orders/customers/partners 改为 UPDATE SET deleted_at，数据可恢复 | ✅ 已完成 |
 | **~~统计报表~~** ✅ | Dashboard 新增月度趋势图（订单数+营收）、客户总数统计 | ✅ 已完成 |
 
