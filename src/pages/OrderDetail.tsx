@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -201,6 +201,9 @@ export default function OrderDetailPage() {
 
   const stageIndex = STAGE_STEPS.findIndex((s) => s.key === order?.status);
 
+  const queryClient = useQueryClient();
+  const refreshDetail = async () => { await queryClient.invalidateQueries({ queryKey: ['order-detail', orderNo] }); };
+
   // 4. Effects
   const loadDetail = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
     if (!orderNo) { setError('无效单号'); setLoading(false); return; }
@@ -367,9 +370,9 @@ export default function OrderDetailPage() {
           <DocumentsVaultSection
             orderDocuments={orderDocuments}
             uploadingDoc={uploadingDoc}
-            onUploadDocument={(files) => handleUploadOrderDocument(files, { order, customer, setUploadingDoc, showToast, loadDetail })}
+            onUploadDocument={(files) => handleUploadOrderDocument(files, { order, customer, setUploadingDoc, showToast, loadDetail: refreshDetail })}
             onPreview={setPreviewAttachment}
-            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail })}
+            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
             user={user}
           />
 
@@ -382,7 +385,7 @@ export default function OrderDetailPage() {
             onPreview={setPreviewAttachment}
             onEdit={openFinanceDrawer}
             onAdd={() => openFinanceDrawer()}
-            onDelete={(r: FinanceRecord) => { if(window.confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>loadDetail({showLoading:false})) }}
+            onDelete={(r: FinanceRecord) => { if(window.confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>refreshDetail()) }}
             financeFilter={financeFilter}
             onFilterChange={setFinanceFilter}
           />
@@ -391,7 +394,7 @@ export default function OrderDetailPage() {
             sectionRef={sectionRefs.production}
             productionPlan={productionPlan}
             onEditProduction={openProductionDrawer}
-            onUpdateInspection={(status) => handleUpdateInspectionStatus(status, { productionPlan, order, setSaving, showToast, loadDetail })}
+            onUpdateInspection={(status) => handleUpdateInspectionStatus(status, { productionPlan, order, setSaving, showToast, loadDetail: refreshDetail })}
             onPreview={setPreviewAttachment}
             onAddProduction={openProductionDrawer}
           />
@@ -400,7 +403,7 @@ export default function OrderDetailPage() {
             sectionRef={sectionRefs.customs}
             customs={customs}
             onEditCustoms={openCustomsDrawer}
-            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail })}
+            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
             onPreview={setPreviewAttachment}
             user={user}
           />
@@ -418,7 +421,7 @@ export default function OrderDetailPage() {
             hasAnyLogistics={hasAnyLogistics}
             onAddLogistics={() => openLogisticsDrawer()}
             onEditLogistics={openLogisticsDrawer}
-            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail })}
+            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
             onPreview={setPreviewAttachment}
             user={user}
           />
@@ -457,7 +460,7 @@ export default function OrderDetailPage() {
       <TaskDrawer
         isOpen={showTaskDrawer}
         onClose={() => setShowTaskDrawer(false)}
-        onSuccess={() => loadDetail({ showLoading: false })}
+        onSuccess={() => refreshDetail()}
         entityType="ORDER"
         entityId={String(order?.id)}
         entityName={order?.display_id}
@@ -491,7 +494,7 @@ export default function OrderDetailPage() {
               </div>
               <button onClick={closeDrawer} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={26} /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail, setDrawerError }); }} className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-white dark:bg-navy-900">
+            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-white dark:bg-navy-900">
               {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner uppercase "><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
               {drawer.mode === 'order' ? (
                 <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} />
