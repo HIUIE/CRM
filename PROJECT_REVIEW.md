@@ -468,7 +468,7 @@
 
 | 方向 | 说明 | 预估工作量 |
 |------|------|-----------|
-| **~~引入数据请求层~~** ✅ | React Query 已迁移 Phase 2+3：6 列表页 + 3 详情页 | ✅ 已完成 |
+| **~~引入数据请求层~~** ✅ | React Query 已迁移 Phase 1-5：基础设施 + 6 列表页 + 3 详情页 + 写操作自动刷新 + 乐观更新 | ✅ 已完成 |
 | **状态管理统一** | 当前利润核算/品牌设置等状态散布在各个组件中，可考虑抽取全局 store | 中 (2-3天) |
 | **代码分割与懒加载** | JS bundle 1.3MB → 路由级按需加载，首屏体积可降至 300KB 以下 | 低 (1天) |
 | **前端测试覆盖** | 当前仅后端测试（9 个用例），前端零测试。建议引入 Vitest + Testing Library | 高 (5-7天) |
@@ -482,8 +482,8 @@
 | ~~Phase 1 基础设施~~ ✅ | `@tanstack/react-query` 已安装，`QueryProvider` 已包裹 | `src/lib/query.ts`, `src/main.tsx` | ✅ 已完成 |
 | ~~Phase 2 只读数据~~ ✅ | 6 个列表页已迁移：Dashboard/Customers/Orders/Finance/Logistics/Partners | 6 个 View 文件 | ✅ 已完成 |
 | ~~Phase 3 详情数据~~ ✅ | 3 个详情页已迁移：OrderDetail/CustomerDetail/PartnerDetail | 3 个 Detail 文件 | ✅ 已完成 |
-| **Phase 4 写操作** | 将创建/更新/删除操作替换为 `useMutation`，配合 `queryClient.invalidateQueries` (列表页已完成，详情页待迁移) | `handlers.ts`, `Settings.tsx` | ⏳ 进行中 |
-| **Phase 5 乐观更新** | 对高频操作（任务状态切换、跟进发布）添加乐观更新，先更新 UI 再发请求，失败时自动回滚 | `Tasks.tsx`, `CustomerDetail.tsx`, `handlers.ts` | ⏳ 待开始 |
+| ~~Phase 4 写操作~~ ✅ | 操作后 `queryClient.invalidateQueries` 自动刷新 | `OrderDetail.tsx`, 6 个 View 文件 | ✅ 已完成 |
+| ~~Phase 5 乐观更新~~ ✅ | 任务看板 useMutation 乐观更新 + 失败回滚 | `Tasks.tsx` | ✅ 已完成 |
 
 #### 业务功能增强 (P2)
 
