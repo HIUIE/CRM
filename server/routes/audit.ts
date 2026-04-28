@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { dbAll, dbRun } from '../lib/db.js';
+import { dbAll, dbRun, SQL } from '../lib/db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError } from '../lib/http.js';
 
@@ -9,7 +9,7 @@ export function createAuditRouter() {
   router.get('/', requireAdmin, async (req: AuthedRequest, res) => {
     try {
       // Auto-prune: keep only last 30 days of audit logs to prevent unbounded growth
-      await dbRun(`DELETE FROM audit_logs WHERE datetime(created_at) < datetime('now', '-30 days')`);
+      await dbRun(`DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '30 days'`);
 
       const logs = await dbAll(`
         SELECT * FROM audit_logs

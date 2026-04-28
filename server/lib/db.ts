@@ -10,11 +10,26 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
-// Convert SQLite ? placeholders to PostgreSQL $1, $2, etc.
+// Convert SQLite queries to PostgreSQL-compatible SQL.
 function pgParams(sql: string, params: any[]): [string, any[]] {
   let idx = 0;
-  const converted = sql.replace(/\?/g, () => `$${++idx}`);
-  return [converted, params];
+  const _sql = sql; // keep original for GROUP BY analysis (before transforms)
+  const result = sql
+    // Convert ? to $1, $2, ...
+    .replace(/\?/g, () => `$${++idx}`)
+    // Strip datetime(col) → col (PG sorts TIMESTAMP natively)
+    .replace(/\bdatetime\((\w+(?:\.\w+)?)\)/g, '$1')
+    // Quote camelCase aliases: " AS fooBar" → " AS \"fooBar\""
+    .replace(/\bAS\s+([a-z]+[A-Z][a-zA-Z]*)\b/g, 'AS "$1"')
+    // Auto-expand GROUP BY c.id to include joined columns (PG requires all non-aggregate cols)
+    .replace(/GROUP BY (\w+)\.id(?!,)/g, (match, tbl) => {
+      const hasUser = _sql.includes('LEFT JOIN users u') || _sql.includes('JOIN users u');
+      const extras: string[] = [];
+      if (hasUser && tbl !== 'u') extras.push('u.name');
+      if (extras.length) return `GROUP BY ${tbl}.id, ${extras.join(', ')}`;
+      return match;
+    });
+  return [result, params];
 }
 
 // PostgreSQL-specific SQL helpers
@@ -25,6 +40,7 @@ export const SQL = {
     return `TO_CHAR(${col}, '${fmt.replace(/%[Ymd]/g, m => ({'%Y': 'YYYY', '%m': 'MM', '%d': 'DD'})[m] || m)}')`;
   },
   daysBetween: (col: string) => `EXTRACT(DAY FROM NOW() - ${col})::INTEGER`,
+  monthsAgo: (n: number) => `NOW() - INTERVAL '${n} months'`,
 };
 
 export async function dbAll<T = any[]>(sql: string, params: any[] = []): Promise<T> {

@@ -195,7 +195,7 @@ export function createDashboardRouter() {
           COUNT(*) AS orders,
           COALESCE(SUM(total_amount), 0) AS revenue
         FROM orders
-        WHERE created_at >= date('now', '-6 months')
+        WHERE created_at >= ${SQL.monthsAgo(6)}
         GROUP BY month ORDER BY month ASC
       `);
 
