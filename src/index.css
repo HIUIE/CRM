@@ -52,14 +52,26 @@
 }
 
 .dark {
-  --app-bg: #020617;
-  --app-surface: #0F172A;
+  /* Base canvas — deepest layer */
+  --app-bg: #080C18;
+  /* Card surface — one clear step above canvas (≈ #1A2233) */
+  --app-surface: #1A2233;
+  /* Primary text — near-white */
   --app-text-primary: #F8FAFC;
-  --app-text-secondary: #94A3B8;
-  --app-border: #1E293B;
-  --app-divider: #1E293B;
-  --app-sage: #10B981;
-  --color-tertiary-sage: #10B981;
+  /* Secondary text — lifted to ~68% brightness (was 58%) */
+  --app-text-secondary: #B4BCC8;
+  /* Card borders — semi-transparent light stroke to slice modules */
+  --app-border: rgba(255, 255, 255, 0.10);
+  /* Internal dividers — subtle separation */
+  --app-divider: rgba(255, 255, 255, 0.06);
+  /* Accent — lowered saturation to reduce blooming on dark bg */
+  --app-sage: #0D9068;
+  --color-tertiary-sage: #0D9068;
+
+  /* Override Tailwind palette for dark-mode elevation layering */
+  --color-navy-950: #080C18;
+  --color-navy-900: #1A2233;
+  --color-navy-800: #253040;
 }
 
 html {
@@ -158,11 +170,11 @@ h1, h2, h3, h4, .headline {
     pointer-events: none;
   }
   .dark .btn-primary {
-    background-color: #10B981;
+    background-color: #0D9068;
     color: #FFFFFF;
   }
   .dark .btn-primary:hover {
-    background-color: #059669;
+    background-color: #0B7A5A;
   }
 
   /* Secondary: transparent fill, Navy text, Navy border */
