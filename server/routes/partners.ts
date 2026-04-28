@@ -15,6 +15,7 @@ export function createPartnersRouter() {
           u.name AS created_by_name
         FROM partners p
         LEFT JOIN users u ON u.id = p.created_by
+        WHERE p.deleted_at IS NULL
         ORDER BY datetime(p.created_at) DESC, p.id DESC
       `);
       res.json(partners);
@@ -196,7 +197,7 @@ export function createPartnersRouter() {
         return fail(res, 409, '该伙伴已被财务或生产安排引用，暂时不能删除', 'PARTNER_IN_USE');
       }
 
-      const deleted = await db.run(`DELETE FROM partners WHERE id = ?`, [partnerId]);
+      const deleted = await db.run(`UPDATE partners SET deleted_at = datetime("now") WHERE id = ?`, [partnerId]);
       if (!deleted.changes) {
         return fail(res, 404, '伙伴不存在', 'PARTNER_NOT_FOUND');
       }

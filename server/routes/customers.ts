@@ -19,7 +19,7 @@ export function createCustomersRouter() {
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
 
-    let whereSql = 'WHERE 1=1';
+    let whereSql = 'WHERE c.deleted_at IS NULL';
     const params: (string | number | null | undefined)[] = [];
 
     if (q) {
@@ -267,7 +267,7 @@ export function createCustomersRouter() {
       }
 
       const oldVal = await db.get(`SELECT * FROM customers WHERE id = ?`, [customer.id]);
-      const result = await db.run(`DELETE FROM customers WHERE id = ?`, [customer.id]);
+      const result = await db.run(`UPDATE customers SET deleted_at = datetime("now") WHERE id = ?`, [customer.id]);
       if (!result.changes) {
         return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
       }

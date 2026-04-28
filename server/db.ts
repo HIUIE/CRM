@@ -349,6 +349,12 @@ async function runMigrations() {
   await ensureColumn('production_plans', 'updated_by', 'INTEGER');
   await ensureColumn('packing_records', 'attachment_id', 'INTEGER');
   await ensureColumn('attachments', 'remark', 'TEXT');
+  await ensureColumn('orders', 'deleted_at', 'DATETIME');
+  await ensureColumn('customers', 'deleted_at', 'DATETIME');
+  await ensureColumn('partners', 'deleted_at', 'DATETIME');
+  await ensureColumn('finance_records', 'deleted_at', 'DATETIME');
+  await ensureColumn('logistics_records', 'deleted_at', 'DATETIME');
+  await ensureColumn('production_plans', 'deleted_at', 'DATETIME');
 
   await db.run(
     `
