@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
 import { defineConfig, loadEnv } from 'vite';
+/// <reference types="vitest" />
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -44,6 +45,12 @@ export default defineConfig(({ mode }) => {
         },
       },
       chunkSizeWarningLimit: 600,
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: [],
+      include: ['src/**/*.test.{ts,tsx}'],
     },
   };
 });

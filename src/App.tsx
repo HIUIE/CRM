@@ -3,29 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import MainLayout from './components/layout/MainLayout';
 import ErrorBoundary from './components/ui/ErrorBoundary';
-
-// --- Static Imports for ALL pages to rule out lazy-load issues ---
-import DashboardView from './pages/Dashboard';
-import AIAssistantView from './pages/AIAssistant';
-import OrderDetailPage from './pages/OrderDetail';
-import SettingsView from './pages/Settings';
-import HelpCenterPage from './pages/HelpCenter';
-import LoginScreen from './pages/Login';
-import OrdersView from './components/OrdersView';
-import FinanceView from './components/FinanceView';
-import LogisticsView from './components/LogisticsView';
-import CustomersView from './components/CustomersView';
-import CustomerDetailPage from './pages/CustomerDetail';
-import AuditLogsPage from './pages/AuditLogs';
-import PartnersView from './components/PartnersView';
-import PartnerDetailPage from './pages/PartnerDetail';
-import TasksView from './pages/Tasks';
 import VersionGuard from './components/VersionGuard';
+
+// --- Lazy-loaded pages for code splitting ---
+const DashboardView = lazy(() => import('./pages/Dashboard'));
+const AIAssistantView = lazy(() => import('./pages/AIAssistant'));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetail'));
+const SettingsView = lazy(() => import('./pages/Settings'));
+const HelpCenterPage = lazy(() => import('./pages/HelpCenter'));
+const LoginScreen = lazy(() => import('./pages/Login'));
+const OrdersView = lazy(() => import('./components/OrdersView'));
+const FinanceView = lazy(() => import('./components/FinanceView'));
+const LogisticsView = lazy(() => import('./components/LogisticsView'));
+const CustomersView = lazy(() => import('./components/CustomersView'));
+const CustomerDetailPage = lazy(() => import('./pages/CustomerDetail'));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogs'));
+const PartnersView = lazy(() => import('./components/PartnersView'));
+const PartnerDetailPage = lazy(() => import('./pages/PartnerDetail'));
+const TasksView = lazy(() => import('./pages/Tasks'));
 
 // --- Loading Placeholder ---
 function PageLoader() {
