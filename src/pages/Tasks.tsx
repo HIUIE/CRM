@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2, Clock, Plus, User, Calendar,
   Package, MessageSquare, Paperclip
@@ -32,30 +33,37 @@ type ViewMode = 'assigned' | 'delegated' | 'all';
 
 export default function TasksView() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
 
   const viewMode = (searchParams.get('view') as ViewMode) || 'assigned';
 
-  const loadTasks = async () => {
-    setLoading(true);
-    try {
-      const data = await apiFetch<Task[]>(`/api/tasks?view=${viewMode}`);
-      setTasks(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: tasks = [], isLoading: loading } = useQuery<Task[]>({
+    queryKey: ['tasks', viewMode],
+    queryFn: () => apiFetch<Task[]>(`/api/tasks?view=${viewMode}`),
+  });
 
-  useEffect(() => {
-    void loadTasks();
-  }, [viewMode]);
+  const statusMutation = useMutation({
+    mutationFn: ({ taskId, newStatus }: { taskId: number; newStatus: ColumnKey }) =>
+      apiFetch(`/api/tasks/${taskId}/status`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) }),
+    onMutate: async ({ taskId, newStatus }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks', viewMode] });
+      const previous = queryClient.getQueryData<Task[]>(['tasks', viewMode]);
+      queryClient.setQueryData<Task[]>(['tasks', viewMode], (old) =>
+        old?.map(t => t.id === taskId ? { ...t, status: newStatus } : t) || []
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(['tasks', viewMode], context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', viewMode] });
+    },
+  });
 
   useEffect(() => {
     const detailId = searchParams.get('detail');
@@ -74,18 +82,10 @@ export default function TasksView() {
     { key: 'done', label: '已完成 (Done)', color: 'bg-emerald-50/20 dark:bg-emerald-900/5' }
   ];
 
-  const updateTaskStatus = async (taskId: number, newStatus: ColumnKey) => {
-    try {
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-      await apiFetch(`/api/tasks/${taskId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus })
-      });
-      setToast('状态已流转');
-      setTimeout(() => setToast(''), 2000);
-    } catch (e) {
-      loadTasks();
-    }
+  const updateTaskStatus = (taskId: number, newStatus: ColumnKey) => {
+    statusMutation.mutate({ taskId, newStatus });
+    setToast('状态已流转');
+    setTimeout(() => setToast(''), 2000);
   };
 
   return (
@@ -155,10 +155,10 @@ export default function TasksView() {
       <TaskDrawer
         isOpen={showCreateDrawer} 
         onClose={() => setShowCreateDrawer(false)} 
-        onSuccess={loadTasks} 
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
       />
 
-      <TaskDetailDrawer 
+      <TaskDetailDrawer
         taskId={selectedTaskId}
         onClose={() => {
            setSelectedTaskId(null);
@@ -166,7 +166,7 @@ export default function TasksView() {
            next.delete('detail');
            setSearchParams(next);
         }}
-        onUpdate={loadTasks}
+        onUpdate={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
       />
 
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
