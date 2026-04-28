@@ -468,7 +468,7 @@
 
 | 方向 | 说明 | 预估工作量 |
 |------|------|-----------|
-| **引入数据请求层** | React Query 替代散落的 `useEffect` + `apiFetch` 模式，自动缓存、请求去重、乐观更新 | 中 (3-5天) |
+| **~~引入数据请求层~~** ✅ | React Query 已迁移 Phase 2+3：6 列表页 + 3 详情页 | ✅ 已完成 |
 | **状态管理统一** | 当前利润核算/品牌设置等状态散布在各个组件中，可考虑抽取全局 store | 中 (2-3天) |
 | **代码分割与懒加载** | JS bundle 1.3MB → 路由级按需加载，首屏体积可降至 300KB 以下 | 低 (1天) |
 | **前端测试覆盖** | 当前仅后端测试（9 个用例），前端零测试。建议引入 Vitest + Testing Library | 高 (5-7天) |
@@ -479,11 +479,11 @@
 
 | 阶段 | 内容 | 涉及文件 | 预期效果 |
 |------|------|----------|----------|
-| **Phase 1 基础设施** | 安装 `@tanstack/react-query`，创建 `QueryProvider`，在 `main.tsx` 中包裹应用 | `src/lib/query.ts`, `src/main.tsx` | 全局 QueryClient 就绪 |
-| **Phase 2 只读数据** | 将 Dashboard、客户列表、订单列表、财务列表、物流列表、合作伙伴列表的 `useEffect`+apiFetch 替换为 `useQuery` | `Dashboard.tsx`, `CustomersView.tsx`, `OrdersView.tsx`, `FinanceView.tsx`, `LogisticsView.tsx`, `PartnersView.tsx` | 列表页自动缓存 + 后台刷新，切换页面不再重复请求 |
-| **Phase 3 详情数据** | 将订单详情、客户详情、合作伙伴详情的加载替换为 `useQuery`，依赖 ID 参数自动重新获取 | `OrderDetail.tsx`, `CustomerDetail.tsx`, `PartnerDetail.tsx` | 详情页数据缓存，切换订单不闪烁 |
-| **Phase 4 写操作** | 将创建/更新/删除操作替换为 `useMutation`，配合 `queryClient.invalidateQueries` 实现操作后自动刷新列表 | `handlers.ts`, `CustomersView.tsx`, `OrdersView.tsx`, `Settings.tsx` | 增删改后自动刷新，无需手动 `loadData()` |
-| **Phase 5 乐观更新** | 对高频操作（任务状态切换、跟进发布）添加乐观更新，先更新 UI 再发请求，失败时自动回滚 | `Tasks.tsx`, `CustomerDetail.tsx`, `handlers.ts` | 操作即时响应，无感更新 |
+| ~~Phase 1 基础设施~~ ✅ | `@tanstack/react-query` 已安装，`QueryProvider` 已包裹 | `src/lib/query.ts`, `src/main.tsx` | ✅ 已完成 |
+| ~~Phase 2 只读数据~~ ✅ | 6 个列表页已迁移：Dashboard/Customers/Orders/Finance/Logistics/Partners | 6 个 View 文件 | ✅ 已完成 |
+| ~~Phase 3 详情数据~~ ✅ | 3 个详情页已迁移：OrderDetail/CustomerDetail/PartnerDetail | 3 个 Detail 文件 | ✅ 已完成 |
+| **Phase 4 写操作** | 将创建/更新/删除操作替换为 `useMutation`，配合 `queryClient.invalidateQueries` (列表页已完成，详情页待迁移) | `handlers.ts`, `Settings.tsx` | ⏳ 进行中 |
+| **Phase 5 乐观更新** | 对高频操作（任务状态切换、跟进发布）添加乐观更新，先更新 UI 再发请求，失败时自动回滚 | `Tasks.tsx`, `CustomerDetail.tsx`, `handlers.ts` | ⏳ 待开始 |
 
 #### 业务功能增强 (P2)
 
