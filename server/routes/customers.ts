@@ -59,12 +59,15 @@ export function createCustomersRouter() {
     const customerIdOrDisplay = req.params.id;
     
     try {
+      // Try by display_id first, then by id (PG can't compare int = text)
+      const isNumeric = /^\d+$/.test(customerIdOrDisplay);
       const customer = await dbGet(`
         SELECT c.*, u.name AS created_by_name
         FROM customers c
         LEFT JOIN users u ON u.id = c.created_by
-        WHERE c.id = ? OR LOWER(c.display_id) = LOWER(?)
-      `, [customerIdOrDisplay, customerIdOrDisplay]);
+        WHERE LOWER(c.display_id) = LOWER(?)
+        ${isNumeric ? 'OR c.id = ?' : ''}
+      `, isNumeric ? [customerIdOrDisplay, Number(customerIdOrDisplay)] : [customerIdOrDisplay]);
 
       if (!customer) {
         return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
