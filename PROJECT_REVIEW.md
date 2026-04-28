@@ -272,7 +272,7 @@
 
 | 优先级 | 建议 | 文件 | 说明 |
 |--------|------|------|------|
-| **P0** | **迁移 PostgreSQL** | `server/db.ts` | SQLite 不支持并发写入，多用户同时操作会锁库。SQLite 在千级订单后可预见性能问题 | ⏳ 待处理 |
+| **P0** | **迁移 PostgreSQL** | `server/db-pg.ts` | Schema + DB 抽象层已完成 🚧。需逐文件替换 datetime/strftime/julianday 等 SQLite 语法 | ⏳ 进行中 |
 | ~~**P0**~~ | ~~**启用 WAL 模式**~~ | ~~`server/db.ts`~~ | ✅ 已添加 `PRAGMA journal_mode=WAL` | ✅ 已修复 |
 | **P1** | **前后端类型统一** | `server/domain.ts` vs `src/types/crm.ts` | 两端各自定义 OrderStatus 等类型，容易不同步。建议抽出 shared/types |
 | **P1** | **引入数据请求层** | `src/lib/api.ts` | 建议加入 SWR / TanStack Query 做自动缓存、重新验证、乐观更新 |
@@ -489,7 +489,7 @@
 
 | 方向 | 说明 | 优先度 |
 |------|------|--------|
-| **PostgreSQL 迁移** | 解决 SQLite 并发写入瓶颈，千级订单后性能显著提升 | 长期 |
+| **PostgreSQL 迁移** | 🚧 Schema + DB 抽象层已完成。剩余工作：逐文件替换 SQLite 专用语法（datetime/strftime/julianday）为 PG 兼容写法 | 进行中 |
 | **OpenAPI 文档** | 15+ 子路由无 API 文档，使用 Swagger/OpenAPI 自动生成 | 中 |
 | **国际化 (i18n)** | 目前全中文，支持英文/多语言后可拓展海外用户 | 中 |
 | **~~消息通知推送~~** ✅ | 企业微信群机器人 Webhook，新订单自动推送，设置页可配置 URL | ✅ 已完成 |
