@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { logAction } from '../lib/audit.js';
 import { fail, handleRouteError } from '../lib/http.js';
+import { notifyOrderCreated } from '../services/notifier.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows } from '../services/attachments.js';
 import { buildOrderDetail } from '../services/order-detail.js';
 import {
@@ -151,6 +152,8 @@ export function createOrdersRouter() {
       );
 
       await db.run('COMMIT');
+      // Fire-and-forget webhook notification
+      notifyOrderCreated(displayId, String(result.payload.customerId));
       res.status(201).json({ id: created.lastID, display_id: displayId });
     } catch (error) {
       await db.run('ROLLBACK');

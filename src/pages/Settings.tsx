@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus, X, Globe, DollarSign, AlertCircle, Loader2, RefreshCw, GitBranch, Clock, ExternalLink } from 'lucide-react';
+import { Bot, CheckCircle2, Download, FileDigit, KeyRound, Shield, UserCog, Settings, Layout, BrainCircuit, Plus, X, Globe, DollarSign, AlertCircle, Loader2, RefreshCw, GitBranch, Clock, ExternalLink, Bell } from 'lucide-react';
 import Field from '../components/ui/Field';
 import { apiDownload, apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -70,6 +70,8 @@ export default function SettingsView() {
   const [siteFavicon, setSiteFavicon] = useState('');
   const [savedSite, setSavedSite] = useState(false);
   const [uploadingBrand, setUploadingBrand] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [savedWebhook, setSavedWebhook] = useState(false);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [userForm, setUserForm] = useState<UserFormState>(EMPTY_USER_FORM);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -95,11 +97,12 @@ export default function SettingsView() {
 
   const loadSettings = async () => {
     try {
-      const [aiData, documentData, userData, basicData] = await Promise.all([
+      const [aiData, documentData, userData, basicData, webhookData] = await Promise.all([
         apiFetch<AiSettings>('/api/settings/ai'),
         isAdmin ? apiFetch<DocumentSettings>('/api/settings/document') : Promise.resolve({ orderNumberPrefix: 'ORD-' }),
         isAdmin ? apiFetch<ManagedUser[]>('/api/users') : Promise.resolve([]),
         apiFetch<{ siteName: string; siteSlogan: string; siteLogo: string; siteFavicon: string }>('/api/settings/basic'),
+        apiFetch<{ webhookUrl: string }>('/api/settings/webhook').catch(() => ({ webhookUrl: '' })),
       ]);
 
       setModel(aiData.model);
@@ -112,6 +115,7 @@ export default function SettingsView() {
       setSiteSlogan(basicData.siteSlogan || '');
       setSiteLogo(basicData.siteLogo || '');
       setSiteFavicon(basicData.siteFavicon || '');
+      setWebhookUrl(webhookData.webhookUrl || '');
 
       // Detect provider from model
       for (const p of AI_PROVIDERS) {
@@ -210,6 +214,18 @@ export default function SettingsView() {
       window.setTimeout(() => setSavedDocument(false), 1800);
     } catch (requestError) {
       setError(getErrorMessage(requestError, '保存单据编码规则失败'));
+    }
+  };
+
+  const saveWebhook = async () => {
+    setError('');
+    setSavedWebhook(false);
+    try {
+      await apiFetch('/api/settings/webhook', { method: 'POST', body: JSON.stringify({ webhookUrl }) });
+      setSavedWebhook(true);
+      window.setTimeout(() => setSavedWebhook(false), 1800);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, '保存失败'));
     }
   };
 
@@ -493,6 +509,20 @@ export default function SettingsView() {
                     <span className="text-sm font-bold text-primary-navy dark:text-white">{currency}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Webhook Notification */}
+            <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-4">
+                <Bell size={16} /> 消息通知（企业微信机器人）
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-medium">配置后，新订单创建时将自动推送通知到企业微信群。</p>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm outline-none focus:border-primary-navy data-field text-primary-navy dark:text-white" />
+                </div>
+                <button onClick={saveWebhook} className="btn-primary shadow-md shrink-0">{savedWebhook ? '已保存' : '保存'}</button>
               </div>
             </div>
           </div>

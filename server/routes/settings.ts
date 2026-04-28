@@ -141,6 +141,21 @@ export function createSettingsRouter() {
     }
   });
 
+  router.get('/webhook', async (_req, res) => {
+    const url = await getSettingValue('webhook_url', '');
+    res.json({ webhookUrl: url });
+  });
+
+  router.post('/webhook', requireAdmin, async (req, res) => {
+    const url = readString(req.body?.webhookUrl);
+    try {
+      await setSettingValue('webhook_url', url);
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '保存失败');
+    }
+  });
+
   router.get('/check-update', async (_req, res) => {
     try {
       const token = process.env.GITHUB_TOKEN || '';
