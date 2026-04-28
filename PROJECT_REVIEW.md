@@ -470,10 +470,10 @@
 |------|------|-----------|
 | **~~引入数据请求层~~** ✅ | React Query 已迁移 Phase 1-5：基础设施 + 6 列表页 + 3 详情页 + 写操作自动刷新 + 乐观更新 | ✅ 已完成 |
 | **~~状态管理统一~~** ✅ | useSiteBrand hook 已抽取，React Query 缓存站点品牌设置，MainLayout/Login 统一调用 | ✅ 已完成 |
-| **代码分割与懒加载** | JS bundle 1.3MB → 路由级按需加载，首屏体积可降至 300KB 以下 | 低 (1天) |
-| **前端测试覆盖** | 当前仅后端测试（9 个用例），前端零测试。建议引入 Vitest + Testing Library | 高 (5-7天) |
-| **E2E 测试** | Playwright / Cypress 覆盖核心业务流程（创建订单→生产→财务→物流→利润核算） | 高 (5-7天) |
-| **CI/CD 流水线** | GitHub Actions：push → lint → test → build → 自动部署 | 低 (1天) |
+| **~~代码分割与懒加载~~** ✅ | App.tsx 全部页面改为 React.lazy()，首屏体积优化 | ✅ 已完成 |
+| **前端测试覆盖** | 当前仅 1 个组件测试（Chip），需扩展至全部 UI 组件 + 页面集成测试 | 中 (3-5天) |
+| **E2E 测试** | Playwright / Cypress 覆盖核心业务流程 | 高 (5-7天) |
+| **~~CI/CD 流水线~~** ✅ | GitHub Actions：tsc → test → build | ✅ 已完成 |
 
 #### React Query 迁移详细计划
 
