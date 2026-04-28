@@ -1,4 +1,4 @@
-import { db } from '../db.js';
+import { dbRun } from './db.js';
 
 export async function createNotification(params: {
   userId: number;
@@ -7,7 +7,7 @@ export async function createNotification(params: {
   link?: string;
 }) {
   try {
-    await db.run(
+    await dbRun(
       `
         INSERT INTO notifications (user_id, title, message, link)
         VALUES (?, ?, ?, ?)

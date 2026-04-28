@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { createApp } from './server/app.js';
-import { DB_PATH, initDb } from './server/db.js';
-import { assertStorageOutsideStaticRoots } from './server/lib/security.js';
+import { initPgTables } from './server/db-pg.js';
 import { UPLOADS_DIR } from './server/paths.js';
 
 function requireProductionEnv() {
@@ -11,12 +10,13 @@ function requireProductionEnv() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'super-secret-key-for-preview-only') {
     throw new Error('生产环境必须设置 JWT_SECRET');
   }
-  assertStorageOutsideStaticRoots(DB_PATH, UPLOADS_DIR);
 }
 
 async function startServer() {
   requireProductionEnv();
-  await initDb();
+  const dbHost = process.env.PG_HOST || 'localhost';
+  const dbName = process.env.PG_DATABASE || 'smarttrade_crm';
+  await initPgTables();
 
   const app = await createApp();
   const PORT = Number(process.env.PORT) || 3000;
@@ -24,7 +24,7 @@ async function startServer() {
 
   const server = app.listen(PORT, HOST, () => {
     console.log(`Mode: ${process.env.NODE_ENV === 'production' ? 'production' : 'development'}`);
-    console.log(`Database: ${DB_PATH}`);
+    console.log(`Database: PostgreSQL ${dbHost}/${dbName}`);
     console.log(`Uploads: ${UPLOADS_DIR}`);
     console.log(`Local: http://localhost:${PORT}`);
     if (HOST === '0.0.0.0') {

@@ -1,4 +1,4 @@
-import { db } from '../db.js';
+import { dbRun } from './db.js';
 import { sanitizeForAI } from './sanitizer.js';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
@@ -18,7 +18,7 @@ export async function logAction(params: {
     const safeOld = params.oldValue ? sanitizeForAI(params.oldValue) : null;
     const safeNew = params.newValue ? sanitizeForAI(params.newValue) : null;
 
-    await db.run(
+    await dbRun(
       `
         INSERT INTO audit_logs (user_id, user_name, action_type, entity_type, entity_id, old_value, new_value)
         VALUES (?, ?, ?, ?, ?, ?, ?)

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { db } from '../db.js';
+import { dbGet, dbRun } from './db.js';
 import type { UserRole } from '../domain.js';
 import { fail } from './http.js';
 
@@ -107,7 +107,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
-    const currentUser = await db.get<{ id: number; active: number | null }>(
+    const currentUser = await dbGet<{ id: number; active: number | null }>(
       `SELECT id, active FROM users WHERE id = ?`,
       [decoded.id],
     );

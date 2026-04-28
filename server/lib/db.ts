@@ -1,89 +1,70 @@
-import { db as sqliteDb } from '../db.js';
-import pool from '../db-pg.js';
+import pkg from 'pg';
+const { Pool } = pkg;
+const pool = new Pool({
+  host: process.env.PG_HOST || 'localhost',
+  port: Number(process.env.PG_PORT) || 5432,
+  database: process.env.PG_DATABASE || 'smarttrade_crm',
+  user: process.env.PG_USER || 'postgres',
+  password: process.env.PG_PASSWORD || '',
+  max: 10,
+  idleTimeoutMillis: 30000,
+});
 
-const USE_PG = process.env.DB_TYPE === 'pg';
+// Convert SQLite ? placeholders to PostgreSQL $1, $2, etc.
+function pgParams(sql: string, params: any[]): [string, any[]] {
+  let idx = 0;
+  const converted = sql.replace(/\?/g, () => `$${++idx}`);
+  return [converted, params];
+}
 
-// SQL compatibility helpers
+// PostgreSQL-specific SQL helpers
 export const SQL = {
-  now: () => USE_PG ? 'NOW()' : "datetime('now')",
+  now: () => 'NOW()',
   date: (col: string, fmt?: string) => {
     if (!fmt) return col;
-    return USE_PG
-      ? `TO_CHAR(${col}, '${fmt.replace('%Y', 'YYYY').replace('%m', 'MM').replace('%d', 'DD')}')`
-      : `strftime('${fmt}', ${col})`;
+    return `TO_CHAR(${col}, '${fmt.replace(/%[Ymd]/g, m => ({'%Y': 'YYYY', '%m': 'MM', '%d': 'DD'})[m] || m)}')`;
   },
-  daysBetween: (col: string) => USE_PG
-    ? `EXTRACT(DAY FROM NOW() - ${col})::INTEGER`
-    : `CAST((julianday('now') - julianday(${col})) AS INTEGER)`,
-  concat: (...args: string[]) => args.join(USE_PG ? ' || ' : ' || '),
-  limit: (n: number) => USE_PG ? `LIMIT ${n}` : `LIMIT ${n}`,
+  daysBetween: (col: string) => `EXTRACT(DAY FROM NOW() - ${col})::INTEGER`,
 };
 
-// Unified query interface
 export async function dbAll<T = any[]>(sql: string, params: any[] = []): Promise<T> {
-  if (USE_PG) {
-    const result = await pool.query(sql, params);
-    return result.rows as T;
-  }
-  return sqliteDb.all<T>(sql, params);
+  const [q, p] = pgParams(sql, params);
+  const result = await pool.query(q, p);
+  return result.rows as T;
 }
 
 export async function dbGet<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
-  if (USE_PG) {
-    const result = await pool.query(sql, params);
-    return result.rows[0] as T | undefined;
-  }
-  return sqliteDb.get<T>(sql, params);
+  const [q, p] = pgParams(sql, params);
+  const result = await pool.query(q, p);
+  return result.rows[0] as T | undefined;
 }
 
 export async function dbRun(sql: string, params: any[] = []) {
-  if (USE_PG) {
-    const result = await pool.query(sql, params);
-    return { changes: result.rowCount || 0, lastID: 0 };
-  }
-  return sqliteDb.run(sql, params);
+  const [q, p] = pgParams(sql, params);
+  const result = await pool.query(q, p);
+  return { changes: result.rowCount || 0, lastID: 0 };
 }
 
 export async function dbExec(sql: string) {
-  if (USE_PG) {
-    await pool.query(sql);
-    return;
-  }
-  await sqliteDb.exec(sql);
+  await pool.query(sql);
 }
 
 export async function dbBegin() {
-  if (USE_PG) {
-    await pool.query('BEGIN');
-    return;
-  }
-  await sqliteDb.exec('BEGIN TRANSACTION');
+  await pool.query('BEGIN');
 }
 
 export async function dbCommit() {
-  if (USE_PG) {
-    await pool.query('COMMIT');
-    return;
-  }
-  await sqliteDb.exec('COMMIT');
+  await pool.query('COMMIT');
 }
 
 export async function dbRollback() {
-  if (USE_PG) {
-    await pool.query('ROLLBACK');
-    return;
-  }
-  await sqliteDb.exec('ROLLBACK');
+  await pool.query('ROLLBACK');
 }
 
-// Table info (for CSV export)
 export async function dbTableInfo(table: string): Promise<{ name: string }[]> {
-  if (USE_PG) {
-    const result = await pool.query(
-      `SELECT column_name AS name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
-      [table],
-    );
-    return result.rows;
-  }
-  return sqliteDb.all<{ name: string }[]>(`PRAGMA table_info(${table})`);
+  const result = await pool.query(
+    `SELECT column_name AS name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
+    [table],
+  );
+  return result.rows;
 }

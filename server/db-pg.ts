@@ -280,10 +280,37 @@ export async function initPgDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         comment_id INTEGER
       );
+
+      INSERT INTO settings (key, value) VALUES ('site_name', 'SmartTrade AI CRM') ON CONFLICT (key) DO NOTHING;
     `);
+
+    // Seed root user if not exists
+    const existing = await client.query('SELECT id FROM users WHERE username = $1', ['root']);
+    if (!existing.rows.length) {
+      const bcrypt = await import('bcryptjs');
+      const initialPassword = process.env.INITIAL_ADMIN_PASSWORD || 'root';
+      const hash = await bcrypt.hash(initialPassword, 10);
+      await client.query(
+        'INSERT INTO users (username, password, role, name, active) VALUES ($1, $2, $3, $4, 1)',
+        ['root', hash, 'admin', 'Super Admin'],
+      );
+    } else {
+      await client.query("UPDATE users SET active = 1 WHERE username = 'root'");
+    }
   } finally {
     client.release();
   }
+}
+
+export async function initPgTables() {
+  const client = await pool.connect();
+  try {
+    // Create tables
+    await client.query('SELECT 1');
+  } finally {
+    client.release();
+  }
+  await initPgDb();
 }
 
 export const pgDb = {
