@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './swagger.js';
 import { csrfProtection, requireAuth } from './lib/auth.js';
 import { createAiRouter } from './routes/ai.js';
 import { createAttachmentsRouter } from './routes/attachments.js';
@@ -47,6 +49,8 @@ router.get('/settings/basic', async (_req, res) => {
     res.json({ siteName: 'SmartTrade AI CRM', siteSlogan: '', siteLogo: '/logo.png', siteFavicon: '' });
   }
 });
+
+router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 router.use(requireAuth);
 router.use(csrfProtection);

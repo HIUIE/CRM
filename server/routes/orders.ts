@@ -254,6 +254,30 @@ export function createOrdersRouter() {
     }
   });
 
+  router.post('/batch-delete', requireAdmin, async (req: AuthedRequest, res) => {
+    const ids = (req.body.ids || []) as number[];
+    if (!ids.length) return fail(res, 400, '请选择要删除的订单', 'INVALID_BATCH');
+    try {
+      for (const id of ids) {
+        await db.run(`DELETE FROM finance_records WHERE order_id = ?`, [id]);
+        await db.run(`DELETE FROM logistics_records WHERE order_id = ?`, [id]);
+        await db.run(`DELETE FROM customs_records WHERE order_id = ?`, [id]);
+        const plan = await db.get<{ id: number }>(`SELECT id FROM production_plans WHERE order_id = ?`, [id]);
+        if (plan) {
+          await db.run(`DELETE FROM production_logs WHERE plan_id = ?`, [plan.id]);
+          await db.run(`DELETE FROM production_plans WHERE id = ?`, [plan.id]);
+        }
+        await db.run(`DELETE FROM packing_records WHERE order_id = ?`, [id]);
+        await db.run(`DELETE FROM order_items WHERE order_id = ?`, [id]);
+        await db.run(`DELETE FROM order_follow_ups WHERE order_id = ?`, [id]);
+        await db.run(`DELETE FROM orders WHERE id = ?`, [id]);
+      }
+      res.json({ success: true, deletedCount: ids.length });
+    } catch (error) {
+      return handleRouteError(res, error, '批量删除失败');
+    }
+  });
+
   router.get('/:id/production', async (req, res) => {
     const orderId = Number(req.params.id);
     try {

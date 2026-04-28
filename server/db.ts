@@ -493,6 +493,28 @@ async function seedRootUser() {
   }
 }
 
+async function createIndexes() {
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_orders_display_id ON orders(display_id)',
+    'CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id)',
+    'CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)',
+    'CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)',
+    'CREATE INDEX IF NOT EXISTS idx_customers_country ON customers(country)',
+    'CREATE INDEX IF NOT EXISTS idx_finance_order_id ON finance_records(order_id)',
+    'CREATE INDEX IF NOT EXISTS idx_finance_type ON finance_records(type)',
+    'CREATE INDEX IF NOT EXISTS idx_logistics_order_id ON logistics_records(order_id)',
+    'CREATE INDEX IF NOT EXISTS idx_production_order_id ON production_plans(order_id)',
+    'CREATE INDEX IF NOT EXISTS idx_customs_order_id ON customs_records(order_id)',
+    'CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id)',
+    'CREATE INDEX IF NOT EXISTS idx_tasks_entity ON tasks(entity_type, entity_id)',
+    'CREATE INDEX IF NOT EXISTS idx_attachments_entity ON attachments(entity_type, entity_id)',
+  ];
+  for (const sql of indexes) {
+    try { await db.exec(sql); } catch { /* ignore if index already exists */ }
+  }
+}
+
 export async function initDb() {
   db = await open({
     filename: DB_PATH,
@@ -501,5 +523,6 @@ export async function initDb() {
 
   await db.exec('PRAGMA journal_mode=WAL');
   await runMigrations();
+  await createIndexes();
   await seedRootUser();
 }
