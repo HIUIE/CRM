@@ -188,6 +188,20 @@ export function createDashboardRouter() {
         color: COLORS[r.status] || '#CBD5E1'
       })).sort((a, b) => b.count - a.count);
 
+      // Monthly trends (last 6 months)
+      const monthlyTrends = await db.all<{ month: string; orders: number; revenue: number }[]>(`
+        SELECT
+          strftime('%Y-%m', created_at) AS month,
+          COUNT(*) AS orders,
+          COALESCE(SUM(total_amount), 0) AS revenue
+        FROM orders
+        WHERE created_at >= date('now', '-6 months')
+        GROUP BY month ORDER BY month ASC
+      `);
+
+      // Total customer count
+      const customerCount = await db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL`);
+
       res.json({
         overview: {
           totalOrders,
@@ -196,10 +210,12 @@ export function createDashboardRouter() {
           pendingReceiptUsd: financeStats?.pendingReceiptUsd || 0,
           pendingFinanceCount: financeStats?.pendingCount || 0,
           activeLogistics: activeLogistics?.count || 0,
+          customerCount: customerCount?.count || 0,
         },
         todos,
         activities,
         statusDistribution,
+        monthlyTrends,
       });
     } catch (error) {
       return handleRouteError(res, error, '读取控制台数据失败');

@@ -499,7 +499,7 @@
 | **~~OpenAPI 文档~~** ✅ | swagger-jsdoc + swagger-ui-express，访问 /api/api-docs | ✅ 已完成 |
 | **~~批量操作~~** ✅ | 新增 POST /api/orders/batch-delete 批量删除端点 | ✅ 已完成 |
 | **移动端适配** | 当前 UI 定位桌面，手机浏览器体验较差 | 低 |
-| **操作撤销/软删除** | 目前硬删除不可恢复，加 `deleted_at` 字段 | 低 |
+| **~~软删除~~** ✅ | orders/customers/partners 改为 UPDATE SET deleted_at，数据可恢复 | ✅ 已完成 |
 | **统计报表** | 月度/季度/年度财务报表、客户分析、利润趋势图 | 低 |
 
 #### 用户体验优化 (P2)

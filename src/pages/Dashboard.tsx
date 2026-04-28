@@ -16,7 +16,9 @@ interface DashboardData {
     receiptUsd: number;
     pendingReceiptUsd: number;
     activeLogistics: number;
+    customerCount: number;
   };
+  monthlyTrends: { month: string; orders: number; revenue: number }[];
   todos: {
     id: string;
     type: 'payment_overdue' | 'customs_missing' | 'logistics_pending';
@@ -79,7 +81,7 @@ export default function DashboardView() {
         <StatCard title="订单总数" value={String(data.overview.totalOrders)} subValue={`进行中 ${data.overview.activeOrders}`} icon={<FileText size={16} className="text-blue-500" />} sparklineColor="#3B82F6" sparklineData={[10, 20, 15, 25, 20, 30]} />
         <StatCard title="已收金额 (USD)" value={formatAmount(data.overview.receiptUsd, '$')} subValue="较上月 ↑ 12.5%" subValueColor="text-emerald-500" icon={<Wallet size={16} className="text-emerald-500" />} sparklineColor="#10B981" sparklineData={[5, 10, 15, 10, 20, 25]} />
         <StatCard title="待收金额 (USD)" value={formatAmount(data.overview.pendingReceiptUsd, '$')} subValue={`${data.todos.filter(t => t.type === 'payment_overdue').length} 笔逾期`} subValueColor="text-error" icon={<Clock size={16} className="text-error" />} sparklineColor="#EF4444" sparklineData={[25, 20, 30, 20, 15, 10]} />
-        <StatCard title="运输中的订单" value={`${data.overview.activeLogistics} 笔`} subValue="运输中" icon={<Truck size={16} className="text-purple-500" />} sparklineColor="#A855F7" sparklineData={[15, 20, 18, 25, 20, 22]} />
+        <StatCard title="运输中的订单" value={`${data.overview.activeLogistics} 笔`} subValue={`客户 ${data.overview.customerCount} 个`} icon={<Truck size={16} className="text-purple-500" />} sparklineColor="#A855F7" sparklineData={[15, 20, 18, 25, 20, 22]} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[65%_minmax(0,1fr)] items-start">
@@ -158,6 +160,25 @@ export default function DashboardView() {
 
         {/* Right Column: Tools & Analysis */}
         <div className="flex flex-col space-y-8">
+          {/* Monthly Trends */}
+          {data.monthlyTrends && data.monthlyTrends.length > 0 && (
+            <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">月度趋势</h2>
+              <div className="space-y-3">
+                {data.monthlyTrends.map(m => (
+                  <div key={m.month} className="flex items-center gap-3">
+                    <div className="w-16 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
+                    <div className="flex-1 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden flex">
+                      <div className="h-full bg-primary-navy dark:bg-tertiary-sage rounded-full transition-all" style={{ width: `${Math.min((m.orders / Math.max(...data.monthlyTrends.map(x => x.orders), 1)) * 100, 100)}%` }} />
+                    </div>
+                    <div className="w-8 text-right text-xs font-bold text-primary-navy dark:text-white data-field">{m.orders}</div>
+                    <div className="w-20 text-right text-[11px] font-bold text-slate-500 data-field">${Number(m.revenue).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
