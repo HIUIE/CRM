@@ -42,6 +42,7 @@ function injectBrandHtml(html: string, brand: { siteName: string; siteLogo: stri
 
 export async function createApp() {
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
+  await fs.mkdir(path.join(UPLOADS_DIR, 'temp'), { recursive: true });
 
   const app = express();
   app.disable('x-powered-by');

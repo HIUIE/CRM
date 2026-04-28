@@ -195,9 +195,50 @@ export function createDashboardRouter() {
           COUNT(*) AS orders,
           COALESCE(SUM(total_amount), 0) AS revenue
         FROM orders
-        WHERE created_at >= ${SQL.monthsAgo(6)}
+        WHERE created_at >= ${SQL.monthsAgo(6)} AND deleted_at IS NULL
         GROUP BY month ORDER BY month ASC
       `);
+
+      // Monthly Profit Trends
+      const profitTrends = await dbAll<{ month: string; revenue: number; cost: number; profit: number }[]>(`
+        SELECT
+          ${SQL.date('created_at', '%Y-%m')} AS month,
+          SUM(CASE WHEN type = 'receipt' AND status = 'completed' THEN 
+            CASE WHEN currency = 'CNY' THEN amount / 7.2 ELSE amount END
+          ELSE 0 END) AS revenue,
+          SUM(CASE WHEN type = 'payment' AND status = 'completed' THEN 
+            CASE WHEN currency = 'CNY' THEN amount / 7.2 ELSE amount END
+          ELSE 0 END) AS cost
+        FROM finance_records
+        WHERE created_at >= ${SQL.monthsAgo(6)} AND deleted_at IS NULL
+        GROUP BY month ORDER BY month ASC
+      `);
+
+      // Add profit to profitTrends
+      const trendsWithProfit = profitTrends.map(t => ({
+        ...t,
+        profit: t.revenue - t.cost
+      }));
+
+      // Calculate MoM growth
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const lastMonthDate = new Date();
+      lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+      const lastMonth = lastMonthDate.toISOString().slice(0, 7);
+
+      const getMonthStats = (month: string) => trendsWithProfit.find(t => t.month === month) || { revenue: 0, profit: 0 };
+      const currStats = getMonthStats(currentMonth);
+      const prevStats = getMonthStats(lastMonth);
+
+      const calcGrowth = (curr: number, prev: number) => {
+        if (prev === 0) return curr > 0 ? 100 : 0;
+        return Math.round(((curr - prev) / prev) * 1000) / 10;
+      };
+
+      const growth = {
+        revenue: calcGrowth(currStats.revenue, prevStats.revenue),
+        profit: calcGrowth(currStats.profit, prevStats.profit),
+      };
 
       // Total customer count
       const customerCount = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL`);
@@ -211,11 +252,14 @@ export function createDashboardRouter() {
           pendingFinanceCount: financeStats?.pendingCount || 0,
           activeLogistics: activeLogistics?.count || 0,
           customerCount: customerCount?.count || 0,
+          estProfit: currStats.profit,
+          growth,
         },
         todos,
         activities,
         statusDistribution,
         monthlyTrends,
+        profitTrends: trendsWithProfit,
       });
     } catch (error) {
       return handleRouteError(res, error, '读取控制台数据失败');

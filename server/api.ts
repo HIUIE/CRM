@@ -18,6 +18,7 @@ import { createUsersRouter } from './routes/users.js';
 import { createAuditRouter } from './routes/audit.js';
 import { createTasksRouter } from './routes/tasks.js';
 import { createNotificationsRouter } from './routes/notifications.js';
+import { createImportRouter } from './routes/import.js';
 
 const router = Router();
 
@@ -66,6 +67,7 @@ router.use('/orders', createOrdersRouter());
 router.use('/finance', createFinanceRouter());
 router.use('/logistics', createLogisticsRouter());
 router.use('/files', createFilesRouter());
+router.use('/import', createImportRouter());
 router.use('/', createCustomsRouter());
 router.use('/attachments', createAttachmentsRouter());
 router.use('/ai', createAiRouter());
