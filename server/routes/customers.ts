@@ -76,82 +76,79 @@ export function createCustomersRouter() {
 
       const actualId = customer.id;
 
-      const orders = await dbAll(`
-        SELECT 
-          id, display_id, status, total_amount, product_summary, created_at,
-          (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed') as paid_amount
-        FROM orders
-        WHERE customer_id = ?
-        ORDER BY created_at DESC
-      `, [actualId]);
-
-      const finance_records = await dbAll(`
-        SELECT
-          f.id, f.type, f.amount, f.currency, f.status, f.target, f.created_at, f.remark,
-          o.display_id as order_display_id, o.product_summary
-        FROM finance_records f
-        LEFT JOIN orders o ON o.id = f.order_id
-        WHERE o.customer_id = ?
-        ORDER BY f.created_at DESC
-      `, [actualId]);
-
-      const followups = await dbAll(`
-        SELECT f.id, f.content, f.created_at, f.created_by, f.created_by_name,
-               NULL as source_order_id, NULL as source_order_display_id
-        FROM customer_followups f
-        WHERE f.customer_id = ?
-        UNION ALL
-        SELECT ofu.id, ofu.content, ofu.created_at, ofu.created_by,
-               COALESCE(u.name, '系统') as created_by_name,
-               ofu.order_id as source_order_id, o.display_id as source_order_display_id
-        FROM order_follow_ups ofu
-        JOIN orders o ON ofu.order_id = o.id
-        LEFT JOIN users u ON ofu.created_by = u.id
-        WHERE o.customer_id = ?
-        ORDER BY created_at DESC
-      `, [actualId, actualId]);
-
-      const system_activities = await dbAll(`
-        SELECT 'finance' as type, f.id, o.display_id as order_display_id, 
-          CASE WHEN f.type = 'receipt' THEN '收款完成' ELSE '付款完成' END as title,
-          '' as desc, f.created_at,
-          CASE WHEN f.type = 'receipt' THEN '+' ELSE '-' END || f.currency || ' ' || f.amount as value,
-          CASE WHEN f.type = 'receipt' THEN 'text-emerald-500' ELSE 'text-red-500' END as valueColor
-        FROM finance_records f JOIN orders o ON f.order_id = o.id
-        WHERE f.status = 'completed' AND o.customer_id = ?
-        UNION ALL
-        SELECT 'logistics' as type, l.id, o.display_id as order_display_id, 
-          '物流更新' as title, '货物已发出 · ' || l.carrier as desc, l.created_at,
-          CASE WHEN l.status = 'arrived' THEN '已送达' WHEN l.status = 'shipped' THEN '运输中' ELSE '备货中' END as value,
-          'text-slate-500' as valueColor
-        FROM logistics_records l JOIN orders o ON l.order_id = o.id
-        WHERE o.customer_id = ?
-        UNION ALL
-        SELECT 'customs' as type, cr.id, o.display_id as order_display_id, 
-          '报关完成' as title, '报关单号 ' || cr.declaration_no as desc, cr.created_at,
-          '' as value, '' as valueColor
-        FROM customs_records cr JOIN orders o ON cr.order_id = o.id
-        WHERE o.customer_id = ?
-        UNION ALL
-        SELECT 'order' as type, o.id, o.display_id as order_display_id, 
-          '新建订单' as title, o.product_summary as desc, o.created_at,
-          'USD ' || o.total_amount as value,
-          'text-primary-navy dark:text-white' as valueColor
-        FROM orders o
-        WHERE o.customer_id = ?
-        ORDER BY 6 DESC
-        LIMIT 20
-      `, [actualId, actualId, actualId, actualId]);
-      
-      const tasks = await dbAll(`
-        SELECT t.*, u.name as assignee_name
-        FROM tasks t
-        JOIN users u ON t.assignee_id = u.id
-        WHERE t.entity_type = 'CUSTOMER' AND t.entity_id = ?
-        ORDER BY t.due_date ASC
-      `, [actualId]);
-
-      const contacts = await dbAll(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId]);
+      const [orders, finance_records, followups, system_activities, tasks, contacts] = await Promise.all([
+        dbAll(`
+          SELECT 
+            id, display_id, status, total_amount, product_summary, created_at,
+            (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed') as paid_amount
+          FROM orders
+          WHERE customer_id = ?
+          ORDER BY created_at DESC
+        `, [actualId]),
+        dbAll(`
+          SELECT
+            f.id, f.type, f.amount, f.currency, f.status, f.target, f.created_at, f.remark,
+            o.display_id as order_display_id, o.product_summary
+          FROM finance_records f
+          LEFT JOIN orders o ON o.id = f.order_id
+          WHERE o.customer_id = ?
+          ORDER BY f.created_at DESC
+        `, [actualId]),
+        dbAll(`
+          SELECT f.id, f.content, f.created_at, f.created_by, f.created_by_name,
+                 NULL as source_order_id, NULL as source_order_display_id
+          FROM customer_followups f
+          WHERE f.customer_id = ?
+          UNION ALL
+          SELECT ofu.id, ofu.content, ofu.created_at, ofu.created_by,
+                 COALESCE(u.name, '系统') as created_by_name,
+                 ofu.order_id as source_order_id, o.display_id as source_order_display_id
+          FROM order_follow_ups ofu
+          JOIN orders o ON ofu.order_id = o.id
+          LEFT JOIN users u ON ofu.created_by = u.id
+          WHERE o.customer_id = ?
+          ORDER BY created_at DESC
+        `, [actualId, actualId]),
+        dbAll(`
+          SELECT 'finance' as type, f.id, o.display_id as order_display_id, 
+            CASE WHEN f.type = 'receipt' THEN '收款完成' ELSE '付款完成' END as title,
+            '' as desc, f.created_at,
+            CASE WHEN f.type = 'receipt' THEN '+' ELSE '-' END || f.currency || ' ' || f.amount as value,
+            CASE WHEN f.type = 'receipt' THEN 'text-emerald-500' ELSE 'text-red-500' END as valueColor
+          FROM finance_records f JOIN orders o ON f.order_id = o.id
+          WHERE f.status = 'completed' AND o.customer_id = ?
+          UNION ALL
+          SELECT 'logistics' as type, l.id, o.display_id as order_display_id, 
+            '物流更新' as title, '货物已发出 · ' || l.carrier as desc, l.created_at,
+            CASE WHEN l.status = 'arrived' THEN '已送达' WHEN l.status = 'shipped' THEN '运输中' ELSE '备货中' END as value,
+            'text-slate-500' as valueColor
+          FROM logistics_records l JOIN orders o ON l.order_id = o.id
+          WHERE o.customer_id = ?
+          UNION ALL
+          SELECT 'customs' as type, cr.id, o.display_id as order_display_id, 
+            '报关完成' as title, '报关单号 ' || cr.declaration_no as desc, cr.created_at,
+            '' as value, '' as valueColor
+          FROM customs_records cr JOIN orders o ON cr.order_id = o.id
+          WHERE o.customer_id = ?
+          UNION ALL
+          SELECT 'order' as type, o.id, o.display_id as order_display_id, 
+            '新建订单' as title, o.product_summary as desc, o.created_at,
+            'USD ' || o.total_amount as value,
+            'text-primary-navy dark:text-white' as valueColor
+          FROM orders o
+          WHERE o.customer_id = ?
+          ORDER BY 6 DESC
+          LIMIT 20
+        `, [actualId, actualId, actualId, actualId]),
+        dbAll(`
+          SELECT t.*, u.name as assignee_name
+          FROM tasks t
+          JOIN users u ON t.assignee_id = u.id
+          WHERE t.entity_type = 'CUSTOMER' AND t.entity_id = ?
+          ORDER BY t.due_date ASC
+        `, [actualId]),
+        dbAll(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId])
+      ]);
 
       res.json({ ...customer, orders, finance_records, system_activities, followups, contacts, tasks });
     } catch (error) {
