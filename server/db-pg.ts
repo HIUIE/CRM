@@ -163,6 +163,13 @@ export async function initPgDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS order_profits (
+        order_id INTEGER PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS production_plans (
         id SERIAL PRIMARY KEY,
         order_id INTEGER UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,

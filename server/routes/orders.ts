@@ -314,8 +314,24 @@ export function createOrdersRouter() {
   router.get('/:id/profit', async (req, res) => {
     const orderId = Number(req.params.id);
     try {
-      const row = await dbGet<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [`order_profit_${orderId}`]);
-      const data = row ? JSON.parse(row.value) : {};
+      const row = await dbGet<{ data: string }>(`SELECT data FROM order_profits WHERE order_id = ?`, [orderId]);
+      
+      // Fallback: migrate from old settings table if not in order_profits
+      let data: any = {};
+      if (row) {
+        data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+      } else {
+        const oldRow = await dbGet<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [`order_profit_${orderId}`]);
+        if (oldRow) {
+          data = JSON.parse(oldRow.value);
+          // Auto-migrate to the new table
+          await dbRun(
+            `INSERT INTO order_profits (order_id, data) VALUES (?, ?) ON CONFLICT(order_id) DO NOTHING`,
+            [orderId, oldRow.value]
+          );
+        }
+      }
+
       res.json({
         receipts: data.receipts || [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
         invoiceAmount: data.invoiceAmount || 0,
@@ -355,9 +371,15 @@ export function createOrdersRouter() {
     };
     try {
       await dbRun(
-        `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        [`order_profit_${orderId}`, JSON.stringify(data)],
+        `INSERT INTO order_profits (order_id, data, updated_at) 
+         VALUES (?, ?, CURRENT_TIMESTAMP) 
+         ON CONFLICT(order_id) DO UPDATE SET data = excluded.data, updated_at = CURRENT_TIMESTAMP`,
+        [orderId, JSON.stringify(data)],
       );
+      
+      // Cleanup old settings key if it exists
+      await dbRun(`DELETE FROM settings WHERE key = ?`, [`order_profit_${orderId}`]);
+      
       res.json({ success: true, ...data });
     } catch (error) {
       return handleRouteError(res, error, '保存利润数据失败');

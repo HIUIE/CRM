@@ -160,6 +160,14 @@ async function runMigrations() {
       FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS order_profits (
+      order_id INTEGER PRIMARY KEY,
+      data TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS production_plans (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id INTEGER UNIQUE NOT NULL,
