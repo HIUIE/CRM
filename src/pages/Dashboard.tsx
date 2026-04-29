@@ -414,12 +414,12 @@ export default function DashboardView() {
                   {data.monthlyTrends.map(m => {
                     const maxOrders = Math.max(...data.monthlyTrends.map(x => x.orders), 1);
                     return (
-                      <div key={m.month} className="flex items-center gap-3">
-                        <div className="w-14 shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
-                        <div className="flex-1 min-w-0 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden flex">
+                      <div key={m.month} className="flex items-center gap-4">
+                        <div className="w-20 shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
+                        <div className="flex-1 min-w-0 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden">
                           <div className="h-full bg-primary-navy dark:bg-tertiary-sage rounded-full transition-all" style={{ width: `${Math.min((m.orders / maxOrders) * 100, 100)}%` }} />
                         </div>
-                        <div className="w-10 shrink-0 text-right text-xs font-bold text-primary-navy dark:text-white data-field">{m.orders}</div>
+                        <div className="w-24 shrink-0 text-right text-xs font-bold text-primary-navy dark:text-white data-field tabular-nums">{m.orders}</div>
                       </div>
                     );
                   })}
@@ -434,12 +434,12 @@ export default function DashboardView() {
                   {data.profitTrends.map(m => {
                     const maxProfit = Math.max(...data.profitTrends.map(x => x.profit), 1);
                     return (
-                      <div key={m.month} className="flex items-center gap-3">
-                        <div className="w-14 shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
-                        <div className="flex-1 min-w-0 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden flex">
+                      <div key={m.month} className="flex items-center gap-4">
+                        <div className="w-20 shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
+                        <div className="flex-1 min-w-0 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden">
                           <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min((Math.max(0, m.profit) / maxProfit) * 100, 100)}%` }} />
                         </div>
-                        <div className="w-24 shrink-0 text-right text-[11px] font-bold text-primary-navy dark:text-white data-field">${Number(m.profit).toLocaleString()}</div>
+                        <div className="w-32 shrink-0 text-right text-[11px] font-bold text-primary-navy dark:text-white data-field tabular-nums">${Number(m.profit).toLocaleString()}</div>
                       </div>
                     );
                   })}
