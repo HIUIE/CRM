@@ -347,7 +347,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | # | 问题 | 工作量 |
 |---|------|--------|
 | 1 | 拆分 `Tasks` 和 `Settings` 大 chunk | ✅ 已完成 |
-| 2 | 清理 SQLite/PG 双栈兼容层 | 4h+ |
+| 2 | 清理 SQLite/PG 双栈兼容层 | ✅ 已完成 |
 | 3 | 补 PG 实连接集成测试 | 3h |
 | 4 | 添加结构化日志（pino/winston） | ✅ 已完成 |
 | 5 | 补前端组件测试（表单验证、权限守卫） | 4h |
@@ -414,6 +414,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 结构化日志 | `server/lib/logger.ts` 等 | 引入 pino 和 pino-pretty，替换 `console` 全局日志 |
 | 客户查询并行化 | `server/routes/customers.ts` | 将 6 个关联数据查询重构为 `Promise.all` 并行 |
 | 利润数据独立 | `server/routes/orders.ts` | 废弃 `settings` 表的 hack 存储，新建 `order_profits` 表并支持无缝懒迁移 |
+| 清理双栈兼容层 | `server/lib/db.ts` | 彻底移除 SQLite 支持，将 `db.ts` 架构精简为纯 PostgreSQL 直连，移除依赖包及老废脚本 |
 | 依赖分类修正 | `package.json` | 移除误放入 dependencies 的构建包 (`vite`, `plugin-react` 等) |
 | 清理残留备份文件 | `src/pages/OrderDetail.tsx.b` 等 | 删除历史废弃临时文件 |
 

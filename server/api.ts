@@ -4,7 +4,6 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
 import { normalizeBrandText, sanitizeBrandAssetUrl } from './lib/brand.js';
 import { csrfProtection, requireAuth, requireAdmin } from './lib/auth.js';
-import { useSqlite } from './lib/db.js';
 import { createAiRouter } from './routes/ai.js';
 import { createAttachmentsRouter } from './routes/attachments.js';
 import { createAuthRouter } from './routes/auth.js';
@@ -55,7 +54,6 @@ const SERVER_START_TIME = Date.now();
 router.get('/health', (_req, res) => {
   res.json({
     ok: true,
-    database: useSqlite ? 'sqlite(test)' : 'postgresql',
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     timestamp: new Date().toISOString(),
     startupTime: SERVER_START_TIME,
