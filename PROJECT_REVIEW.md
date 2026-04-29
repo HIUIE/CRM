@@ -354,7 +354,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 6 | 客户详情查询并行化 | ✅ 已完成 |
 | 7 | 利润数据迁移到独立表 | ✅ 已完成 |
 | 8 | 自动更新增加 `dist/` 备份和回滚 | ✅ 已完成 |
-| 9 | Express 5 升级评估 | 2h |
+| 9 | Express 5 升级评估 | ✅ 已完成 |
 | 10 | 数据库迁移工具化 | ✅ 已完成 |
 | 11 | 清理残留 `.b`/`.c` 备份文件 | ✅ 已完成 |
 | 12 | 依赖分类修正（devDependencies） | ✅ 已完成 |
@@ -418,6 +418,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 数据库迁移工具化 | `server/db-pg.ts` | 引入 `node-pg-migrate`，将原本的手工初始化脚本变更为标准的程序化 migration 流程，且保持老库数据兼容 |
 | PG 集成测试验证 | `tests/pg.test.ts` | 编写了一套独立的 Node.js 原生集成测试，利用专属隔离的 `smarttrade_crm_test` 测试库验证了连接池、增删改查语法适配、并发事务回滚及 JSONB 数据入库等核心场景 |
 | 前端组件测试补全 | `src/components/ui/__tests__` | 引入了 `AuthGuard` 权限守卫组件并编写了全量逻辑分支测试；针对 `OrderCreateDrawer` 编写了表单提交、异步 ID 加载及后端校验错误显示的自动化测试用例 |
+| Express 5 升级评估 | `artifacts/` | 对比了 Express 4 与 5 的差异，确认项目逻辑（异步处理、路由匹配）兼容性，给出了详细的迁移建议与验证计划 |
 | 依赖分类修正 | `package.json` | 移除误放入 dependencies 的构建包 (`vite`, `plugin-react` 等) |
 | 清理残留备份文件 | `src/pages/OrderDetail.tsx.b` 等 | 删除历史废弃临时文件 |
 
