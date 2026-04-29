@@ -251,11 +251,14 @@ export function createOrdersRouter() {
   router.post('/batch-delete', requireAdmin, async (req: AuthedRequest, res) => {
     const ids = (req.body.ids || []) as number[];
     if (!ids.length) return fail(res, 400, '请选择要删除的订单', 'INVALID_BATCH');
+    if (ids.length > 100) return fail(res, 400, '单次最多删除 100 条订单', 'BATCH_TOO_LARGE');
     try {
-      for (const id of ids) {
-        await dbRun(`DELETE FROM order_items WHERE order_id = ?`, [id]);
-        await dbRun(`UPDATE orders SET deleted_at = ${SQL.now()} WHERE id = ?`, [id]);
-      }
+      await withTransaction(async (tx) => {
+        for (const id of ids) {
+          await tx.run(`DELETE FROM order_items WHERE order_id = ?`, [id]);
+          await tx.run(`UPDATE orders SET deleted_at = ${SQL.now()} WHERE id = ?`, [id]);
+        }
+      });
       res.json({ success: true, deletedCount: ids.length });
     } catch (error) {
       return handleRouteError(res, error, '批量删除失败');

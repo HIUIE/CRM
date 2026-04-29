@@ -1,7 +1,11 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
-const pool = new Pool({
+/**
+ * Shared PostgreSQL connection pool — single instance for the entire app.
+ * Imported by server/lib/db.ts to avoid creating duplicate pools.
+ */
+export const pgPool = new Pool({
   host: process.env.PG_HOST || 'localhost',
   port: Number(process.env.PG_PORT) || 5432,
   database: process.env.PG_DATABASE || 'smarttrade_crm',
@@ -10,6 +14,9 @@ const pool = new Pool({
   max: 10,
   idleTimeoutMillis: 30000,
 });
+
+// Keep backward-compat alias for default export
+const pool = pgPool;
 
 export async function initPgDb() {
   const client = await pool.connect();
@@ -74,6 +81,7 @@ export async function initPgDb() {
         key_milestone TEXT,
         freight_amount REAL DEFAULT 0,
         misc_amount REAL DEFAULT 0,
+        quick_notes TEXT,
         created_by INTEGER REFERENCES users(id),
         updated_by INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -85,6 +93,7 @@ export async function initPgDb() {
         order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
         product_name TEXT NOT NULL,
         specification TEXT,
+        hs_code TEXT,
         quantity REAL NOT NULL,
         unit TEXT,
         unit_price REAL NOT NULL,
@@ -116,6 +125,7 @@ export async function initPgDb() {
         order_id INTEGER REFERENCES orders(id),
         tracking_no TEXT,
         carrier TEXT,
+        freight_forwarder TEXT,
         packing_details TEXT,
         status TEXT,
         shipping_date TEXT,
@@ -129,6 +139,8 @@ export async function initPgDb() {
         bill_no TEXT,
         etd TEXT,
         eta TEXT,
+        recipient_address TEXT,
+        package_size TEXT,
         remark TEXT,
         created_by INTEGER REFERENCES users(id),
         updated_by INTEGER,
@@ -171,6 +183,7 @@ export async function initPgDb() {
         id SERIAL PRIMARY KEY,
         plan_id INTEGER NOT NULL REFERENCES production_plans(id) ON DELETE CASCADE,
         content TEXT NOT NULL,
+        log_date TEXT,
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -242,6 +255,8 @@ export async function initPgDb() {
         entity_type TEXT,
         entity_id TEXT,
         description TEXT,
+        comment_count INTEGER DEFAULT 0,
+        attachment_count INTEGER DEFAULT 0,
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

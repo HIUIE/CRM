@@ -1,18 +1,12 @@
 import pkg from 'pg';
 import { db as sqliteDb } from '../db.js';
+import { pgPool } from '../db-pg.js';
 const { Pool } = pkg;
 type PgClient = InstanceType<typeof Pool> extends { connect: () => Promise<infer T> } ? T : never;
 export const useSqlite = process.env.NODE_ENV === 'test';
 
-const pool = new Pool({
-  host: process.env.PG_HOST || 'localhost',
-  port: Number(process.env.PG_PORT) || 5432,
-  database: process.env.PG_DATABASE || 'smarttrade_crm',
-  user: process.env.PG_USER || 'postgres',
-  password: process.env.PG_PASSWORD || '',
-  max: 10,
-  idleTimeoutMillis: 30000,
-});
+// Reuse the single shared PG pool from db-pg.ts (avoids duplicate connection pools)
+const pool = pgPool;
 
 // Convert SQLite queries to PostgreSQL-compatible SQL.
 function pgParams(sql: string, params: any[]): [string, any[]] {

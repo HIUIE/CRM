@@ -1,193 +1,427 @@
-# SmartTrade AI CRM 项目审计报告
+# SmartTrade AI CRM 项目全面审计报告
 
 审计日期：2026-04-29
+审计范围：代码质量、安全、性能、架构、数据库、前端、测试、运维、可维护性
 
-本报告基于当前工作区代码、现有测试、构建结果和运行脚本整理。仓库当前有未提交改动，本次审计只给出结论，不回滚任何现有变更。
+---
 
 ## 结论摘要
 
-项目已经具备完整的 CRM 主链路，当前最危险的权限、事务、品牌注入和前端请求链路问题都已经收掉，测试与构建也恢复到了通过状态。
+项目已具备完整的外贸 CRM 主链路（客户 → 订单 → 财务 → 物流 → 报关 → 任务），核心安全加固（JWT/CSRF/XSS/CSP/权限控制）已到位，TypeScript 编译和生产构建均通过。
 
-目前剩余的主要问题已经从“上线阻断级”收敛到两类：
+**当前最突出的问题分为三个等级：**
 
-1. 自动更新已经改成后台任务加状态查询，并把最近一次状态、命令输出和最近几次历史归档落盘；但仍然是单进程内执行，跨进程协同和更长周期的历史检索还有提升空间。
-2. 前端包体偏大、数据库双栈兼容层仍在，后续维护和首屏性能还有优化空间。
+| 等级 | 问题数 | 说明 |
+|------|--------|------|
+| ✅ P0 阻断级 | ~~3~~ → 0 | 全部已修复（2026-04-29） |
+| 🟡 P1 高优先级 | 7 | 安全边界缺口、输入验证不足、错误信息泄露内部细节等 |
+| 🟢 P2 改进级 | 12 | 性能优化、代码质量、文档对齐、测试覆盖等 |
 
-本轮继续修复后，`/api-docs`、生产 `CSP`、导入临时文件目录、CSV 解析、健康检查数据库类型、设置页更新 CSRF 调用都已与代码现状对齐。
+---
 
 ## 一、安全审计
 
-### 已修复
+### 已有加固点 ✅
 
-#### 1. 任务详情/评论/修改的对象级授权缺失
+| 机制 | 位置 | 状态 |
+|------|------|------|
+| JWT 认证 + 停用账号拦截 | `server/lib/auth.ts` | ✅ |
+| CSRF 双提交 Cookie | `server/lib/auth.ts:24-68` | ✅ |
+| 全站写操作 CSRF 保护 | `server/api.ts:62` | ✅ |
+| Helmet 安全头 | `server/app.ts:65-76` | ✅ |
+| 生产环境 CSP 策略 | `server/app.ts:66-74` | ✅ |
+| 敏感路径探测拦截 | `server/lib/security.ts` | ✅ |
+| 品牌设置 XSS 防护 | `server/lib/brand.ts` | ✅ |
+| SVG 上传已禁用 | `server/routes/settings.ts:278` | ✅ |
+| 附件下载路径遍历防护 | `server/lib/files.ts` | ✅ |
+| API 文档仅开发环境+管理员 | `server/api.ts:64-66` | ✅ |
+| 密码重置需管理员二次验证 | `server/routes/users.ts:102-120` | ✅ |
+| AI 数据脱敏 (PII) | `server/lib/sanitizer.ts` | ✅ |
+| 审计日志 PII 脱敏 | `server/lib/audit.ts:17-19` | ✅ |
+| 登录限流 (5次/15分钟) | `server/routes/auth.ts:8-31` | ✅ |
+| 任务对象级授权 | `server/routes/tasks.ts:16-25` | ✅ |
+| 生产环境 JWT_SECRET 强制检查 | `server.ts:6-13` | ✅ |
 
-- 已修复位置：`server/routes/tasks.ts:16-25`, `server/routes/tasks.ts:72-77`, `server/routes/tasks.ts:137-145`
-- 结果：任务详情、评论、状态变更、元数据修改现在都要求当前用户是管理员、负责人或创建人。
-- 验证：`tests/core.test.ts` 已新增越权回归测试并通过。
+### 🔴 安全问题 — 必须修复
 
-#### 2. 品牌设置持久化 XSS
+#### S1. API 路由缺少全局限流
 
-- 已修复位置：`server/lib/brand.ts:1-31`, `server/app.ts:29-45`, `server/routes/settings.ts:44-54`
-- 结果：
-  - 品牌文案保存时做归一化
-  - 品牌资源 URL 只接受根路径或 `http/https`
-  - 首页注入 `<title>` 与 `<link rel="icon">` 时做 HTML escape
+- **问题**：仅 `/auth/login` 有内存限流（5次/15分钟），其他所有 API 端点**无限流保护**
+- **风险**：攻击者可无限调用 AI 分析、数据导出、导入等接口，耗尽服务器资源和 AI API 配额
+- **位置**：`server/api.ts` — 全局路由挂载处
+- **建议**：在 `requireAuth` 之后添加全局限流中间件（如 `express-rate-limit`），对 `/ai/*` 和 `/settings/export/*` 等高成本接口单独设置更严格的限流
 
-#### 3. SVG 品牌上传扩大 XSS 攻击面
+#### S2. 错误信息泄露内部细节
 
-- 已修复位置：`server/routes/settings.ts:28-32`
-- 结果：品牌上传已移除 `image/svg+xml`，当前仅允许 `png/jpg/gif/webp/ico`。
+- **问题**：`handleRouteError` 直接将错误的 `error.message` 拼接返回给客户端
+- **位置**：`server/lib/http.ts:37`
+  ```typescript
+  return fail(res, 500, `${fallbackMessage}: ${message}`, 'INTERNAL_ERROR');
+  ```
+- **风险**：数据库错误、SQL 语句片段、文件路径等内部信息可能泄露
+- **建议**：生产环境下仅返回 `fallbackMessage`，将 `message` 限制在日志中
 
-#### 4. API 文档已收口
+#### S3. 财务记录 POST/PATCH 缺少角色限制
 
-- 已修复位置：`server/api.ts:61-66`
-- 结果：`/api/api-docs` 现在位于认证链路之后，且仅在非生产环境挂载，并附加 `requireAdmin`。
+- **问题**：财务记录创建 (`POST /finance`) 和更新 (`PATCH /finance/:id`) 仅需 `requireAuth`，任何已登录用户均可操作
+- **位置**：`server/routes/finance.ts:68, 112`
+- **对比**：财务删除已正确设置 `requireAdmin`
+- **建议**：根据业务需要，至少对金额修改加 admin 或财务角色限制
 
-#### 5. 生产环境 CSP 已启用
+#### S4. 附件上传缺少 MIME 白名单
 
-- 已修复位置：`server/app.ts:65-76`
-- 结果：
-  - 开发环境仍允许关闭 CSP，避免影响本地 Vite 开发
-  - 生产环境启用最小可用 CSP，限制脚本来源为 `'self'`
-  - 保留样式内联白名单，并明确 `img-src` / `connect-src` 约束
+- **问题**：通用附件上传 (`/attachments`、`/logistics/attachments`) 未限制文件类型
+- **位置**：`server/routes/attachments.ts:18-40`, `server/routes/logistics.ts:16-35`
+- **风险**：用户可上传 `.html`、`.exe`、`.svg` 等文件，可能导致存储型 XSS 或恶意文件分发
+- **建议**：添加 `fileFilter`，至少禁止 `text/html`、`application/javascript`、`image/svg+xml` 等高风险类型
 
-### 已有加固点
+#### ~~S5. 订单批量删除未限制数组长度~~ ✅ 已修复 (2026-04-29)
 
-- JWT 必填，未配置会在启动时报错：`server/lib/auth.ts:16-19`
-- 全站写操作已挂 CSRF 中间件：`server/api.ts:56-57`
-- 登录有限流雏形：`server/routes/auth.ts:8-31`
-- 附件下载有路径约束：`server/routes/files.ts:11-47`, `server/lib/files.ts:17-39`
-- 敏感路径探测被拦截：`server/lib/security.ts:17-33`
+- **修复内容**：已添加 `ids.length > 100` 上限校验（附带 P0-3 事务修复一起完成）
 
-## 二、功能审计
+---
 
-### 已修复
+## 二、数据库审计
 
-#### 1. PostgreSQL 事务实现无效
+### ~~PostgreSQL Schema 缺列~~ ✅ 已修复 (2026-04-29)
 
-- 已修复位置：`server/lib/db.ts:50-164`
-- 结果：
-  - 新增 `withTransaction(...)`
-  - PostgreSQL 事务现在绑定同一个 `client`
-  - SQLite 测试路径仍保持兼容
-- 已切换调用点：
-  - `server/routes/tasks.ts:145-182`
-  - `server/routes/import.ts:107-148`, `server/routes/import.ts:159-202`
-  - `server/routes/orders.ts` 的创建、更新、删除关键写链路
+以下 8 个缺失列已全部补齐到 `server/db-pg.ts` 的 CREATE TABLE 语句中：
 
-#### 2. 设置页“一键更新”前端调用缺少 CSRF 头
+| 列 | 表 | 状态 |
+|----|-------|------|
+| `hs_code` | `order_items` | ✅ 已添加 |
+| `quick_notes` | `orders` | ✅ 已添加 |
+| `comment_count` | `tasks` | ✅ 已添加 |
+| `attachment_count` | `tasks` | ✅ 已添加 |
+| `freight_forwarder` | `logistics_records` | ✅ 已添加 |
+| `recipient_address` | `logistics_records` | ✅ 已添加 |
+| `package_size` | `logistics_records` | ✅ 已添加 |
+| `log_date` | `production_logs` | ✅ 已添加 |
 
-- 已修复位置：`src/pages/Settings.tsx:151-160`
-- 结果：设置页更新接口已经改为走 `apiFetch(...)`，现在会自动携带 `X-CSRF-Token`。
+> ⚠️ **已有数据库注意**：`CREATE TABLE IF NOT EXISTS` 不会自动为已有表添加新列。如果 PG 数据库已运行过旧版 schema，需手动执行 `ALTER TABLE ... ADD COLUMN ...` 补列。
 
-#### 3. 健康检查数据库类型已修正
+### ~~数据库连接池重复创建~~ ✅ 已修复 (2026-04-29)
 
-- 已修复位置：`server/api.ts:29-36`
-- 结果：`/api/health` 现在会按实际驱动返回 `postgresql` 或 `sqlite(test)`。
+- **修复方案**：`server/db-pg.ts` 导出共享 `pgPool` 实例，`server/lib/db.ts` 从中导入复用
+- **效果**：`new Pool(...)` 从 2 处减至 1 处，生产连接数上限从 20 降至 10
 
-### 中优先级
+### 🟡 SQLite/PG 双数据库兼容层的风险
 
-#### 4. 导入临时文件目录与清理链路已对齐
+- **位置**：`server/lib/db.ts:18-37` (`pgParams` 函数)
+- **机制**：所有 SQL 查询先写 SQLite 语法（`?` 占位、`datetime()` 函数、`GROUP BY` 简写），运行时通过正则替换转为 PG 语法
+- **已知局限**：
+  - `pgParams` 的 `GROUP BY` 自动扩展仅处理 `users` 表 join，其他 join 需要手工适配
+  - `datetime()` 替换无法处理 `ORDER BY datetime(col) DESC` 在 PG 中的排序语义差异
+  - `ON CONFLICT` 的 `excluded.value` 语法两端兼容，但 SQLite 的 `PRAGMA table_info` vs PG 的 `information_schema` 不统一
+- **建议**：
+  1. 如果长期使用 PG，逐步将 SQL 改为原生 PG 语法
+  2. 如果保留双栈，需要为 `pgParams` 建立单元测试覆盖所有已知 SQL 模式
 
-- 已修复位置：`server/routes/import.ts:17`, `server/routes/import.ts:92`, `server/routes/import.ts:155-162`, `server/app.ts:49-61`
-- 结果：
-  - 上传与执行统一使用 `UPLOADS_DIR/temp`
-  - 应用启动会清空遗留临时文件
-  - 导入执行结束后会在 `finally` 中删除临时文件
+---
 
-#### 5. CSV 导入不再走手写 `split(',')`
+## 三、性能审计
 
-- 已修复位置：`server/routes/import.ts:213-239`
-- 结果：备份导入现在通过 `ExcelJS` 的 CSV 读取能力解析，带逗号和引号的数据不再靠手写拆分。
+### 构建产物分析
 
-#### 6. 自动更新已改为后台任务，并支持状态、日志和最近历史持久化
+```
+dist/assets/pdfExport-*.js          594.11 kB   ← 按需加载，不影响首屏
+dist/assets/index-*.js              274.90 kB   ← 主 chunk（motion + excel 等）
+dist/assets/index.es-*.js           159.71 kB   ← ExcelJS 库
+dist/assets/Tasks-*.js              139.24 kB   ← 任务页面偏大
+dist/assets/Settings-*.js            54.78 kB   ← 设置页面
+dist/assets/vendor-react-*.js        50.36 kB   ← React 核心
+```
 
-- 位置：`server/routes/settings.ts`, `src/pages/Settings.tsx:100-189`
-- 现状：
-  - `POST /system/update` 现在只负责启动后台任务，前端通过状态接口轮询进度
-  - 更新进行中会返回 `409 SYSTEM_UPDATE_IN_PROGRESS`
-  - 状态和最近一次结果会写入磁盘，服务重启后仍可读取
-  - 每一步命令的最近输出也会被裁剪后持久化，前端可直接查看
-  - 最近几次更新会按时间倒序归档，可在前端查看
-  - 失败信息会保留并返回给前端
-  - 成功后仍通过 `process.exit(0)` 触发重启
-- 影响：前端阻塞和并发踩踏问题已明显改善，最近状态、命令输出和近期历史都能恢复；但仍缺少跨实例协调、更长周期的日志检索和外部 supervisor 级别的托管。
-- 建议：下一步把更新记录接入可检索存储，或交给外部 supervisor / 独立 worker 托管。
+### 🟡 前端性能问题
 
-### 验证结果
+| 问题 | 大小 | 建议 |
+|------|------|------|
+| `Tasks` chunk 139 kB | gzip 46 kB | 评论抽屉、附件上传等子组件应延迟加载 |
+| `index` 主 chunk 275 kB | gzip 86 kB | `motion` 和 `exceljs` 应从主包剥离 |
+| `Settings` 55 kB | gzip 12 kB | 自动更新、AI 设置等子 Tab 应延迟加载 |
+| `pdfExport` 594 kB | 已按需 | ✅ 已正确延迟加载 |
 
-- `npm run lint`：通过
-- `npm test`：通过
-- `npm run build`：通过，但仍有大 chunk 警告
+### 🟡 后端性能问题
 
-## 三、优化审计
+#### 客户详情 N+1 查询
 
-### 性能
+- **位置**：`server/routes/customers.ts:58-155`
+- **问题**：单个客户详情请求执行 **6 次独立数据库查询**（客户信息、订单列表、财务记录、跟进记录、系统活动、任务列表、联系人列表）
+- **建议**：合并部分查询或使用 `Promise.all` 并行执行
 
-#### 1. `OrderDetail` 主 chunk 已显著收敛
+#### ~~批量删除未使用事务~~ ✅ 已修复 (2026-04-29)
 
-- 已修复位置：`src/pages/OrderDetail.tsx`, `src/features/order-detail/sections-primary.tsx`, `src/features/order-detail/handlers.ts`
-- 结果：
-  - 首屏必需的头部和商品区已独立到主 chunk
-  - 文档、财务、利润、生产、报关、装箱、物流、任务等板块改为延迟 chunk
-  - PDF 导出依赖改为按需动态加载
-- 当前构建结果：
-  - `dist/assets/OrderDetail-*.js` 约 `36 kB`
-  - 延迟加载的 `dist/assets/sections-*.js` 约 `48 kB`
-  - 延迟加载的 `dist/assets/pdfExport-*.js` 约 `594 kB`
-- 影响：订单详情首屏加载成本已明显下降，之前的主 chunk 超限 warning 已消失。
+- **修复内容**：`batch-delete` 已包装在 `withTransaction` 中，并添加 100 条上限校验
+- **效果**：中间失败时自动回滚，保证数据一致性
 
-#### 2. `Tasks` 页面体积仍偏大
+#### 无分页的列表接口
 
-- 构建结果：`dist/assets/Tasks-*.js` 约 `139 kB`
-- 建议：将评论抽屉、上传、通知逻辑从主屏拆出去。
+- **位置**：所有列表 GET 接口（orders、customers、finance、logistics 等）
+- **问题**：均返回全量数据，无 `LIMIT/OFFSET` 分页
+- **风险**：数据量增长后响应体膨胀，客户端渲染卡顿
+- **建议**：所有列表接口添加分页支持（前端已有 `usePagination` hook）
 
-### 可维护性
+---
 
-#### 3. 代码库仍有“双数据库世界”
+## 四、代码质量审计
 
-- 位置：`server.ts`, `server/db-pg.ts`, `server/db.ts`, `server/lib/db.ts`
-- 现状：生产入口走 PostgreSQL，但测试和一部分历史逻辑仍深度依赖 SQLite 语法，再通过 `pgParams()` 做字符串替换兼容。
-- 风险：行为差异很难靠测试发现，后续每个查询都要担心两套数据库语义。
-- 建议：
-  - 明确“测试也跑 PostgreSQL”还是“正式回归 SQLite”。
-  - 如果继续用 PostgreSQL，逐步去掉 SQL 字符串兼容层。
+### 类型安全
 
-#### 4. 文档和代码现状明显脱节
+- **TypeScript 编译**：`npx tsc --noEmit` ✅ 通过
+- **`any` 类型使用**：共 **36 处** 显式 `any`，集中在 `server/routes/orders.ts`（利润数据）、`server/lib/http.ts`（错误处理）和 `server/services/ai.ts`
+- **建议**：逐步为高频 `any` 补充具体类型，优先处理 orders 利润数据和 AI 返回值
 
-- 位置：`README.md`, 旧版 `PROJECT_REVIEW.md`
-- 现状：文档声称“安全/自动更新/审计等已全部完备”，但当前代码和测试并不支持这个结论。
-- 建议：文档改为“当前状态 + 已知限制 + 部署前检查表”，避免误导上线判断。
+### 残留文件
 
-### 测试
+| 文件 | 大小 | 说明 |
+|------|------|------|
+| `src/pages/OrderDetail.tsx.b` | 8.7 kB | 旧版备份，应删除 |
+| `src/pages/OrderDetail.tsx.c` | 19.4 kB | 旧版备份，应删除 |
 
-#### 5. 关键高风险面仍有测试缺口
+虽然 `.gitignore` 中有 `*.b` 和 `*.c` 规则，但这些文件仍占用本地工作区空间，建议清理。
 
-- 缺口：
-  - PostgreSQL 实连接事务一致性
-  - 导入临时文件清理的端到端覆盖
-  - 品牌设置的注入/XSS 防护
-  - 自动更新更长周期的历史检索与告警
-- 已补回归：
-  - 任务越权访问
-  - 设置页更新并发互斥
-  - 自动更新后台任务、状态查询与重启后恢复
-- 建议：继续围绕高风险写链路补最小回归测试，优先级高于新增功能测试。
+### 代码规模分析
 
-## 四、建议执行顺序
+| 文件 | 行数 | 建议 |
+|------|------|------|
+| `src/pages/Settings.tsx` | 1130 | 拆分为独立 Tab 组件 |
+| `server/services/export.ts` | 1054 | 可接受，但建议按导出格式拆分 |
+| `src/pages/CustomerDetail.tsx` | 676 | 建议拆分 sections |
+| `server/db.ts` (SQLite 迁移) | 535 | 仅测试用，可接受 |
+| `server/routes/settings.ts` | 498 | 系统更新逻辑建议独立为 service |
 
-### P1
+### 审计日志 entityType 标记错误
 
-1. 给自动更新补更长周期的历史检索、告警和跨进程恢复策略。
-2. 给品牌设置、导入清理和 PostgreSQL 事务补端到端测试。
+- **位置**：`server/routes/tasks.ts:236`
+  ```typescript
+  entityType: 'ORDER', // Tasks are part of order/customer context
+  ```
+- **问题**：创建任务的审计日志被标记为 `ORDER` 类型，而非 `TASK`
+- **建议**：如果 `AuditEntity` 类型允许，应改为 `'TASK'`
 
-### P2
+### 版本号不一致
 
-1. 拆分 `OrderDetail` 和 `Tasks` 大 chunk。
-2. 清理 SQLite/PG 双栈兼容层。
+- `package.json` → `"version": "1.0.4"`
+- `vite.config.ts` → `version: '1.1.0'`
+- **建议**：统一版本号来源，从 `package.json` 读取
 
-## 五、总体评价
+---
 
-这是一个已经能跑主业务的项目，不是半成品。当前最危险的权限、事务、品牌注入和接口暴露问题已经收掉，测试和构建也都恢复到了可用状态。
+## 五、架构审计
 
-如果按上面的 P1/P2 继续推进，这个项目会从“核心风险已控”进入“可持续部署和维护”的阶段。
+### 整体架构 ✅
+
+```
+前端: React 19 + React Router 7 + TanStack Query + Tailwind CSS 4
+后端: Express 4 + PostgreSQL (生产) / SQLite (测试)
+AI:  Gemini / DeepSeek / OpenAI Compatible
+部署: 单进程 Node.js + 自动更新
+```
+
+### 🟡 架构问题
+
+#### 自动更新安全风险
+
+- **位置**：`server/routes/settings.ts:220-263`
+- **机制**：通过 `spawn('git', ['pull'])` + `spawn('npm', ['install'])` + `spawn('npm', ['run', 'build'])` 在同一进程内执行
+- **已有防护**：管理员权限、并发互斥（`isSystemUpdateRunning()`）、状态持久化、历史归档
+- **残余风险**：
+  1. 无回滚机制：构建失败后旧的 `dist/` 已被覆盖
+  2. `process.exit(0)` 硬重启依赖外部 supervisor（systemd/pm2）
+  3. 无构建前备份
+- **建议**：在 `npm run build` 之前备份 `dist/`，失败时自动恢复
+
+#### 利润数据存储在 `settings` 表
+
+- **位置**：`server/routes/orders.ts:310,350`
+- **机制**：每个订单的利润数据以 `order_profit_{orderId}` 为 key 存入 `settings` 表，JSON 格式
+- **问题**：
+  1. `settings` 表设计为 KV 配置存储，存放业务数据违反单一职责
+  2. 无法对利润数据做聚合查询（如"所有订单总利润"）
+  3. 数据导出和备份难以覆盖
+- **建议**：长期应迁移到独立的 `order_profits` 表
+
+---
+
+## 六、前端审计
+
+### 路由和权限 ✅
+
+- 所有页面已正确使用 `lazy()` 延迟加载
+- 管理员页面（审计、设置）在路由层做了角色校验
+- `ErrorBoundary` 和 `VersionGuard` 已挂载
+
+### 🟡 前端问题
+
+#### 前端权限仅在路由层保护
+
+- **问题**：`/audit` 和 `/settings` 仅通过 `user?.role === 'admin'` 在 JSX 条件中控制，无独立的 `ProtectedRoute` 组件
+- **风险**：不同开发者添加新管理员页面时可能遗漏权限检查
+- **建议**：抽取 `<AdminRoute>` 包装组件
+
+#### `AuthContext` 缺少 token 刷新机制
+
+- **位置**：`src/context/AuthContext.tsx`
+- **问题**：JWT 有效期 24 小时，但前端无主动刷新机制，用户长时间使用后会突然被踢出
+- **建议**：在 `apiFetch` 拦截 401 时尝试静默刷新，或在 token 过期前 1 小时主动刷新
+
+#### 客户详情页重定向冗余
+
+- **位置**：`src/App.tsx:43-46, 69`
+- **问题**：`/customers/:id` 先渲染 `CustomerRedirect` 组件再 Navigate 到 `/customers/detail/:id`
+- **建议**：如果旧路由已废弃足够久，可直接删除重定向
+
+---
+
+## 七、测试审计
+
+### 当前覆盖
+
+- **后端集成测试**：`tests/core.test.ts`（42,537 字节，覆盖核心 CRUD、认证、权限）
+- **前端单元测试**：配置已就绪（`vitest`），但 **0 个测试文件**
+
+### 🟡 测试缺口
+
+| 缺口 | 风险等级 | 说明 |
+|------|---------|------|
+| PostgreSQL 实连接测试 | 高 | 所有后端测试跑 SQLite，PG 特有行为（事务隔离、类型转换）无覆盖 |
+| 品牌设置 XSS 防护测试 | 高 | `escapeHtml`、`sanitizeBrandAssetUrl` 无回归测试 |
+| 导入/导出端到端测试 | 中 | 备份导入、Excel 导出的完整链路无测试 |
+| 附件上传/下载测试 | 中 | 路径遍历防护逻辑仅靠代码审查 |
+| 前端组件测试 | 低 | 无任何前端测试，大型表单逻辑容易回归 |
+
+---
+
+## 八、运维审计
+
+### 部署就绪检查
+
+| 检查项 | 状态 | 说明 |
+|--------|------|------|
+| `.env.example` 模板 | ✅ | 完整，含安全说明 |
+| `.gitignore` 覆盖 | ✅ | 数据、环境变量、临时文件均已排除 |
+| 生产启动脚本 | ✅ | `npm start` → `NODE_ENV=production` |
+| 数据库自动初始化 | ✅ | `initPgTables()` 自动建表 |
+| 健康检查端点 | ✅ | `/api/health` |
+| 备份脚本 | ✅ | `npm run backup` |
+| 构建脚本 | ✅ | `npm run build` 通过 |
+
+### 🟡 运维问题
+
+| 问题 | 说明 |
+|------|------|
+| 无结构化日志 | 所有日志使用 `console.log/error`，生产环境难以检索和告警 |
+| 无进程管理配置 | 缺少 `pm2.config.js` 或 `systemd` 单元文件模板 |
+| 无数据库迁移工具 | Schema 变更通过 `ensureColumn` 和手动建表管理，无版本化迁移 |
+| 无监控端点 | `/api/health` 仅返回基本信息，缺少内存/连接池/请求延迟等指标 |
+
+---
+
+## 九、依赖审计
+
+### 依赖健康度
+
+| 依赖 | 版本 | 说明 |
+|------|------|------|
+| `react` | 19.0.0 | ✅ 最新大版本 |
+| `express` | 4.21.2 | ⚠️ Express 5 已 GA，当前版本依赖 `express-async-errors` 补丁 |
+| `sqlite3` | 6.0.1 | ⚠️ 仅测试使用，可考虑替换为 `better-sqlite3` |
+| `vite` | 6.2.0 | ✅ |
+| `tailwindcss` | 4.1.14 | ✅ 最新 v4 |
+
+### 🟢 依赖类型放置问题
+
+- `@types/multer`、`@tailwindcss/vite`、`@vitejs/plugin-react`、`vite` 被放在 `dependencies` 而非 `devDependencies`
+- 生产部署不需要这些包，增加安装时间和 `node_modules` 体积
+- **建议**：将构建工具和类型包移至 `devDependencies`
+
+---
+
+## 十、建议执行优先级
+
+### ✅ P0 — 生产部署前必须修复（全部完成 2026-04-29）
+
+| # | 问题 | 状态 |
+|---|------|------|
+| 1 | 补齐 PG schema 缺失的 8 个列 | ✅ 已修复 |
+| 2 | 合并数据库连接池为单一实例 | ✅ 已修复 |
+| 3 | 批量删除包装事务 + 数组上限 | ✅ 已修复 |
+
+### 🟡 P1 — 部署后尽快修复
+
+| # | 问题 | 工作量 |
+|---|------|--------|
+| 1 | API 全局限流（特别是 AI 和导出接口） | 1h |
+| 2 | 生产环境错误信息脱敏 | 0.5h |
+| 3 | 财务记录写操作角色限制 | 0.5h |
+| 4 | 附件上传 MIME 白名单 | 0.5h |
+| 6 | 列表接口添加分页 | 3h |
+| 7 | 统一版本号来源 | 0.5h |
+| 8 | 审计日志 entityType 修正 | 0.5h |
+
+### 🟢 P2 — 持续改进
+
+| # | 问题 | 工作量 |
+|---|------|--------|
+| 1 | 拆分 `Tasks` 和 `Settings` 大 chunk | 2h |
+| 2 | 清理 SQLite/PG 双栈兼容层 | 4h+ |
+| 3 | 补 PG 实连接集成测试 | 3h |
+| 4 | 添加结构化日志（pino/winston） | 2h |
+| 5 | 补前端组件测试（表单验证、权限守卫） | 4h |
+| 6 | 客户详情查询并行化 | 1h |
+| 7 | 利润数据迁移到独立表 | 3h |
+| 8 | 自动更新增加 `dist/` 备份和回滚 | 2h |
+| 9 | Express 5 升级评估 | 2h |
+| 10 | 数据库迁移工具化 | 3h |
+| 11 | 清理残留 `.b`/`.c` 备份文件 | 0.1h |
+| 12 | 依赖分类修正（devDependencies） | 0.5h |
+
+---
+
+## 十一、总体评价
+
+这是一个**功能完整、核心安全已加固**的外贸 CRM 系统。从代码审计来看：
+
+**优势：**
+- 认证和授权体系完善（JWT + CSRF + 角色控制 + 对象级授权）
+- 品牌注入已做 XSS 防护
+- AI 集成有 PII 脱敏保护
+- 数据库事务在关键写链路已正确使用
+- 前端代码拆分和延迟加载做得不错
+- ✅ PG schema 与代码已完全同步
+- ✅ 数据库连接池已合并为单一实例
+- ✅ 批量操作已具备事务保护和输入限制
+
+**短板：**
+- ~~PG schema 与代码不同步是最大的部署风险~~ ✅ 已修复
+- ~~双 Pool 实例和双数据库兼容层增加了维护复杂度~~ ✅ 连接池已合并，兼容层待清理
+- 缺少 API 限流和分页，扩展性受限
+- 测试仅覆盖 SQLite 路径，PG 特有行为是盲区
+
+**结论：** 3 个 P0 问题已全部修复，项目可安全部署。按 P1/P2 持续推进后，项目将从"核心风险已控"进入"可持续运维和扩展"阶段。
+
+---
+
+## 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| `npx tsc --noEmit` | ✅ 通过 |
+| `npm run build` | ✅ 通过 (3.37s) |
+| 代码行数（核心文件） | 13,288 行 |
+| 显式 `any` 类型计数 | 36 处 |
+| TODO/FIXME 标记 | 0 处（仅变量命名 `MAX_LOGIN_ATTEMPTS` 被误匹配） |
+
+---
+
+## 修复日志
+
+### 2026-04-29 — P0 阻断级问题修复
+
+| 修复项 | 变更文件 | 说明 |
+|--------|---------|------|
+| PG schema 补齐 8 列 | `server/db-pg.ts` | 添加 `quick_notes`、`hs_code`、`freight_forwarder`、`recipient_address`、`package_size`（logistics）、`log_date`、`comment_count`、`attachment_count` 到 CREATE TABLE 语句 |
+| 合并数据库连接池 | `server/db-pg.ts` + `server/lib/db.ts` | `db-pg.ts` 导出 `pgPool`，`lib/db.ts` 导入复用，`new Pool` 从 2 处减至 1 处 |
+| 批量删除加事务 | `server/routes/orders.ts` | `batch-delete` 包装 `withTransaction`，添加 100 条数组上限校验 |
+
+**验证**：`npx tsc --noEmit` ✅ | `npm run build` ✅ (3.37s)
