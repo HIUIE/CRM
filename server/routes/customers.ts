@@ -23,9 +23,9 @@ export function createCustomersRouter() {
     const params: (string | number | null | undefined)[] = [];
 
     if (q) {
-      whereSql += ` AND (c.name LIKE ? OR c.country LIKE ? OR c.contact LIKE ?)`;
+      whereSql += ` AND (c.name LIKE ? OR c.country LIKE ? OR c.contact LIKE ? OR c.display_id LIKE ?)`;
       const p = `%${q}%`;
-      params.push(p, p, p);
+      params.push(p, p, p, p);
     }
     if (startDate) {
       whereSql += ` AND c.created_at >= ?`;

@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/smarttrade_crm
+      - PG_HOST=db
+      - PG_PORT=5432
+      - PG_DATABASE=smarttrade_crm
+      - PG_USER=postgres
+      - PG_PASSWORD=postgres
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-do-not-use-in-production}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-admin123}
+      - NODE_ENV=production
+    volumes:
+      - crm-uploads:/app/data/uploads
+      - crm-backups:/app/data/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=smarttrade_crm
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - crm-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smarttrade_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  crm-uploads:
+  crm-backups:
+  crm-db-data:

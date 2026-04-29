@@ -30,11 +30,18 @@ export function createTasksRouter() {
   // Get tasks with filtering (Assigned to me, Delegated by me, All)
   router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     const view = readString(req.query.view) || 'assigned'; // assigned, delegated, all
+    const q = readString(req.query.q);
     const userId = req.user?.id;
     const role = req.user?.role;
 
     let whereSql = 'WHERE 1=1';
     const params: (string | number | null | undefined)[] = [];
+
+    if (q) {
+      whereSql += ' AND (t.title LIKE ? OR t.description LIKE ?)';
+      const p = `%${q}%`;
+      params.push(p, p);
+    }
 
     if (view === 'assigned') {
       whereSql += ' AND t.assignee_id = ?';

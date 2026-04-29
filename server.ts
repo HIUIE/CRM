@@ -23,7 +23,13 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
   const HOST = process.env.HOST || '0.0.0.0';
 
-  const server = app.listen(PORT, HOST, () => {
+  const { createServer } = await import('http');
+  const { initSocket } = await import('./server/lib/socket.js');
+  
+  const httpServer = createServer(app);
+  initSocket(httpServer);
+
+  const server = httpServer.listen(PORT, HOST, () => {
     logger.info(`Mode: ${process.env.NODE_ENV === 'production' ? 'production' : 'development'}`);
     logger.info(`Database: PostgreSQL ${dbHost}/${dbName}`);
     logger.info(`Uploads: ${UPLOADS_DIR}`);

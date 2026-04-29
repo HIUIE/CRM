@@ -25,6 +25,7 @@ import {
   X as XIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../hooks/useSocket';
 import { CommandPalette } from '../ui/CommandPalette';
 import { NotificationDrawer } from '../ui/NotificationDrawer';
 import { Drawer } from '../ui/Drawer';
@@ -34,6 +35,7 @@ import { useSiteBrand } from '../../hooks/useSiteBrand';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
+  useSocket(); // Initialize global socket connection
   const navigate = useNavigate();
   const location = useLocation();
   

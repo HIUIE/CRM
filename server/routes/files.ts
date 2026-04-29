@@ -7,7 +7,7 @@ import { fail, handleRouteError } from '../lib/http.js';
 export function createFilesRouter() {
   const router = Router();
 
-  router.get('/:id/:storedName(*)', async (req, res) => {
+  router.get('/:id/:storedName', async (req, res) => {
     const attachmentId = Number(req.params.id);
     const storedName = String(req.params.storedName || '').trim();
 

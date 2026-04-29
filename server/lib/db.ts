@@ -16,6 +16,8 @@ function pgParams(sql: string, params: any[]): [string, any[]] {
     .replace(/\?/g, () => `$${++idx}`)
     // Strip datetime(col) → col (PG sorts TIMESTAMP natively)
     .replace(/\bdatetime\((\w+(?:\.\w+)?)\)/g, '$1')
+    // Convert LIKE to ILIKE for case-insensitive search (works great with pg_trgm GIN indexes)
+    .replace(/\bLIKE\b/g, 'ILIKE')
     // Quote camelCase aliases: " AS fooBar" → " AS \"fooBar\""
     .replace(/\bAS\s+([a-z]+[A-Z][a-zA-Z]*)\b/g, 'AS "$1"')
     // Auto-expand GROUP BY c.id to include joined columns (PG requires all non-aggregate cols)
