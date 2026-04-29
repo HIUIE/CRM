@@ -346,7 +346,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 
 | # | 问题 | 工作量 |
 |---|------|--------|
-| 1 | 拆分 `Tasks` 和 `Settings` 大 chunk | 2h |
+| 1 | 拆分 `Tasks` 和 `Settings` 大 chunk | ✅ 已完成 |
 | 2 | 清理 SQLite/PG 双栈兼容层 | 4h+ |
 | 3 | 补 PG 实连接集成测试 | 3h |
 | 4 | 添加结构化日志（pino/winston） | ✅ 已完成 |
@@ -409,6 +409,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 
 | 修复项 | 变更文件 | 说明 |
 |--------|---------|------|
+| 拆分大型组件 | `Settings.tsx` | 将 1100+ 行的 Settings 拆解为 5 个 Lazy Tab 独立组件，显著减小了初始打包 chunk 体积 |
 | 自动更新回滚 | `server/routes/settings.ts` | 增加系统更新时的 `dist` 备份，失败后自动恢复 |
 | 结构化日志 | `server/lib/logger.ts` 等 | 引入 pino 和 pino-pretty，替换 `console` 全局日志 |
 | 客户查询并行化 | `server/routes/customers.ts` | 将 6 个关联数据查询重构为 `Promise.all` 并行 |
