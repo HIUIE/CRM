@@ -2,7 +2,7 @@ import React from 'react';
 import { COUNTRIES } from '../../lib/countries';
 
 interface CountryDisplayProps {
-  value: string;
+  value: string | null | undefined;
   className?: string;
 }
 

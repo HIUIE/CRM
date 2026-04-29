@@ -77,7 +77,7 @@ export async function runOpenAiCompatibleModel({
     }
 
     const data = (await response.json()) as Record<string, unknown>;
-    const content = data?.choices?.[0]?.message?.content || '';
+    const content = (data as Record<string, any>).choices?.[0]?.message?.content || '';
     
     // 如果不是 JSON 模式，直接返回文字内容，不要尝试解析
     if (!jsonMode) {

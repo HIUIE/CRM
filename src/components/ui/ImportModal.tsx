@@ -32,9 +32,9 @@ type Step = 'upload' | 'mapping' | 'backup_confirm' | 'executing' | 'result';
 export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: Props) {
   const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<{ 
-    headers?: string[]; 
-    rows?: any[][]; 
+  const [previewData, setPreviewData] = useState<{
+    headers?: string[];
+    rows?: unknown[][];
     filename: string;
     isZip?: boolean;
     isBackup?: boolean;
@@ -239,7 +239,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
                         className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-3 py-2 text-xs font-bold outline-none focus:border-primary-navy transition-all"
                       >
                         <option value="">-- 请选择对应列 --</option>
-                        {previewData.headers.map(h => (
+                        {previewData.headers?.map(h => (
                           <option key={h} value={h}>{h}</option>
                         ))}
                       </select>
@@ -256,13 +256,13 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
                   <table className="w-full text-[11px] text-left">
                     <thead>
                       <tr className="bg-slate-50/50 dark:bg-navy-950/50">
-                        {previewData.headers.map(h => (
+                        {previewData.headers?.map(h => (
                           <th key={h} className="px-4 py-2 font-extrabold text-slate-500 border-b border-slate-100 dark:border-navy-800 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {previewData.rows.map((row, i) => (
+                      {previewData.rows?.map((row, i) => (
                         <tr key={i} className="border-b border-slate-50 dark:border-navy-800 last:border-0">
                           {row.map((cell, j) => (
                             <td key={j} className="px-4 py-2 font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">{String(cell || '-')}</td>

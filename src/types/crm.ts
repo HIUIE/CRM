@@ -72,6 +72,7 @@ export type OrderOption = {
   id: number;
   display_id: string;
   customer_name: string;
+  customer_country?: string;
 };
 
 export type PartnerOption = {

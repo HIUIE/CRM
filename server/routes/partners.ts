@@ -27,7 +27,7 @@ export function createPartnersRouter() {
   router.post('/', async (req: AuthedRequest, res) => {
     const result = await readPartnerPayload(req.body || {});
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_PARTNER_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_PARTNER_PAYLOAD');
     }
 
     try {
@@ -64,7 +64,7 @@ export function createPartnersRouter() {
 
     const result = await readPartnerPayload(req.body || {});
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_PARTNER_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_PARTNER_PAYLOAD');
     }
 
     try {

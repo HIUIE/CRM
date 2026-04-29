@@ -17,7 +17,7 @@ export default function EmptyStateBoard({
   const renderIcon = () => {
     if (!Icon) return null;
     if (React.isValidElement(Icon)) return Icon;
-    const IconComp = Icon as React.ComponentType<{ size?: number }>;
+    const IconComp = Icon as React.ComponentType<{ size?: number; className?: string }>;
     return <IconComp size={24} className="text-slate-300 dark:text-navy-800" />;
   };
 

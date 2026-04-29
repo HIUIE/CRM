@@ -34,14 +34,15 @@ export function sanitizeForAI(data: unknown): unknown {
   }
 
   // Handle Objects
-  if (typeof data === 'object') {
+  if (typeof data === 'object' && data !== null) {
+    const obj = data as Record<string, unknown>;
     const sanitized: Record<string, unknown> = {};
-    for (const key in data) {
+    for (const key in obj) {
       const lowerKey = key.toLowerCase();
-      
+
       // Specialized logic for specific fields
       if (SENSITIVE_FIELD_KEYS.includes(lowerKey)) {
-        const val = data[key];
+        const val = obj[key];
         
         if (!val) {
           sanitized[key] = val;
@@ -56,12 +57,12 @@ export function sanitizeForAI(data: unknown): unknown {
         } else {
           sanitized[key] = `[${key.toUpperCase()}_REDACTED]`;
         }
-      } else if (typeof data[key] === 'string') {
+      } else if (typeof obj[key] === 'string') {
         // For general text fields (like remarks or follow-up content), perform regex scrubbing
-        sanitized[key] = scrubText(data[key]);
+        sanitized[key] = scrubText(obj[key] as string);
       } else {
         // Recursive dive
-        sanitized[key] = sanitizeForAI(data[key]);
+        sanitized[key] = sanitizeForAI(obj[key]);
       }
     }
     return sanitized;

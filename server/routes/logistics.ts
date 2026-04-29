@@ -106,7 +106,7 @@ router.get('/', async (req, res) => {
   router.post('/', async (req: AuthedRequest, res) => {
     const result = await readLogisticsPayload(req.body || {});
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_LOGISTICS_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_LOGISTICS_PAYLOAD');
     }
 
     try {
@@ -159,7 +159,7 @@ router.get('/', async (req, res) => {
 
     const result = await readLogisticsPayload(req.body || {});
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_LOGISTICS_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_LOGISTICS_PAYLOAD');
     }
 
     try {

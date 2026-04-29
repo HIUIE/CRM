@@ -64,7 +64,7 @@ export default function CustomersView() {
 
   // Debounced search input: local state drives the input, URL param updates after 300ms of inactivity
   const [inputValue, setInputValue] = useState(query);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setInputValue(query);

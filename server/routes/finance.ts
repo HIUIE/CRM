@@ -68,7 +68,7 @@ export function createFinanceRouter() {
   router.post('/', async (req: AuthedRequest, res) => {
     const result = await readFinancePayload(req.body || {});
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_FINANCE_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_FINANCE_PAYLOAD');
     }
 
     try {
@@ -117,7 +117,7 @@ export function createFinanceRouter() {
 
     const result = await readFinancePayload(req.body || {});
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_FINANCE_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_FINANCE_PAYLOAD');
     }
 
     try {

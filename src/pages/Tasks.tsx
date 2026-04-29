@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2, Clock, Plus, User, Calendar,
@@ -8,10 +8,12 @@ import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Chip from '../components/ui/Chip';
 import Toast from '../components/ui/Toast';
-import { TaskDrawer } from '../components/ui/TaskDrawer';
-import { TaskDetailDrawer } from '../components/ui/TaskDetailDrawer';
 import { AnimatePresence, motion } from 'motion/react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+
+const TaskDrawer = lazy(() => import('../components/ui/TaskDrawer').then(m => ({ default: m.TaskDrawer })));
+const TaskDetailDrawer = lazy(() => import('../components/ui/TaskDetailDrawer').then(m => ({ default: m.TaskDetailDrawer })));
+
 
 interface Task {
   id: number;
@@ -152,22 +154,24 @@ export default function TasksView() {
         </div>
       )}
 
-      <TaskDrawer
-        isOpen={showCreateDrawer} 
-        onClose={() => setShowCreateDrawer(false)} 
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
-      />
+      <Suspense fallback={null}>
+        <TaskDrawer
+          isOpen={showCreateDrawer} 
+          onClose={() => setShowCreateDrawer(false)} 
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
+        />
 
-      <TaskDetailDrawer
-        taskId={selectedTaskId}
-        onClose={() => {
-           setSelectedTaskId(null);
-           const next = new URLSearchParams(searchParams);
-           next.delete('detail');
-           setSearchParams(next);
-        }}
-        onUpdate={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
-      />
+        <TaskDetailDrawer
+          taskId={selectedTaskId}
+          onClose={() => {
+             setSelectedTaskId(null);
+             const next = new URLSearchParams(searchParams);
+             next.delete('detail');
+             setSearchParams(next);
+          }}
+          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
+        />
+      </Suspense>
 
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
@@ -188,10 +192,10 @@ function ViewToggle({ active, label, onClick }: { active: boolean; label: string
 interface TaskCardProps {
   task: Task;
   onSelect: () => void;
-  onStatusChange: (taskId: number, newStatus: ColumnKey) => Promise<void>;
+  onStatusChange: (taskId: number, newStatus: ColumnKey) => void;
 }
 
-const TaskCard = React.memo<React.FC<TaskCardProps>>(({ task, onSelect, onStatusChange }) => {
+const TaskCard = React.memo(({ task, onSelect, onStatusChange }: TaskCardProps) => {
   const navigate = useNavigate();
   const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'done';
   const priorityColor = task.priority === 'P0' ? 'bg-red-500' : task.priority === 'P1' ? 'bg-amber-500' : 'bg-blue-500';

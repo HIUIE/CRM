@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../lib/api';
 import type { OrderSummary, CustomerListItem } from '../../types/crm';
 
-type SearchResult = 
-  | { type: 'order'; id: string | number; display_id: string; customer_name: string }
-  | { type: 'customer'; id: string | number; display_id?: string; name: string; country?: string };
+type SearchResult =
+  | { type: 'order'; id: number; display_id: string; customer_name?: string }
+  | { type: 'customer'; id: number; display_id?: string | null; name: string; country: string };
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);

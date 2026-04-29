@@ -71,7 +71,7 @@ export function createCustomsRouter() {
     const orderId = Number(req.params.id);
     const result = await readCustomsPayload({ ...(req.body || {}), orderId });
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_CUSTOMS_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_CUSTOMS_PAYLOAD');
     }
 
     try {
@@ -117,7 +117,7 @@ export function createCustomsRouter() {
 
     const result = await readCustomsPayload({ ...(req.body || {}), orderId: existing.order_id });
     if ('error' in result) {
-      return fail(res, 400, result.error, 'INVALID_CUSTOMS_PAYLOAD');
+      return fail(res, 400, result.error!, 'INVALID_CUSTOMS_PAYLOAD');
     }
 
     try {

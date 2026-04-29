@@ -96,7 +96,7 @@ export function clearAuthCookie(res: Response) {
 }
 
 export function signAuthToken(user: AuthUser) {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+  return jwt.sign(user, JWT_SECRET!, { expiresIn: '24h' });
 }
 
 export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -106,7 +106,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    const decoded = jwt.verify(token, JWT_SECRET!) as unknown as AuthUser;
     const currentUser = await dbGet<{ id: number; active: number | null }>(
       `SELECT id, active FROM users WHERE id = ?`,
       [decoded.id],

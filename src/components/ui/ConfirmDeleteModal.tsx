@@ -6,7 +6,7 @@ interface Props {
   onClose: () => void;
   onConfirm: () => void;
   title?: string;
-  warning: string;
+  warning: React.ReactNode;
   entityLabel: string;
   entityId: string;
   isDeleting: boolean;
