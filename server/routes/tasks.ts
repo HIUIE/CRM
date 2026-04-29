@@ -1,10 +1,28 @@
 import { Router } from 'express';
-import { dbAll, dbGet, dbRun, dbBegin, dbCommit, dbRollback } from '../lib/db.js';
+import { dbAll, dbGet, dbRun, withTransaction } from '../lib/db.js';
 import { requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString, readNumber } from '../lib/values.js';
 import { createNotification, notifyMention } from '../lib/notifications.js';
 import { logAction } from '../lib/audit.js';
+
+type TaskAccessRow = {
+  id: number;
+  title: string;
+  assignee_id: number;
+  created_by: number | null;
+};
+
+async function loadAccessibleTask(taskId: number, user: AuthedRequest['user']) {
+  const task = await dbGet<TaskAccessRow>(`SELECT id, title, assignee_id, created_by FROM tasks WHERE id = ?`, [taskId]);
+  if (!task) {
+    return { error: 'NOT_FOUND' as const };
+  }
+  if (user?.role === 'admin' || task.assignee_id === user?.id || task.created_by === user?.id) {
+    return { task };
+  }
+  return { error: 'FORBIDDEN' as const };
+}
 
 export function createTasksRouter() {
   const router = Router();
@@ -51,9 +69,13 @@ export function createTasksRouter() {
   });
 
   // Get single task detail
-  router.get('/:id', requireAuth, async (req, res) => {
+  router.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
     const taskId = Number(req.params.id);
     try {
+      const access = await loadAccessibleTask(taskId, req.user);
+      if (access.error === 'NOT_FOUND') return fail(res, 404, '任务不存在');
+      if (access.error === 'FORBIDDEN') return fail(res, 403, '无权访问该任务', 'TASK_FORBIDDEN');
+
       const task = await dbGet(`
         SELECT t.*, u.name as assignee_name, u2.name as creator_name
         FROM tasks t
@@ -113,57 +135,65 @@ export function createTasksRouter() {
     if (!content) return fail(res, 400, '请输入评论内容');
 
     try {
-      const task = await dbGet(`SELECT * FROM tasks WHERE id = ?`, [taskId]);
-      if (!task) return fail(res, 404, '任务不存在');
+      const access = await loadAccessibleTask(taskId, req.user);
+      if (access.error === 'NOT_FOUND') return fail(res, 404, '任务不存在');
+      if (access.error === 'FORBIDDEN') return fail(res, 403, '无权访问该任务', 'TASK_FORBIDDEN');
+      const task = access.task;
+      const mentionedUserIds = new Set<number>();
+      let shouldNotifyAssignee = false;
 
-      await dbBegin();
+      await withTransaction(async (tx) => {
+        const result = await tx.run(
+          `INSERT INTO task_comments (task_id, content, created_by) VALUES (?, ?, ?)`,
+          [taskId, content, req.user?.id]
+        );
 
-      const result = await dbRun(
-        `INSERT INTO task_comments (task_id, content, created_by) VALUES (?, ?, ?)`,
-        [taskId, content, req.user?.id]
-      );
+        const commentId = result.lastID;
 
-      const commentId = result.lastID;
-
-      const attachmentIds = Array.isArray(req.body?.attachmentIds) ? req.body.attachmentIds : [];
-      if (attachmentIds.length > 0) {
-        for (const aid of attachmentIds) {
-          await dbRun(
-            `INSERT INTO task_attachments (task_id, attachment_id, comment_id) VALUES (?, ?, ?)`,
-            [taskId, aid, commentId]
-          );
+        const attachmentIds = Array.isArray(req.body?.attachmentIds) ? req.body.attachmentIds : [];
+        if (attachmentIds.length > 0) {
+          for (const aid of attachmentIds) {
+            await tx.run(
+              `INSERT INTO task_attachments (task_id, attachment_id, comment_id) VALUES (?, ?, ?)`,
+              [taskId, aid, commentId]
+            );
+          }
+          await tx.run(`UPDATE tasks SET attachment_count = attachment_count + ? WHERE id = ?`, [attachmentIds.length, taskId]);
         }
-        await dbRun(`UPDATE tasks SET attachment_count = attachment_count + ? WHERE id = ?`, [attachmentIds.length, taskId]);
-      }
 
-      await dbRun(`UPDATE tasks SET comment_count = comment_count + 1 WHERE id = ?`, [taskId]);
+        await tx.run(`UPDATE tasks SET comment_count = comment_count + 1 WHERE id = ?`, [taskId]);
 
-      // Parse mentions like @Carlos
-      const mentions = content.match(/@([^ ]+)/g);
-      if (mentions) {
-        for (const m of mentions) {
-          const name = m.slice(1);
-          const mentionedUser = await dbGet(`SELECT id FROM users WHERE name = ?`, [name]);
-          if (mentionedUser && mentionedUser.id !== req.user?.id) {
-            await notifyMention(mentionedUser.id, req.user?.name || '有人', 'TASK', String(taskId));
+        // Parse mentions like @Carlos
+        const mentions = content.match(/@([^ ]+)/g);
+        if (mentions) {
+          for (const m of mentions) {
+            const name = m.slice(1);
+            const mentionedUser = await tx.get<{ id: number }>(`SELECT id FROM users WHERE name = ?`, [name]);
+            if (mentionedUser && mentionedUser.id !== req.user?.id) {
+              mentionedUserIds.add(mentionedUser.id);
+            }
           }
         }
-      }
 
-      // Notify assignee if someone else comments
-      if (task.assignee_id !== req.user?.id) {
-         await createNotification({
-           userId: task.assignee_id,
-           title: '任务有新进展',
-           message: `${req.user?.name} 在任务“${task.title}”中发表了评论`,
-           link: `/tasks?detail=${taskId}`
-         });
-      }
+        // Notify assignee if someone else comments
+        if (task.assignee_id !== req.user?.id) {
+          shouldNotifyAssignee = true;
+        }
+      });
 
-      await dbCommit();
+      for (const mentionedUserId of mentionedUserIds) {
+        await notifyMention(mentionedUserId, req.user?.name || '有人', 'TASK', String(taskId));
+      }
+      if (shouldNotifyAssignee) {
+        await createNotification({
+          userId: task.assignee_id,
+          title: '任务有新进展',
+          message: `${req.user?.name} 在任务“${task.title}”中发表了评论`,
+          link: `/tasks?detail=${taskId}`
+        });
+      }
       res.status(201).json({ success: true });
     } catch (error) {
-      await dbRollback();
       return handleRouteError(res, error, '发表评论失败');
     }
   });
@@ -224,6 +254,9 @@ export function createTasksRouter() {
     }
 
     try {
+      const access = await loadAccessibleTask(taskId, req.user);
+      if (access.error === 'NOT_FOUND') return fail(res, 404, '任务不存在');
+      if (access.error === 'FORBIDDEN') return fail(res, 403, '无权访问该任务', 'TASK_FORBIDDEN');
       await dbRun(`UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [status, taskId]);
       res.json({ success: true });
     } catch (error) {
@@ -240,6 +273,9 @@ export function createTasksRouter() {
     const title = readString(req.body?.title);
 
     try {
+      const access = await loadAccessibleTask(taskId, req.user);
+      if (access.error === 'NOT_FOUND') return fail(res, 404, '任务不存在');
+      if (access.error === 'FORBIDDEN') return fail(res, 403, '无权访问该任务', 'TASK_FORBIDDEN');
       await dbRun(`
         UPDATE tasks 
         SET assignee_id = COALESCE(?, assignee_id),

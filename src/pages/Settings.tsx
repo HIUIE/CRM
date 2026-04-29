@@ -30,6 +30,17 @@ interface VersionInfo {
   commit: string;
 }
 
+interface SystemUpdateStatus {
+  id: string;
+  phase: 'idle' | 'running' | 'failed' | 'completed' | 'restarting';
+  steps: string[];
+  logs: string[];
+  currentStep: string;
+  error: string;
+  startedAt: string;
+  finishedAt: string;
+}
+
 const AI_PROVIDERS = [
   { id: 'deepseek', label: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'], baseUrl: 'https://api.deepseek.com', icon: <BrainCircuit size={20} /> },
   { id: 'openai', label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini'], baseUrl: 'https://api.openai.com', icon: <Bot size={20} /> },
@@ -94,6 +105,8 @@ export default function SettingsView() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updateLog, setUpdateLog] = useState<string[]>([]);
+  const [updateStatus, setUpdateStatus] = useState<SystemUpdateStatus | null>(null);
+  const [updateHistory, setUpdateHistory] = useState<SystemUpdateStatus[]>([]);
 
   const isAdmin = user?.role === 'admin';
 
@@ -136,6 +149,44 @@ export default function SettingsView() {
     fetch('/version.json').then(r => r.json()).then(setLocalVersion).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    let timer: number | undefined;
+    let cancelled = false;
+
+    const pollStatus = async () => {
+      try {
+        const [status, history] = await Promise.all([
+          apiFetch<SystemUpdateStatus>('/api/settings/system/update/status'),
+          apiFetch<SystemUpdateStatus[]>('/api/settings/system/update/history'),
+        ]);
+        if (cancelled) return;
+        setUpdateStatus(status);
+        setUpdateHistory(history);
+        setUpdateLog(status.logs?.length ? status.logs : status.steps || []);
+        const active = status.phase === 'running' || status.phase === 'restarting';
+        setUpdating(active);
+        if (active) {
+          timer = window.setTimeout(() => {
+            void pollStatus();
+          }, 2000);
+        }
+      } catch {
+        if (!cancelled) {
+          setUpdating(false);
+        }
+      }
+    };
+
+    void pollStatus();
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [isAdmin]);
+
   const checkForUpdates = async () => {
     setCheckingUpdate(true);
     try {
@@ -153,12 +204,16 @@ export default function SettingsView() {
     setUpdating(true);
     setUpdateLog([]);
     try {
-      const res = await fetch('/api/settings/system/update', { method: 'POST', credentials: 'include' });
-      const data = await res.json();
+      const data = await apiFetch<{ success?: boolean; message?: string; status?: string }>('/api/settings/system/update', { method: 'POST' });
       setUpdateLog(prev => [...prev, data.message || '更新命令已发送...']);
-      if (data.success) {
-        setTimeout(() => window.location.reload(), 3000);
-      }
+      const [status, history] = await Promise.all([
+        apiFetch<SystemUpdateStatus>('/api/settings/system/update/status'),
+        apiFetch<SystemUpdateStatus[]>('/api/settings/system/update/history'),
+      ]);
+      setUpdateStatus(status);
+      setUpdateHistory(history);
+      setUpdateLog(status.logs?.length ? status.logs : status.steps || []);
+      setUpdating(status.phase === 'running' || status.phase === 'restarting');
     } catch (e) {
       setUpdateLog(prev => [...prev, `错误: ${getErrorMessage(e)}`]);
       setUpdating(false);
@@ -998,41 +1053,78 @@ export default function SettingsView() {
                     <CheckCircle2 size={16} /> 已是最新版本
                   </div>
                 )
-              ) : remoteVersion?.error ? (
-                <div className="text-sm text-amber-600 dark:text-amber-400">{remoteVersion.error}。请确保已执行 git push，或设置 GITHUB_TOKEN (私有仓库需要)。</div>
               ) : (
                 <div className="text-sm text-slate-400">点击"检测更新"查看是否有新版本可用。</div>
               )}
 
               {/* Update trigger */}
-              {remoteVersion && remoteVersion.version !== localVersion?.version && (
-                <div className="mt-5 pt-5 border-t border-slate-200 dark:border-navy-800">
-                  <button onClick={doUpdate} disabled={updating} className="btn-primary w-full justify-center shadow-md disabled:opacity-60">
-                    {updating ? <Loader2 size={16} className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />}
-                    {updating ? '正在更新...' : '一键更新系统'}
-                  </button>
-                  {updateLog.length > 0 && (
-                    <div className="mt-3 p-3 rounded-lg bg-slate-100 dark:bg-navy-800 text-xs font-mono text-slate-600 dark:text-slate-400 space-y-1 max-h-24 overflow-y-auto">
-                      {updateLog.map((log, i) => <div key={i}>{log}</div>)}
-                    </div>
-                  )}
+	              {remoteVersion && remoteVersion.version !== localVersion?.version && (
+	                <div className="mt-5 pt-5 border-t border-slate-200 dark:border-navy-800">
+	                  <button onClick={doUpdate} disabled={updating} className="btn-primary w-full justify-center shadow-md disabled:opacity-60">
+	                    {updating ? <Loader2 size={16} className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />}
+	                    {updating ? '正在更新...' : '一键更新系统'}
+	                  </button>
+                    {updateStatus?.currentStep && (
+                      <div className="mt-3 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+                        当前状态：{updateStatus.currentStep}
+                      </div>
+                    )}
+                    {updateStatus?.error && (
+                      <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300">
+                        更新失败：{updateStatus.error}
+                      </div>
+                    )}
+	                  {updateLog.length > 0 && (
+	                    <div className="mt-3 p-3 rounded-lg bg-slate-100 dark:bg-navy-800 text-xs font-mono text-slate-600 dark:text-slate-400 space-y-1 max-h-24 overflow-y-auto">
+	                      {updateLog.map((log, i) => <div key={i}>{log}</div>)}
+	                    </div>
+	                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {localVersion && (
-            <div className="mt-6 rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+	          {localVersion && (
+	            <div className="mt-6 rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
               <div className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-3">
                 <Clock size={16} /> 更新指引
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                系统更新需要服务器管理员在终端执行命令。部署完成后，所有在线用户将自动收到"系统已升级"的刷新提示。
-              </p>
-            </div>
-          )}
-        </section>
-      )}
+	              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+	                系统更新需要服务器管理员在终端执行命令。部署完成后，所有在线用户将自动收到"系统已升级"的刷新提示。
+	              </p>
+	            </div>
+	          )}
+
+            {updateHistory.length > 0 && (
+              <div className="mt-6 rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
+                <div className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white mb-4">
+                  <Clock size={16} /> 最近更新记录
+                </div>
+                <div className="space-y-3">
+                  {updateHistory.slice(0, 5).map((item) => (
+                    <div key={item.id || item.startedAt} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                          {item.currentStep || '系统更新记录'}
+                        </div>
+                        <div className={`text-[11px] font-bold ${item.phase === 'failed' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                          {item.phase === 'failed' ? '失败' : '完成'}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span>开始：{item.startedAt ? new Date(item.startedAt).toLocaleString('zh-CN') : '-'}</span>
+                        <span>结束：{item.finishedAt ? new Date(item.finishedAt).toLocaleString('zh-CN') : '-'}</span>
+                      </div>
+                      {item.error && (
+                        <div className="mt-2 text-[11px] text-rose-600 dark:text-rose-400">{item.error}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+	        </section>
+	      )}
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
-import { csrfProtection, requireAuth } from './lib/auth.js';
+import { normalizeBrandText, sanitizeBrandAssetUrl } from './lib/brand.js';
+import { csrfProtection, requireAuth, requireAdmin } from './lib/auth.js';
+import { useSqlite } from './lib/db.js';
 import { createAiRouter } from './routes/ai.js';
 import { createAttachmentsRouter } from './routes/attachments.js';
 import { createAuthRouter } from './routes/auth.js';
@@ -27,7 +29,7 @@ const SERVER_START_TIME = Date.now();
 router.get('/health', (_req, res) => {
   res.json({
     ok: true,
-    database: 'sqlite',
+    database: useSqlite ? 'sqlite(test)' : 'postgresql',
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     timestamp: new Date().toISOString(),
     startupTime: SERVER_START_TIME,
@@ -45,16 +47,24 @@ router.get('/settings/basic', async (_req, res) => {
     const siteSlogan = await getSettingValue('site_slogan', '');
     const siteLogo = await getSettingValue('site_logo', '');
     const siteFavicon = await getSettingValue('site_favicon', '');
-    res.json({ siteName, siteSlogan, siteLogo, siteFavicon });
+    res.json({
+      siteName: normalizeBrandText(siteName, 'SmartTrade AI CRM'),
+      siteSlogan: normalizeBrandText(siteSlogan, '', 160),
+      siteLogo: sanitizeBrandAssetUrl(siteLogo, '/logo.png'),
+      siteFavicon: sanitizeBrandAssetUrl(siteFavicon, ''),
+    });
   } catch (error) {
     res.json({ siteName: 'SmartTrade AI CRM', siteSlogan: '', siteLogo: '/logo.png', siteFavicon: '' });
   }
 });
 
-router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
-
 router.use(requireAuth);
 router.use(csrfProtection);
+
+if (process.env.NODE_ENV !== 'production') {
+  router.use('/api-docs', requireAdmin, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+}
+
 router.use('/dashboard', createDashboardRouter());
 router.use('/settings', createSettingsRouter());
 router.use('/audit', createAuditRouter());

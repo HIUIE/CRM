@@ -1,6 +1,5 @@
 import React from 'react';
 import { apiFetch, apiUpload, apiUploadSimple, getErrorMessage } from '../../lib/api';
-import { exportElementToPdf } from '../../lib/pdfExport';
 import { withTransition } from '../../lib/transition';
 import type {
   OrderFormState,
@@ -474,6 +473,7 @@ export async function handleExportPdf(
   const { printContentRef, order, showToast } = deps;
   if (!printContentRef.current || !order) return;
   try {
+    const { exportElementToPdf } = await import('../../lib/pdfExport');
     await exportElementToPdf(printContentRef.current, `${order.display_id}-REPORT`);
   } catch { showToast('PDF 生成失败'); }
 };

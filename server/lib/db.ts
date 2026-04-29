@@ -1,5 +1,9 @@
 import pkg from 'pg';
+import { db as sqliteDb } from '../db.js';
 const { Pool } = pkg;
+type PgClient = InstanceType<typeof Pool> extends { connect: () => Promise<infer T> } ? T : never;
+export const useSqlite = process.env.NODE_ENV === 'test';
+
 const pool = new Pool({
   host: process.env.PG_HOST || 'localhost',
   port: Number(process.env.PG_PORT) || 5432,
@@ -43,41 +47,126 @@ export const SQL = {
   monthsAgo: (n: number) => `NOW() - INTERVAL '${n} months'`,
 };
 
+type DbExecutor = {
+  all: <T = any[]>(sql: string, params?: any[]) => Promise<T>;
+  get: <T = any>(sql: string, params?: any[]) => Promise<T | undefined>;
+  run: (sql: string, params?: any[]) => Promise<{ changes: number; lastID: number }>;
+  exec: (sql: string) => Promise<void>;
+};
+
+function createExecutor(executor?: { query: (sql: string, params?: any[]) => Promise<{ rows: any[]; rowCount?: number }> }): DbExecutor {
+  return {
+    async all<T = any[]>(sql: string, params: any[] = []) {
+      if (useSqlite) {
+        return await sqliteDb.all(sql, params) as T;
+      }
+      const [q, p] = pgParams(sql, params);
+      const result = await (executor || pool).query(q, p);
+      return result.rows as T;
+    },
+    async get<T = any>(sql: string, params: any[] = []) {
+      if (useSqlite) {
+        return await sqliteDb.get(sql, params) as T | undefined;
+      }
+      const [q, p] = pgParams(sql, params);
+      const result = await (executor || pool).query(q, p);
+      return result.rows[0] as T | undefined;
+    },
+    async run(sql: string, params: any[] = []) {
+      if (useSqlite) {
+        const result = await sqliteDb.run(sql, params);
+        return { changes: result.changes || 0, lastID: result.lastID || 0 };
+      }
+      const [q, p] = pgParams(sql, params);
+      const result = await (executor || pool).query(q, p);
+      return { changes: result.rowCount || 0, lastID: 0 };
+    },
+    async exec(sql: string) {
+      if (useSqlite) {
+        await sqliteDb.exec(sql);
+        return;
+      }
+      await (executor || pool).query(sql);
+    },
+  };
+}
+
+export type TransactionExecutor = DbExecutor;
+const defaultExecutor = createExecutor();
+
 export async function dbAll<T = any[]>(sql: string, params: any[] = []): Promise<T> {
-  const [q, p] = pgParams(sql, params);
-  const result = await pool.query(q, p);
-  return result.rows as T;
+  return defaultExecutor.all<T>(sql, params);
 }
 
 export async function dbGet<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
-  const [q, p] = pgParams(sql, params);
-  const result = await pool.query(q, p);
-  return result.rows[0] as T | undefined;
+  return defaultExecutor.get<T>(sql, params);
 }
 
 export async function dbRun(sql: string, params: any[] = []) {
-  const [q, p] = pgParams(sql, params);
-  const result = await pool.query(q, p);
-  return { changes: result.rowCount || 0, lastID: 0 };
+  return defaultExecutor.run(sql, params);
 }
 
 export async function dbExec(sql: string) {
-  await pool.query(sql);
+  return defaultExecutor.exec(sql);
 }
 
 export async function dbBegin() {
+  if (useSqlite) {
+    await sqliteDb.exec('BEGIN');
+    return;
+  }
   await pool.query('BEGIN');
 }
 
 export async function dbCommit() {
+  if (useSqlite) {
+    await sqliteDb.exec('COMMIT');
+    return;
+  }
   await pool.query('COMMIT');
 }
 
 export async function dbRollback() {
+  if (useSqlite) {
+    await sqliteDb.exec('ROLLBACK');
+    return;
+  }
   await pool.query('ROLLBACK');
 }
 
+export async function withTransaction<T>(runInTransaction: (tx: TransactionExecutor) => Promise<T>): Promise<T> {
+  if (useSqlite) {
+    await sqliteDb.exec('BEGIN');
+    const tx = createExecutor();
+    try {
+      const result = await runInTransaction(tx);
+      await sqliteDb.exec('COMMIT');
+      return result;
+    } catch (error) {
+      await sqliteDb.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
+  const client = await pool.connect();
+  const tx = createExecutor(client as unknown as PgClient & { query: (sql: string, params?: any[]) => Promise<{ rows: any[]; rowCount?: number }> });
+  try {
+    await client.query('BEGIN');
+    const result = await runInTransaction(tx);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function dbTableInfo(table: string): Promise<{ name: string }[]> {
+  if (useSqlite) {
+    return await sqliteDb.all<{ name: string }[]>(`PRAGMA table_info(${table})`);
+  }
   const result = await pool.query(
     `SELECT column_name AS name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
     [table],

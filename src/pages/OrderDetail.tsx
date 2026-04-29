@@ -1,13 +1,37 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/ui/Toast';
-import { PreviewModal } from '../features/order-detail/components';
-import { TaskDrawer } from '../components/ui/TaskDrawer';
-import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
+
+// Lazy loaded components
+const PreviewModal = lazy(() => import('../features/order-detail/components').then(m => ({ default: m.PreviewModal })));
+const TaskDrawer = lazy(() => import('../components/ui/TaskDrawer').then(m => ({ default: m.TaskDrawer })));
+const ConfirmDeleteModal = lazy(() => import('../components/ui/ConfirmDeleteModal'));
+
+const OrderEditForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.OrderEditForm })));
+const FinanceForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.FinanceForm })));
+const ProductionForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.ProductionForm })));
+const ProductionLogForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.ProductionLogForm })));
+const CustomsForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.CustomsForm })));
+const LogisticsForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.LogisticsForm })));
+const PackingForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.PackingForm })));
+const AIAnalysisContent = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.AIAnalysisContent })));
+const DocumentsVaultSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.DocumentsVaultSection })));
+const FinanceSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.FinanceSection })));
+const ProfitSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.ProfitSection })));
+const ProductionSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.ProductionSection })));
+const CustomsSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.CustomsSection })));
+const PackingSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.PackingSection })));
+const LogisticsSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.LogisticsSection })));
+const TasksSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.TasksSection })));
+const FollowupsSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.FollowupsSection })));
+const NavRailSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.NavRailSection })));
+const QuickFollowUpSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.QuickFollowUpSection })));
+const AIAnalysisPanel = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.AIAnalysisPanel })));
+
 import type {
   AIAnalysisResult,
   AttachmentMeta,
@@ -44,32 +68,7 @@ import {
   orderToFormState,
   STAGE_STEPS,
 } from '../features/order-detail/utils';
-import {
-  OrderHeaderSection,
-  ItemsSection,
-  DocumentsVaultSection,
-  FinanceSection,
-  ProfitSection,
-  ProductionSection,
-  CustomsSection,
-  PackingSection,
-  LogisticsSection,
-  TasksSection,
-  FollowupsSection,
-  NavRailSection,
-  QuickFollowUpSection,
-  AIAnalysisPanel,
-} from '../features/order-detail/sections';
-import {
-  OrderEditForm,
-  FinanceForm,
-  ProductionForm,
-  ProductionLogForm,
-  CustomsForm,
-  LogisticsForm,
-  PackingForm,
-  AIAnalysisContent,
-} from '../features/order-detail/drawers';
+import { OrderHeaderSection, ItemsSection } from '../features/order-detail/sections-primary';
 import {
   handleSaveOrder,
   handleSaveFinance,
@@ -146,6 +145,13 @@ export default function OrderDetailPage() {
   const [scrollPercent, setScrollPercent] = useState(0);
 
   const toastTimerRef = useRef<any>(null);
+
+  const sectionChunkFallback = (
+    <div className="space-y-6">
+      <div className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />
+      <div className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />
+    </div>
+  );
 
   // 3. Derived
   const order = detail?.order;
@@ -367,121 +373,129 @@ export default function OrderDetailPage() {
             miscAmount={miscAmount}
           />
 
-          <DocumentsVaultSection
-            orderDocuments={orderDocuments}
-            uploadingDoc={uploadingDoc}
-            onUploadDocument={(files) => handleUploadOrderDocument(files, { order, customer, setUploadingDoc, showToast, loadDetail: refreshDetail })}
-            onPreview={setPreviewAttachment}
-            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
-            user={user}
-          />
+          <Suspense fallback={sectionChunkFallback}>
+            <DocumentsVaultSection
+              orderDocuments={orderDocuments}
+              uploadingDoc={uploadingDoc}
+              onUploadDocument={(files) => handleUploadOrderDocument(files, { order, customer, setUploadingDoc, showToast, loadDetail: refreshDetail })}
+              onPreview={setPreviewAttachment}
+              onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
+              user={user}
+            />
 
-          <FinanceSection
-            sectionRef={sectionRefs.finance}
-            financeRecords={financeRecords}
-            filteredRecords={filteredFinanceRecords}
-            grandTotal={grandTotal}
-            summary={summary}
-            onPreview={setPreviewAttachment}
-            onEdit={openFinanceDrawer}
-            onAdd={() => openFinanceDrawer()}
-            onDelete={(r: FinanceRecord) => { if(window.confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>refreshDetail()) }}
-            financeFilter={financeFilter}
-            onFilterChange={setFinanceFilter}
-          />
+            <FinanceSection
+              sectionRef={sectionRefs.finance}
+              financeRecords={financeRecords}
+              filteredRecords={filteredFinanceRecords}
+              grandTotal={grandTotal}
+              summary={summary}
+              onPreview={setPreviewAttachment}
+              onEdit={openFinanceDrawer}
+              onAdd={() => openFinanceDrawer()}
+              onDelete={(r: FinanceRecord) => { if(window.confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>refreshDetail()) }}
+              financeFilter={financeFilter}
+              onFilterChange={setFinanceFilter}
+            />
 
-          <ProductionSection
-            sectionRef={sectionRefs.production}
-            productionPlan={productionPlan}
-            onEditProduction={openProductionDrawer}
-            onUpdateInspection={(status) => handleUpdateInspectionStatus(status, { productionPlan, order, setSaving, showToast, loadDetail: refreshDetail })}
-            onPreview={setPreviewAttachment}
-            onAddProduction={openProductionDrawer}
-          />
+            <ProductionSection
+              sectionRef={sectionRefs.production}
+              productionPlan={productionPlan}
+              onEditProduction={openProductionDrawer}
+              onUpdateInspection={(status) => handleUpdateInspectionStatus(status, { productionPlan, order, setSaving, showToast, loadDetail: refreshDetail })}
+              onPreview={setPreviewAttachment}
+              onAddProduction={openProductionDrawer}
+            />
 
-          <CustomsSection
-            sectionRef={sectionRefs.customs}
-            customs={customs}
-            onEditCustoms={openCustomsDrawer}
-            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
-            onPreview={setPreviewAttachment}
-            user={user}
-          />
+            <CustomsSection
+              sectionRef={sectionRefs.customs}
+              customs={customs}
+              onEditCustoms={openCustomsDrawer}
+              onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
+              onPreview={setPreviewAttachment}
+              user={user}
+            />
 
-          <PackingSection
-            sectionRef={sectionRefs.packing}
-            packingRecords={packingRecords}
-            onEditPacking={openPackingDrawer}
-            onPreview={setPreviewAttachment}
-          />
+            <PackingSection
+              sectionRef={sectionRefs.packing}
+              packingRecords={packingRecords}
+              onEditPacking={openPackingDrawer}
+              onPreview={setPreviewAttachment}
+            />
 
-          <LogisticsSection
-            sectionRef={sectionRefs.logistics}
-            logisticsRecords={logisticsRecords}
-            hasAnyLogistics={hasAnyLogistics}
-            onAddLogistics={() => openLogisticsDrawer()}
-            onEditLogistics={openLogisticsDrawer}
-            onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
-            onPreview={setPreviewAttachment}
-            user={user}
-          />
+            <LogisticsSection
+              sectionRef={sectionRefs.logistics}
+              logisticsRecords={logisticsRecords}
+              hasAnyLogistics={hasAnyLogistics}
+              onAddLogistics={() => openLogisticsDrawer()}
+              onEditLogistics={openLogisticsDrawer}
+              onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
+              onPreview={setPreviewAttachment}
+              user={user}
+            />
 
-          <TasksSection
-            tasks={tasks}
-            onAddTask={() => setShowTaskDrawer(true)}
-            navigate={navigate}
-          />
+            <TasksSection
+              tasks={tasks}
+              onAddTask={() => setShowTaskDrawer(true)}
+              navigate={navigate}
+            />
 
-          <ProfitSection
-            user={user}
-            orderNo={orderNo || ''}
-            totalAmount={itemsTotal + freightAmount + miscAmount || 0}
-            freightAmount={freightAmount}
-            miscAmount={miscAmount}
-            itemsTotal={itemsTotal}
-          />
-          <FollowupsSection followUps={followUps} />
+            <ProfitSection
+              user={user}
+              orderNo={orderNo || ''}
+              totalAmount={itemsTotal + freightAmount + miscAmount || 0}
+              freightAmount={freightAmount}
+              miscAmount={miscAmount}
+              itemsTotal={itemsTotal}
+            />
+            <FollowupsSection followUps={followUps} />
+          </Suspense>
         </div>
 
         {/* Right Nav Rail */}
         <aside className="w-[280px] shrink-0 sticky top-6 self-start space-y-6">
-          <NavRailSection activeSection={activeSection} scrollToSection={scrollToSection} />
-          <QuickFollowUpSection
-            followUpInput={followUpInput}
-            onFollowUpChange={setFollowUpInput}
-            onSubmitFollowUp={() => handleSubmitFollowUp({ followUpInput, order, user, setDetail, setFollowUpInput, setSaving, showToast, setDrawerError })}
-            saving={saving}
-          />
-          <AIAnalysisPanel onOpenAnalysis={() => setDrawer({ mode: 'ai-analysis' })} analyzing={analyzing} />
+          <Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />}>
+            <NavRailSection activeSection={activeSection} scrollToSection={scrollToSection} />
+            <QuickFollowUpSection
+              followUpInput={followUpInput}
+              onFollowUpChange={setFollowUpInput}
+              onSubmitFollowUp={() => handleSubmitFollowUp({ followUpInput, order, user, setDetail, setFollowUpInput, setSaving, showToast, setDrawerError })}
+              saving={saving}
+            />
+            <AIAnalysisPanel onOpenAnalysis={() => setDrawer({ mode: 'ai-analysis' })} analyzing={analyzing} />
+          </Suspense>
         </aside>
       </main>
 
-      {previewAttachment && <PreviewModal attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
-      <TaskDrawer
-        isOpen={showTaskDrawer}
-        onClose={() => setShowTaskDrawer(false)}
-        onSuccess={() => refreshDetail()}
-        entityType="ORDER"
-        entityId={String(order?.id)}
-        entityName={order?.display_id}
-      />
+      <Suspense fallback={null}>
+        {previewAttachment && <PreviewModal attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
+        <TaskDrawer
+          isOpen={showTaskDrawer}
+          onClose={() => setShowTaskDrawer(false)}
+          onSuccess={() => refreshDetail()}
+          entityType="ORDER"
+          entityId={String(order?.id)}
+          entityName={order?.display_id}
+        />
+      </Suspense>
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
 
-      <ConfirmDeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={() => handleDeleteOrder({ order, setIsDeleting, setIsDeleteModalOpen, showToast, navigate })}
-        warning={
-          <>
-            确定要永久删除订单吗？
-            <br /><br />
-            此操作将同步清除与之关联的所有<span className="text-red-600 font-bold">生产、财务及物流数据</span>，且无法恢复！
-          </>
-        }
-        entityLabel="单号"
-        entityId={order?.display_id || ''}
-        isDeleting={isDeleting}
-      />
+      <Suspense fallback={null}>
+        <ConfirmDeleteModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={() => handleDeleteOrder({ order, setIsDeleting, setIsDeleteModalOpen, showToast, navigate })}
+          warning={
+            <>
+              确定要永久删除订单吗？
+              <br /><br />
+              此操作将同步清除与之关联的所有<span className="text-red-600 font-bold">生产、财务及物流数据</span>，且无法恢复！
+            </>
+          }
+          entityLabel="单号"
+          entityId={order?.display_id || ''}
+          isDeleting={isDeleting}
+        />
+      </Suspense>
 
       {/* Drawer */}
       {drawer.mode !== 'closed' && (
@@ -496,23 +510,25 @@ export default function OrderDetailPage() {
             </div>
             <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-white dark:bg-navy-900">
               {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner uppercase "><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
-              {drawer.mode === 'order' ? (
-                <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} />
-              ) : drawer.mode === 'production-log' ? (
-                <ProductionLogForm productionLogForm={productionLogForm} setProductionLogForm={setProductionLogForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-              ) : drawer.mode === 'customs' ? (
-                <CustomsForm customsForm={customsForm} setCustomsForm={setCustomsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-              ) : drawer.mode === 'packing' ? (
-                <PackingForm packingForm={packingForm} setPackingForm={setPackingForm} onUploadPhoto={(idx, file) => handleUploadPackingPhoto(idx, file, { packingForm, setPackingForm, order, customer, setSaving, setDrawerError, setIsUploading, setUploadProgress })} />
-              ) : drawer.mode === 'logistics' ? (
-                <LogisticsForm logisticsForm={logisticsForm} setLogisticsForm={setLogisticsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-              ) : drawer.mode === 'finance' ? (
-                <FinanceForm financeForm={financeForm} setFinanceForm={setFinanceForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-              ) : drawer.mode === 'production' ? (
-                <ProductionForm productionForm={productionForm} setProductionForm={setProductionForm} productionPartners={productionPartners} isUploading={isUploading} uploadProgress={uploadProgress} />
-              ) : (
-                <AIAnalysisContent analyzing={analyzing} aiResult={aiResult} />
-              )}
+              <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-widest uppercase">正在载入组件...</div>}>
+                {drawer.mode === 'order' ? (
+                  <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} />
+                ) : drawer.mode === 'production-log' ? (
+                  <ProductionLogForm productionLogForm={productionLogForm} setProductionLogForm={setProductionLogForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                ) : drawer.mode === 'customs' ? (
+                  <CustomsForm customsForm={customsForm} setCustomsForm={setCustomsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                ) : drawer.mode === 'packing' ? (
+                  <PackingForm packingForm={packingForm} setPackingForm={setPackingForm} onUploadPhoto={(idx, file) => handleUploadPackingPhoto(idx, file, { packingForm, setPackingForm, order, customer, setSaving, setDrawerError, setIsUploading, setUploadProgress })} />
+                ) : drawer.mode === 'logistics' ? (
+                  <LogisticsForm logisticsForm={logisticsForm} setLogisticsForm={setLogisticsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                ) : drawer.mode === 'finance' ? (
+                  <FinanceForm financeForm={financeForm} setFinanceForm={setFinanceForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                ) : drawer.mode === 'production' ? (
+                  <ProductionForm productionForm={productionForm} setProductionForm={setProductionForm} productionPartners={productionPartners} isUploading={isUploading} uploadProgress={uploadProgress} />
+                ) : (
+                  <AIAnalysisContent analyzing={analyzing} aiResult={aiResult} />
+                )}
+              </Suspense>
               <div className="flex gap-6 pt-16 sticky bottom-0 bg-white/95 dark:bg-navy-900/95 backdrop-blur-2xl pb-12 z-[40] border-t border-slate-100 dark:border-navy-800">
                 <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-5 text-xs font-extrabold uppercase tracking-[0.5em]">放弃修改</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-[3] py-5 text-base font-extrabold uppercase tracking-[0.5em]">{saving ? '同步同步中...' : '确认并同步数据'}</button>

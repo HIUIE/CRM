@@ -13,11 +13,13 @@ type OrderDetailModule = typeof import('../server/services/order-detail.js');
 type UsersRouteModule = typeof import('../server/routes/users.js');
 type FilesRouteModule = typeof import('../server/routes/files.js');
 type SettingsRouteModule = typeof import('../server/routes/settings.js');
+type TasksRouteModule = typeof import('../server/routes/tasks.js');
 type SecurityModule = typeof import('../server/lib/security.js');
 type PathsModule = typeof import('../server/paths.js');
 type ApiModule = typeof import('../server/api.js');
 
 let tempDir = '';
+let updateStatusFile = '';
 let dbModule: DbModule;
 let authModule: AuthModule;
 let payloadsModule: PayloadsModule;
@@ -25,6 +27,7 @@ let orderDetailModule: OrderDetailModule;
 let usersRouteModule: UsersRouteModule;
 let filesRouteModule: FilesRouteModule;
 let settingsRouteModule: SettingsRouteModule;
+let tasksRouteModule: TasksRouteModule;
 let securityModule: SecurityModule;
 let pathsModule: PathsModule;
 let apiModule: ApiModule;
@@ -153,15 +156,39 @@ async function requireAuthed(req: any, res: MockResponse) {
   return passed;
 }
 
+function flushAsyncWork() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 1000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (await predicate()) {
+      return;
+    }
+    await flushAsyncWork();
+  }
+  throw new Error('Timed out waiting for condition');
+}
+
 async function resetDatabase() {
   const { db } = dbModule;
   await db.exec(`
+    DELETE FROM task_attachments;
+    DELETE FROM task_comments;
+    DELETE FROM notifications;
+    DELETE FROM tasks;
+    DELETE FROM customer_followups;
+    DELETE FROM customer_contacts;
     DELETE FROM attachments;
+    DELETE FROM packing_records;
+    DELETE FROM production_logs;
     DELETE FROM production_plans;
     DELETE FROM customs_records;
     DELETE FROM logistics_records;
     DELETE FROM finance_records;
     DELETE FROM order_items;
+    DELETE FROM order_follow_ups;
     DELETE FROM orders;
     DELETE FROM partners;
     DELETE FROM customers;
@@ -185,8 +212,10 @@ function getAuthCookie(user: { id: number; username: string; role: 'admin' | 'st
 
 before(async () => {
   tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'crm-tests-'));
+  updateStatusFile = path.join(tempDir, 'system-update-status.json');
   process.env.CRM_DB_PATH = path.join(tempDir, 'crm-test.sqlite');
   process.env.UPLOADS_DIR = path.join(tempDir, 'uploads');
+  process.env.JWT_SECRET = 'test-jwt-secret';
   process.env.NODE_ENV = 'test';
 
   dbModule = await import('../server/db.js');
@@ -197,6 +226,7 @@ before(async () => {
   usersRouteModule = await import('../server/routes/users.js');
   filesRouteModule = await import('../server/routes/files.js');
   settingsRouteModule = await import('../server/routes/settings.js');
+  tasksRouteModule = await import('../server/routes/tasks.js');
   securityModule = await import('../server/lib/security.js');
   pathsModule = await import('../server/paths.js');
   apiModule = await import('../server/api.js');
@@ -204,6 +234,11 @@ before(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  settingsRouteModule.setSystemUpdateInProgressForTest(false);
+  settingsRouteModule.setSystemUpdateCommandRunnerForTest(null);
+  settingsRouteModule.setSystemUpdateRestartSchedulerForTest(null);
+  settingsRouteModule.setSystemUpdateStatusFilePathForTest(updateStatusFile);
+  await fs.rm(updateStatusFile, { force: true });
 });
 
 after(async () => {
@@ -297,8 +332,9 @@ test('user management route creates a user and protects root from being disabled
   assert.equal(createdUser.role, 'staff');
 
   const resetReq: any = {
+    user: await getRootUser(),
     params: { id: String(createdUser.id) },
-    body: { password: 'newpass123' },
+    body: { password: 'newpass123', confirmPassword: 'root' },
   };
   const resetRes = new MockResponse();
   await resetPasswordHandler(resetReq, resetRes as any);
@@ -323,6 +359,263 @@ test('user management route creates a user and protects root from being disabled
       message: '默认管理员账号不能停用',
     },
   });
+});
+
+test('settings update route rejects concurrent update requests', async () => {
+  const router = settingsRouteModule.createSettingsRouter();
+  const updateHandler = getFinalRouteHandler(router, '/system/update', 'post');
+  const res = new MockResponse();
+
+  settingsRouteModule.setSystemUpdateInProgressForTest(true);
+
+  try {
+    await updateHandler({ user: await getRootUser() }, res as any);
+  } finally {
+    settingsRouteModule.setSystemUpdateInProgressForTest(false);
+  }
+
+  assert.equal(res.statusCode, 409);
+  assert.deepEqual(res.body, {
+    error: {
+      code: 'SYSTEM_UPDATE_IN_PROGRESS',
+      message: '系统更新正在进行中，请稍后再试',
+    },
+  });
+});
+
+test('settings update routes start a background job and expose status', async () => {
+  const router = settingsRouteModule.createSettingsRouter();
+  const startHandler = getFinalRouteHandler(router, '/system/update', 'post');
+  const statusHandler = getFinalRouteHandler(router, '/system/update/status', 'get');
+  const historyHandler = getFinalRouteHandler(router, '/system/update/history', 'get');
+  const startRes = new MockResponse();
+  const statusRes = new MockResponse();
+  const historyRes = new MockResponse();
+  const commands: string[] = [];
+  let restartTriggered = false;
+
+  settingsRouteModule.setSystemUpdateCommandRunnerForTest(async (command: string, args: string[]) => {
+    commands.push([command, ...args].join(' '));
+    return [`${command} ok`];
+  });
+  settingsRouteModule.setSystemUpdateRestartSchedulerForTest(() => {
+    restartTriggered = true;
+  });
+
+  await startHandler({ user: await getRootUser() }, startRes as any);
+  await waitFor(() => commands.length === 3 && restartTriggered);
+  await statusHandler({ user: await getRootUser() }, statusRes as any);
+  await historyHandler({ user: await getRootUser() }, historyRes as any);
+
+  assert.equal(startRes.statusCode, 202);
+  assert.deepEqual(startRes.body, {
+    success: true,
+    message: '系统更新任务已启动，请稍候查看进度',
+    status: 'running',
+  });
+  assert.deepEqual(commands, [
+    'git pull origin main',
+    'npm install',
+    'npm run build',
+  ]);
+  assert.equal(restartTriggered, true);
+  assert.equal(statusRes.statusCode, 200);
+  assert.deepEqual(statusRes.body, {
+    id: (statusRes.body as any).id,
+    phase: 'restarting',
+    steps: [
+      '正在拉取最新代码...',
+      '正在安装依赖...',
+      '正在构建前端...',
+      '更新完成，正在重启服务...',
+    ],
+    logs: [
+      '$ git pull origin main',
+      'git ok',
+      '$ npm install',
+      'npm ok',
+      '$ npm run build',
+      'npm ok',
+    ],
+    currentStep: '更新完成，正在重启服务...',
+    error: '',
+    startedAt: (statusRes.body as any).startedAt,
+    finishedAt: (statusRes.body as any).finishedAt,
+  });
+  assert.equal(historyRes.statusCode, 200);
+  assert.equal(Array.isArray(historyRes.body), true);
+  assert.equal((historyRes.body as any[]).length, 1);
+  assert.equal((historyRes.body as any[])[0].id, (statusRes.body as any).id);
+  assert.equal(typeof (statusRes.body as any).startedAt, 'string');
+  assert.equal(typeof (statusRes.body as any).finishedAt, 'string');
+});
+
+test('settings update status survives restart by reading the persisted status file', async () => {
+  const router = settingsRouteModule.createSettingsRouter();
+  const startHandler = getFinalRouteHandler(router, '/system/update', 'post');
+  const statusHandler = getFinalRouteHandler(router, '/system/update/status', 'get');
+  const startRes = new MockResponse();
+  const statusRes = new MockResponse();
+
+  settingsRouteModule.setSystemUpdateCommandRunnerForTest(async () => {});
+  settingsRouteModule.setSystemUpdateRestartSchedulerForTest(() => {});
+
+  await startHandler({ user: await getRootUser() }, startRes as any);
+  await waitFor(async () => {
+    try {
+      const persisted = JSON.parse(await fs.readFile(updateStatusFile, 'utf8'));
+      return persisted.current?.phase === 'restarting';
+    } catch {
+      return false;
+    }
+  });
+
+  const persisted = JSON.parse(await fs.readFile(updateStatusFile, 'utf8'));
+  assert.equal(persisted.current.phase, 'restarting');
+  assert.equal(Array.isArray(persisted.current.steps), true);
+  assert.equal(Array.isArray(persisted.current.logs), true);
+  assert.equal(Array.isArray(persisted.history), true);
+
+  settingsRouteModule.setSystemUpdateStatusFilePathForTest(updateStatusFile);
+
+  await statusHandler({ user: await getRootUser() }, statusRes as any);
+
+  assert.equal(statusRes.statusCode, 200);
+  assert.equal((statusRes.body as any).phase, 'completed');
+  assert.equal((statusRes.body as any).currentStep, '上次更新已完成，服务已重新启动');
+  assert.equal((statusRes.body as any).steps.includes('上次更新已完成，服务已重新启动'), true);
+});
+
+test('settings update status persists command errors in logs', async () => {
+  const router = settingsRouteModule.createSettingsRouter();
+  const startHandler = getFinalRouteHandler(router, '/system/update', 'post');
+  const statusHandler = getFinalRouteHandler(router, '/system/update/status', 'get');
+  const startRes = new MockResponse();
+  const statusRes = new MockResponse();
+
+  settingsRouteModule.setSystemUpdateCommandRunnerForTest(async (command: string) => {
+    if (command === 'git') {
+      throw new Error('fatal: cannot pull');
+    }
+    return [];
+  });
+  settingsRouteModule.setSystemUpdateRestartSchedulerForTest(() => {});
+
+  await startHandler({ user: await getRootUser() }, startRes as any);
+  await waitFor(async () => {
+    try {
+      const body = JSON.parse(await fs.readFile(updateStatusFile, 'utf8'));
+      return body.current?.phase === 'failed';
+    } catch {
+      return false;
+    }
+  });
+  await statusHandler({ user: await getRootUser() }, statusRes as any);
+
+  assert.equal(startRes.statusCode, 202);
+  assert.equal((statusRes.body as any).phase, 'failed');
+  assert.equal((statusRes.body as any).error, 'fatal: cannot pull');
+  assert.equal((statusRes.body as any).logs.includes('$ git pull origin main'), true);
+  assert.equal((statusRes.body as any).logs.includes('ERROR: fatal: cannot pull'), true);
+});
+
+test('settings update history keeps the most recent runs first', async () => {
+  const router = settingsRouteModule.createSettingsRouter();
+  const startHandler = getFinalRouteHandler(router, '/system/update', 'post');
+  const historyHandler = getFinalRouteHandler(router, '/system/update/history', 'get');
+  const firstRes = new MockResponse();
+  const secondRes = new MockResponse();
+  const historyRes = new MockResponse();
+  let runNumber = 0;
+
+  settingsRouteModule.setSystemUpdateCommandRunnerForTest(async (command: string) => {
+    if (command === 'git') {
+      runNumber += 1;
+      return [`run-${runNumber}`];
+    }
+    return [];
+  });
+  settingsRouteModule.setSystemUpdateRestartSchedulerForTest(() => {});
+
+  await startHandler({ user: await getRootUser() }, firstRes as any);
+  await waitFor(async () => {
+    try {
+      const body = JSON.parse(await fs.readFile(updateStatusFile, 'utf8'));
+      return body.history?.length === 1;
+    } catch {
+      return false;
+    }
+  });
+  settingsRouteModule.setSystemUpdateStatusFilePathForTest(updateStatusFile);
+
+  await startHandler({ user: await getRootUser() }, secondRes as any);
+  await waitFor(async () => {
+    try {
+      const body = JSON.parse(await fs.readFile(updateStatusFile, 'utf8'));
+      return body.history?.length === 2;
+    } catch {
+      return false;
+    }
+  });
+
+  await historyHandler({ user: await getRootUser() }, historyRes as any);
+
+  assert.equal(firstRes.statusCode, 202);
+  assert.equal(secondRes.statusCode, 202);
+  assert.equal(historyRes.statusCode, 200);
+  assert.equal((historyRes.body as any[]).length, 2);
+  assert.equal((historyRes.body as any[])[0].logs.includes('run-2'), true);
+  assert.equal((historyRes.body as any[])[1].logs.includes('run-1'), true);
+});
+
+test('task routes block users who are not admin, assignee, or creator', async () => {
+  const root = await getRootUser();
+  const password = await bcrypt.hash('secret123', 10);
+  const owner = await dbModule.db.run(
+    `INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, 1)`,
+    ['task-owner', password, 'staff', 'Task Owner'],
+  );
+  const outsider = await dbModule.db.run(
+    `INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, 1)`,
+    ['task-outsider', password, 'staff', 'Task Outsider'],
+  );
+  const task = await dbModule.db.run(
+    `INSERT INTO tasks (title, assignee_id, due_date, priority, status, created_by) VALUES (?, ?, ?, ?, ?, ?)`,
+    ['Restricted task', owner.lastID, '2026-05-01', 'P1', 'todo', root.id],
+  );
+
+  const router = tasksRouteModule.createTasksRouter();
+  const detailHandlers = getRouteHandlers(router, '/:id', 'get');
+  const statusHandlers = getRouteHandlers(router, '/:id/status', 'patch');
+
+  const detailReq: any = {
+    params: { id: String(task.lastID) },
+    cookies: { token: getAuthCookie({ id: outsider.lastID as number, username: 'task-outsider', role: 'staff' }).replace('token=', '') },
+  };
+  const detailRes = new MockResponse();
+  assert.equal(await requireAuthed(detailReq, detailRes), true);
+  await runHandlers(detailHandlers as any, detailReq, detailRes);
+  assert.equal(detailRes.statusCode, 403);
+  assert.deepEqual(detailRes.body, {
+    error: {
+      code: 'TASK_FORBIDDEN',
+      message: '无权访问该任务',
+    },
+  });
+
+  const statusReq: any = {
+    params: { id: String(task.lastID) },
+    body: { status: 'done' },
+    cookies: { token: getAuthCookie({ id: outsider.lastID as number, username: 'task-outsider', role: 'staff' }).replace('token=', '') },
+  };
+  const statusRes = new MockResponse();
+  assert.equal(await requireAuthed(statusReq, statusRes), true);
+  await runHandlers(statusHandlers as any, statusReq, statusRes);
+  assert.equal(statusRes.statusCode, 403);
+
+  const unchanged = await dbModule.db.get<{ status: string }>(`SELECT status FROM tasks WHERE id = ?`, [task.lastID]);
+  assert(unchanged);
+  assert.equal(unchanged.status, 'todo');
 });
 
 test('payload readers enforce partner and order validation rules', async () => {
@@ -368,7 +661,7 @@ test('payload readers enforce partner and order validation rules', async () => {
     order.lastID as number,
   );
   assert('payload' in validProduction);
-  assert.equal(validProduction.payload.partnerName, 'Best Factory');
+  assert.equal(validProduction.payload!.partnerName, 'Best Factory');
 
   const validFinance = await payloadsModule.readFinancePayload({
     orderId: order.lastID,
@@ -382,8 +675,8 @@ test('payload readers enforce partner and order validation rules', async () => {
     remark: 'supplier payment',
   });
   assert('payload' in validFinance);
-  assert.equal(validFinance.payload.partnerId, factory.lastID);
-  assert.equal(validFinance.payload.target, 'Best Factory');
+  assert.equal(validFinance.payload!.partnerId, factory.lastID);
+  assert.equal(validFinance.payload!.target, 'Best Factory');
 });
 
 test('buildOrderDetail returns unified summary, attachments and creator metadata', async () => {
@@ -592,26 +885,18 @@ test('admin export is restricted and returns a zip archive', async () => {
   assert.match(adminRes.getHeader('content-disposition') || '', /crm-customer-archive-\d{8}-\d{6}\.zip/);
 
   const archive = adminRes.rawBody || Buffer.alloc(0);
-  const archiveText = archive.toString('utf8');
-  assert.match(archiveText, new RegExp(`customers/ACME_Export_${customer.lastID}/customer\\.json`));
-  assert.match(archiveText, new RegExp(`customers/ACME_Export_${customer.lastID}/orders/ORD_2026_000001_${order.lastID}/order\\.json`));
-  assert.match(archiveText, /order_items\.csv/);
-  assert.match(archiveText, /finance_records\.csv/);
-  assert.match(archiveText, /logistics_records\.csv/);
-  assert.match(archiveText, /customs_record\.json/);
-  assert.match(archiveText, /production_plan\.json/);
-  assert.match(archiveText, /production_logs\.csv/);
-  assert.match(archiveText, /packing_records\.csv/);
-  assert.match(archiveText, /attachments\/finance\/receipt\.pdf/);
-  assert.match(archiveText, /attachments\/finance\/receipt \(2\)\.pdf/);
-  assert.match(archiveText, /attachments\/packing\/box\.png/);
-  assert.match(archiveText, /attachments_manifest\.csv/);
-  assert.match(archiveText, /_unlinked_attachments\/orphan\.txt/);
-  assert.match(archiveText, /_unlinked_attachments\/unlinked_attachments\.csv/);
-  assert.match(archiveText, /%PDF-finance/);
-  assert.match(archiveText, /orphan-file/);
-  assert.match(archiveText, /missing/);
-  assert.match(archiveText, /true/);
+  assert.equal(archive.includes(Buffer.from(`customers/ACME_Export_${customer.lastID}/客户信息.xlsx`, 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from(`customers/ACME_Export_${customer.lastID}/orders/ORD_2026_000001_${order.lastID}/订单详情.xlsx`, 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from(`customers/ACME_Export_${customer.lastID}/orders/ORD_2026_000001_${order.lastID}/attachments/finance/receipt.pdf`, 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from(`customers/ACME_Export_${customer.lastID}/orders/ORD_2026_000001_${order.lastID}/attachments/packing/box.png`, 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from(`customers/ACME_Export_${customer.lastID}/orders/ORD_2026_000001_${order.lastID}/attachments_manifest.csv`, 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from('_unlinked_attachments/orphan.txt', 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from('_unlinked_attachments/unlinked_attachments.csv', 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from('receipt (2).pdf', 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from('%PDF-finance', 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from('orphan-file', 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from('missing', 'utf8')), true);
+  assert.equal(archive.includes(Buffer.from('true', 'utf8')), true);
   assert.equal(archive.length > 0, true);
 });
 

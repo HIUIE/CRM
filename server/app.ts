@@ -7,6 +7,7 @@ import fs from 'fs/promises';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import apiRouter from './api.js';
+import { escapeHtml, normalizeBrandText, sanitizeBrandAssetUrl } from './lib/brand.js';
 import { blockSensitivePaths } from './lib/security.js';
 import { PROJECT_ROOT, UPLOADS_DIR } from './paths.js';
 import { getSettingValue } from './services/settings.js';
@@ -25,7 +26,11 @@ async function getBrandSettings() {
       getSettingValue('site_logo', '/logo.png'),
       getSettingValue('site_favicon', ''),
     ]);
-    brandCache = { siteName, siteLogo, siteFavicon };
+    brandCache = {
+      siteName: normalizeBrandText(siteName, 'SmartTrade AI CRM'),
+      siteLogo: sanitizeBrandAssetUrl(siteLogo, '/logo.png'),
+      siteFavicon: sanitizeBrandAssetUrl(siteFavicon, ''),
+    };
     brandCacheTime = now;
   }
   return brandCache;
@@ -33,21 +38,40 @@ async function getBrandSettings() {
 
 function injectBrandHtml(html: string, brand: { siteName: string; siteLogo: string; siteFavicon: string }) {
   const faviconLink = brand.siteFavicon
-    ? `<link rel="icon" href="${brand.siteFavicon}" />`
+    ? `<link rel="icon" href="${escapeHtml(brand.siteFavicon)}" />`
     : '<link rel="icon" href="/logo.png" />';
   return html
-    .replace('<title>SmartTrade AI CRM</title>', `<title>${brand.siteName}</title>`)
+    .replace('<title>SmartTrade AI CRM</title>', `<title>${escapeHtml(brand.siteName)}</title>`)
     .replace('</head>', `${faviconLink}\n</head>`);
 }
 
 export async function createApp() {
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
-  await fs.mkdir(path.join(UPLOADS_DIR, 'temp'), { recursive: true });
+  const tempDir = path.join(UPLOADS_DIR, 'temp');
+  await fs.mkdir(tempDir, { recursive: true });
+  
+  // Cleanup old temp files on startup
+  try {
+    const files = await fs.readdir(tempDir);
+    for (const file of files) {
+      await fs.unlink(path.join(tempDir, file)).catch(() => {});
+    }
+  } catch (e) {
+    console.warn('Failed to cleanup temp directory on startup:', e);
+  }
 
   const app = express();
   app.disable('x-powered-by');
   app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "script-src": ["'self'"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        "img-src": ["'self'", "data:", "blob:", "http:", "https:"],
+        "connect-src": ["'self'"],
+      },
+    } : false,
     crossOriginEmbedderPolicy: false,
   }));
   app.use(blockSensitivePaths);
