@@ -1,13 +1,13 @@
 # SmartTrade AI CRM 项目全面审计报告
 
-审计日期：2026-04-29
+审计日期：2026-04-30
 审计范围：代码质量、安全、性能、架构、数据库、前端、测试、运维、可维护性
 
 ---
 
 ## 结论摘要
 
-项目已具备完整的外贸 CRM 主链路（客户 → 订单 → 财务 → 物流 → 报关 → 任务），核心安全加固（JWT/CSRF/XSS/CSP/权限控制）已到位，TypeScript 编译和生产构建均通过。
+项目已具备完整的外贸 CRM 主链路（客户 → 订单 → 财务 → 物流 → 报关 → 任务），核心安全加固（JWT/CSRF/XSS/CSP/权限控制）已到位，TypeScript 编译、生产构建、PostgreSQL 集成测试、前端测试、HTTP 级 UI smoke 和依赖安全扫描均通过。
 
 **当前最突出的问题分为三个等级：**
 
@@ -15,7 +15,19 @@
 |------|--------|------|
 | ✅ P0 阻断级 | ~~3~~ → 0 | 全部已修复（2026-04-29） |
 | ✅ P1 高优先级 | ~~7~~ → 0 | 全部已修复（2026-04-29） |
-| 🟢 P2 改进级 | 12 | 性能优化、代码质量、文档对齐、测试覆盖等 |
+| ✅ P2 改进级 | ~~12~~ → 0 | 已完成并完成 2026-04-30 上线复核 |
+
+### 2026-04-30 上线复核结论
+
+| 检查项 | 结论 |
+|--------|------|
+| 核心页面路由 | ✅ `/dashboard`、`/customers`、`/partners`、`/orders`、`/finance`、`/logistics`、`/tasks`、`/ai`、`/settings`、`/audit`、`/help` HTTP smoke 通过 |
+| 核心 API | ✅ 登录、当前用户、看板、客户、伙伴、订单、财务、物流、设置、用户接口 smoke 通过 |
+| 权限控制 | ✅ 普通员工无法访问管理员设置接口，前端侧边栏也隐藏审计/系统设置入口 |
+| 依赖漏洞 | ✅ `npm audit --audit-level=low` 返回 0 vulnerabilities |
+| Excel 导出 | ✅ 工作簿生成成功，10 个 worksheet |
+| 旧库升级 | ✅ 新增兼容迁移，旧 PostgreSQL 表缺列可自动补齐 |
+| 浏览器点击 smoke | ⚠️ 当前环境未安装 Playwright，脚本自动跳过浏览器真机点击；HTTP/API smoke 已通过 |
 
 ---
 
@@ -41,6 +53,8 @@
 | 登录限流 (5次/15分钟) | `server/routes/auth.ts:8-31` | ✅ |
 | 任务对象级授权 | `server/routes/tasks.ts:16-25` | ✅ |
 | 生产环境 JWT_SECRET 强制检查 | `server.ts:6-13` | ✅ |
+| 初始 root 密码接管 | `server/bootstrap.ts` | ✅ |
+| 依赖漏洞扫描清零 | `package.json` overrides | ✅ |
 
 ### 🔴 安全问题 — 必须修复
 
@@ -88,6 +102,8 @@
 | `log_date` | `production_logs` | ✅ 已添加 |
 
 > ⚠️ **已有数据库注意**：`CREATE TABLE IF NOT EXISTS` 不会自动为已有表添加新列。如果 PG 数据库已运行过旧版 schema，需手动执行 `ALTER TABLE ... ADD COLUMN ...` 补列。
+
+> ✅ **2026-04-30 更新**：已新增 `migrations/1777482000000_ensure-current-schema-columns.js`，旧库升级时会自动补齐当前版本所需列，不再需要手工补列。
 
 ### ~~数据库连接池重复创建~~ ✅ 已修复 (2026-04-29)
 
@@ -289,6 +305,16 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 备份脚本 | ✅ | `npm run backup` |
 | 构建脚本 | ✅ | `npm run build` 通过 |
 
+### 异地协作部署方案
+
+| 场景 | 推荐方案 | 说明 |
+|------|----------|------|
+| 长期正式使用 | 云服务器 + Docker + 域名 + HTTPS | 推荐生产方案，适合同事不在同一局域网 |
+| 小团队内测/低预算 | Tailscale / ZeroTier 虚拟局域网 | 不直接暴露公网端口，安全性较好 |
+| 临时演示 | Cloudflare Tunnel / frp / ngrok | 仅建议短期测试，不建议无加固长期生产使用 |
+
+生产公网部署必须设置 `COOKIE_SECURE=true`，使用强 `JWT_SECRET`，并通过系统设置为每位同事单独创建账号，避免多人共用 root。
+
 ### 🟡 运维问题
 
 | 问题 | 说明 |
@@ -311,6 +337,15 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | `sqlite3` | 6.0.1 | ⚠️ 仅测试使用，可考虑替换为 `better-sqlite3` |
 | `vite` | 6.2.0 | ✅ |
 | `tailwindcss` | 4.1.14 | ✅ 最新 v4 |
+
+### 2026-04-30 安全扫描结果
+
+| 检查项 | 结果 |
+|--------|------|
+| `npm audit --audit-level=low` | ✅ 0 vulnerabilities |
+| `exceljs` | 固定为 `3.4.0`，避免 `uuid <14` 中危链路 |
+| `fast-csv` | 通过 `overrides` 固定到 `^4.3.6` |
+| `tmp` | 通过 `overrides` 固定到 `^0.2.4` |
 
 ### 🟢 依赖类型放置问题
 
@@ -397,14 +432,30 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 检查项 | 结果 |
 |--------|------|
 | `npx tsc --noEmit` | ✅ 通过 |
-| `npm run test` | ✅ 通过 (PG 集成测试) |
-| `npm run test:frontend` | ✅ 通过 (Vitest) |
-| `npm run build` | ✅ 通过 (3.24s) |
+| `npm test` | ✅ 通过 (PG 集成测试 4/4) |
+| `npm run test:frontend` | ✅ 通过 (Vitest 12/12) |
+| `npm run build` | ✅ 通过 |
+| `npm run smoke:ui` | ✅ 通过（Browser smoke 因未安装 Playwright 自动跳过） |
+| `npm audit --audit-level=low` | ✅ 0 vulnerabilities |
+| Excel 导出生成 | ✅ 10 个 worksheet |
 | 显式 `any` 类型计数 | 34 处 |
 
 ---
 
 ## 修复日志
+
+### 2026-04-30 — 上线前安全复核与协作准备
+
+| 修复项 | 变更文件 | 说明 |
+|--------|---------|------|
+| 初始管理员密码加固 | `server/bootstrap.ts`, `server.ts` | 生产首次启动会用 `.env` 的 `INITIAL_ADMIN_PASSWORD` 接管旧 root 默认密码 |
+| 旧库兼容迁移 | `migrations/1777482000000_ensure-current-schema-columns.js` | 为旧版本 PostgreSQL 表自动补齐当前代码所需列 |
+| UI smoke 可运行 | `scripts/seed-demo.ts`, `scripts/smoke-ui.ts`, `package.json` | 补齐缺失 demo seed，验证登录、主要页面和核心 API |
+| 员工侧权限体验 | `src/components/layout/MainLayout.tsx` | 普通员工隐藏操作审计和系统配置入口 |
+| 本地解析稳定性 | `server/db-pg.ts`, `tests/pg.test.ts`, `vite.config.ts`, `.env.example` | 默认使用 `127.0.0.1`，避免 `localhost` 解析失败 |
+| 依赖漏洞清零 | `package.json`, `package-lock.json` | 固定 `exceljs@3.4.0`，并用 overrides 升级 `fast-csv`、`tmp` |
+
+**验证**：`npm run lint` ✅ | `npm run build` ✅ | `npm run test:frontend` ✅ | `npm test` ✅ | `npm run smoke:ui` ✅ | `npm audit --audit-level=low` ✅ | Excel 导出 ✅
 
 ### 2026-04-29 — P2 持续改进（全量达成）
 

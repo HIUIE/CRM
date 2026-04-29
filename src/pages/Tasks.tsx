@@ -91,7 +91,7 @@ export default function TasksView() {
   };
 
   return (
-    <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
+    <div className="flex flex-col space-y-4 animate-page-in">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="flex items-center justify-between">
           <h1 className="text-base font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">团队协同看板</h1>

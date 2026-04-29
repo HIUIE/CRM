@@ -14,7 +14,7 @@ function buildPgConfig() {
   const ssl = process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
 
   return {
-    host: process.env.PG_HOST || 'localhost',
+    host: process.env.PG_HOST || '127.0.0.1',
     port: Number(process.env.PG_PORT) || 5432,
     database: process.env.PG_DATABASE || 'smarttrade_crm',
     user: process.env.PG_USER || 'postgres',
@@ -56,7 +56,7 @@ export async function initPgTables() {
 
   await runner({
     databaseUrl: process.env.DATABASE_URL || {
-      host: process.env.PG_HOST || 'localhost',
+      host: process.env.PG_HOST || '127.0.0.1',
       port: Number(process.env.PG_PORT) || 5432,
       database: process.env.PG_DATABASE || 'smarttrade_crm',
       user: process.env.PG_USER || 'postgres',

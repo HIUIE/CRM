@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createApp } from './server/app.js';
+import { bootstrapInitialAdmin } from './server/bootstrap.js';
 import { initPgTables } from './server/db-pg.js';
 import { UPLOADS_DIR } from './server/paths.js';
 import { logger } from './server/lib/logger.js';
@@ -15,9 +16,10 @@ function requireProductionEnv() {
 
 async function startServer() {
   requireProductionEnv();
-  const dbHost = process.env.PG_HOST || 'localhost';
+  const dbHost = process.env.PG_HOST || '127.0.0.1';
   const dbName = process.env.PG_DATABASE || 'smarttrade_crm';
   await initPgTables();
+  await bootstrapInitialAdmin();
 
   const app = await createApp();
   const PORT = Number(process.env.PORT) || 3000;

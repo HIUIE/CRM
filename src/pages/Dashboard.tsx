@@ -260,7 +260,7 @@ export default function DashboardView() {
     : data.activities.filter(a => a.type === activityFilter);
 
   return (
-    <div className="flex flex-col space-y-8">
+    <div className="flex flex-col space-y-8 animate-page-in">
       {/* AI Daily Briefing */}
       <AIBriefing data={data} />
 

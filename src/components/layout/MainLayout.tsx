@@ -53,6 +53,7 @@ export default function MainLayout() {
   const { data: brand } = useSiteBrand();
   const siteName = brand?.siteName || 'SmartTrade AI CRM';
   const siteLogo = brand?.siteLogo || '/logo.png';
+  const isAdmin = user?.role === 'admin';
   useEffect(() => {
     const fetchUnread = async () => {
       try {
@@ -167,7 +168,7 @@ export default function MainLayout() {
 
         {/* 底部菜单：排序 操作审计 -> 帮助中心 -> 深色模式 -> 系统配置 */}
         <div className="mt-auto pt-4 space-y-1 pb-2 list-none">
-          <NavItem icon={<History size={18} />} label="操作审计" path="/audit" currentPath={location.pathname} />
+          {isAdmin && <NavItem icon={<History size={18} />} label="操作审计" path="/audit" currentPath={location.pathname} />}
           <NavItem icon={<CircleHelp size={18} />} label="帮助中心" path="/help" currentPath={location.pathname} />
           <button
             onClick={() => setIsDark(!isDark)}
@@ -178,7 +179,7 @@ export default function MainLayout() {
             </span>
             <span className="truncate tracking-wide">{isDark ? '浅色模式' : '深色模式'}</span>
           </button>
-          <NavItem icon={<Settings size={18} />} label="系统配置" path="/settings" currentPath={location.pathname} />
+          {isAdmin && <NavItem icon={<Settings size={18} />} label="系统配置" path="/settings" currentPath={location.pathname} />}
         </div>
 
         {/* 用户卡片 + 向上弹出下拉菜单 */}

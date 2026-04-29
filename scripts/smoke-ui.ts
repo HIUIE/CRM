@@ -206,6 +206,7 @@ async function main() {
     NODE_ENV: 'production',
     PORT: String(port),
     HOST: '127.0.0.1',
+    PG_HOST: process.env.PG_HOST === 'localhost' || !process.env.PG_HOST ? '127.0.0.1' : process.env.PG_HOST,
     UPLOADS_DIR: path.join(tempDir, 'uploads'),
     JWT_SECRET: 'smoke-jwt-secret',
     INITIAL_ADMIN_PASSWORD: rootPassword,
