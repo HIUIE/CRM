@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { dbAll, dbGet, dbRun, SQL } from '../lib/db.js';
 import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
-import { readString } from '../lib/values.js';
+import { readString, readPagination, buildLimitOffset } from '../lib/values.js';
 import { logAction } from '../lib/audit.js';
 
 function generateCustomerDisplayId() {
@@ -48,6 +48,7 @@ export function createCustomersRouter() {
         ${whereSql}
         GROUP BY c.id
         ORDER BY datetime(c.created_at) DESC, c.id DESC
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
       `, params);
       res.json(customers);
     } catch (error) {

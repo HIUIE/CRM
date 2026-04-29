@@ -15,6 +15,18 @@ function sanitizePathSegment(value: unknown, fallback: string) {
   return normalized || fallback;
 }
 
+// MIME types that are blocked from upload (XSS / malware risk)
+const BLOCKED_MIME_TYPES = new Set([
+  'text/html',
+  'application/xhtml+xml',
+  'application/javascript',
+  'text/javascript',
+  'image/svg+xml',
+  'application/x-httpd-php',
+  'application/x-msdownload',
+  'application/x-executable',
+]);
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: async (req, _file, callback) => {
@@ -33,6 +45,13 @@ const upload = multer({
       callback(null, `${Date.now()}-${randomUUID()}${extension}`);
     },
   }),
+  fileFilter: (_req, file, callback) => {
+    if (BLOCKED_MIME_TYPES.has(file.mimetype)) {
+      callback(new Error(`不允许上传此类型的文件: ${file.mimetype}`));
+      return;
+    }
+    callback(null, true);
+  },
   limits: {
     fileSize: 10 * 1024 * 1024,
     files: 6,

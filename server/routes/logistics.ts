@@ -11,7 +11,19 @@ import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
 import { bindAttachmentsToEntity, getAttachmentsByEntity, deleteAttachmentRows } from '../services/attachments.js';
 import { readLogisticsPayload } from '../services/payloads.js';
-import { readString } from '../lib/values.js';
+import { readString, readPagination, buildLimitOffset } from '../lib/values.js';
+
+// MIME types that are blocked from upload (XSS / malware risk)
+const BLOCKED_MIME_TYPES = new Set([
+  'text/html',
+  'application/xhtml+xml',
+  'application/javascript',
+  'text/javascript',
+  'image/svg+xml',
+  'application/x-httpd-php',
+  'application/x-msdownload',
+  'application/x-executable',
+]);
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -28,6 +40,13 @@ const upload = multer({
       callback(null, `${Date.now()}-${randomUUID()}${extension}`);
     },
   }),
+  fileFilter: (_req, file, callback) => {
+    if (BLOCKED_MIME_TYPES.has(file.mimetype)) {
+      callback(new Error(`不允许上传此类型的文件: ${file.mimetype}`));
+      return;
+    }
+    callback(null, true);
+  },
   limits: {
     fileSize: 10 * 1024 * 1024,
     files: 6,
@@ -81,6 +100,7 @@ router.get('/', async (req, res) => {
           CASE WHEN l.shipping_date IS NULL OR l.shipping_date = '' THEN 1 ELSE 0 END ASC,
           l.shipping_date DESC,
           datetime(l.created_at) DESC
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
       `, params);
       const attachments = await getAttachmentsByEntity('logistics', records.map((record) => Number(record.id)));
       res.json(

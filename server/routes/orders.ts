@@ -13,6 +13,7 @@ import {
   readProductionPayload,
 } from '../services/payloads.js';
 import { readString } from '../lib/values.js';
+import { readPagination, buildLimitOffset } from '../lib/values.js';
 
 // 核心逻辑：生成下一个建议单号
 async function generateNextDisplayId() {
@@ -94,6 +95,9 @@ export function createOrdersRouter() {
       params.push(endDate);
     }
     sql += ` ORDER BY datetime(o.created_at) DESC, o.id DESC`;
+
+    const pagination = readPagination(req.query as Record<string, unknown>);
+    sql += buildLimitOffset(pagination);
 
     try {
       const orders = await dbAll(sql, params);

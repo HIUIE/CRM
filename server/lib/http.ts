@@ -34,5 +34,9 @@ export function handleRouteError(res: Response, error: unknown, fallbackMessage:
   };
   console.error(`[Route Error] ${fallbackMessage}`, logMeta, error);
 
-  return fail(res, 500, `${fallbackMessage}: ${message}`, 'INTERNAL_ERROR');
+  // 生产环境仅返回通用错误信息，避免泄露内部细节（SQL、文件路径等）
+  const clientMessage = process.env.NODE_ENV === 'production'
+    ? fallbackMessage
+    : `${fallbackMessage}: ${message}`;
+  return fail(res, 500, clientMessage, 'INTERNAL_ERROR');
 }

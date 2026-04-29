@@ -41,3 +41,19 @@ export function normalizeOrderStatus(status: string) {
   }
   return status;
 }
+
+/**
+ * Parse pagination query parameters with sensible defaults.
+ * Returns { page, pageSize, offset } for SQL queries.
+ * Max pageSize capped at 500 to prevent excessive data retrieval.
+ */
+export function readPagination(query: Record<string, unknown>) {
+  const page = Math.max(1, Math.floor(readNumber(query.page) || 1));
+  const rawSize = Math.floor(readNumber(query.pageSize) || 200);
+  const pageSize = Math.min(Math.max(1, rawSize), 500);
+  return { page, pageSize, offset: (page - 1) * pageSize };
+}
+
+export function buildLimitOffset(pagination: { pageSize: number; offset: number }) {
+  return ` LIMIT ${pagination.pageSize} OFFSET ${pagination.offset}`;
+}

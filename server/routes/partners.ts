@@ -7,8 +7,9 @@ import { readPartnerPayload } from '../services/payloads.js';
 export function createPartnersRouter() {
   const router = Router();
 
-  router.get('/', async (_req, res) => {
+  router.get('/', async (req, res) => {
     try {
+      const { readPagination, buildLimitOffset } = await import('../lib/values.js');
       const partners = await dbAll(`
         SELECT
           p.*,
@@ -17,6 +18,7 @@ export function createPartnersRouter() {
         LEFT JOIN users u ON u.id = p.created_by
         WHERE p.deleted_at IS NULL
         ORDER BY datetime(p.created_at) DESC, p.id DESC
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
       `);
       res.json(partners);
     } catch (error) {

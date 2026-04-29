@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { dbAll, dbGet, dbRun, withTransaction } from '../lib/db.js';
 import { requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
-import { readString, readNumber } from '../lib/values.js';
+import { readString, readNumber, readPagination, buildLimitOffset } from '../lib/values.js';
 import { createNotification, notifyMention } from '../lib/notifications.js';
 import { logAction } from '../lib/audit.js';
 
@@ -61,6 +61,7 @@ export function createTasksRouter() {
           CASE WHEN t.status = 'done' THEN 1 ELSE 0 END,
           t.due_date ASC,
           t.created_at DESC
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
       `, params);
       res.json(tasks);
     } catch (error) {
@@ -233,7 +234,7 @@ export function createTasksRouter() {
         userId: req.user?.id || null,
         userName: req.user?.name || null,
         action: 'CREATE',
-        entityType: 'ORDER', // Tasks are part of order/customer context
+        entityType: 'TASK',
         entityId: taskId,
         newValue: req.body
       });

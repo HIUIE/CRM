@@ -4,7 +4,7 @@ import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows, getAttachmentsByEntity } from '../services/attachments.js';
 import { readFinancePayload } from '../services/payloads.js';
-import { readString } from '../lib/values.js';
+import { readString, readPagination, buildLimitOffset } from '../lib/values.js';
 import { logAction } from '../lib/audit.js';
 
 export function createFinanceRouter() {
@@ -47,6 +47,7 @@ export function createFinanceRouter() {
         LEFT JOIN users u ON u.id = f.created_by
         ${whereSql}
         ORDER BY datetime(f.created_at) DESC, f.id DESC
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
       `, params);
       const attachments = await getAttachmentsByEntity('finance', records.map((record) => Number(record.id)));
       res.json(
@@ -65,7 +66,7 @@ export function createFinanceRouter() {
     }
   });
 
-  router.post('/', async (req: AuthedRequest, res) => {
+  router.post('/', requireAdmin, async (req: AuthedRequest, res) => {
     const result = await readFinancePayload(req.body || {});
     if ('error' in result) {
       return fail(res, 400, result.error!, 'INVALID_FINANCE_PAYLOAD');
@@ -109,7 +110,7 @@ export function createFinanceRouter() {
     }
   });
 
-  router.patch('/:id', async (req: AuthedRequest, res) => {
+  router.patch('/:id', requireAdmin, async (req: AuthedRequest, res) => {
     const recordId = Number(req.params.id);
     if (!Number.isInteger(recordId) || recordId <= 0) {
       return fail(res, 400, '财务记录编号无效', 'INVALID_FINANCE_ID');

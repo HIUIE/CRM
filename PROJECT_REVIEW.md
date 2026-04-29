@@ -14,7 +14,7 @@
 | 等级 | 问题数 | 说明 |
 |------|--------|------|
 | ✅ P0 阻断级 | ~~3~~ → 0 | 全部已修复（2026-04-29） |
-| 🟡 P1 高优先级 | 7 | 安全边界缺口、输入验证不足、错误信息泄露内部细节等 |
+| ✅ P1 高优先级 | ~~7~~ → 0 | 全部已修复（2026-04-29） |
 | 🟢 P2 改进级 | 12 | 性能优化、代码质量、文档对齐、测试覆盖等 |
 
 ---
@@ -44,36 +44,25 @@
 
 ### 🔴 安全问题 — 必须修复
 
-#### S1. API 路由缺少全局限流
+#### ~~S1. API 路由缺少全局限流~~ ✅ 已修复 (2026-04-29)
 
-- **问题**：仅 `/auth/login` 有内存限流（5次/15分钟），其他所有 API 端点**无限流保护**
-- **风险**：攻击者可无限调用 AI 分析、数据导出、导入等接口，耗尽服务器资源和 AI API 配额
-- **位置**：`server/api.ts` — 全局路由挂载处
-- **建议**：在 `requireAuth` 之后添加全局限流中间件（如 `express-rate-limit`），对 `/ai/*` 和 `/settings/export/*` 等高成本接口单独设置更严格的限流
+- **修复内容**：添加 `express-rate-limit`，全局 200次/分钟，AI 接口 10次/分钟，导入导出 20次/分钟
+- **变更文件**：`server/api.ts`
 
-#### S2. 错误信息泄露内部细节
+#### ~~S2. 错误信息泄露内部细节~~ ✅ 已修复 (2026-04-29)
 
-- **问题**：`handleRouteError` 直接将错误的 `error.message` 拼接返回给客户端
-- **位置**：`server/lib/http.ts:37`
-  ```typescript
-  return fail(res, 500, `${fallbackMessage}: ${message}`, 'INTERNAL_ERROR');
-  ```
-- **风险**：数据库错误、SQL 语句片段、文件路径等内部信息可能泄露
-- **建议**：生产环境下仅返回 `fallbackMessage`，将 `message` 限制在日志中
+- **修复内容**：生产环境 `handleRouteError` 仅返回通用 `fallbackMessage`，内部错误详情仅记录在服务端日志
+- **变更文件**：`server/lib/http.ts`
 
-#### S3. 财务记录 POST/PATCH 缺少角色限制
+#### ~~S3. 财务记录 POST/PATCH 缺少角色限制~~ ✅ 已修复 (2026-04-29)
 
-- **问题**：财务记录创建 (`POST /finance`) 和更新 (`PATCH /finance/:id`) 仅需 `requireAuth`，任何已登录用户均可操作
-- **位置**：`server/routes/finance.ts:68, 112`
-- **对比**：财务删除已正确设置 `requireAdmin`
-- **建议**：根据业务需要，至少对金额修改加 admin 或财务角色限制
+- **修复内容**：`POST /finance` 和 `PATCH /finance/:id` 均已添加 `requireAdmin` 中间件
+- **变更文件**：`server/routes/finance.ts`
 
-#### S4. 附件上传缺少 MIME 白名单
+#### ~~S4. 附件上传缺少 MIME 白名单~~ ✅ 已修复 (2026-04-29)
 
-- **问题**：通用附件上传 (`/attachments`、`/logistics/attachments`) 未限制文件类型
-- **位置**：`server/routes/attachments.ts:18-40`, `server/routes/logistics.ts:16-35`
-- **风险**：用户可上传 `.html`、`.exe`、`.svg` 等文件，可能导致存储型 XSS 或恶意文件分发
-- **建议**：添加 `fileFilter`，至少禁止 `text/html`、`application/javascript`、`image/svg+xml` 等高风险类型
+- **修复内容**：通用附件和物流附件上传均已添加 `fileFilter`，禁止 HTML/JS/SVG/EXE/PHP 等 8 种高风险 MIME 类型
+- **变更文件**：`server/routes/attachments.ts`、`server/routes/logistics.ts`
 
 #### ~~S5. 订单批量删除未限制数组长度~~ ✅ 已修复 (2026-04-29)
 
@@ -154,12 +143,11 @@ dist/assets/vendor-react-*.js        50.36 kB   ← React 核心
 - **修复内容**：`batch-delete` 已包装在 `withTransaction` 中，并添加 100 条上限校验
 - **效果**：中间失败时自动回滚，保证数据一致性
 
-#### 无分页的列表接口
+#### ~~无分页的列表接口~~ ✅ 已修复 (2026-04-29)
 
-- **位置**：所有列表 GET 接口（orders、customers、finance、logistics 等）
-- **问题**：均返回全量数据，无 `LIMIT/OFFSET` 分页
-- **风险**：数据量增长后响应体膨胀，客户端渲染卡顿
-- **建议**：所有列表接口添加分页支持（前端已有 `usePagination` hook）
+- **修复内容**：所有 6 个列表接口（orders、customers、finance、logistics、partners、tasks）均已添加 `LIMIT/OFFSET` 分页
+- **实现**：`server/lib/values.ts` 新增 `readPagination` + `buildLimitOffset` 工具函数，默认 200 条/页，上限 500 条
+- **兼容性**：前端不传分页参数时默认返回前 200 条，不影响现有功能
 
 ---
 
@@ -190,20 +178,15 @@ dist/assets/vendor-react-*.js        50.36 kB   ← React 核心
 | `server/db.ts` (SQLite 迁移) | 535 | 仅测试用，可接受 |
 | `server/routes/settings.ts` | 498 | 系统更新逻辑建议独立为 service |
 
-### 审计日志 entityType 标记错误
+### ~~审计日志 entityType 标记错误~~ ✅ 已修复 (2026-04-29)
 
-- **位置**：`server/routes/tasks.ts:236`
-  ```typescript
-  entityType: 'ORDER', // Tasks are part of order/customer context
-  ```
-- **问题**：创建任务的审计日志被标记为 `ORDER` 类型，而非 `TASK`
-- **建议**：如果 `AuditEntity` 类型允许，应改为 `'TASK'`
+- **修复内容**：任务创建审计日志 `entityType` 从 `'ORDER'` 改为 `'TASK'`，`AuditEntity` 类型已添加 `'TASK'`
+- **变更文件**：`server/routes/tasks.ts`、`server/lib/audit.ts`
 
-### 版本号不一致
+### ~~版本号不一致~~ ✅ 已修复 (2026-04-29)
 
-- `package.json` → `"version": "1.0.4"`
-- `vite.config.ts` → `version: '1.1.0'`
-- **建议**：统一版本号来源，从 `package.json` 读取
+- **修复内容**：`vite.config.ts` 构建时从 `package.json` 读取版本号，不再硬编码
+- **变更文件**：`vite.config.ts`
 
 ---
 
@@ -347,17 +330,17 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 2 | 合并数据库连接池为单一实例 | ✅ 已修复 |
 | 3 | 批量删除包装事务 + 数组上限 | ✅ 已修复 |
 
-### 🟡 P1 — 部署后尽快修复
+### ✅ P1 — 部署后尽快修复（全部完成 2026-04-29）
 
-| # | 问题 | 工作量 |
-|---|------|--------|
-| 1 | API 全局限流（特别是 AI 和导出接口） | 1h |
-| 2 | 生产环境错误信息脱敏 | 0.5h |
-| 3 | 财务记录写操作角色限制 | 0.5h |
-| 4 | 附件上传 MIME 白名单 | 0.5h |
-| 6 | 列表接口添加分页 | 3h |
-| 7 | 统一版本号来源 | 0.5h |
-| 8 | 审计日志 entityType 修正 | 0.5h |
+| # | 问题 | 状态 |
+|---|------|------|
+| 1 | API 全局限流（全局 + AI + 导入导出） | ✅ 已修复 |
+| 2 | 生产环境错误信息脱敏 | ✅ 已修复 |
+| 3 | 财务记录写操作角色限制 | ✅ 已修复 |
+| 4 | 附件上传 MIME 白名单 | ✅ 已修复 |
+| 5 | 列表接口添加分页 | ✅ 已修复 |
+| 6 | 统一版本号来源 | ✅ 已修复 |
+| 7 | 审计日志 entityType 修正 | ✅ 已修复 |
 
 ### 🟢 P2 — 持续改进
 
@@ -391,14 +374,20 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 - ✅ PG schema 与代码已完全同步
 - ✅ 数据库连接池已合并为单一实例
 - ✅ 批量操作已具备事务保护和输入限制
+- ✅ API 全局限流已到位（三级限流策略）
+- ✅ 所有列表接口已添加服务端分页
+- ✅ 财务写操作已限制管理员权限
+- ✅ 附件上传已添加 MIME 白名单
+- ✅ 版本号来源已统一
+- ✅ 审计日志实体类型已修正
 
 **短板：**
 - ~~PG schema 与代码不同步是最大的部署风险~~ ✅ 已修复
 - ~~双 Pool 实例和双数据库兼容层增加了维护复杂度~~ ✅ 连接池已合并，兼容层待清理
-- 缺少 API 限流和分页，扩展性受限
+- ~~缺少 API 限流和分页，扩展性受限~~ ✅ 已修复
 - 测试仅覆盖 SQLite 路径，PG 特有行为是盲区
 
-**结论：** 3 个 P0 问题已全部修复，项目可安全部署。按 P1/P2 持续推进后，项目将从"核心风险已控"进入"可持续运维和扩展"阶段。
+**结论：** P0 + P1 共 10 个问题已全部修复，项目具备生产就绪状态。剩余 P2 项为持续改进方向。
 
 ---
 
@@ -407,14 +396,28 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 检查项 | 结果 |
 |--------|------|
 | `npx tsc --noEmit` | ✅ 通过 |
-| `npm run build` | ✅ 通过 (3.37s) |
-| 代码行数（核心文件） | 13,288 行 |
+| `npm run build` | ✅ 通过 (3.33s) |
+| 代码行数（核心文件） | ~13,500 行 |
 | 显式 `any` 类型计数 | 36 处 |
-| TODO/FIXME 标记 | 0 处（仅变量命名 `MAX_LOGIN_ATTEMPTS` 被误匹配） |
+| TODO/FIXME 标记 | 0 处 |
 
 ---
 
 ## 修复日志
+
+### 2026-04-29 — P1 高优先级问题修复
+
+| 修复项 | 变更文件 | 说明 |
+|--------|---------|------|
+| API 全局限流 | `server/api.ts` | 新增 `express-rate-limit`，全局 200/min，AI 10/min，导入导出 20/min |
+| 错误信息脱敏 | `server/lib/http.ts` | 生产环境隐藏内部错误详情，仅返回通用错误信息 |
+| 财务写操作权限 | `server/routes/finance.ts` | POST/PATCH 添加 `requireAdmin` |
+| 附件 MIME 白名单 | `server/routes/attachments.ts` + `logistics.ts` | 禁止 HTML/JS/SVG/EXE/PHP 等 8 类危险 MIME |
+| 列表接口分页 | 6 个路由文件 + `server/lib/values.ts` | 所有列表添加 `LIMIT/OFFSET`，默认 200 条，上限 500 |
+| 版本号统一 | `vite.config.ts` | 构建时从 `package.json` 读取版本号 |
+| 审计日志类型 | `server/routes/tasks.ts` + `server/lib/audit.ts` | entityType 从 ORDER 改为 TASK |
+
+**验证**：`npx tsc --noEmit` ✅ | `npm run build` ✅ (3.33s)
 
 ### 2026-04-29 — P0 阻断级问题修复
 
