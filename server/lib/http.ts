@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { logger } from './logger.js';
 
 export class AppError extends Error {
   status: number;
@@ -27,12 +28,12 @@ export function handleRouteError(res: Response, error: unknown, fallbackMessage:
 
   const message = error instanceof Error ? error.message : String(error);
   const logMeta = {
-    timestamp: new Date().toISOString(),
     method: req?.method,
     path: req?.originalUrl,
     userId: (req as any)?.user?.id,
+    err: error,
   };
-  console.error(`[Route Error] ${fallbackMessage}`, logMeta, error);
+  logger.error(logMeta, `[Route Error] ${fallbackMessage}`);
 
   // 生产环境仅返回通用错误信息，避免泄露内部细节（SQL、文件路径等）
   const clientMessage = process.env.NODE_ENV === 'production'

@@ -1,4 +1,5 @@
 import { dbRun } from './db.js';
+import { logger } from './logger.js';
 
 export async function createNotification(params: {
   userId: number;
@@ -15,7 +16,7 @@ export async function createNotification(params: {
       [params.userId, params.title, params.message || null, params.link || null]
     );
   } catch (error) {
-    console.error('Failed to create notification:', error);
+    logger.error({ err: error }, 'Failed to create notification');
   }
 }
 

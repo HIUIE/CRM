@@ -230,19 +230,44 @@ async function runSystemUpdateJob() {
   };
   await persistSystemUpdateStatus();
 
-  const commands: Array<{ step: string; command: string; args: string[] }> = [
+  const backupDir = path.join(PROJECT_ROOT, `dist_backup_${Date.now()}`);
+  const distDir = path.join(PROJECT_ROOT, 'dist');
+
+  const commands: Array<{ step: string; command: string; args: string[]; isBuild?: boolean }> = [
     { step: '正在拉取最新代码...', command: 'git', args: ['pull', 'origin', 'main'] },
     { step: '正在安装依赖...', command: 'npm', args: ['install'] },
-    { step: '正在构建前端...', command: 'npm', args: ['run', 'build'] },
+    { step: '正在构建前端...', command: 'npm', args: ['run', 'build'], isBuild: true },
   ];
 
   try {
     for (const item of commands) {
+      if (item.isBuild) {
+        try {
+          await fs.rename(distDir, backupDir);
+        } catch (e) { /* ignore */ }
+      }
+
       await pushUpdateStep(item.step);
       appendUpdateLog([`$ ${item.command} ${item.args.join(' ')}`]);
       await persistSystemUpdateStatus();
-      const output = await commandRunner(item.command, item.args);
-      appendUpdateLog(Array.isArray(output) ? output : []);
+
+      try {
+        const output = await commandRunner(item.command, item.args);
+        appendUpdateLog(Array.isArray(output) ? output : []);
+
+        if (item.isBuild) {
+          try { await fs.rm(backupDir, { recursive: true, force: true }); } catch (e) {}
+        }
+      } catch (err) {
+        if (item.isBuild) {
+          appendUpdateLog(['构建失败，正在从备份回滚前端产物...']);
+          try {
+            await fs.rm(distDir, { recursive: true, force: true });
+            await fs.rename(backupDir, distDir);
+          } catch (e) {}
+        }
+        throw err;
+      }
       await persistSystemUpdateStatus();
     }
 

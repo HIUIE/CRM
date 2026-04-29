@@ -11,6 +11,7 @@ import { escapeHtml, normalizeBrandText, sanitizeBrandAssetUrl } from './lib/bra
 import { blockSensitivePaths } from './lib/security.js';
 import { PROJECT_ROOT, UPLOADS_DIR } from './paths.js';
 import { getSettingValue } from './services/settings.js';
+import { logger } from './lib/logger.js';
 
 const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
 
@@ -57,7 +58,7 @@ export async function createApp() {
       await fs.unlink(path.join(tempDir, file)).catch(() => {});
     }
   } catch (e) {
-    console.warn('Failed to cleanup temp directory on startup:', e);
+    logger.warn({ err: e }, 'Failed to cleanup temp directory on startup');
   }
 
   const app = express();
@@ -83,7 +84,7 @@ export async function createApp() {
   // Global error handler for uncaught async errors (Express 4 does not catch promise rejections).
   // express-async-errors patches route handlers so rejected promises land here.
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('[Unhandled Route Error]', err);
+    logger.error({ err }, '[Unhandled Route Error]');
     const status = err.status || 500;
     res.status(status).json({ error: err.message || 'Internal Server Error' });
   });

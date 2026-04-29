@@ -1,5 +1,6 @@
 import { dbRun } from './db.js';
 import { sanitizeForAI } from './sanitizer.js';
+import { logger } from './logger.js';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
 export type AuditEntity = 'ORDER' | 'CUSTOMER' | 'FINANCE' | 'PARTNER' | 'LOGISTICS' | 'CUSTOMS' | 'USER' | 'TASK';
@@ -34,6 +35,6 @@ export async function logAction(params: {
       ]
     );
   } catch (error) {
-    console.error('Failed to log audit trail:', error);
+    logger.error({ err: error }, 'Failed to log audit trail');
   }
 }

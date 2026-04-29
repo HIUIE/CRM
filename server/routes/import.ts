@@ -5,6 +5,7 @@ import { Readable } from 'stream';
 import multer from 'multer';
 import ExcelJS from 'exceljs';
 import AdmZip from 'adm-zip';
+import { logger } from '../lib/logger.js';
 import { dbGet, dbRun, withTransaction, type TransactionExecutor } from '../lib/db.js';
 import { requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
@@ -157,7 +158,7 @@ export function createImportRouter() {
       try {
         await fs.unlink(filePath);
       } catch (e) {
-        console.error('Failed to cleanup import file:', filePath, e);
+        logger.error({ err: e, filePath }, 'Failed to cleanup import file');
       }
     }
   });
