@@ -355,7 +355,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 7 | 利润数据迁移到独立表 | ✅ 已完成 |
 | 8 | 自动更新增加 `dist/` 备份和回滚 | ✅ 已完成 |
 | 9 | Express 5 升级评估 | 2h |
-| 10 | 数据库迁移工具化 | 3h |
+| 10 | 数据库迁移工具化 | ✅ 已完成 |
 | 11 | 清理残留 `.b`/`.c` 备份文件 | ✅ 已完成 |
 | 12 | 依赖分类修正（devDependencies） | ✅ 已完成 |
 
@@ -415,6 +415,7 @@ AI:  Gemini / DeepSeek / OpenAI Compatible
 | 客户查询并行化 | `server/routes/customers.ts` | 将 6 个关联数据查询重构为 `Promise.all` 并行 |
 | 利润数据独立 | `server/routes/orders.ts` | 废弃 `settings` 表的 hack 存储，新建 `order_profits` 表并支持无缝懒迁移 |
 | 清理双栈兼容层 | `server/lib/db.ts` | 彻底移除 SQLite 支持，将 `db.ts` 架构精简为纯 PostgreSQL 直连，移除依赖包及老废脚本 |
+| 数据库迁移工具化 | `server/db-pg.ts` | 引入 `node-pg-migrate`，将原本的手工初始化脚本变更为标准的程序化 migration 流程，且保持老库数据兼容 |
 | 依赖分类修正 | `package.json` | 移除误放入 dependencies 的构建包 (`vite`, `plugin-react` 等) |
 | 清理残留备份文件 | `src/pages/OrderDetail.tsx.b` 等 | 删除历史废弃临时文件 |
 
