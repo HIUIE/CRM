@@ -173,6 +173,7 @@ export function createCustomersRouter() {
         `
           INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING id
         `,
         [displayId, name, country, contact, sourceChannel, intentProducts, req.user?.id || null, req.user?.id || null],
       );

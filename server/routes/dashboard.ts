@@ -243,6 +243,36 @@ export function createDashboardRouter() {
       // Total customer count
       const customerCount = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL`);
 
+      // Risk detection: low margin (< 8%) and freight inversion
+      const profitRows = await dbAll<{ order_id: number; display_id: string; customer_name: string; data: any }[]>(`
+        SELECT o.id as order_id, o.display_id, c.name as customer_name, op.data
+        FROM order_profits op
+        JOIN orders o ON o.id = op.order_id
+        JOIN customers c ON c.id = o.customer_id
+        WHERE o.deleted_at IS NULL
+        ORDER BY op.updated_at DESC
+        LIMIT 20
+      `);
+
+      const risks: { orderId: number; displayId: string; customerName: string; riskType: 'low_margin' | 'freight_inversion'; value: number; threshold: number }[] = [];
+      for (const row of profitRows) {
+        const d = row.data;
+        if (!d || !d.receipts) continue;
+        const receiptsTotalCny = (d.receipts || []).reduce((sum: number, r: any) => sum + ((r.net || 0) * (r.exchangeRate || 7.2)), 0);
+        const freightCny = d.freightCurrency === 'USD' ? (d.freightValue || 0) * ((d.receipts?.[0]?.exchangeRate) || 7.2) : (d.freightValue || 0);
+        const totalCost = (d.factoryCostCny || 0) + (d.domesticFees || 0) + freightCny + (d.customsMisc || 0)
+          + (d.miscFees || []).reduce((s: number, f: any) => s + (f.amount || 0), 0);
+        const profit = receiptsTotalCny + (d.otherIncomeCny || 0) - totalCost;
+        const margin = d.invoiceAmount > 0 ? (profit / d.invoiceAmount) * 100 : 0;
+
+        if (margin < 8 && margin > 0) {
+          risks.push({ orderId: row.order_id, displayId: row.display_id, customerName: row.customer_name, riskType: 'low_margin', value: Math.round(margin * 10) / 10, threshold: 8 });
+        }
+        if (freightCny > (d.factoryCostCny || 0) && (d.factoryCostCny || 0) > 0) {
+          risks.push({ orderId: row.order_id, displayId: row.display_id, customerName: row.customer_name, riskType: 'freight_inversion', value: Math.round(freightCny), threshold: Math.round(d.factoryCostCny) });
+        }
+      }
+
       res.json({
         overview: {
           totalOrders,
@@ -254,6 +284,7 @@ export function createDashboardRouter() {
           customerCount: customerCount?.count || 0,
           estProfit: currStats.profit,
           growth,
+          risks,
         },
         todos,
         activities,

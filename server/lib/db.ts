@@ -64,7 +64,8 @@ function createExecutor(executor?: { query: (sql: string, params?: any[]) => Pro
     async run(sql: string, params: any[] = []) {
       const [q, p] = pgParams(sql, params);
       const result = await (executor || pool).query(q, p);
-      return { changes: result.rowCount || 0, lastID: 0 };
+      const lastID = (result.rows && result.rows[0] && result.rows[0].id) ? Number(result.rows[0].id) : 0;
+      return { changes: result.rowCount || 0, lastID };
     },
     async exec(sql: string) {
       await (executor || pool).query(sql);

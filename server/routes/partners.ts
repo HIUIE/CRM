@@ -37,6 +37,7 @@ export function createPartnersRouter() {
         `
           INSERT INTO partners (name, partner_type, country, contact, contact_person, address, rating, payment_terms, remark, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING id
         `,
         [
           result.payload.name,

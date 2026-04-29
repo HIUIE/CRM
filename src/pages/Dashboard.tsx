@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet, Clock,
   FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight,
-  Building2
+  Building2, ArrowRightLeft, AlertTriangle, TrendingDown, Loader2
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import Chip from '../components/ui/Chip';
+import { Drawer } from '../components/ui/Drawer';
+import type { OrderSummary } from '../types/crm';
 
 interface DashboardData {
   overview: {
@@ -18,41 +20,54 @@ interface DashboardData {
     activeLogistics: number;
     customerCount: number;
     estProfit: number;
-    growth: {
-      revenue: number;
-      profit: number;
-    };
+    growth: { revenue: number; profit: number };
+    risks?: RiskItem[];
   };
   monthlyTrends: { month: string; orders: number; revenue: number }[];
   profitTrends: { month: string; revenue: number; cost: number; profit: number }[];
-  todos: {
-    id: string;
-    type: 'payment_overdue' | 'customs_missing' | 'logistics_pending';
-    order_display_id: string;
-    customer_name: string;
-    desc: string;
-    days: number;
-    urgency: 'high' | 'medium' | 'low';
-    actionLabel: string;
-  }[];
-  activities: {
-    id: string;
-    type: 'finance' | 'logistics' | 'customs' | 'production' | 'order';
-    order_display_id: string;
-    customer_name: string;
-    title: string;
-    desc: string;
-    created_at: string;
-    value?: string;
-    valueColor?: string;
-  }[];
-  statusDistribution: {
-    status: string;
-    label: string;
-    count: number;
-    percentage: number;
-    color: string;
-  }[];
+  todos: TodoItem[];
+  activities: ActivityItem[];
+  statusDistribution: StatusDistItem[];
+}
+
+interface TodoItem {
+  id: string;
+  type: 'payment_overdue' | 'customs_missing' | 'logistics_pending';
+  order_display_id: string;
+  customer_name: string;
+  desc: string;
+  days: number;
+  urgency: 'high' | 'medium' | 'low';
+  actionLabel: string;
+}
+
+interface ActivityItem {
+  id: string;
+  type: 'finance' | 'logistics' | 'customs' | 'production' | 'order';
+  order_display_id: string;
+  customer_name: string;
+  title: string;
+  desc: string;
+  created_at: string;
+  value?: string;
+  valueColor?: string;
+}
+
+interface StatusDistItem {
+  status: string;
+  label: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+interface RiskItem {
+  orderId: number;
+  displayId: string;
+  customerName: string;
+  riskType: 'low_margin' | 'freight_inversion';
+  value: number;
+  threshold: number;
 }
 
 function formatAmount(amount: number, currency: string) {
@@ -77,6 +92,151 @@ function formatActivityValue(val?: string) {
   return val;
 }
 
+function getOrderStatusMeta(status: string) {
+  const map: Record<string, { label: string; tone: 'success' | 'warning' | 'error' | 'info' | 'neutral' }> = {
+    draft: { label: '待受理', tone: 'neutral' },
+    production: { label: '生产中', tone: 'warning' },
+    customs: { label: '报关中', tone: 'warning' },
+    shipping: { label: '发货中', tone: 'info' },
+    completed: { label: '已完成', tone: 'success' },
+  };
+  return map[status] || { label: status, tone: 'neutral' as const };
+}
+
+// ==================== Stat Card Drawer Content ====================
+
+function OrderListDrawerContent({ filter, onClose }: { filter: { status?: string; label: string }; onClose: () => void }) {
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams();
+    if (filter.status) params.set('status', filter.status);
+    params.set('limit', '50');
+    apiFetch<OrderSummary[]>(`/api/orders?${params.toString()}`)
+      .then(data => { if (!cancelled) setOrders(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [filter.status]);
+
+  return (
+    <div className="space-y-3">
+      {loading ? (
+        <div className="py-16 text-center text-slate-400 animate-pulse font-bold uppercase tracking-widest">加载中...</div>
+      ) : orders.length === 0 ? (
+        <div className="py-16 text-center text-slate-400 font-bold uppercase tracking-widest">暂无数据</div>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-slate-50 dark:bg-navy-950 font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+              <tr>
+                <th className="px-4 py-3">订单号</th>
+                <th className="px-4 py-3">客户</th>
+                <th className="px-4 py-3 text-right">金额</th>
+                <th className="px-4 py-3">状态</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
+              {orders.map(o => {
+                const meta = getOrderStatusMeta(o.status);
+                return (
+                  <tr key={o.id} onClick={() => { onClose(); navigate(`/orders/${o.display_id.toLowerCase()}`); }} className="hover:bg-slate-50 dark:hover:bg-navy-800 cursor-pointer transition-colors">
+                    <td className="px-4 py-3 font-bold text-primary-navy dark:text-white">{o.display_id}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{o.customer_name || '-'}</td>
+                    <td className="px-4 py-3 text-right font-bold data-field">USD {o.total_amount.toLocaleString()}</td>
+                    <td className="px-4 py-3"><Chip tone={meta.tone}>{meta.label}</Chip></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== AI Briefing ====================
+
+function AIBriefing({ data }: { data: DashboardData }) {
+  const [briefing, setBriefing] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    setLoading(true);
+    const prompt = `请基于以下控制台数据生成一段50字以内的外贸业务早报（直接输出文本，不加任何前缀）：今日待处理${data.todos.length}项，活跃订单${data.overview.activeOrders}个，已收金额$${data.overview.receiptUsd.toLocaleString()}，运输中${data.overview.activeLogistics}笔。语气专业，带一点鼓励。`;
+    apiFetch<{ content: string }>('/api/ai/chat', { method: 'POST', body: JSON.stringify({ message: prompt }) })
+      .then(res => setBriefing(res.content || ''))
+      .catch(() => setBriefing('早上好！今日控制台已就绪，请查看待处理任务和最新动态。'))
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="rounded-lg bg-gradient-to-r from-indigo-50 via-white to-blue-50 dark:from-navy-800 dark:via-navy-900 dark:to-indigo-900/30 border border-indigo-100 dark:border-navy-700 p-4 flex items-start gap-3">
+      <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 mt-0.5">
+        <Sparkles size={14} className="text-indigo-500" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">AI 每日业务洞察</div>
+        {loading ? (
+          <div className="flex items-center gap-2 text-xs text-slate-400"><Loader2 size={12} className="animate-spin" /> 正在生成...</div>
+        ) : (
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">{briefing}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Currency Exchange Widget ====================
+
+function CurrencyExchangeWidget() {
+  const [mode, setMode] = useState<'usd2cny' | 'cny2usd'>('usd2cny');
+  const [inputVal, setInputVal] = useState('1');
+  const rate = 7.2;
+  const result = mode === 'usd2cny'
+    ? (parseFloat(inputVal) || 0) * rate
+    : (parseFloat(inputVal) || 0) / rate;
+
+  const toggleMode = () => setMode(m => m === 'usd2cny' ? 'cny2usd' : 'usd2cny');
+
+  return (
+    <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm shrink-0">
+      <div className="flex items-center gap-2 mb-4">
+        <ArrowRightLeft size={14} className="text-indigo-500" />
+        <h2 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">汇率速算</h2>
+        <span className="text-[10px] font-bold text-slate-400 ml-auto">参考</span>
+      </div>
+      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-3">
+        <span>USD/CNY ≈ {rate.toFixed(2)}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{mode === 'usd2cny' ? 'USD' : 'CNY'}</label>
+          <input type="number" value={inputVal} onChange={e => setInputVal(e.target.value)} className="w-full bg-slate-50 dark:bg-navy-950 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-indigo-300" />
+        </div>
+        <button onClick={toggleMode} className="mt-4 h-7 w-7 rounded-full bg-slate-100 dark:bg-navy-800 flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors shrink-0">
+          <ArrowRightLeft size={12} className="text-slate-400" />
+        </button>
+        <div className="flex-1">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{mode === 'usd2cny' ? 'CNY' : 'USD'}</label>
+          <div className="w-full bg-slate-50 dark:bg-navy-950 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white">
+            {result.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ==================== Main Dashboard ====================
+
 export default function DashboardView() {
   const navigate = useNavigate();
   const { data, isLoading, error } = useQuery<DashboardData>({
@@ -85,25 +245,88 @@ export default function DashboardView() {
     staleTime: 60 * 1000,
   });
 
+  const [activityFilter, setActivityFilter] = useState<'all' | 'finance' | 'logistics'>('all');
+  const [drawer, setDrawer] = useState<{ title: string; filter: { status?: string; label: string } } | null>(null);
+
   if (isLoading) return <div className="p-8 text-sm text-slate-500 dark:text-slate-400 animate-pulse font-bold uppercase tracking-widest text-center">正在加载数字化指挥舱...</div>;
   if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{getErrorMessage(error, '无法读取控制台数据')}</div>;
 
   const revenueGrowth = formatGrowth(data.overview.growth.revenue);
   const profitGrowth = formatGrowth(data.overview.growth.profit);
+  const risks = data.overview.risks || [];
+
+  const filteredActivities = activityFilter === 'all'
+    ? data.activities
+    : data.activities.filter(a => a.type === activityFilter);
 
   return (
     <div className="flex flex-col space-y-8">
+      {/* AI Daily Briefing */}
+      <AIBriefing data={data} />
+
       {/* Top Indicators */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 shrink-0">
-        <StatCard title="订单总数" value={String(data.overview.totalOrders)} subValue={`进行中 ${data.overview.activeOrders}`} icon={<FileText size={16} className="text-blue-500" />} sparklineColor="#3B82F6" sparklineData={[10, 20, 15, 25, 20, 30]} />
-        <StatCard title="已收金额 (USD)" value={formatAmount(data.overview.receiptUsd, '$')} subValue={`较上月 ${revenueGrowth.label}`} subValueColor={revenueGrowth.color} icon={<Wallet size={16} className="text-emerald-500" />} sparklineColor="#10B981" sparklineData={[5, 10, 15, 10, 20, 25]} />
-        <StatCard title="本月估算利润 (USD)" value={formatAmount(data.overview.estProfit, '$')} subValue={`较上月 ${profitGrowth.label}`} subValueColor={profitGrowth.color} icon={<ArrowUpRight size={16} className="text-indigo-500" />} sparklineColor="#6366F1" sparklineData={[2, 8, 12, 10, 18, 22]} />
-        <StatCard title="运输中的订单" value={`${data.overview.activeLogistics} 笔`} subValue={`客户 ${data.overview.customerCount} 个`} icon={<Truck size={16} className="text-purple-500" />} sparklineColor="#A855F7" sparklineData={[15, 20, 18, 25, 20, 22]} />
+        <StatCard
+          title="订单总数" value={String(data.overview.totalOrders)} subValue={`进行中 ${data.overview.activeOrders}`}
+          icon={<FileText size={16} className="text-blue-500" />} sparklineColor="#3B82F6" sparklineData={[10, 20, 15, 25, 20, 30]}
+          onClick={() => setDrawer({ title: '全部订单', filter: { label: '全部订单' } })}
+        />
+        <StatCard
+          title="已收金额 (USD)" value={formatAmount(data.overview.receiptUsd, '$')} subValue={`较上月 ${revenueGrowth.label}`} subValueColor={revenueGrowth.color}
+          icon={<Wallet size={16} className="text-emerald-500" />} sparklineColor="#10B981" sparklineData={[5, 10, 15, 10, 20, 25]}
+          onClick={() => setDrawer({ title: '已结清订单', filter: { status: 'completed', label: '已结清' } })}
+        />
+        <StatCard
+          title="本月估算利润 (USD)" value={formatAmount(data.overview.estProfit, '$')} subValue={`较上月 ${profitGrowth.label}`} subValueColor={profitGrowth.color}
+          icon={<ArrowUpRight size={16} className="text-indigo-500" />} sparklineColor="#6366F1" sparklineData={[2, 8, 12, 10, 18, 22]}
+          onClick={() => setDrawer({ title: '全部订单（含利润）', filter: { label: '利润视图' } })}
+        />
+        <StatCard
+          title="运输中的订单" value={`${data.overview.activeLogistics} 笔`} subValue={`客户 ${data.overview.customerCount} 个`}
+          icon={<Truck size={16} className="text-purple-500" />} sparklineColor="#A855F7" sparklineData={[15, 20, 18, 25, 20, 22]}
+          onClick={() => setDrawer({ title: '运输中的订单', filter: { status: 'shipping', label: '发货中' } })}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[65%_minmax(0,1fr)] items-start">
-        {/* Left Column: Business Drivers */}
+        {/* Left Column */}
         <div className="flex flex-col space-y-8">
+          {/* Risk Alerts */}
+          {risks.length > 0 && (
+            <section className="flex flex-col rounded-lg border-2 border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-900/5 shadow-sm transition-colors">
+              <div className="px-6 py-4 border-b border-red-100 dark:border-red-800/20 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle size={16} className="text-error" />
+                  <div>
+                    <h2 className="text-sm font-extrabold text-error uppercase tracking-tight">风控预警 ({risks.length})</h2>
+                    <p className="text-[11px] text-red-400 dark:text-red-500 font-bold uppercase tracking-widest mt-0.5">以下订单触发利润红线或成本倒挂</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 space-y-2">
+                {risks.map((risk, i) => (
+                  <div key={i} onClick={() => navigate(`/orders/${risk.displayId.toLowerCase()}`)} className="flex items-center justify-between p-3 bg-white dark:bg-navy-900 rounded-lg border border-red-100 dark:border-red-800/20 hover:border-red-300 dark:hover:border-red-700 cursor-pointer transition-all group">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${risk.riskType === 'low_margin' ? 'bg-red-100 dark:bg-red-900/20 text-error' : 'bg-amber-100 dark:bg-amber-900/20 text-amber-500'}`}>
+                        {risk.riskType === 'low_margin' ? <TrendingDown size={14} /> : <Truck size={14} />}
+                      </div>
+                      <div>
+                        <div className="text-[12px] font-extrabold text-primary-navy dark:text-white">{risk.displayId} · {risk.customerName}</div>
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                          {risk.riskType === 'low_margin'
+                            ? `利润率 ${risk.value}% 低于红线 ${risk.threshold}%`
+                            : `运费 ¥${risk.value.toLocaleString()} 超过货品成本 ¥${risk.threshold.toLocaleString()}`}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={14} className="text-slate-300 group-hover:text-error transition-colors" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Todos */}
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div>
@@ -112,13 +335,12 @@ export default function DashboardView() {
               </div>
               <button onClick={() => navigate('/orders')} className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看全部 <ChevronRight size={14} /></button>
             </div>
-
             <div className="p-4 space-y-3">
               {data.todos.length > 0 ? data.todos.map((todo) => (
                 <div key={todo.id} onClick={() => navigate(`/orders/${String(todo.order_display_id).toLowerCase()}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
                   <div className="flex items-center gap-4">
                     <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${todo.urgency === 'high' ? 'bg-red-50 dark:bg-red-900/20 text-error' : todo.urgency === 'medium' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500'}`}>
-                       {todo.urgency === 'high' ? <ArrowUpRight size={18} /> : <FileText size={18} />}
+                      {todo.urgency === 'high' ? <ArrowUpRight size={18} /> : <FileText size={18} />}
                     </div>
                     <div>
                       <div className="text-[13px] font-extrabold text-primary-navy dark:text-white mb-0.5">{todo.type === 'payment_overdue' ? '收款提醒' : todo.type === 'customs_missing' ? '报关资料' : '创建物流'}</div>
@@ -137,21 +359,27 @@ export default function DashboardView() {
             </div>
           </section>
 
+          {/* Activities */}
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">最近动态</h2>
                 <div className="hidden sm:flex gap-4 text-xs font-bold uppercase tracking-widest">
-                  <span className="text-primary-navy dark:text-tertiary-sage border-b-2 border-primary-navy dark:border-tertiary-sage pb-1">全部</span>
-                  <span className="text-slate-400 hover:text-primary-navy pb-1 cursor-pointer transition-colors">财务</span>
-                  <span className="text-slate-400 hover:text-primary-navy pb-1 cursor-pointer transition-colors">物流</span>
+                  {(['all', 'finance', 'logistics'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setActivityFilter(tab)}
+                      className={`pb-1 transition-colors cursor-pointer ${activityFilter === tab ? 'text-primary-navy dark:text-tertiary-sage border-b-2 border-primary-navy dark:border-tertiary-sage' : 'text-slate-400 hover:text-primary-navy dark:hover:text-tertiary-sage'}`}
+                    >
+                      {tab === 'all' ? '全部' : tab === 'finance' ? '财务' : '物流'}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <button className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看日志 <ChevronRight size={14} /></button>
+              <button onClick={() => navigate('/audit')} className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看日志 <ChevronRight size={14} /></button>
             </div>
-
             <div className="p-4 space-y-0">
-              {data.activities.length > 0 ? data.activities.map((activity, i) => (
+              {filteredActivities.length > 0 ? filteredActivities.map((activity, i) => (
                 <div key={i} onClick={() => navigate(`/orders/${String(activity.order_display_id).toLowerCase()}`)} className="flex items-center justify-between cursor-pointer group py-4 border-b border-slate-100 dark:border-navy-800 last:border-0 hover:bg-slate-50 dark:hover:bg-navy-950/50 px-4 -mx-4 rounded-lg transition-colors">
                   <div className="flex items-start gap-4">
                     <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${activity.type === 'finance' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' : activity.type === 'logistics' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' : activity.type === 'customs' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-slate-100 dark:bg-navy-800 text-slate-500'}`}>
@@ -169,13 +397,13 @@ export default function DashboardView() {
                   </div>
                 </div>
               )) : (
-                <EmptyState title="暂无动态" description="系统尚未产生任何流转日志" />
+                <EmptyState title="暂无动态" description="该分类下暂无流转日志" />
               )}
             </div>
           </section>
         </div>
 
-        {/* Right Column: Tools & Analysis */}
+        {/* Right Column */}
         <div className="flex flex-col space-y-8">
           {/* Monthly Trends */}
           <div className="grid gap-6">
@@ -183,15 +411,18 @@ export default function DashboardView() {
               <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">业务趋势 (订单)</h2>
                 <div className="space-y-3">
-                  {data.monthlyTrends.map(m => (
-                    <div key={m.month} className="flex items-center gap-3">
-                      <div className="w-16 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
-                      <div className="flex-1 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden flex">
-                        <div className="h-full bg-primary-navy dark:bg-tertiary-sage rounded-full transition-all" style={{ width: `${Math.min((m.orders / Math.max(...data.monthlyTrends.map(x => x.orders), 1)) * 100, 100)}%` }} />
+                  {data.monthlyTrends.map(m => {
+                    const maxOrders = Math.max(...data.monthlyTrends.map(x => x.orders), 1);
+                    return (
+                      <div key={m.month} className="flex items-center gap-3">
+                        <div className="w-14 shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
+                        <div className="flex-1 min-w-0 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden flex">
+                          <div className="h-full bg-primary-navy dark:bg-tertiary-sage rounded-full transition-all" style={{ width: `${Math.min((m.orders / maxOrders) * 100, 100)}%` }} />
+                        </div>
+                        <div className="w-10 shrink-0 text-right text-xs font-bold text-primary-navy dark:text-white data-field">{m.orders}</div>
                       </div>
-                      <div className="w-8 text-right text-xs font-bold text-primary-navy dark:text-white data-field">{m.orders}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -200,20 +431,27 @@ export default function DashboardView() {
               <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">利润趋势 (USD)</h2>
                 <div className="space-y-3">
-                  {data.profitTrends.map(m => (
-                    <div key={m.month} className="flex items-center gap-3">
-                      <div className="w-16 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
-                      <div className="flex-1 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden flex">
-                        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min((Math.max(0, m.profit) / Math.max(...data.profitTrends.map(x => x.profit), 1)) * 100, 100)}%` }} />
+                  {data.profitTrends.map(m => {
+                    const maxProfit = Math.max(...data.profitTrends.map(x => x.profit), 1);
+                    return (
+                      <div key={m.month} className="flex items-center gap-3">
+                        <div className="w-14 shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400 data-field">{m.month}</div>
+                        <div className="flex-1 min-w-0 h-5 bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden flex">
+                          <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min((Math.max(0, m.profit) / maxProfit) * 100, 100)}%` }} />
+                        </div>
+                        <div className="w-24 shrink-0 text-right text-[11px] font-bold text-primary-navy dark:text-white data-field">${Number(m.profit).toLocaleString()}</div>
                       </div>
-                      <div className="w-20 text-right text-[11px] font-bold text-primary-navy dark:text-white data-field">${Number(m.profit).toLocaleString()}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
           </div>
 
+          {/* Currency Exchange */}
+          <CurrencyExchangeWidget />
+
+          {/* Quick Actions */}
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
@@ -230,6 +468,7 @@ export default function DashboardView() {
             </div>
           </section>
 
+          {/* AI CTA */}
           <section className="rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-navy-800 dark:to-indigo-900/30 border border-blue-100 dark:border-navy-700 p-6 relative overflow-hidden transition-colors shrink-0">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
@@ -237,15 +476,14 @@ export default function DashboardView() {
                 <h3 className="text-[14px] font-extrabold text-primary-navy dark:text-white tracking-tight">使用 AI 助手，提升效率</h3>
               </div>
               <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-4 max-w-[200px]">智能分析订单数据，自动生成业务建议</p>
-              <Link to="/ai" className="btn-primary text-xs px-4 py-2">
-                立即体验 <ArrowUpRight size={14} />
-              </Link>
+              <Link to="/ai" className="btn-primary text-xs px-4 py-2">立即体验 <ArrowUpRight size={14} /></Link>
             </div>
             <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-50 dark:opacity-20 pointer-events-none">
               <FileText size={100} className="text-blue-200 dark:text-blue-400" />
             </div>
           </section>
 
+          {/* Status Distribution */}
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
             <div className="mb-8 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">订单状态分布</h2>
@@ -277,13 +515,22 @@ export default function DashboardView() {
           </section>
         </div>
       </div>
+
+      {/* Stat Card Order List Drawer */}
+      <Drawer isOpen={drawer !== null} onClose={() => setDrawer(null)} title={drawer?.title || ''} width="max-w-[600px]">
+        {drawer && <OrderListDrawerContent filter={drawer.filter} onClose={() => setDrawer(null)} />}
+      </Drawer>
     </div>
   );
 }
 
-function StatCard({ title, value, subValue, subValueColor = "text-slate-400", icon, sparklineColor, sparklineData }: { title: string; value: string; subValue: string; subValueColor?: string; icon: React.ReactNode; sparklineColor: string; sparklineData: number[] }) {
+// ==================== Inner Components ====================
+
+function StatCard({ title, value, subValue, subValueColor = "text-slate-400", icon, sparklineColor, sparklineData, onClick }: {
+  title: string; value: string; subValue: string; subValueColor?: string; icon: React.ReactNode; sparklineColor: string; sparklineData: number[]; onClick?: () => void;
+}) {
   return (
-    <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 transition-all flex flex-col justify-between h-[130px]">
+    <button onClick={onClick} className="w-full text-left rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm hover:border-primary-navy/30 dark:hover:border-tertiary-sage/30 hover:shadow-md transition-all flex flex-col justify-between h-[130px] cursor-pointer">
       <div className="flex items-center gap-3 mb-2">
         <div className="h-8 w-8 rounded bg-slate-50 dark:bg-navy-950 flex items-center justify-center shrink-0 border border-slate-100 dark:border-navy-800">{icon}</div>
         <div className="text-[12px] font-bold text-slate-500 dark:text-slate-400">{title}</div>
@@ -297,7 +544,7 @@ function StatCard({ title, value, subValue, subValueColor = "text-slate-400", ic
           <Sparkline color={sparklineColor} data={sparklineData} />
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -327,7 +574,6 @@ const Sparkline = React.memo(function Sparkline({ color, data }: { color: string
 const DonutChart = React.memo(function DonutChart({ data }: { data: { status: string, count: number, percentage: number, color: string }[] }) {
   const total = data.reduce((acc, curr) => acc + curr.count, 0);
   let cumulativePercent = 0;
-
   return (
     <div className="relative w-40 h-40 aspect-square shrink-0">
       <svg viewBox="0 0 42 42" className="w-full h-full rounded-full transform -rotate-90">
@@ -338,16 +584,9 @@ const DonutChart = React.memo(function DonutChart({ data }: { data: { status: st
           const strokeDashoffset = -cumulativePercent;
           cumulativePercent += percent;
           return (
-            <circle
-              key={i}
-              cx="21" cy="21" r="15.91549431"
-              fill="transparent"
-              stroke={slice.color}
-              strokeWidth="4"
-              strokeDasharray={strokeDasharray}
-              strokeDashoffset={strokeDashoffset}
-              className="transition-all duration-1000 ease-in-out hover:stroke-[6]"
-            />
+            <circle key={i} cx="21" cy="21" r="15.91549431" fill="transparent" stroke={slice.color} strokeWidth="4"
+              strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset}
+              className="transition-all duration-1000 ease-in-out hover:stroke-[6]" />
           );
         })}
       </svg>

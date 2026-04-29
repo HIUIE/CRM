@@ -43,19 +43,26 @@ export async function getAttachmentsByEntity(entityType: AttachmentEntityType, e
 }
 
 export async function bindAttachmentsToEntity(entityType: AttachmentEntityType, entityId: number, attachmentIds: number[]) {
-  if (!attachmentIds.length) {
-    return;
-  }
+  // First, unbind all currently bound attachments for this entity that are NOT in the new list
+  const placeholders = attachmentIds.length > 0 ? attachmentIds.map(() => '?').join(', ') : null;
+  const unbindSql = placeholders 
+    ? `UPDATE attachments SET entity_type = NULL, entity_id = NULL WHERE entity_type = ? AND entity_id = ? AND id NOT IN (${placeholders})`
+    : `UPDATE attachments SET entity_type = NULL, entity_id = NULL WHERE entity_type = ? AND entity_id = ?`;
+  const unbindParams = placeholders ? [entityType, entityId, ...attachmentIds] : [entityType, entityId];
+  
+  await dbRun(unbindSql, unbindParams);
 
-  const placeholders = attachmentIds.map(() => '?').join(', ');
-  await dbRun(
-    `
-      UPDATE attachments
-      SET entity_type = ?, entity_id = ?
-      WHERE id IN (${placeholders})
-    `,
-    [entityType, entityId, ...attachmentIds],
-  );
+  if (attachmentIds.length > 0) {
+    const bindPlaceholders = attachmentIds.map(() => '?').join(', ');
+    await dbRun(
+      `
+        UPDATE attachments
+        SET entity_type = ?, entity_id = ?
+        WHERE id IN (${bindPlaceholders})
+      `,
+      [entityType, entityId, ...attachmentIds],
+    );
+  }
 }
 
 export async function deleteAttachmentRows(entityType: AttachmentEntityType, entityId: number) {

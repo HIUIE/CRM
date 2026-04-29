@@ -83,6 +83,7 @@ export function createAttachmentsRouter() {
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, remark)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
           `,
           [entityType, entityId, originalName, file.filename, file.mimetype, file.size, relativePath, remark],
         );

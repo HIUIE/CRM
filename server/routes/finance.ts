@@ -77,6 +77,7 @@ export function createFinanceRouter() {
         `
           INSERT INTO finance_records (order_id, type, amount, target, status, remark, currency, payment_category, record_category, partner_id, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING id
         `,
         [
           result.payload.orderId,

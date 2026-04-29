@@ -8,9 +8,10 @@ interface DrawerProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   isDirty?: boolean;
+  width?: string;
 }
 
-export function Drawer({ isOpen, onClose, title, children, footer, isDirty = false }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, children, footer, isDirty = false, width = 'max-w-md' }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
       />
       <div 
         ref={drawerRef}
-        className="relative z-10 w-full max-w-md h-full bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer"
+        className={`relative z-10 w-full ${width} h-full bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 shrink-0">
           <h2 className="text-[15px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">{title}</h2>

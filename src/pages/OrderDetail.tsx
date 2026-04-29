@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -207,8 +207,7 @@ export default function OrderDetailPage() {
 
   const stageIndex = STAGE_STEPS.findIndex((s) => s.key === order?.status);
 
-  const queryClient = useQueryClient();
-  const refreshDetail = async () => { await queryClient.invalidateQueries({ queryKey: ['order-detail', orderNo] }); };
+  const refreshDetail = async () => { await loadDetail({ showLoading: false }); };
 
   // 4. Effects
   const loadDetail = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
