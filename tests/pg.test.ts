@@ -72,7 +72,7 @@ describe('PostgreSQL Integration Tests', () => {
 
     // 3. Read Multiple (dbAll)
     await dbRun('INSERT INTO settings (key, value) VALUES (?, ?)', ['language', 'zh-CN']);
-    const rows = await dbAll<{ key: string; value: string }>('SELECT * FROM settings ORDER BY key ASC');
+    const rows = await dbAll<{ key: string; value: string }[]>('SELECT * FROM settings ORDER BY key ASC');
     assert.strictEqual(rows.length, 2, 'Should return exactly 2 rows');
     assert.strictEqual(rows[0].key, 'language');
     assert.strictEqual(rows[1].key, 'theme');

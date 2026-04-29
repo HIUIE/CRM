@@ -65,7 +65,7 @@ describe('AuthGuard Component', () => {
 
   it('renders children when user is authenticated and no specific role is required', () => {
     mockUseAuth.mockReturnValue({ 
-      user: { id: 1, username: 'test', name: 'Test', role: 'user' }, 
+      user: { id: 1, username: 'test', name: 'Test', role: 'staff' }, 
       loading: false, login: vi.fn(), logout: vi.fn() 
     });
     
@@ -80,7 +80,7 @@ describe('AuthGuard Component', () => {
 
   it('renders fallback when user lacks required role', () => {
     mockUseAuth.mockReturnValue({ 
-      user: { id: 1, username: 'user', name: 'User', role: 'user' }, 
+      user: { id: 1, username: 'user', name: 'User', role: 'staff' }, 
       loading: false, login: vi.fn(), logout: vi.fn() 
     });
     
