@@ -879,16 +879,18 @@ export function LogisticsSection({
 // ==================== Tasks Section ====================
 
 export function TasksSection({
+  sectionRef,
   tasks,
   onAddTask,
   navigate,
 }: {
+  sectionRef: React.RefObject<HTMLDivElement | null>;
   tasks: Array<{ id: number; title: string; status: string; assignee_name: string; due_date: string; priority: string }>;
   onAddTask: () => void;
   navigate: (path: string) => void;
 }) {
   return (
-    <DocumentBoard title="关联协同任务" action={<LightActionButton onClick={onAddTask} className="!py-1.5 !px-3 !text-xs"><Plus size={12} className="mr-1" /> 指派任务</LightActionButton>}>
+    <DocumentBoard ref={sectionRef} title="关联协同任务" action={<LightActionButton onClick={onAddTask} className="!py-1.5 !px-3 !text-xs"><Plus size={12} className="mr-1" /> 指派任务</LightActionButton>}>
       {tasks.length > 0 ? (
         <div className="space-y-2">
           {tasks.map(t => (

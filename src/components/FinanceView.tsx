@@ -259,7 +259,7 @@ export default function FinanceView() {
                   {currentItems.length ? currentItems.map((r) => (
                     <tr key={r.id} onClick={() => {
                         if (r.order_display_id) {
-                          withTransition(() => navigate(`/orders/${r.order_display_id}`));
+                          withTransition(() => navigate(`/orders/${r.order_display_id}?section=finance`));
                         }
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                       <td className="px-4 py-4 text-left">

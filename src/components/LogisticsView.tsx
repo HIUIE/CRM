@@ -229,7 +229,7 @@ export default function LogisticsView() {
                     <tr
                       key={r.id}
                       onClick={() => {
-                        withTransition(() => navigate(`/orders/${r.order_display_id}`));
+                        withTransition(() => navigate(`/orders/${r.order_display_id}?section=logistics`));
                       }}
                       className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                     >

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/ui/Toast';
@@ -90,6 +90,7 @@ export default function OrderDetailPage() {
   const { user } = useAuth();
   const { orderNo } = useParams();
   const navigate = useNavigate();
+  const [detailSearchParams, setDetailSearchParams] = useSearchParams();
 
   // 1. Refs
   const sectionRefs: Record<SectionKey | 'packing', React.RefObject<HTMLDivElement | null>> = {
@@ -275,23 +276,61 @@ export default function OrderDetailPage() {
 
   // 5. Scroll / Drawer
   const scrollToSection = (section: string) => {
-    if (section === 'documents' || section === 'followups' || section === 'profit') {
-      const id = section === 'documents' ? 'documents-vault' : section === 'profit' ? 'profit-section' : 'followups-timeline';
+    const normalizedSection = section === 'tasks' ? 'todos' : section;
+    if (normalizedSection === 'documents' || normalizedSection === 'followups' || normalizedSection === 'profit') {
+      const id = normalizedSection === 'documents' ? 'documents-vault' : normalizedSection === 'profit' ? 'profit-section' : 'followups-timeline';
       const el = document.getElementById(id);
       if (el) {
         const top = el.getBoundingClientRect().top + window.pageYOffset - 24;
         window.scrollTo({ top, behavior: 'smooth' });
       }
-      if (section !== 'followups') setActiveSection(section as SectionKey);
+      if (normalizedSection !== 'followups') setActiveSection(normalizedSection as SectionKey);
       return;
     }
-    const ref = sectionRefs[section as keyof typeof sectionRefs];
+    const ref = sectionRefs[normalizedSection as keyof typeof sectionRefs];
     if (ref?.current) {
       const top = ref.current.getBoundingClientRect().top + window.pageYOffset - 24;
       window.scrollTo({ top, behavior: 'smooth' });
-      if (section !== 'packing') setActiveSection(section as SectionKey);
+      if (normalizedSection !== 'packing') setActiveSection(normalizedSection as SectionKey);
     }
   };
+
+  useEffect(() => {
+    const targetSection = detailSearchParams.get('section');
+    if (!targetSection || loading || !detail) return;
+
+    let attempts = 0;
+    let timer: number | undefined;
+    const scrollWhenReady = () => {
+      const normalizedSection = targetSection === 'tasks' ? 'todos' : targetSection;
+      const ref = sectionRefs[normalizedSection as keyof typeof sectionRefs];
+      const specialId = targetSection === 'documents'
+        ? 'documents-vault'
+        : targetSection === 'profit'
+          ? 'profit-section'
+          : targetSection === 'followups'
+            ? 'followups-timeline'
+            : '';
+
+      if (ref?.current || (specialId && document.getElementById(specialId))) {
+        scrollToSection(targetSection);
+        const next = new URLSearchParams(detailSearchParams);
+        next.delete('section');
+        setDetailSearchParams(next, { replace: true });
+        return;
+      }
+
+      if (attempts < 20) {
+        attempts += 1;
+        timer = window.setTimeout(scrollWhenReady, 80);
+      }
+    };
+
+    timer = window.setTimeout(scrollWhenReady, 80);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [detailSearchParams, detail, loading, setDetailSearchParams]);
 
   const closeDrawer = () => { setDrawer({ mode: 'closed' }); setDrawerError(''); setSaving(false); };
 
@@ -473,6 +512,7 @@ export default function OrderDetailPage() {
             />
 
             <TasksSection
+              sectionRef={sectionRefs.todos}
               tasks={tasks}
               onAddTask={() => setShowTaskDrawer(true)}
               navigate={navigate}
