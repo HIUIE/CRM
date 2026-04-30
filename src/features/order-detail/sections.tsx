@@ -309,9 +309,17 @@ export function ProfitSection({
   const [showDrawer, setShowDrawer] = useState(false);
 
   useEffect(() => {
-    if (!isAdmin || !orderNo) return;
+    let cancelled = false;
+    if (!isAdmin || !orderNo) {
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
     setLoading(true);
-    apiFetch<ProfitData>(`/api/orders/${orderNo}/profit`).then(setProfitData).catch(() => {}).finally(() => setLoading(false));
+    apiFetch<ProfitData>(`/api/orders/${encodeURIComponent(orderNo)}/profit`)
+      .then((data) => { if (!cancelled) setProfitData(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [isAdmin, orderNo]);
 
   if (!isAdmin) return null;

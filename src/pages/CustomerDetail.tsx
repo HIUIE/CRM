@@ -98,8 +98,8 @@ export default function CustomerDetailPage() {
 
   const { data, isLoading, error: queryError, refetch } = useQuery<CustomerDetailData>({
     queryKey: ['customer-detail', id],
-    queryFn: () => apiFetch<CustomerDetailData>(`/api/customers/${id}`),
-    enabled: !!id,
+    queryFn: () => apiFetch<CustomerDetailData>(`/api/customers/${encodeURIComponent(id!)}`),
+    enabled: Boolean(id),
   });
   const loading = isLoading;
   const error = queryError ? getErrorMessage(queryError, '读取客户画像失败') : '';

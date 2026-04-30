@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -221,30 +220,24 @@ export default function OrderDetailPage() {
   const loadDetail = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
     if (!orderNo) { setError('无效单号'); setLoading(false); return; }
     if (showLoading) setLoading(true);
+    setError('');
     try {
-      const detailData = await apiFetch<OrderDetailResponse>(`/api/orders/${orderNo}`);
+      const [detailData, partnerData] = await Promise.all([
+        apiFetch<OrderDetailResponse>(`/api/orders/${encodeURIComponent(orderNo)}`),
+        apiFetch<Partner[]>('/api/partners').catch(() => null),
+      ]);
       setDetail(detailData);
-      if (showLoading) setLoading(false);
+      if (partnerData) setPartners(partnerData);
     } catch (err) {
       setError(getErrorMessage(err, '读取详情失败'));
+    } finally {
       if (showLoading) setLoading(false);
-    }
-    try {
-      const partnerData = await apiFetch<Partner[]>('/api/partners');
-      setPartners(partnerData);
-    } catch (_err) {
-      // Ignore — partners fetch failure should not block the page
     }
   };
 
-  useQuery({
-    queryKey: ['order-detail', orderNo],
-    queryFn: async () => {
-      await loadDetail();
-      return null;
-    },
-    enabled: !!orderNo,
-  });
+  useEffect(() => {
+    void loadDetail();
+  }, [orderNo]);
 
   useEffect(() => {
     const handleScroll = () => {

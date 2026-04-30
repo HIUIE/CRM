@@ -32,7 +32,11 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
   };
 
   useEffect(() => {
-    if (isOpen) loadNotifications();
+    if (isOpen) {
+      void loadNotifications();
+    } else {
+      setLoading(false);
+    }
   }, [isOpen]);
 
   const markAllRead = async () => {

@@ -92,8 +92,8 @@ export default function PartnerDetailPage() {
 
   const { data, isLoading, error: queryError } = useQuery<PartnerDetail>({
     queryKey: ['partner-detail', id],
-    queryFn: () => apiFetch<PartnerDetail>(`/api/partners/${id}`),
-    enabled: !!id,
+    queryFn: () => apiFetch<PartnerDetail>(`/api/partners/${encodeURIComponent(id!)}`),
+    enabled: Boolean(id),
   });
   const loading = isLoading;
   const error = queryError ? getErrorMessage(queryError, '读取伙伴画像失败') : '';

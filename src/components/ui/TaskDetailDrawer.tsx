@@ -57,7 +57,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
     if (!taskId) return;
     setLoading(true);
     try {
-      const data = await apiFetch<TaskDetail>(`/api/tasks/${taskId}`);
+      const data = await apiFetch<TaskDetail>(`/api/tasks/${encodeURIComponent(taskId)}`);
       setTask(data);
     } catch (e) {
       setToast(getErrorMessage(e, '加载任务失败'));
@@ -67,8 +67,10 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
   };
 
   useEffect(() => {
-    if (taskId) loadTask();
-    else {
+    if (taskId) {
+      void loadTask();
+    } else {
+      setLoading(false);
       setTask(null);
       setCommentInput('');
       setNewFiles([]);

@@ -35,12 +35,13 @@ export default function AuditLogsPage() {
 
   const fetchLogs = async () => {
     setLoading(true);
+    setError('');
     try {
       const params = new URLSearchParams();
       if (userId) params.append('userId', userId);
       if (entityType) params.append('entityType', entityType);
       if (entityId) params.append('entityId', entityId);
-      
+
       const data = await apiFetch<AuditLog[]>(`/api/audit?${params.toString()}`);
       setLogs(Array.isArray(data) ? data : []);
     } catch (err) {

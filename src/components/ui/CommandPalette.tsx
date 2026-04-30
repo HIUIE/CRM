@@ -40,9 +40,11 @@ export function CommandPalette() {
   }, [isOpen]);
 
   useEffect(() => {
+    let cancelled = false;
     if (!query.trim()) {
       setResults([]);
-      return;
+      setLoading(false);
+      return () => { cancelled = true; };
     }
     const timer = setTimeout(async () => {
       setLoading(true);
@@ -51,20 +53,24 @@ export function CommandPalette() {
           apiFetch<OrderSummary[]>(`/api/orders?q=${encodeURIComponent(query)}`),
           apiFetch<CustomerListItem[]>(`/api/customers?q=${encodeURIComponent(query)}`)
         ]);
-        
+        if (cancelled) return;
+
         const combined: SearchResult[] = [
           ...orders.slice(0, 4).map(o => ({ type: 'order' as const, id: o.id, display_id: o.display_id, customer_name: o.customer_name })),
           ...customers.slice(0, 4).map(c => ({ type: 'customer' as const, id: c.id, display_id: c.display_id, name: c.name, country: c.country }))
         ];
-        
+
         setResults(combined);
       } catch (e) {
         console.error(e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   if (!isOpen) return null;
