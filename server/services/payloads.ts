@@ -135,7 +135,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
     return { error: '杂费必须大于或等于 0' };
   }
 
-  const customer = await dbGet<{ id: number }>(`SELECT id FROM customers WHERE id = ?`, [customerId]);
+  const customer = await dbGet<{ id: number }>(`SELECT id FROM customers WHERE id = ? AND deleted_at IS NULL`, [customerId]);
   if (!customer) {
     return { error: '客户不存在，请先创建客户档案' };
   }

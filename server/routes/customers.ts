@@ -43,7 +43,7 @@ export function createCustomersRouter() {
           u.name AS created_by_name,
           COUNT(o.id) AS order_count
         FROM customers c
-        LEFT JOIN orders o ON o.customer_id = c.id
+        LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL
         LEFT JOIN users u ON u.id = c.created_by
         ${whereSql}
         GROUP BY c.id
@@ -66,8 +66,11 @@ export function createCustomersRouter() {
         SELECT c.*, u.name AS created_by_name
         FROM customers c
         LEFT JOIN users u ON u.id = c.created_by
-        WHERE LOWER(c.display_id) = LOWER(?)
-        ${isNumeric ? 'OR c.id = ?' : ''}
+        WHERE c.deleted_at IS NULL
+          AND (
+            LOWER(c.display_id) = LOWER(?)
+            ${isNumeric ? 'OR c.id = ?' : ''}
+          )
       `, isNumeric ? [customerIdOrDisplay, Number(customerIdOrDisplay)] : [customerIdOrDisplay]);
 
       if (!customer) {
@@ -82,7 +85,7 @@ export function createCustomersRouter() {
             id, display_id, status, total_amount, product_summary, created_at,
             (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed') as paid_amount
           FROM orders
-          WHERE customer_id = ?
+          WHERE customer_id = ? AND deleted_at IS NULL
           ORDER BY created_at DESC
         `, [actualId]),
         dbAll(`
@@ -91,7 +94,7 @@ export function createCustomersRouter() {
             o.display_id as order_display_id, o.product_summary
           FROM finance_records f
           LEFT JOIN orders o ON o.id = f.order_id
-          WHERE o.customer_id = ?
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL
           ORDER BY f.created_at DESC
         `, [actualId]),
         dbAll(`
@@ -106,7 +109,7 @@ export function createCustomersRouter() {
           FROM order_follow_ups ofu
           JOIN orders o ON ofu.order_id = o.id
           LEFT JOIN users u ON ofu.created_by = u.id
-          WHERE o.customer_id = ?
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL
           ORDER BY created_at DESC
         `, [actualId, actualId]),
         dbAll(`
@@ -116,27 +119,27 @@ export function createCustomersRouter() {
             CASE WHEN f.type = 'receipt' THEN '+' ELSE '-' END || f.currency || ' ' || f.amount as value,
             CASE WHEN f.type = 'receipt' THEN 'text-emerald-500' ELSE 'text-red-500' END as valueColor
           FROM finance_records f JOIN orders o ON f.order_id = o.id
-          WHERE f.status = 'completed' AND o.customer_id = ?
+          WHERE f.status = 'completed' AND o.customer_id = ? AND o.deleted_at IS NULL
           UNION ALL
           SELECT 'logistics' as type, l.id, o.display_id as order_display_id, 
             '物流更新' as title, '货物已发出 · ' || l.carrier as desc, l.created_at,
             CASE WHEN l.status = 'arrived' THEN '已送达' WHEN l.status = 'shipped' THEN '运输中' ELSE '备货中' END as value,
             'text-slate-500' as valueColor
           FROM logistics_records l JOIN orders o ON l.order_id = o.id
-          WHERE o.customer_id = ?
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL
           UNION ALL
           SELECT 'customs' as type, cr.id, o.display_id as order_display_id, 
             '报关完成' as title, '报关单号 ' || cr.declaration_no as desc, cr.created_at,
             '' as value, '' as valueColor
           FROM customs_records cr JOIN orders o ON cr.order_id = o.id
-          WHERE o.customer_id = ?
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL
           UNION ALL
           SELECT 'order' as type, o.id, o.display_id as order_display_id, 
             '新建订单' as title, o.product_summary as desc, o.created_at,
             'USD ' || o.total_amount as value,
             'text-primary-navy dark:text-white' as valueColor
           FROM orders o
-          WHERE o.customer_id = ?
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL
           ORDER BY 6 DESC
           LIMIT 20
         `, [actualId, actualId, actualId, actualId]),
@@ -201,7 +204,7 @@ export function createCustomersRouter() {
     if (!content) return fail(res, 400, '请输入跟进内容');
 
     try {
-      const customer = await dbGet(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      const customer = await dbGet(`SELECT id FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)`, [customerId, customerId]);
       if (!customer) return fail(res, 404, '客户不存在');
 
       await dbRun(
@@ -228,7 +231,7 @@ export function createCustomersRouter() {
     }
 
     try {
-      const oldVal = await dbGet(`SELECT * FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      const oldVal = await dbGet(`SELECT * FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)`, [customerId, customerId]);
       if (!oldVal) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
 
       await dbRun(
@@ -259,10 +262,10 @@ export function createCustomersRouter() {
   router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
     const customerId = req.params.id;
     try {
-      const customer = await dbGet(`SELECT id FROM customers WHERE id = ? OR display_id = ?`, [customerId, customerId]);
+      const customer = await dbGet(`SELECT id FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)`, [customerId, customerId]);
       if (!customer) return fail(res, 404, '客户不存在');
 
-      const linkedOrders = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM orders WHERE customer_id = ?`, [customer.id]);
+      const linkedOrders = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM orders WHERE customer_id = ? AND deleted_at IS NULL`, [customer.id]);
       if ((linkedOrders?.count || 0) > 0) {
         return fail(res, 409, '该客户下仍有关联订单，不能删除', 'CUSTOMER_HAS_ORDERS');
       }

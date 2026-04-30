@@ -12,6 +12,17 @@ import { UPLOADS_DIR } from '../paths.js';
 import { bindAttachmentsToEntity, getAttachmentsByEntity } from '../services/attachments.js';
 import { readCustomsPayload } from '../services/payloads.js';
 
+const BLOCKED_MIME_TYPES = new Set([
+  'text/html',
+  'application/xhtml+xml',
+  'application/javascript',
+  'text/javascript',
+  'image/svg+xml',
+  'application/x-httpd-php',
+  'application/x-msdownload',
+  'application/x-executable',
+]);
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: async (_req, _file, callback) => {
@@ -27,6 +38,13 @@ const upload = multer({
       callback(null, `${Date.now()}-${randomUUID()}${extension}`);
     },
   }),
+  fileFilter: (_req, file, callback) => {
+    if (BLOCKED_MIME_TYPES.has(file.mimetype)) {
+      callback(new Error(`不允许上传此类型的文件: ${file.mimetype}`));
+      return;
+    }
+    callback(null, true);
+  },
   limits: { fileSize: 10 * 1024 * 1024, files: 6 },
 });
 
@@ -46,8 +64,9 @@ export function createCustomsRouter() {
             c.*,
             u.name AS created_by_name
           FROM customs_records c
+          JOIN orders o ON o.id = c.order_id
           LEFT JOIN users u ON u.id = c.created_by
-          WHERE c.order_id = ?
+          WHERE c.order_id = ? AND o.deleted_at IS NULL
           LIMIT 1
         `,
         [orderId],

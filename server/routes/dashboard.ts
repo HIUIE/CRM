@@ -15,6 +15,7 @@ export function createDashboardRouter() {
           COUNT(*) AS totalOrders,
           SUM(CASE WHEN status != 'completed' THEN 1 ELSE 0 END) AS activeOrders
         FROM orders
+        WHERE deleted_at IS NULL
       `);
 
       const financeStats = await dbGet<{
@@ -23,14 +24,21 @@ export function createDashboardRouter() {
         pendingCount: number;
       }>(`
         SELECT
-          SUM(CASE WHEN status = 'completed' AND type = 'receipt' AND currency = 'USD' THEN amount ELSE 0 END) as receiptUsd,
-          SUM(CASE WHEN status = 'pending' AND type = 'receipt' AND currency = 'USD' THEN amount ELSE 0 END) as pendingReceiptUsd,
-          SUM(CASE WHEN status = 'pending' AND type = 'receipt' THEN 1 ELSE 0 END) as pendingCount
-        FROM finance_records
+          SUM(CASE WHEN f.status = 'completed' AND f.type = 'receipt' AND f.currency = 'USD' THEN f.amount ELSE 0 END) as receiptUsd,
+          SUM(CASE WHEN f.status = 'pending' AND f.type = 'receipt' AND f.currency = 'USD' THEN f.amount ELSE 0 END) as pendingReceiptUsd,
+          SUM(CASE WHEN f.status = 'pending' AND f.type = 'receipt' THEN 1 ELSE 0 END) as pendingCount
+        FROM finance_records f
+        LEFT JOIN orders o ON o.id = f.order_id
+        WHERE f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)
       `);
 
       const activeLogistics = await dbGet<{ count: number }>(
-        `SELECT COUNT(*) AS count FROM logistics_records WHERE status != 'arrived'`,
+        `
+          SELECT COUNT(*) AS count
+          FROM logistics_records l
+          JOIN orders o ON o.id = l.order_id
+          WHERE l.status != 'arrived' AND l.deleted_at IS NULL AND o.deleted_at IS NULL
+        `,
       );
 
       const overduePayments = await dbAll<{
@@ -48,7 +56,7 @@ export function createDashboardRouter() {
         FROM finance_records f
         JOIN orders o ON f.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
-        WHERE f.type = 'receipt' AND f.status = 'pending'
+        WHERE f.type = 'receipt' AND f.status = 'pending' AND f.deleted_at IS NULL AND o.deleted_at IS NULL
         ORDER BY f.created_at ASC
         LIMIT 3
       `);
@@ -63,7 +71,7 @@ export function createDashboardRouter() {
         FROM orders o
         LEFT JOIN customers c ON o.customer_id = c.id
         LEFT JOIN customs_records cr ON cr.order_id = o.id
-        WHERE o.status IN ('customs', 'shipping') AND cr.id IS NULL
+        WHERE o.status IN ('customs', 'shipping') AND cr.id IS NULL AND o.deleted_at IS NULL
         LIMIT 2
       `);
 
@@ -77,7 +85,7 @@ export function createDashboardRouter() {
         FROM orders o
         LEFT JOIN customers c ON o.customer_id = c.id
         LEFT JOIN logistics_records lr ON lr.order_id = o.id
-        WHERE o.status IN ('shipping') AND lr.id IS NULL
+        WHERE o.status IN ('shipping') AND lr.id IS NULL AND o.deleted_at IS NULL
         LIMIT 2
       `);
 
@@ -131,24 +139,27 @@ export function createDashboardRouter() {
           CASE WHEN f.type = 'receipt' THEN '+' ELSE '-' END || f.currency || ' ' || f.amount as value,
           CASE WHEN f.type = 'receipt' THEN 'text-emerald-500' ELSE 'text-red-500' END as valueColor
         FROM finance_records f JOIN orders o ON f.order_id = o.id LEFT JOIN customers c ON o.customer_id = c.id
-        WHERE f.status = 'completed'
+        WHERE f.status = 'completed' AND f.deleted_at IS NULL AND o.deleted_at IS NULL
         UNION ALL
         SELECT 'logistics' as type, l.id, o.display_id, c.name as customer_name,
           '物流更新' as title, '货物已发出 · ' || l.carrier as desc, l.created_at,
           CASE WHEN l.status = 'arrived' THEN '已送达' WHEN l.status = 'shipped' THEN '运输中' ELSE '备货中' END as value,
           'text-slate-500' as valueColor
         FROM logistics_records l JOIN orders o ON l.order_id = o.id LEFT JOIN customers c ON o.customer_id = c.id
+        WHERE l.deleted_at IS NULL AND o.deleted_at IS NULL
         UNION ALL
         SELECT 'customs' as type, cr.id, o.display_id, c.name as customer_name,
           '报关完成' as title, '报关单号 ' || cr.declaration_no as desc, cr.created_at,
           '' as value, '' as valueColor
         FROM customs_records cr JOIN orders o ON cr.order_id = o.id LEFT JOIN customers c ON o.customer_id = c.id
+        WHERE o.deleted_at IS NULL
         UNION ALL
         SELECT 'order' as type, o.id, o.display_id, c.name as customer_name,
           '新建订单' as title, o.product_summary as desc, o.created_at,
           'USD ' || o.total_amount as value,
           'text-primary-navy dark:text-white' as valueColor
         FROM orders o LEFT JOIN customers c ON o.customer_id = c.id
+        WHERE o.deleted_at IS NULL
         ORDER BY 7 DESC
         LIMIT 8
       `);
@@ -159,7 +170,7 @@ export function createDashboardRouter() {
       }));
 
       const statusRows = await dbAll<{ status: string, count: number }[]>(`
-        SELECT status, COUNT(*) as count FROM orders GROUP BY status
+        SELECT status, COUNT(*) as count FROM orders WHERE deleted_at IS NULL GROUP BY status
       `);
 
       const totalOrders = overview?.totalOrders || 0;
@@ -202,15 +213,16 @@ export function createDashboardRouter() {
       // Monthly Profit Trends
       const profitTrends = await dbAll<{ month: string; revenue: number; cost: number; profit: number }[]>(`
         SELECT
-          ${SQL.date('created_at', '%Y-%m')} AS month,
-          SUM(CASE WHEN type = 'receipt' AND status = 'completed' THEN 
-            CASE WHEN currency = 'CNY' THEN amount / 7.2 ELSE amount END
+          ${SQL.date('f.created_at', '%Y-%m')} AS month,
+          SUM(CASE WHEN f.type = 'receipt' AND f.status = 'completed' THEN 
+            CASE WHEN f.currency = 'CNY' THEN f.amount / 7.2 ELSE f.amount END
           ELSE 0 END) AS revenue,
-          SUM(CASE WHEN type = 'payment' AND status = 'completed' THEN 
-            CASE WHEN currency = 'CNY' THEN amount / 7.2 ELSE amount END
+          SUM(CASE WHEN f.type = 'payment' AND f.status = 'completed' THEN 
+            CASE WHEN f.currency = 'CNY' THEN f.amount / 7.2 ELSE f.amount END
           ELSE 0 END) AS cost
-        FROM finance_records
-        WHERE created_at >= ${SQL.monthsAgo(6)} AND deleted_at IS NULL
+        FROM finance_records f
+        LEFT JOIN orders o ON o.id = f.order_id
+        WHERE f.created_at >= ${SQL.monthsAgo(6)} AND f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)
         GROUP BY month ORDER BY month ASC
       `);
 

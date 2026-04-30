@@ -2,7 +2,7 @@ import type { PartnerType } from '../domain.js';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
 
 export async function ensureOrderExists(orderId: number) {
-  const order = await dbGet<{ id: number }>(`SELECT id FROM orders WHERE id = ?`, [orderId]);
+  const order = await dbGet<{ id: number }>(`SELECT id FROM orders WHERE id = ? AND deleted_at IS NULL`, [orderId]);
   return Boolean(order);
 }
 

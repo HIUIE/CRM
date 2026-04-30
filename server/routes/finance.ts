@@ -15,7 +15,7 @@ export function createFinanceRouter() {
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
 
-    let whereSql = 'WHERE 1=1';
+    let whereSql = 'WHERE f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)';
     const params: unknown[] = [];
 
     if (q) {

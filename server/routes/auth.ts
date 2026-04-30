@@ -23,12 +23,13 @@ function checkLoginRateLimit(ip: string): boolean {
 }
 
 // Periodic cleanup of stale entries
-setInterval(() => {
+const loginRateLimitCleanup = setInterval(() => {
   const now = Date.now();
   for (const [ip, entry] of loginAttempts) {
     if (now > entry.resetAt) loginAttempts.delete(ip);
   }
 }, 60 * 1000);
+loginRateLimitCleanup.unref?.();
 
 export function createAuthRouter() {
   const router = Router();

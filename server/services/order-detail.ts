@@ -25,6 +25,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     LEFT JOIN customers c ON c.id = o.customer_id
     LEFT JOIN users cu ON cu.id = o.created_by
     WHERE ${isId ? 'o.id' : 'LOWER(o.display_id)'} = ?
+      AND o.deleted_at IS NULL
   `;
 
   const order = await dbGet<Record<string, unknown>>(sql, [isId ? idOrNo : String(idOrNo).toLowerCase()]);

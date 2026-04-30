@@ -1,6 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert';
 import pkg from 'pg';
+import type { AddressInfo } from 'node:net';
 
 const { Pool } = pkg;
 
@@ -31,6 +32,7 @@ describe('PostgreSQL Integration Tests', () => {
 
     // 2. Override process.env so backend imports use the test database
     process.env.PG_DATABASE = 'smarttrade_crm_test';
+    process.env.JWT_SECRET = 'test-secret-for-integration-tests';
     // Mute migration logs during tests
     process.env.NODE_ENV = 'test';
 
@@ -140,5 +142,72 @@ describe('PostgreSQL Integration Tests', () => {
     // node-pg parses JSON/JSONB natively
     const parsed = typeof profitRow.data === 'string' ? JSON.parse(profitRow.data) : profitRow.data;
     assert.strictEqual(parsed.invoiceAmount, 1000, 'JSONB data should be accurately preserved');
+  });
+
+  test('Soft-deleted orders are hidden from customer 360 and order detail', async () => {
+    const { dbRun, dbGet } = await import('../server/lib/db.js');
+    const { buildOrderDetail } = await import('../server/services/order-detail.js');
+
+    await dbRun('INSERT INTO customers (display_id, name, country) VALUES (?, ?, ?)', ['C-SOFT-001', 'Soft Delete Customer', 'CN']);
+    const customer = await dbGet<{ id: number }>('SELECT id FROM customers WHERE display_id = ?', ['C-SOFT-001']);
+    assert.ok(customer);
+
+    await dbRun(
+      'INSERT INTO orders (display_id, customer_id, status, total_amount, product_summary, deleted_at) VALUES (?, ?, ?, ?, ?, NOW())',
+      ['ORD-SOFT-001', customer.id, 'draft', 100, 'Hidden product'],
+    );
+
+    const orderDetail = await buildOrderDetail('ORD-SOFT-001');
+    assert.strictEqual(orderDetail, null, 'Soft-deleted order detail should not be readable');
+
+    const activeOrderCount = await dbGet<{ count: number }>(
+      'SELECT COUNT(*) AS count FROM orders WHERE customer_id = ? AND deleted_at IS NULL',
+      [customer.id],
+    );
+    assert.strictEqual(Number(activeOrderCount?.count || 0), 0, 'Soft-deleted orders should not block customer deletion');
+  });
+
+  test('Dashboard endpoint excludes soft-deleted orders without SQL errors', async () => {
+    const { dbRun, dbGet } = await import('../server/lib/db.js');
+    const bcrypt = await import('bcryptjs');
+    const { createApp } = await import('../server/app.js');
+
+    const passwordHash = await bcrypt.hash('dashboard-pass', 10);
+    await dbRun(
+      'INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, ?)',
+      ['dashboard-admin', passwordHash, 'admin', 'Dashboard Admin', 1],
+    );
+    await dbRun('INSERT INTO customers (display_id, name, country) VALUES (?, ?, ?)', ['C-DASH-001', 'Dashboard Customer', 'CN']);
+    const customer = await dbGet<{ id: number }>('SELECT id FROM customers WHERE display_id = ?', ['C-DASH-001']);
+    assert.ok(customer);
+    await dbRun(
+      'INSERT INTO orders (display_id, customer_id, status, total_amount, product_summary, deleted_at) VALUES (?, ?, ?, ?, ?, NOW())',
+      ['ORD-DASH-DELETED', customer.id, 'shipping', 200, 'Deleted dashboard product'],
+    );
+    const activeOrderCount = await dbGet<{ count: number }>('SELECT COUNT(*) AS count FROM orders WHERE deleted_at IS NULL');
+
+    const app = await createApp();
+    const server = app.listen(0);
+    try {
+      const port = (server.address() as AddressInfo).port;
+      const loginResponse = await fetch(`http://127.0.0.1:${port}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'dashboard-admin', password: 'dashboard-pass' }),
+      });
+      assert.strictEqual(loginResponse.status, 200);
+      const cookie = loginResponse.headers.get('set-cookie')?.match(/token=[^;]+/)?.[0];
+      assert.ok(cookie, 'Login should set auth cookie');
+
+      const dashboardResponse = await fetch(`http://127.0.0.1:${port}/api/dashboard`, {
+        headers: { Cookie: cookie },
+      });
+      assert.strictEqual(dashboardResponse.status, 200);
+      const dashboard = await dashboardResponse.json() as { overview: { totalOrders: number }; activities: Array<{ order_display_id?: string }> };
+      assert.strictEqual(Number(dashboard.overview.totalOrders), Number(activeOrderCount?.count || 0));
+      assert.ok(!dashboard.activities.some((item) => item.order_display_id === 'ORD-DASH-DELETED'));
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
   });
 });
