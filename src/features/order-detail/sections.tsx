@@ -137,7 +137,7 @@ export function ItemsSection({
   miscAmount?: number;
 }) {
   return (
-    <WorkSection ref={sectionRef} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed} onToggle={onToggle} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!text-xs !px-3"><Plus size={12} className="mr-1" /> 编辑清单</LightActionButton> : null}>
+    <WorkSection ref={sectionRef} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed} onToggle={onToggle} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 编辑清单</LightActionButton> : null}>
       {items.length ? (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
           <table className="min-w-full text-left text-xs font-medium">
@@ -206,8 +206,8 @@ export function DocumentsVaultSection({
 }) {
   return (
     <DocumentBoard title="核心单据凭证库" id="documents-vault" action={
-      <label className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold transition-all cursor-pointer ${uploadingDoc ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white dark:bg-navy-800 text-slate-900 dark:text-white border-slate-200 dark:border-navy-600 hover:bg-slate-50 dark:hover:bg-navy-700 shadow-sm'}`}>
-        {uploadingDoc ? '上传中...' : <><Upload size={14} className="mr-1" /> 上传凭证</>}
+      <label className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all ${uploadingDoc ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white dark:bg-navy-800 text-slate-900 dark:text-white border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700 hover:border-slate-300 dark:hover:border-navy-600 shadow-sm cursor-pointer active:scale-95'}`}>
+        {uploadingDoc ? '上传中...' : <><Upload size={14} className="mr-1 opacity-70" /> 上传凭证</>}
         {!uploadingDoc && <input type="file" multiple className="hidden" onChange={e => e.target.files && onUploadDocument(e.target.files)} />}
       </label>
     }>
@@ -273,7 +273,7 @@ export function FinanceSection({
           <FilterPill active={financeFilter==='receipt'} onClick={()=>onFilterChange('receipt')}>收款</FilterPill>
           <FilterPill active={financeFilter==='payment'} onClick={()=>onFilterChange('payment')}>付款</FilterPill>
         </div>
-        <LightActionButton onClick={onAdd} className="!py-1.5 !px-3 !text-xs"><Plus size={12} className="mr-1" /> 录入收支</LightActionButton>
+        <LightActionButton onClick={onAdd} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 录入收支</LightActionButton>
       </div>
     ) : null}>
       {financeRecords.length ? (
@@ -377,10 +377,10 @@ export function ProfitSection({
     <>
       <DocumentBoard title="外贸利润核算" id="profit-section" action={
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowDrawer(true)} className="btn-primary text-[10px] !px-3 !py-1.5"><Edit3 size={12} /> 编辑核算明细</button>
-          <button onClick={() => setRevealed(!revealed)} className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest whitespace-nowrap">
-            {revealed ? <><EyeOff size={13} /> 隐藏</> : <><Eye size={13} /> 揭示</>}
-          </button>
+          <LightActionButton onClick={() => setShowDrawer(true)} className="!py-1.5 !px-3 !text-xs"><Edit3 size={14} className="mr-1 opacity-70" /> 编辑核算明细</LightActionButton>
+          <LightActionButton onClick={() => setRevealed(!revealed)} className="!py-1.5 !px-3 !text-xs">
+            {revealed ? <><EyeOff size={14} className="mr-1 opacity-70" /> 隐藏</> : <><Eye size={14} className="mr-1 opacity-70" /> 揭示</>}
+          </LightActionButton>
         </div>
       }>
         <div className="grid gap-8 lg:grid-cols-2">
@@ -724,7 +724,7 @@ export function ProductionSection({
   onAddProduction: () => void;
 }) {
   return (
-    <DocumentBoard ref={sectionRef} title="生产信息" action={productionPlan ? <LightActionButton onClick={onEditProduction} className="!py-1.5 !px-3 !text-xs"><Plus size={12} className="mr-1" /> 更新排产</LightActionButton> : null}>
+    <DocumentBoard ref={sectionRef} title="生产信息" action={productionPlan ? <LightActionButton onClick={onEditProduction} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 更新排产</LightActionButton> : null}>
       {productionPlan ? (
         <ProductionDashboard plan={productionPlan} onEditLink={onEditProduction} onUpdateInspection={onUpdateInspection} onPreview={onPreview} />
       ) : (
@@ -935,7 +935,7 @@ export function TasksSection({
   navigate: (path: string) => void;
 }) {
   return (
-    <DocumentBoard ref={sectionRef} title="关联协同任务" action={<LightActionButton onClick={onAddTask} className="!py-1.5 !px-3 !text-xs"><Plus size={12} className="mr-1" /> 指派任务</LightActionButton>}>
+    <DocumentBoard ref={sectionRef} title="关联协同任务" action={<LightActionButton onClick={onAddTask} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 指派任务</LightActionButton>}>
       {tasks.length > 0 ? (
         <div className="space-y-2">
           {tasks.map(t => (

@@ -61,7 +61,7 @@ export const LightActionButton = ({ children, onClick, className = '' }: { child
   <button
     type="button"
     onClick={onClick}
-    className={`btn-secondary text-xs px-4 py-2 ${className}`}
+    className={`inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-4 py-2 text-xs font-bold text-slate-900 dark:text-white shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-navy-700 hover:border-slate-300 dark:hover:border-navy-600 active:scale-95 ${className}`}
   >
     {children}
   </button>
