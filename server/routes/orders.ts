@@ -313,6 +313,9 @@ export function createOrdersRouter() {
 
   router.get('/:id/profit', async (req, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: '无效的订单编号' });
+    }
     try {
       const row = await dbGet<{ data: string }>(`SELECT data FROM order_profits WHERE order_id = ?`, [orderId]);
       

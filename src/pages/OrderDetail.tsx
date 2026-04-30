@@ -217,12 +217,16 @@ export default function OrderDetailPage() {
     try {
       const detailData = await apiFetch<OrderDetailResponse>(`/api/orders/${orderNo}`);
       setDetail(detailData);
-      const partnerData = await apiFetch<Partner[]>('/api/partners');
-      setPartners(partnerData);
+      if (showLoading) setLoading(false);
     } catch (err) {
       setError(getErrorMessage(err, '读取详情失败'));
-    } finally {
       if (showLoading) setLoading(false);
+    }
+    try {
+      const partnerData = await apiFetch<Partner[]>('/api/partners');
+      setPartners(partnerData);
+    } catch (_err) {
+      // Ignore — partners fetch failure should not block the page
     }
   };
 

@@ -118,7 +118,7 @@ export async function createApp() {
   } else {
     const distPath = path.join(PROJECT_ROOT, 'dist');
     app.use(express.static(distPath));
-    app.use('*', async (_req, res) => {
+    app.use(async (_req, res) => {
       try {
         const htmlPath = path.join(distPath, 'index.html');
         let html = await fs.readFile(htmlPath, 'utf-8');
