@@ -77,7 +77,7 @@ export function Combobox({ value, onChange, onSearch, placeholder = '请选择..
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative w-full min-w-0 ${className}`}>
       <div 
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`flex items-center justify-between w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm transition-all cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary-navy dark:hover:border-tertiary-sage'} ${isOpen ? 'ring-2 ring-primary-navy/10 dark:ring-tertiary-sage/10 border-primary-navy dark:border-tertiary-sage' : ''}`}
@@ -89,7 +89,7 @@ export function Combobox({ value, onChange, onSearch, placeholder = '请选择..
       </div>
 
       {isOpen && (
-        <div className="absolute z-[100] mt-2 w-full rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute z-[100] mt-2 w-full min-w-full rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="p-2 border-b border-slate-100 dark:border-navy-800">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />

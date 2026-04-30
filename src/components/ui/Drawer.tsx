@@ -12,7 +12,7 @@ interface DrawerProps {
   width?: string;
 }
 
-export function Drawer({ isOpen, onClose, title, children, footer, isDirty = false, width = 'max-w-md' }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, children, footer, isDirty = false, width = 'max-w-[760px]' }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -70,6 +70,7 @@ export type OrderSummary = {
 
 export type OrderOption = {
   id: number;
+  customer_id?: number;
   display_id: string;
   customer_name: string;
   customer_country?: string;

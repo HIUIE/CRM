@@ -62,7 +62,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = 'æ
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative w-full min-w-0 ${className}`}>
       {/* Trigger */}
       <button
         type="button"
