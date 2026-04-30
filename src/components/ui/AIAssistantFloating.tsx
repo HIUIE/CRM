@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, X, Sparkles, Paperclip, Image as ImageIcon, Loader2, CheckCircle2, Zap, Database, ShieldCheck } from 'lucide-react';
-import { apiFetch, apiUpload, getErrorMessage } from '../../lib/api';
+import { Bot, Send, X, Sparkles, Paperclip, Loader2, Zap, Database, ShieldCheck } from 'lucide-react';
+import { apiFetch, getErrorMessage } from '../../lib/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -8,6 +8,18 @@ interface Message {
   isAction?: boolean;
   images?: string[];
 }
+
+type PendingAction = {
+  tool: string;
+  params: Record<string, string>;
+};
+
+type AiChatResponse = {
+  content: string;
+  requiresConfirmation?: boolean;
+  pendingAction?: PendingAction;
+  action?: { tool: string; result: { message: string } };
+};
 
 const STORAGE_KEY = 'smarttrade_ai_float_history';
 
@@ -28,6 +40,7 @@ export default function AIAssistantFloating() {
   const [loading, setLoading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -54,17 +67,44 @@ export default function AIAssistantFloating() {
     setLoading(true);
 
     try {
-      const response = await apiFetch<{ content: string; action?: { tool: string; result: { message: string } } }>('/api/ai/chat', {
+      const response = await apiFetch<AiChatResponse>('/api/ai/chat', {
         method: 'POST',
         body: JSON.stringify({ message: msg }),
       });
       let content = response.content;
       let isAction = false;
       if (response.action) {
-        content = `✅ ${response.action.result.message}`;
+        content = `已执行：${response.action.result.message}`;
         isAction = true;
       }
+      if (response.requiresConfirmation && response.pendingAction) {
+        setPendingAction(response.pendingAction);
+      } else {
+        setPendingAction(null);
+      }
       setMessages(prev => [...prev, { role: 'assistant', content, isAction }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `诊断反馈：${getErrorMessage(err)}` }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction || loading) return;
+    setMessages(prev => [...prev, { role: 'user', content: '确认执行' }]);
+    setLoading(true);
+    try {
+      const response = await apiFetch<AiChatResponse>('/api/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({ pendingAction, confirmAction: true }),
+      });
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response.action ? `已执行：${response.action.result.message}` : response.content,
+        isAction: Boolean(response.action),
+      }]);
+      setPendingAction(null);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: `诊断反馈：${getErrorMessage(err)}` }]);
     } finally {
@@ -174,6 +214,15 @@ export default function AIAssistantFloating() {
                   <button onClick={() => setUploadedImages(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-all">✕</button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {pendingAction && (
+            <div className="shrink-0 border-t border-amber-100 bg-amber-50 px-4 py-3 dark:border-amber-900/30 dark:bg-amber-900/10">
+              <div className="mb-2 truncate text-[11px] font-bold text-amber-800 dark:text-amber-300">待确认操作：{pendingAction.tool}</div>
+              <button onClick={confirmPendingAction} disabled={loading} className="w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-amber-800 disabled:opacity-50">
+                确认执行
+              </button>
             </div>
           )}
 

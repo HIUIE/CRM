@@ -53,14 +53,14 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[400] flex justify-end">
+    <div className="fixed inset-0 z-[400] flex h-dvh justify-end overflow-hidden">
       <div 
         className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
         onClick={handleOverlayClick}
       />
       <div 
         ref={drawerRef}
-        className={`relative z-10 w-full ${width} h-full bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer`}
+        className={`relative z-10 w-full ${width} h-dvh max-h-dvh min-h-0 overflow-hidden bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 shrink-0">
           <h2 className="text-[15px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">{title}</h2>
@@ -71,7 +71,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
             <X size={18} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar relative">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar relative">
           {children}
         </div>
         {footer && (

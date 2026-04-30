@@ -512,39 +512,47 @@ export default function OrderDetailPage() {
 
       {/* Drawer */}
       {drawer.mode !== 'closed' && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[150] flex h-dvh justify-end overflow-hidden">
-          <button onClick={closeDrawer} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm transition-all" />
+        <div className="fixed inset-0 z-[420] flex h-dvh justify-end overflow-hidden">
+          <button type="button" onClick={closeDrawer} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm transition-all" />
           <div className="relative z-10 h-dvh max-h-dvh w-full max-w-[750px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex min-h-0 flex-col animate-in slide-in-from-right duration-500">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-10 py-8 bg-slate-50 dark:bg-navy-950/50">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-6 py-5 sm:px-10 sm:py-8 bg-slate-50 dark:bg-navy-950/50">
               <div className="group cursor-default">
                 <h3 className="text-xl font-bold text-primary-navy dark:text-white tracking-tight uppercase leading-none">{currentDrawerTitle}</h3>
               </div>
-              <button onClick={closeDrawer} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={26} /></button>
+              <button type="button" onClick={closeDrawer} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={26} /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="min-h-0 flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-white dark:bg-navy-900">
-              {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner uppercase "><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
-              <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-widest uppercase">正在载入组件...</div>}>
-                {drawer.mode === 'order' ? (
-                  <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} />
-                ) : drawer.mode === 'production-log' ? (
-                  <ProductionLogForm productionLogForm={productionLogForm} setProductionLogForm={setProductionLogForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-                ) : drawer.mode === 'customs' ? (
-                  <CustomsForm customsForm={customsForm} setCustomsForm={setCustomsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-                ) : drawer.mode === 'packing' ? (
-                  <PackingForm packingForm={packingForm} setPackingForm={setPackingForm} onUploadPhoto={(idx, file) => handleUploadPackingPhoto(idx, file, { packingForm, setPackingForm, order, customer, setSaving, setDrawerError, setIsUploading, setUploadProgress })} />
-                ) : drawer.mode === 'logistics' ? (
-                  <LogisticsForm logisticsForm={logisticsForm} setLogisticsForm={setLogisticsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-                ) : drawer.mode === 'finance' ? (
-                  <FinanceForm financeForm={financeForm} setFinanceForm={setFinanceForm} isUploading={isUploading} uploadProgress={uploadProgress} />
-                ) : drawer.mode === 'production' ? (
-                  <ProductionForm productionForm={productionForm} setProductionForm={setProductionForm} productionPartners={productionPartners} isUploading={isUploading} uploadProgress={uploadProgress} />
+            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="flex min-h-0 flex-1 flex-col bg-white dark:bg-navy-900">
+              <div className="min-h-0 flex-1 overflow-y-auto p-6 sm:p-10 space-y-10 custom-scrollbar">
+                {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner uppercase "><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
+                <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-widest uppercase">正在载入组件...</div>}>
+                  {drawer.mode === 'order' ? (
+                    <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} />
+                  ) : drawer.mode === 'production-log' ? (
+                    <ProductionLogForm productionLogForm={productionLogForm} setProductionLogForm={setProductionLogForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                  ) : drawer.mode === 'customs' ? (
+                    <CustomsForm customsForm={customsForm} setCustomsForm={setCustomsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                  ) : drawer.mode === 'packing' ? (
+                    <PackingForm packingForm={packingForm} setPackingForm={setPackingForm} onUploadPhoto={(idx, file) => handleUploadPackingPhoto(idx, file, { packingForm, setPackingForm, order, customer, setSaving, setDrawerError, setIsUploading, setUploadProgress })} />
+                  ) : drawer.mode === 'logistics' ? (
+                    <LogisticsForm logisticsForm={logisticsForm} setLogisticsForm={setLogisticsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                  ) : drawer.mode === 'finance' ? (
+                    <FinanceForm financeForm={financeForm} setFinanceForm={setFinanceForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                  ) : drawer.mode === 'production' ? (
+                    <ProductionForm productionForm={productionForm} setProductionForm={setProductionForm} productionPartners={productionPartners} isUploading={isUploading} uploadProgress={uploadProgress} />
+                  ) : (
+                    <AIAnalysisContent analyzing={analyzing} aiResult={aiResult} />
+                  )}
+                </Suspense>
+              </div>
+              <div className="shrink-0 flex gap-4 sm:gap-6 bg-white/95 dark:bg-navy-900/95 backdrop-blur-2xl px-6 py-5 sm:px-10 sm:py-8 border-t border-slate-100 dark:border-navy-800">
+                {drawer.mode === 'ai-analysis' ? (
+                  <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-4 text-xs font-extrabold uppercase tracking-[0.35em]">关闭</button>
                 ) : (
-                  <AIAnalysisContent analyzing={analyzing} aiResult={aiResult} />
+                  <>
+                    <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-4 text-xs font-extrabold uppercase tracking-[0.35em]">放弃修改</button>
+                    <button type="submit" disabled={saving} className="btn-primary flex-[3] py-4 text-sm font-extrabold uppercase tracking-[0.35em]">{saving ? '同步中...' : '确认并同步数据'}</button>
+                  </>
                 )}
-              </Suspense>
-              <div className="flex gap-6 pt-16 sticky bottom-0 bg-white/95 dark:bg-navy-900/95 backdrop-blur-2xl pb-12 z-[40] border-t border-slate-100 dark:border-navy-800">
-                <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-5 text-xs font-extrabold uppercase tracking-[0.5em]">放弃修改</button>
-                <button type="submit" disabled={saving} className="btn-primary flex-[3] py-5 text-base font-extrabold uppercase tracking-[0.5em]">{saving ? '同步同步中...' : '确认并同步数据'}</button>
               </div>
             </form>
           </div>

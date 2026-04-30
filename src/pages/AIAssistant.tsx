@@ -7,6 +7,18 @@ interface Message {
   content: string;
 }
 
+type PendingAction = {
+  tool: string;
+  params: Record<string, string>;
+};
+
+type AiChatResponse = {
+  content: string;
+  requiresConfirmation?: boolean;
+  pendingAction?: PendingAction;
+  action?: { tool: string; result: { message: string } };
+};
+
 const STORAGE_KEY = 'smarttrade_ai_chat_history';
 
 export default function AIAssistantPage() {
@@ -27,6 +39,7 @@ export default function AIAssistantPage() {
   
   const [input, setFormInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   // 2. 每当消息列表更新时，自动同步到本地存储
   useEffect(() => {
@@ -51,18 +64,41 @@ export default function AIAssistantPage() {
     setLoading(true);
 
     try {
-      const response = await apiFetch<{ content: string; action?: { tool: string; result: { message: string } } }>('/api/ai/chat', {
+      const response = await apiFetch<AiChatResponse>('/api/ai/chat', {
         method: 'POST',
         body: JSON.stringify({ message: input })
       });
       let msg = response.content;
       if (response.action) {
-        msg = `✅ ${response.action.result.message}`;
+        msg = `已执行：${response.action.result.message}`;
+      }
+      if (response.requiresConfirmation && response.pendingAction) {
+        setPendingAction(response.pendingAction);
+      } else {
+        setPendingAction(null);
       }
       setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
     } catch (err) {
       const detailedError = getErrorMessage(err);
       setMessages(prev => [...prev, { role: 'assistant', content: `诊断反馈：${detailedError}` }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction || loading) return;
+    setLoading(true);
+    setMessages(prev => [...prev, { role: 'user', content: '确认执行' }]);
+    try {
+      const response = await apiFetch<AiChatResponse>('/api/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({ pendingAction, confirmAction: true }),
+      });
+      setMessages(prev => [...prev, { role: 'assistant', content: response.action ? `已执行：${response.action.result.message}` : response.content }]);
+      setPendingAction(null);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `诊断反馈：${getErrorMessage(err)}` }]);
     } finally {
       setLoading(false);
     }
@@ -135,6 +171,14 @@ export default function AIAssistantPage() {
         </div>
 
         <form onSubmit={sendMessage} className="border-t border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 p-4 relative z-10">
+          {pendingAction && (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+              <span className="min-w-0 truncate">待确认操作：{pendingAction.tool}</span>
+              <button type="button" onClick={confirmPendingAction} disabled={loading} className="shrink-0 rounded-md bg-amber-700 px-3 py-1.5 text-white disabled:opacity-50">
+                确认执行
+              </button>
+            </div>
+          )}
           <div className="relative flex items-end gap-3 max-w-4xl mx-auto">
             <textarea
               value={input}

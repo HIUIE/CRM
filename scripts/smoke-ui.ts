@@ -109,9 +109,20 @@ async function assertSpaRoute(pathname: string, jar: CookieJar) {
   }
 }
 
+async function getSmokeOrderPath(jar: CookieJar) {
+  const response = await request('/api/orders', jar);
+  const orders = await response.json() as Array<{ display_id?: string; id?: number }>;
+  const order = orders.find((item) => item.display_id || item.id);
+  if (!order) {
+    throw new Error('Smoke seed did not create any orders');
+  }
+  return `/orders/${encodeURIComponent(String(order.display_id || order.id))}`;
+}
+
 async function runHttpSmoke() {
   const admin = await login('root', rootPassword);
   await request('/api/auth/me', admin);
+  const orderPath = await getSmokeOrderPath(admin);
 
   for (const route of [
     '/',
@@ -119,7 +130,7 @@ async function runHttpSmoke() {
     '/customers',
     '/partners',
     '/orders',
-    '/orders/CQBX-2026-000003',
+    orderPath,
     '/finance',
     '/logistics',
     '/ai',
@@ -135,7 +146,7 @@ async function runHttpSmoke() {
     '/api/customers',
     '/api/partners',
     '/api/orders',
-    '/api/orders/CQBX-2026-000003',
+    `/api${orderPath}`,
     '/api/finance',
     '/api/logistics',
     '/api/settings/ai',
@@ -174,7 +185,8 @@ async function maybeRunBrowserSmoke() {
     await page.waitForURL(`${baseUrl}/dashboard`, { timeout: 10000 }).catch(async () => {
       await page.waitForLoadState('networkidle');
     });
-    for (const route of ['/dashboard', '/customers', '/partners', '/orders', '/orders/CQBX-2026-000003', '/finance', '/logistics', '/ai', '/settings', '/help']) {
+    const orderPath = await getSmokeOrderPath({ cookie: await page.context().cookies().then((cookies: any[]) => cookies.map((c) => `${c.name}=${c.value}`).join('; ')) });
+    for (const route of ['/dashboard', '/customers', '/partners', '/orders', orderPath, '/finance', '/logistics', '/ai', '/settings', '/help']) {
       await page.goto(`${baseUrl}${route}`, { waitUntil: 'networkidle' });
       const rootVisible = await page.locator('#root').isVisible();
       if (!rootVisible) {
@@ -208,8 +220,10 @@ async function main() {
     HOST: '127.0.0.1',
     PG_HOST: process.env.PG_HOST === 'localhost' || !process.env.PG_HOST ? '127.0.0.1' : process.env.PG_HOST,
     UPLOADS_DIR: path.join(tempDir, 'uploads'),
-    JWT_SECRET: 'smoke-jwt-secret',
+    JWT_SECRET: 'smoke-ui-jwt-secret-for-production-checks-2026',
     INITIAL_ADMIN_PASSWORD: rootPassword,
+    COOKIE_SECURE: 'false',
+    ALLOW_INSECURE_COOKIES: 'true',
   };
 
   let server: ReturnType<typeof startServer> | null = null;

@@ -1,26 +1,27 @@
 import { Router } from 'express';
-import { buildOrderAnalysisPrompt, buildOrderParsingPrompt, resolveAiProvider, runGeminiModel, runOpenAiCompatibleModel, sanitizeOrderData } from '../services/ai.js';
-import { AI_TOOLS, AI_TOOLS_SYSTEM_PROMPT } from '../services/ai-tools.js';
+import { buildOrderAnalysisPrompt, buildOrderParsingPrompt, resolveAiProvider, resolveAiProviderApiKey, runGeminiModel, runOpenAiCompatibleModel, sanitizeOrderData } from '../services/ai.js';
+import { AI_TOOLS, AI_TOOLS_SYSTEM_PROMPT, type AiToolCall } from '../services/ai-tools.js';
 import { buildOrderDetail } from '../services/order-detail.js';
 import { getSettingValue } from '../services/settings.js';
 import { readString } from '../lib/values.js';
 import { fail, handleRouteError } from '../lib/http.js';
+import type { AuthedRequest } from '../lib/auth.js';
 
 async function resolveModel() {
   const selectedModel = (await getSettingValue('current_ai_model', 'deepseek-v4-flash')).trim();
   const provider = resolveAiProvider(selectedModel);
-  const apiKey = (await getSettingValue('ai_api_key')) || process.env.AI_API_KEY;
+  const apiKey = resolveAiProviderApiKey(provider, await getSettingValue('ai_api_key'));
   const configuredBaseUrl = readString(await getSettingValue('ai_base_url'));
   let baseUrl = configuredBaseUrl;
   if (!baseUrl) {
     if (provider === 'deepseek') baseUrl = 'https://api.deepseek.com';
     else if (provider === 'openai-compatible') baseUrl = 'https://api.openai.com';
   }
-  if (provider !== 'gemini' && !apiKey) throw new Error('AI_API_KEY_MISSING');
+  if (!apiKey) throw new Error('AI_API_KEY_MISSING');
   return { selectedModel, provider, apiKey: apiKey || '', baseUrl };
 }
 
-function findToolCall(text: string): { tool: string; params: Record<string, string> } | null {
+function findToolCall(text: string): AiToolCall | null {
   const match = text.match(/\[ACTION:\s*(\w+)\s*(.*?)\]/s);
   if (!match) return null;
   const tool = match[1];
@@ -35,21 +36,69 @@ function findToolCall(text: string): { tool: string; params: Record<string, stri
   return AI_TOOLS[tool] ? { tool, params } : null;
 }
 
+function readPendingAction(raw: unknown): AiToolCall | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const candidate = raw as { tool?: unknown; params?: unknown };
+  const tool = readString(candidate.tool);
+  if (!tool || !AI_TOOLS[tool]) return null;
+  const params: Record<string, string> = {};
+  if (candidate.params && typeof candidate.params === 'object') {
+    for (const [key, value] of Object.entries(candidate.params as Record<string, unknown>)) {
+      params[key] = readString(value);
+    }
+  }
+  return { tool, params };
+}
+
+function describeToolCall(toolCall: AiToolCall) {
+  const tool = AI_TOOLS[toolCall.tool];
+  const params = Object.entries(toolCall.params)
+    .filter(([, value]) => value)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('，');
+  return `${tool.description}${params ? `（${params}）` : ''}`;
+}
+
+async function executeToolCall(req: AuthedRequest, toolCall: AiToolCall) {
+  const tool = AI_TOOLS[toolCall.tool];
+  if (!tool) {
+    throw new Error('AI_TOOL_NOT_FOUND');
+  }
+  if (tool.requiredRole && req.user?.role !== tool.requiredRole) {
+    throw new Error('AI_TOOL_FORBIDDEN');
+  }
+  return tool.handler(toolCall.params, { userId: req.user!.id, role: req.user!.role });
+}
+
 export function createAiRouter() {
   const router = Router();
 
   // 1. 聊天对话路由 (由 AI 向导页面使用) — 支持工具调用
-  router.post('/chat', async (req, res) => {
+  router.post('/chat', async (req: AuthedRequest, res) => {
     const message = readString(req.body?.message);
-    if (!message) return fail(res, 400, '请输入对话内容', 'INVALID_AI_INPUT');
+    const pendingAction = readPendingAction(req.body?.pendingAction);
+    const confirmAction = req.body?.confirmAction === true;
+    if (!message && !pendingAction) return fail(res, 400, '请输入对话内容', 'INVALID_AI_INPUT');
 
     try {
+      if (pendingAction) {
+        if (!confirmAction) {
+          return res.json({
+            content: `请确认是否执行：${describeToolCall(pendingAction)}`,
+            requiresConfirmation: true,
+            pendingAction,
+          });
+        }
+        const toolResult = await executeToolCall(req, pendingAction);
+        return res.json({ content: toolResult.message, action: { tool: pendingAction.tool, result: toolResult } });
+      }
+
       const { selectedModel, provider, apiKey, baseUrl } = await resolveModel();
       const safeMessage = sanitizeOrderData(message);
       const prompt = `${AI_TOOLS_SYSTEM_PROMPT}\n\n用户消息：\n"""\n${safeMessage}\n"""\n\n如果你需要执行操作，请以 [ACTION: 工具名 参数名="参数值"] 的格式输出。例如创建任务：[ACTION: create_task title="测试任务" assignee_username="root" due_date="2026-05-01"]。如果需要查数据也同理。不执行操作时直接回复即可。`;
 
       const result = provider === 'gemini'
-        ? await runGeminiModel(selectedModel, apiKey, prompt)
+        ? await runGeminiModel(selectedModel, apiKey, prompt, false)
         : await runOpenAiCompatibleModel({ model: selectedModel, apiKey, baseUrl, prompt, jsonMode: false });
 
       const rawContent = typeof result === 'string' ? result : (result.content || result.summary || JSON.stringify(result));
@@ -57,11 +106,19 @@ export function createAiRouter() {
       // Check if AI wants to call a tool
       const toolCall = findToolCall(rawContent);
       if (toolCall) {
-        const toolResult = await AI_TOOLS[toolCall.tool].handler(toolCall.params);
+        if (AI_TOOLS[toolCall.tool].mutating && !confirmAction) {
+          return res.json({
+            content: `AI 请求执行：${describeToolCall(toolCall)}。请确认后再执行。`,
+            requiresConfirmation: true,
+            pendingAction: toolCall,
+          });
+        }
+
+        const toolResult = await executeToolCall(req, toolCall);
         // Second AI call: summarize the result
         const summaryPrompt = `你刚刚执行了操作"${toolCall.tool}"，结果是：${toolResult.message}。请用自然语言简要告知用户结果，保持专业简洁。`;
         const summaryResult = provider === 'gemini'
-          ? await runGeminiModel(selectedModel, apiKey, summaryPrompt)
+          ? await runGeminiModel(selectedModel, apiKey, summaryPrompt, false)
           : await runOpenAiCompatibleModel({ model: selectedModel, apiKey, baseUrl, prompt: summaryPrompt, jsonMode: false });
         const summary = typeof summaryResult === 'string' ? summaryResult : (summaryResult.content || toolResult.message);
         // Clean the ACTION tag from output
@@ -75,6 +132,9 @@ export function createAiRouter() {
     } catch (error: any) {
       if (error.message === 'AI_API_KEY_MISSING') {
         return fail(res, 400, '请先在系统设置中配置可用的 AI API Key', 'AI_KEY_MISSING');
+      }
+      if (error.message === 'AI_TOOL_FORBIDDEN') {
+        return fail(res, 403, '当前账号无权执行该 AI 操作', 'AI_TOOL_FORBIDDEN');
       }
       return handleRouteError(res, error, 'AI 助手暂时无法响应');
     }

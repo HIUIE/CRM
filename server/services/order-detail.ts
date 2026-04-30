@@ -51,7 +51,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     FROM finance_records f
     LEFT JOIN partners p ON p.id = f.partner_id
     LEFT JOIN users u ON u.id = f.created_by
-    WHERE f.order_id = ?
+    WHERE f.order_id = ? AND f.deleted_at IS NULL
     ORDER BY datetime(f.created_at) DESC, f.id DESC
   `, [orderId]);
 
@@ -61,7 +61,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
       u.name AS created_by_name
     FROM logistics_records l
     LEFT JOIN users u ON u.id = l.created_by
-    WHERE l.order_id = ?
+    WHERE l.order_id = ? AND l.deleted_at IS NULL
     ORDER BY
       CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC,
       CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC,
@@ -129,7 +129,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
   const summaryRows = await dbAll<{ type: FinanceType; currency: string; payment_category: PaymentCategory; total: number }[]>(`
     SELECT type, currency, payment_category, COALESCE(SUM(amount), 0) AS total
     FROM finance_records
-    WHERE order_id = ? AND status = 'completed'
+    WHERE order_id = ? AND status = 'completed' AND deleted_at IS NULL
     GROUP BY type, currency, payment_category
   `, [orderId]);
 
@@ -150,7 +150,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
   }
 
   const pendingFinanceCount = await dbGet<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM finance_records WHERE order_id = ? AND status = 'pending'`,
+    `SELECT COUNT(*) AS count FROM finance_records WHERE order_id = ? AND status = 'pending' AND deleted_at IS NULL`,
     [orderId],
   );
 

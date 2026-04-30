@@ -2,7 +2,9 @@ import { GoogleGenAI } from '@google/genai';
 import { parseJsonObject } from './json.js';
 import { sanitizeForAI } from '../lib/sanitizer.js';
 
-export function resolveAiProvider(model: string) {
+export type AiProvider = 'gemini' | 'deepseek' | 'openai-compatible';
+
+export function resolveAiProvider(model: string): AiProvider {
   const normalized = model.toLowerCase();
   if (normalized.includes('gemini')) {
     return 'gemini';
@@ -14,6 +16,14 @@ export function resolveAiProvider(model: string) {
     return 'openai-compatible';
   }
   return 'openai-compatible';
+}
+
+export function resolveAiProviderApiKey(provider: AiProvider, configuredKey?: string | null) {
+  const fromSettings = (configuredKey || '').trim();
+  if (fromSettings) return fromSettings;
+  if (provider === 'gemini') return (process.env.GEMINI_API_KEY || process.env.AI_API_KEY || '').trim();
+  if (provider === 'deepseek') return (process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || '').trim();
+  return (process.env.OPENAI_API_KEY || process.env.AI_API_KEY || '').trim();
 }
 
 export async function runOpenAiCompatibleModel({
@@ -145,11 +155,15 @@ export function sanitizeOrderData(data: unknown) {
   return sanitizeForAI(data);
 }
 
-export async function runGeminiModel(model: string, apiKey: string, prompt: string) {
+export async function runGeminiModel(model: string, apiKey: string, prompt: string, jsonMode = true) {
   const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model,
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
   });
-  return parseJsonObject(response.text || '');
+  const text = response.text || '';
+  if (!jsonMode) {
+    return text;
+  }
+  return parseJsonObject(text);
 }

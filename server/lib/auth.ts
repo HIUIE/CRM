@@ -99,6 +99,10 @@ export function signAuthToken(user: AuthUser) {
   return jwt.sign(user, JWT_SECRET!, { expiresIn: '24h' });
 }
 
+export function verifyAuthToken(token: string) {
+  return jwt.verify(token, JWT_SECRET!) as unknown as AuthUser;
+}
+
 export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   const token = req.cookies.token;
   if (!token) {
@@ -106,7 +110,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET!) as unknown as AuthUser;
+    const decoded = verifyAuthToken(token);
     const currentUser = await dbGet<{ id: number; active: number | null }>(
       `SELECT id, active FROM users WHERE id = ?`,
       [decoded.id],

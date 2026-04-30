@@ -28,6 +28,10 @@ function scrubText(text: string): string {
 export function sanitizeForAI(data: unknown): unknown {
   if (data === null || data === undefined) return data;
 
+  if (typeof data === 'string') {
+    return scrubText(data);
+  }
+
   // Handle Arrays
   if (Array.isArray(data)) {
     return data.map(item => sanitizeForAI(item));

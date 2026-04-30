@@ -5,12 +5,22 @@ import { initPgTables } from './server/db-pg.js';
 import { UPLOADS_DIR } from './server/paths.js';
 import { logger } from './server/lib/logger.js';
 
+const WEAK_JWT_SECRETS = new Set([
+  'super-secret-key-for-preview-only',
+  'dev-jwt-secret-do-not-use-in-production',
+  'replace-with-a-long-random-secret',
+]);
+
 function requireProductionEnv() {
   if (process.env.NODE_ENV !== 'production') {
     return;
   }
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'super-secret-key-for-preview-only') {
-    throw new Error('生产环境必须设置 JWT_SECRET');
+  const jwtSecret = (process.env.JWT_SECRET || '').trim();
+  if (!jwtSecret || WEAK_JWT_SECRETS.has(jwtSecret) || jwtSecret.length < 32) {
+    throw new Error('生产环境必须设置长度至少 32 位的强随机 JWT_SECRET');
+  }
+  if (process.env.COOKIE_SECURE !== 'true' && process.env.ALLOW_INSECURE_COOKIES !== 'true') {
+    throw new Error('生产环境必须启用 COOKIE_SECURE=true；仅本地/LAN HTTP 调试可显式设置 ALLOW_INSECURE_COOKIES=true');
   }
 }
 

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type NextFunction, type Request, type Response } from 'express';
 import path from 'path';
 import fs from 'fs/promises';
 import { Readable } from 'stream';
@@ -7,7 +7,7 @@ import ExcelJS from 'exceljs';
 import AdmZip from 'adm-zip';
 import { logger } from '../lib/logger.js';
 import { dbGet, dbRun, withTransaction, type TransactionExecutor } from '../lib/db.js';
-import { requireAuth, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 import { UPLOADS_DIR } from '../paths.js';
@@ -15,21 +15,94 @@ import { UPLOADS_DIR } from '../paths.js';
 type ImportRowData = Record<string, unknown>;
 type CsvRowData = Record<string, string>;
 
-const upload = multer({ dest: path.join(UPLOADS_DIR, 'temp') });
+const IMPORT_TEMP_DIR = path.join(UPLOADS_DIR, 'temp');
+const MAX_IMPORT_FILE_SIZE = 25 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 200;
+const MAX_ZIP_UNCOMPRESSED_SIZE = 50 * 1024 * 1024;
+const ALLOWED_IMPORT_EXTENSIONS = new Set(['.xlsx', '.csv', '.zip']);
+const ALLOWED_IMPORT_MIME_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+  'application/csv',
+  'text/plain',
+  'application/vnd.ms-excel',
+  'application/zip',
+  'application/x-zip-compressed',
+  'multipart/x-zip',
+]);
+
+const upload = multer({
+  dest: IMPORT_TEMP_DIR,
+  limits: { fileSize: MAX_IMPORT_FILE_SIZE, files: 1 },
+  fileFilter: (_req, file, callback) => {
+    const extension = path.extname(file.originalname || '').toLowerCase();
+    const mimeAllowed = ALLOWED_IMPORT_MIME_TYPES.has(file.mimetype);
+    if (!ALLOWED_IMPORT_EXTENSIONS.has(extension) || !mimeAllowed) {
+      callback(new Error('UNSUPPORTED_IMPORT_FILE'));
+      return;
+    }
+    callback(null, true);
+  },
+});
+
+function handleImportUpload(req: Request, res: Response, next: NextFunction) {
+  upload.single('file')(req, res, (error) => {
+    if (!error) {
+      next();
+      return;
+    }
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      fail(res, 400, '导入文件不能超过 25MB', 'IMPORT_FILE_TOO_LARGE');
+      return;
+    }
+    fail(res, 400, '仅支持 CSV、XLSX 或 ZIP 备份文件', 'UNSUPPORTED_IMPORT_FILE');
+  });
+}
+
+function resolveImportTempFile(filename: unknown) {
+  const safeName = readString(filename);
+  if (!/^[a-zA-Z0-9_-]+$/.test(safeName)) {
+    return null;
+  }
+  const tempDir = path.resolve(IMPORT_TEMP_DIR);
+  const filePath = path.resolve(tempDir, safeName);
+  if (filePath !== tempDir && filePath.startsWith(`${tempDir}${path.sep}`)) {
+    return filePath;
+  }
+  return null;
+}
+
+function validateZipEntries(zip: AdmZip) {
+  const entries = zip.getEntries();
+  if (entries.length > MAX_ZIP_ENTRIES) {
+    throw new Error('ZIP_ENTRIES_LIMIT');
+  }
+  let totalSize = 0;
+  for (const entry of entries) {
+    if (entry.entryName.startsWith('/') || entry.entryName.includes('..')) {
+      throw new Error('ZIP_ENTRY_PATH_INVALID');
+    }
+    totalSize += entry.header.size || 0;
+    if (totalSize > MAX_ZIP_UNCOMPRESSED_SIZE) {
+      throw new Error('ZIP_SIZE_LIMIT');
+    }
+  }
+  return entries;
+}
 
 export function createImportRouter() {
   const router = Router();
 
   // Preview file headers and first 5 rows
-  router.post('/preview', requireAuth, upload.single('file'), async (req, res) => {
+  router.post('/preview', requireAdmin, handleImportUpload, async (req, res) => {
     if (!req.file) return fail(res, 400, '请选择要上传的文件');
 
-    const isZip = req.file.originalname.endsWith('.zip');
+    const isZip = path.extname(req.file.originalname || '').toLowerCase() === '.zip';
     
     if (isZip) {
       try {
         const zip = new AdmZip(req.file.path);
-        const entries = zip.getEntries().map(e => e.entryName);
+        const entries = validateZipEntries(zip).map(e => e.entryName);
         const isBackup = entries.includes('customers.csv') || entries.includes('orders.csv');
         
         return res.json({ 
@@ -86,11 +159,17 @@ export function createImportRouter() {
   });
 
   // Execute import
-  router.post('/execute', requireAuth, async (req: AuthedRequest, res) => {
+  router.post('/execute', requireAdmin, async (req: AuthedRequest, res) => {
     const { filename, entityType, mapping, isBackup } = req.body;
     if (!filename) return fail(res, 400, '参数不完整');
+    if (!isBackup && !['CUSTOMER', 'ORDER'].includes(readString(entityType))) {
+      return fail(res, 400, '导入对象不正确', 'INVALID_IMPORT_ENTITY');
+    }
 
-    const filePath = path.join(UPLOADS_DIR, 'temp', filename);
+    const filePath = resolveImportTempFile(filename);
+    if (!filePath) {
+      return fail(res, 400, '导入文件名无效', 'INVALID_IMPORT_FILE');
+    }
     
     try {
       if (isBackup) {
@@ -168,7 +247,7 @@ export function createImportRouter() {
 
 async function importBackup(zipPath: string, userId?: number) {
   const zip = new AdmZip(zipPath);
-  const entries = zip.getEntries();
+  const entries = validateZipEntries(zip);
   
   let successCount = 0;
   let errorCount = 0;

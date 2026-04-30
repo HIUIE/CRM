@@ -48,6 +48,7 @@ import EmptyStateBoard from '../../components/ui/EmptyStateBoard';
 
 export const ActionButton = ({ children, onClick, icon }: { children: React.ReactNode; icon: React.ReactNode; onClick: () => void }) => (
   <button
+    type="button"
     onClick={onClick}
     className="btn-primary text-xs px-5 py-2.5"
   >
@@ -58,6 +59,7 @@ export const ActionButton = ({ children, onClick, icon }: { children: React.Reac
 
 export const LightActionButton = ({ children, onClick, className = '' }: { children: React.ReactNode; onClick: () => void; className?: string }) => (
   <button
+    type="button"
     onClick={onClick}
     className={`btn-secondary text-xs px-4 py-2 ${className}`}
   >
@@ -503,18 +505,18 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
 
   return createPortal(
     <div className="fixed inset-0 z-[500] flex h-dvh items-center justify-center overflow-hidden p-4">
-      <button onClick={onClose} className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md transition-all" />
-      <div className="relative z-10 flex h-full max-h-[90dvh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-5 bg-white dark:bg-navy-950/50">
+      <button type="button" onClick={onClose} className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md transition-all" />
+      <div className="relative z-10 flex h-full max-h-[calc(100dvh-2rem)] w-full max-w-5xl min-h-0 flex-col overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-5 py-4 sm:px-8 sm:py-5 bg-white dark:bg-navy-950/50">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{attachment.fileName}</h3>
             <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest data-field">
                {attachment.mimeType}
             </p>
           </div>
-          <button onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"><X size={22} /></button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"><X size={22} /></button>
         </div>
-        <div className="flex-1 overflow-auto bg-slate-50 dark:bg-navy-950/50 p-8 flex items-center justify-center">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50 dark:bg-navy-950/50 p-4 sm:p-8">
           {isPdf ? (
             <iframe src={attachment.url} className="h-full w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-lg" title={attachment.fileName} />
           ) : isImage ? (

@@ -45,43 +45,44 @@ export async function buildExcelWorkbook() {
     FROM orders o
     LEFT JOIN customers c ON c.id = o.customer_id
     LEFT JOIN users u ON u.id = o.created_by
+    WHERE o.deleted_at IS NULL
     ORDER BY o.id ASC
   `);
   await addDataSheet(wb, '商品明细', `
     SELECT oi.*, o.display_id AS order_no FROM order_items oi
-    LEFT JOIN orders o ON o.id = oi.order_id ORDER BY oi.id ASC
+    LEFT JOIN orders o ON o.id = oi.order_id WHERE o.deleted_at IS NULL ORDER BY oi.id ASC
   `);
   await addDataSheet(wb, '财务流水', `
     SELECT f.*, o.display_id AS order_no, c.name AS customer_name, p.name AS partner_name
     FROM finance_records f LEFT JOIN orders o ON o.id = f.order_id
-    LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN partners p ON p.id = f.partner_id ORDER BY f.id ASC
+    LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN partners p ON p.id = f.partner_id WHERE f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL) ORDER BY f.id ASC
   `);
   await addDataSheet(wb, '物流记录', `
     SELECT l.*, o.display_id AS order_no, c.name AS customer_name
     FROM logistics_records l LEFT JOIN orders o ON o.id = l.order_id
-    LEFT JOIN customers c ON c.id = o.customer_id ORDER BY l.id ASC
+    LEFT JOIN customers c ON c.id = o.customer_id WHERE l.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL) ORDER BY l.id ASC
   `);
   await addDataSheet(wb, '报关记录', `
     SELECT cr.*, o.display_id AS order_no, c.name AS customer_name
     FROM customs_records cr LEFT JOIN orders o ON o.id = cr.order_id
-    LEFT JOIN customers c ON c.id = o.customer_id ORDER BY cr.id ASC
+    LEFT JOIN customers c ON c.id = o.customer_id WHERE o.deleted_at IS NULL ORDER BY cr.id ASC
   `);
   await addDataSheet(wb, '生产安排', `
     SELECT pp.*, o.display_id AS order_no, c.name AS customer_name, p.name AS partner_name
     FROM production_plans pp LEFT JOIN orders o ON o.id = pp.order_id
-    LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN partners p ON p.id = pp.partner_id ORDER BY pp.id ASC
+    LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN partners p ON p.id = pp.partner_id WHERE o.deleted_at IS NULL ORDER BY pp.id ASC
   `);
   await addDataSheet(wb, '装箱记录', `
     SELECT pr.*, o.display_id AS order_no FROM packing_records pr
-    LEFT JOIN orders o ON o.id = pr.order_id ORDER BY pr.id ASC
+    LEFT JOIN orders o ON o.id = pr.order_id WHERE o.deleted_at IS NULL ORDER BY pr.id ASC
   `);
   await addDataSheet(wb, '客户', `
     SELECT c.*, COUNT(o.id) AS order_count FROM customers c
-    LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.id ORDER BY c.id ASC
+    LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL WHERE c.deleted_at IS NULL GROUP BY c.id ORDER BY c.id ASC
   `);
   await addDataSheet(wb, '合作伙伴', `
     SELECT p.*, u.name AS created_by FROM partners p
-    LEFT JOIN users u ON u.id = p.created_by ORDER BY p.id ASC
+    LEFT JOIN users u ON u.id = p.created_by WHERE p.deleted_at IS NULL ORDER BY p.id ASC
   `);
   await addDataSheet(wb, '任务', `
     SELECT t.*, a.name AS assignee_name, cu.name AS created_by_name FROM tasks t
@@ -90,12 +91,12 @@ export async function buildExcelWorkbook() {
   await addDataSheet(wb, '客户跟进', `
     SELECT cf.*, c.name AS customer_name, u.name AS created_by_name
     FROM customer_followups cf LEFT JOIN customers c ON c.id = cf.customer_id
-    LEFT JOIN users u ON u.id = cf.created_by ORDER BY cf.id ASC
+    LEFT JOIN users u ON u.id = cf.created_by WHERE c.deleted_at IS NULL ORDER BY cf.id ASC
   `);
   await addDataSheet(wb, '订单跟进', `
     SELECT ofu.*, o.display_id AS order_no, u.name AS created_by_name
     FROM order_follow_ups ofu LEFT JOIN orders o ON o.id = ofu.order_id
-    LEFT JOIN users u ON u.id = ofu.created_by ORDER BY ofu.id ASC
+    LEFT JOIN users u ON u.id = ofu.created_by WHERE o.deleted_at IS NULL ORDER BY ofu.id ASC
   `);
 
   return wb;

@@ -26,6 +26,7 @@ export default function TeamTab() {
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const [resettingUserId, setResettingUserId] = useState<number | null>(null);
   const [resetPassword, setResetPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const loadUsers = async () => {
     if (!isAdmin) { setLoading(false); return; }
@@ -38,14 +39,14 @@ export default function TeamTab() {
 
   useEffect(() => { loadUsers(); }, [isAdmin]);
 
-  const startCreateUser = () => { setEditingUser(null); setUserForm(EMPTY_USER_FORM); setResettingUserId(null); };
-  const startEditUser = (user: ManagedUser) => { setEditingUser(user); setUserForm({ username: user.username, name: user.name || '', password: '', role: user.role }); setResettingUserId(null); };
+  const startCreateUser = () => { setEditingUser(null); setUserForm(EMPTY_USER_FORM); setResettingUserId(null); setResetPassword(''); setConfirmPassword(''); };
+  const startEditUser = (user: ManagedUser) => { setEditingUser(user); setUserForm({ username: user.username, name: user.name || '', password: '', role: user.role }); setResettingUserId(null); setResetPassword(''); setConfirmPassword(''); };
 
   const saveUser = async () => {
     setError('');
     try {
       if (editingUser) {
-        await apiFetch(`/api/users/${editingUser.id}`, { method: 'PATCH', body: JSON.stringify({ name: userForm.name, role: userForm.role }) });
+        await apiFetch(`/api/users/${editingUser.id}`, { method: 'PATCH', body: JSON.stringify({ name: userForm.name, role: userForm.role, active: editingUser.active !== false }) });
       } else {
         await apiFetch('/api/users', { method: 'POST', body: JSON.stringify(userForm) });
       }
@@ -57,17 +58,18 @@ export default function TeamTab() {
   const toggleUserStatus = async (user: ManagedUser) => {
     setError('');
     try {
-      await apiFetch(`/api/users/${user.id}`, { method: 'PATCH', body: JSON.stringify({ active: user.active === false ? true : false }) });
+      await apiFetch(`/api/users/${user.id}`, { method: 'PATCH', body: JSON.stringify({ name: user.name || user.username, role: user.role, active: user.active === false ? true : false }) });
       await loadUsers();
     } catch (e) { setError(getErrorMessage(e, '状态更新失败')); }
   };
 
   const submitResetPassword = async () => {
     if (!resetPassword) return setError('请输入新密码');
+    if (!confirmPassword) return setError('请输入当前管理员密码');
     setError('');
     try {
-      await apiFetch(`/api/users/${resettingUserId}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword: resetPassword }) });
-      setResettingUserId(null); setResetPassword('');
+      await apiFetch(`/api/users/${resettingUserId}/reset-password`, { method: 'POST', body: JSON.stringify({ password: resetPassword, confirmPassword }) });
+      setResettingUserId(null); setResetPassword(''); setConfirmPassword('');
     } catch (e) { setError(getErrorMessage(e, '重置密码失败')); }
   };
 
@@ -127,7 +129,7 @@ export default function TeamTab() {
                   <td className="px-4 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => startEditUser(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">编辑</button>
-                      <button onClick={() => setResettingUserId(managedUser.id)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">重置</button>
+                      <button onClick={() => { setResettingUserId(managedUser.id); setResetPassword(''); setConfirmPassword(''); }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">重置</button>
                       {managedUser.username !== 'root' && (
                         <button onClick={() => toggleUserStatus(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">
                           {managedUser.active === false ? '启用' : '停用'}
@@ -171,11 +173,12 @@ export default function TeamTab() {
 
           {resettingUserId && (
             <div className="mt-8 border-t border-slate-200 pt-6 relative animate-in fade-in">
-              <button onClick={() => setResettingUserId(null)} className="absolute top-6 right-0 text-slate-400 hover:text-primary-navy"><X size={16} /></button>
+              <button onClick={() => { setResettingUserId(null); setResetPassword(''); setConfirmPassword(''); }} className="absolute top-6 right-0 text-slate-400 hover:text-primary-navy"><X size={16} /></button>
               <div className="mb-4 text-xs font-bold text-primary-navy uppercase tracking-widest">强制重置密码</div>
-              <div className="flex gap-3">
+              <div className="space-y-3">
                 <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码" className="flex-1 w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none" />
-                <button onClick={submitResetPassword} className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-black">提交</button>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="当前管理员密码" className="flex-1 w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none" />
+                <button onClick={submitResetPassword} className="w-full rounded-lg bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-black">提交</button>
               </div>
             </div>
           )}

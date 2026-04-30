@@ -83,7 +83,7 @@ export function createCustomersRouter() {
         dbAll(`
           SELECT 
             id, display_id, status, total_amount, product_summary, created_at,
-            (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed') as paid_amount
+            (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed' AND deleted_at IS NULL) as paid_amount
           FROM orders
           WHERE customer_id = ? AND deleted_at IS NULL
           ORDER BY created_at DESC
@@ -94,7 +94,7 @@ export function createCustomersRouter() {
             o.display_id as order_display_id, o.product_summary
           FROM finance_records f
           LEFT JOIN orders o ON o.id = f.order_id
-          WHERE o.customer_id = ? AND o.deleted_at IS NULL
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL AND f.deleted_at IS NULL
           ORDER BY f.created_at DESC
         `, [actualId]),
         dbAll(`
@@ -119,14 +119,14 @@ export function createCustomersRouter() {
             CASE WHEN f.type = 'receipt' THEN '+' ELSE '-' END || f.currency || ' ' || f.amount as value,
             CASE WHEN f.type = 'receipt' THEN 'text-emerald-500' ELSE 'text-red-500' END as valueColor
           FROM finance_records f JOIN orders o ON f.order_id = o.id
-          WHERE f.status = 'completed' AND o.customer_id = ? AND o.deleted_at IS NULL
+          WHERE f.status = 'completed' AND o.customer_id = ? AND o.deleted_at IS NULL AND f.deleted_at IS NULL
           UNION ALL
           SELECT 'logistics' as type, l.id, o.display_id as order_display_id, 
             '物流更新' as title, '货物已发出 · ' || l.carrier as desc, l.created_at,
             CASE WHEN l.status = 'arrived' THEN '已送达' WHEN l.status = 'shipped' THEN '运输中' ELSE '备货中' END as value,
             'text-slate-500' as valueColor
           FROM logistics_records l JOIN orders o ON l.order_id = o.id
-          WHERE o.customer_id = ? AND o.deleted_at IS NULL
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL AND l.deleted_at IS NULL
           UNION ALL
           SELECT 'customs' as type, cr.id, o.display_id as order_display_id, 
             '报关完成' as title, '报关单号 ' || cr.declaration_no as desc, cr.created_at,

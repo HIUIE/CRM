@@ -51,7 +51,7 @@ export default function GeneralTab() {
   const uploadBrandFile = async (type: 'logo' | 'favicon') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/png,image/jpeg,image/gif,image/svg+xml,image/x-icon,.ico';
+    input.accept = 'image/png,image/jpeg,image/gif,image/x-icon,.ico';
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;

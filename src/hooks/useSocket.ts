@@ -22,7 +22,6 @@ export function useSocket() {
 
       socket.on('connect', () => {
         console.log('[Socket] Connected to server');
-        socket.emit('join-user-room', user.id);
       });
 
       socket.on('new-notification', (data: { title: string; message: string; link?: string }) => {

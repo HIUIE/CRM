@@ -1,4 +1,5 @@
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
+import type { UserRole } from '../domain.js';
 
 interface ToolResult {
   success: boolean;
@@ -6,18 +7,21 @@ interface ToolResult {
   data?: Record<string, unknown>;
 }
 
-type ToolHandler = (params: Record<string, string>) => Promise<ToolResult>;
+export type AiToolCall = { tool: string; params: Record<string, string> };
+export type AiToolContext = { userId: number; role: UserRole };
+type ToolHandler = (params: Record<string, string>, context: AiToolContext) => Promise<ToolResult>;
 
-export const AI_TOOLS: Record<string, { description: string; params: string; handler: ToolHandler }> = {
+export const AI_TOOLS: Record<string, { description: string; params: string; mutating?: boolean; requiredRole?: UserRole; handler: ToolHandler }> = {
   create_task: {
     description: '创建新任务并指派给指定成员',
     params: 'title (任务标题), assignee_username (负责人用户名), due_date (截止日期 YYYY-MM-DD), priority (P0/P1/P2, 默认 P2), description (描述, 可选)',
-    handler: async (p) => {
-      const user = await dbGet<{ id: number }>('SELECT id FROM users WHERE username = ?', [p.assignee_username]);
+    mutating: true,
+    handler: async (p, context) => {
+      const user = await dbGet<{ id: number }>('SELECT id FROM users WHERE username = ? AND active != 0', [p.assignee_username]);
       if (!user) return { success: false, message: `未找到用户"${p.assignee_username}"` };
       await dbRun(
-        `INSERT INTO tasks (title, assignee_id, due_date, priority, status, description, created_by) VALUES (?, ?, ?, ?, 'todo', ?, 1)`,
-        [p.title, user.id, p.due_date, p.priority || 'P2', p.description || ''],
+        `INSERT INTO tasks (title, assignee_id, due_date, priority, status, description, created_by) VALUES (?, ?, ?, ?, 'todo', ?, ?)`,
+        [p.title, user.id, p.due_date, p.priority || 'P2', p.description || '', context.userId],
       );
       return { success: true, message: `任务"${p.title}"已创建，指派给 ${p.assignee_username}` };
     },
@@ -26,12 +30,13 @@ export const AI_TOOLS: Record<string, { description: string; params: string; han
   create_followup: {
     description: '为指定客户添加跟进记录',
     params: 'customer_id (客户ID), content (跟进内容), channel (渠道,如电话/邮件/会面, 可选)',
-    handler: async (p) => {
-      const customer = await dbGet<{ id: number; display_id: string; name: string }>('SELECT id, display_id, name FROM customers WHERE id = ? OR display_id = ?', [p.customer_id, p.customer_id]);
+    mutating: true,
+    handler: async (p, context) => {
+      const customer = await dbGet<{ id: number; display_id: string; name: string }>('SELECT id, display_id, name FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)', [p.customer_id, p.customer_id]);
       if (!customer) return { success: false, message: `未找到客户"${p.customer_id}"` };
       await dbRun(
-        `INSERT INTO customer_followups (customer_id, content, channel, created_by) VALUES (?, ?, ?, 1)`,
-        [customer.id, p.content, p.channel || 'other'],
+        `INSERT INTO customer_followups (customer_id, content, channel, created_by) VALUES (?, ?, ?, ?)`,
+        [customer.id, p.content, p.channel || 'other', context.userId],
       );
       return { success: true, message: `客户"${customer.name}"的跟进记录已添加` };
     },
@@ -40,12 +45,16 @@ export const AI_TOOLS: Record<string, { description: string; params: string; han
   add_production_log: {
     description: '为指定订单添加生产进度日志',
     params: 'order_id (订单ID), content (进度内容)',
-    handler: async (p) => {
-      const plan = await dbGet<{ id: number }>('SELECT id FROM production_plans WHERE order_id = ?', [Number(p.order_id)]);
+    mutating: true,
+    handler: async (p, context) => {
+      const plan = await dbGet<{ id: number }>(
+        `SELECT pp.id FROM production_plans pp INNER JOIN orders o ON o.id = pp.order_id WHERE pp.order_id = ? AND o.deleted_at IS NULL`,
+        [Number(p.order_id)],
+      );
       if (!plan) return { success: false, message: `订单 ${p.order_id} 暂无生产安排，请先创建生产计划` };
       await dbRun(
-        `INSERT INTO production_logs (plan_id, content, created_by) VALUES (?, ?, 1)`,
-        [plan.id, p.content],
+        `INSERT INTO production_logs (plan_id, content, created_by) VALUES (?, ?, ?)`,
+        [plan.id, p.content, context.userId],
       );
       return { success: true, message: `订单 ${p.order_id} 的生产日志已记录` };
     },
@@ -58,11 +67,11 @@ export const AI_TOOLS: Record<string, { description: string; params: string; han
       const order = await dbGet(`
         SELECT o.*, c.name AS customer_name, c.country
         FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
-        WHERE o.display_id = ?
+        WHERE o.display_id = ? AND o.deleted_at IS NULL
       `, [p.order_no]);
       if (!order) return { success: false, message: `未找到订单 ${p.order_no}` };
-      const finance = await dbAll('SELECT type, SUM(amount) AS total FROM finance_records WHERE order_id = ? GROUP BY type', [order.id]);
-      const logistics = await dbAll('SELECT COUNT(*) AS count, status FROM logistics_records WHERE order_id = ? GROUP BY status', [order.id]);
+      const finance = await dbAll('SELECT type, SUM(amount) AS total FROM finance_records WHERE order_id = ? AND deleted_at IS NULL GROUP BY type', [order.id]);
+      const logistics = await dbAll('SELECT COUNT(*) AS count, status FROM logistics_records WHERE order_id = ? AND deleted_at IS NULL GROUP BY status', [order.id]);
       const production = await dbGet('SELECT production_status, inspection_status FROM production_plans WHERE order_id = ?', [order.id]);
       return {
         success: true,
@@ -88,12 +97,15 @@ export const AI_TOOLS: Record<string, { description: string; params: string; han
     params: '无 (无需参数)',
     handler: async () => {
       const items = await dbAll(`
-        SELECT o.display_id, c.name AS customer_name, o.total_amount,
-          COALESCE((SELECT SUM(amount) FROM finance_records WHERE order_id = o.id AND type = 'receipt' AND status = 'completed'), 0) AS paid
-        FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
-        WHERE o.status != 'completed'
-        HAVING paid < o.total_amount
-        ORDER BY o.created_at ASC
+        SELECT *
+        FROM (
+          SELECT o.display_id, c.name AS customer_name, o.total_amount, o.created_at,
+            COALESCE((SELECT SUM(amount) FROM finance_records WHERE order_id = o.id AND type = 'receipt' AND status = 'completed' AND deleted_at IS NULL), 0) AS paid
+          FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
+          WHERE o.status != 'completed' AND o.deleted_at IS NULL
+        ) overdue_orders
+        WHERE paid < total_amount
+        ORDER BY created_at ASC
       `);
       if (!items.length) return { success: true, message: '没有逾期未收款。' };
       const lines = items.map((i: any) => `${i.display_id} ${i.customer_name} 应收 $${Number(i.total_amount).toLocaleString()} 已收 $${Number(i.paid).toLocaleString()}`);
@@ -106,8 +118,8 @@ export const AI_TOOLS: Record<string, { description: string; params: string; han
     params: 'keyword (关键词搜索, 可选)',
     handler: async (p) => {
       const sql = p.keyword
-        ? `SELECT id, name, country FROM customers WHERE name LIKE ? OR country LIKE ? ORDER BY created_at DESC LIMIT 10`
-        : `SELECT id, name, country FROM customers ORDER BY created_at DESC LIMIT 10`;
+        ? `SELECT id, name, country FROM customers WHERE deleted_at IS NULL AND (name LIKE ? OR country LIKE ?) ORDER BY created_at DESC LIMIT 10`
+        : `SELECT id, name, country FROM customers WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 10`;
       const params = p.keyword ? [`%${p.keyword}%`, `%${p.keyword}%`] : [];
       const customers = await dbAll(sql, params);
       if (!customers.length) return { success: true, message: '未找到匹配的客户。' };

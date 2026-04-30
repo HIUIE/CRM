@@ -11,7 +11,7 @@ import { PROJECT_ROOT } from '../paths.js';
 import { buildLegacyExportZip, getExportFileName, streamCustomerArchiveZip } from '../services/export.js';
 import { buildExcelWorkbook } from '../services/excel-export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
-import { resolveAiProvider, runGeminiModel, runOpenAiCompatibleModel } from '../services/ai.js';
+import { resolveAiProvider, resolveAiProviderApiKey, runGeminiModel, runOpenAiCompatibleModel } from '../services/ai.js';
 
 const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
 const DEFAULT_SYSTEM_UPDATE_STATUS_PATH = path.join(PROJECT_ROOT, 'data', 'system-update-status.json');
@@ -387,17 +387,17 @@ export function createSettingsRouter() {
     try {
       const selectedModel = (await getSettingValue('current_ai_model', 'deepseek-v4-flash')).trim();
       const provider = resolveAiProvider(selectedModel);
-      const apiKey = (await getSettingValue('ai_api_key')) || process.env.AI_API_KEY;
+      const apiKey = resolveAiProviderApiKey(provider, await getSettingValue('ai_api_key'));
       const configuredBaseUrl = await getSettingValue('ai_base_url');
 
-      if (!apiKey && provider !== 'gemini') {
+      if (!apiKey) {
         return fail(res, 400, '未配置 API 密钥，无法测试连接', 'AI_KEY_MISSING');
       }
 
       const testMessage = 'Respond with only the word "ok" if you can read this.';
 
       if (provider === 'gemini') {
-        const result = await runGeminiModel(selectedModel, apiKey || '', testMessage);
+        const result = await runGeminiModel(selectedModel, apiKey || '', testMessage, false);
         res.json({ success: true, response: String(result).slice(0, 100) });
       } else {
         const compatBaseUrl = configuredBaseUrl || (provider === 'deepseek' ? 'https://api.deepseek.com' : '');
@@ -415,7 +415,7 @@ export function createSettingsRouter() {
     }
   });
 
-  router.get('/webhook', async (_req, res) => {
+  router.get('/webhook', requireAdmin, async (_req, res) => {
     const url = await getSettingValue('webhook_url', '');
     res.json({ webhookUrl: url });
   });
@@ -430,7 +430,7 @@ export function createSettingsRouter() {
     }
   });
 
-  router.get('/check-update', async (_req, res) => {
+  router.get('/check-update', requireAdmin, async (_req, res) => {
     try {
       const token = process.env.GITHUB_TOKEN || '';
       const url = 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
@@ -461,6 +461,9 @@ export function createSettingsRouter() {
 
   router.post('/system/update', requireAdmin, async (_req, res) => {
     await ensureSystemUpdateStatusLoaded();
+    if (process.env.ENABLE_SYSTEM_UPDATE !== 'true') {
+      return fail(res, 403, '系统更新入口未启用，请在服务器环境变量中设置 ENABLE_SYSTEM_UPDATE=true 后再使用', 'SYSTEM_UPDATE_DISABLED');
+    }
     if (isSystemUpdateRunning()) {
       return fail(res, 409, '系统更新正在进行中，请稍后再试', 'SYSTEM_UPDATE_IN_PROGRESS');
     }

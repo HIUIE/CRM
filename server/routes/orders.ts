@@ -60,11 +60,11 @@ export function createOrdersRouter() {
         o.*, 
         c.name AS customer_name,
         c.country AS customer_country,
-        (SELECT COUNT(*) FROM finance_records WHERE order_id = o.id AND status = 'pending') AS pending_finance_count,
+        (SELECT COUNT(*) FROM finance_records WHERE order_id = o.id AND status = 'pending' AND deleted_at IS NULL) AS pending_finance_count,
         COALESCE((
           SELECT SUM(f.amount) 
           FROM finance_records f 
-          WHERE f.order_id = o.id AND f.type = 'receipt' AND f.status = 'completed' AND f.currency = 'USD'
+          WHERE f.order_id = o.id AND f.type = 'receipt' AND f.status = 'completed' AND f.currency = 'USD' AND f.deleted_at IS NULL
         ), 0) AS completed_receipt_usd
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id

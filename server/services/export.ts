@@ -61,7 +61,8 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       FROM customers c
       LEFT JOIN users cu ON cu.id = c.created_by
       LEFT JOIN users uu ON uu.id = c.updated_by
-      LEFT JOIN orders o ON o.customer_id = c.id
+      LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL
+      WHERE c.deleted_at IS NULL
       GROUP BY c.id
       ORDER BY c.id ASC
     `,
@@ -78,6 +79,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       FROM partners p
       LEFT JOIN users cu ON cu.id = p.created_by
       LEFT JOIN users uu ON uu.id = p.updated_by
+      WHERE p.deleted_at IS NULL
       ORDER BY p.id ASC
     `,
     extraColumns: ['created_by_name', 'updated_by_name'],
@@ -96,6 +98,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN customers c ON c.id = o.customer_id
       LEFT JOIN users cu ON cu.id = o.created_by
       LEFT JOIN users uu ON uu.id = o.updated_by
+      WHERE o.deleted_at IS NULL
       ORDER BY o.id ASC
     `,
     extraColumns: ['customer_name', 'customer_country', 'created_by_name', 'updated_by_name'],
@@ -111,6 +114,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       FROM order_items oi
       LEFT JOIN orders o ON o.id = oi.order_id
       LEFT JOIN customers c ON c.id = o.customer_id
+      WHERE o.deleted_at IS NULL
       ORDER BY oi.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name'],
@@ -132,6 +136,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN partners p ON p.id = f.partner_id
       LEFT JOIN users cu ON cu.id = f.created_by
       LEFT JOIN users uu ON uu.id = f.updated_by
+      WHERE f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)
       ORDER BY f.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name', 'partner_name', 'created_by_name', 'updated_by_name'],
@@ -151,6 +156,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN customers c ON c.id = o.customer_id
       LEFT JOIN users cu ON cu.id = l.created_by
       LEFT JOIN users uu ON uu.id = l.updated_by
+      WHERE l.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)
       ORDER BY l.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name', 'created_by_name', 'updated_by_name'],
@@ -170,6 +176,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN customers c ON c.id = o.customer_id
       LEFT JOIN users cu ON cu.id = cr.created_by
       LEFT JOIN users uu ON uu.id = cr.updated_by
+      WHERE o.deleted_at IS NULL
       ORDER BY cr.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name', 'created_by_name', 'updated_by_name'],
@@ -191,6 +198,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN partners p ON p.id = pp.partner_id
       LEFT JOIN users cu ON cu.id = pp.created_by
       LEFT JOIN users uu ON uu.id = pp.updated_by
+      WHERE o.deleted_at IS NULL
       ORDER BY pp.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name', 'partner_name', 'created_by_name', 'updated_by_name'],
@@ -210,6 +218,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN orders o ON o.id = pp.order_id
       LEFT JOIN customers c ON c.id = o.customer_id
       LEFT JOIN users cu ON cu.id = pl.created_by
+      WHERE o.deleted_at IS NULL
       ORDER BY pl.id ASC
     `,
     extraColumns: ['order_id', 'order_display_id', 'customer_name', 'created_by_name'],
@@ -231,6 +240,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN packing_records pr ON a.id = pr.attachment_id
       LEFT JOIN orders o ON o.id = COALESCE(f.order_id, l.order_id, cr.order_id, pp.order_id, pr.order_id)
       LEFT JOIN customers c ON c.id = o.customer_id
+      WHERE o.id IS NULL OR o.deleted_at IS NULL
       ORDER BY a.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name'],
@@ -238,13 +248,13 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
   {
     table: 'order_items',
     fileName: 'order_items.csv',
-    query: `SELECT oi.*, o.display_id AS order_display_id FROM order_items oi LEFT JOIN orders o ON o.id = oi.order_id ORDER BY oi.id ASC`,
+    query: `SELECT oi.*, o.display_id AS order_display_id FROM order_items oi LEFT JOIN orders o ON o.id = oi.order_id WHERE o.deleted_at IS NULL ORDER BY oi.id ASC`,
     extraColumns: ['order_display_id'],
   },
   {
     table: 'packing_records',
     fileName: 'packing_records.csv',
-    query: `SELECT pr.*, o.display_id AS order_display_id FROM packing_records pr LEFT JOIN orders o ON o.id = pr.order_id ORDER BY pr.id ASC`,
+    query: `SELECT pr.*, o.display_id AS order_display_id FROM packing_records pr LEFT JOIN orders o ON o.id = pr.order_id WHERE o.deleted_at IS NULL ORDER BY pr.id ASC`,
     extraColumns: ['order_display_id'],
   },
   {
@@ -256,19 +266,19 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
   {
     table: 'customer_contacts',
     fileName: 'customer_contacts.csv',
-    query: `SELECT cc.*, c.name AS customer_name FROM customer_contacts cc LEFT JOIN customers c ON c.id = cc.customer_id ORDER BY cc.id ASC`,
+    query: `SELECT cc.*, c.name AS customer_name FROM customer_contacts cc LEFT JOIN customers c ON c.id = cc.customer_id WHERE c.deleted_at IS NULL ORDER BY cc.id ASC`,
     extraColumns: ['customer_name'],
   },
   {
     table: 'customer_followups',
     fileName: 'customer_followups.csv',
-    query: `SELECT cf.*, c.name AS customer_name, u.name AS created_by_name FROM customer_followups cf LEFT JOIN customers c ON c.id = cf.customer_id LEFT JOIN users u ON u.id = cf.created_by ORDER BY cf.id ASC`,
+    query: `SELECT cf.*, c.name AS customer_name, u.name AS created_by_name FROM customer_followups cf LEFT JOIN customers c ON c.id = cf.customer_id LEFT JOIN users u ON u.id = cf.created_by WHERE c.deleted_at IS NULL ORDER BY cf.id ASC`,
     extraColumns: ['customer_name', 'created_by_name'],
   },
   {
     table: 'order_follow_ups',
     fileName: 'order_followups.csv',
-    query: `SELECT ofu.*, o.display_id AS order_display_id, u.name AS created_by_name FROM order_follow_ups ofu LEFT JOIN orders o ON o.id = ofu.order_id LEFT JOIN users u ON u.id = ofu.created_by ORDER BY ofu.id ASC`,
+    query: `SELECT ofu.*, o.display_id AS order_display_id, u.name AS created_by_name FROM order_follow_ups ofu LEFT JOIN orders o ON o.id = ofu.order_id LEFT JOIN users u ON u.id = ofu.created_by WHERE o.deleted_at IS NULL ORDER BY ofu.id ASC`,
     extraColumns: ['order_display_id', 'created_by_name'],
   },
 ];
@@ -390,7 +400,8 @@ async function getCustomersForArchive() {
       c.*,
       COUNT(o.id) AS order_count
     FROM customers c
-    LEFT JOIN orders o ON o.customer_id = c.id
+    LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL
+    WHERE c.deleted_at IS NULL
     GROUP BY c.id
     ORDER BY c.id ASC
   `);
@@ -401,7 +412,7 @@ async function getOrdersForCustomer(customerId: number) {
     `
       SELECT *
       FROM orders
-      WHERE customer_id = ?
+      WHERE customer_id = ? AND deleted_at IS NULL
       ORDER BY datetime(created_at) ASC, id ASC
     `,
     [customerId],
@@ -412,7 +423,7 @@ async function getOrdersForCustomers(customerIds: number[]) {
   if (!customerIds.length) return [];
   const placeholders = customerIds.map(() => '?').join(', ');
   return dbAll<OrderRow[]>(
-    `SELECT * FROM orders WHERE customer_id IN (${placeholders}) ORDER BY customer_id ASC, datetime(created_at) ASC, id ASC`,
+    `SELECT * FROM orders WHERE customer_id IN (${placeholders}) AND deleted_at IS NULL ORDER BY customer_id ASC, datetime(created_at) ASC, id ASC`,
     customerIds,
   );
 }
@@ -432,7 +443,7 @@ async function getOrderAttachments(orderId: number) {
         a.created_at AS createdAt
       FROM attachments a
       INNER JOIN finance_records f ON a.entity_type = 'finance' AND a.entity_id = f.id
-      WHERE f.order_id = ?
+      WHERE f.order_id = ? AND f.deleted_at IS NULL
       ORDER BY a.id ASC
     `, [orderId]),
     dbAll<Record<string, unknown>[]>(`
@@ -448,7 +459,7 @@ async function getOrderAttachments(orderId: number) {
         a.created_at AS createdAt
       FROM attachments a
       INNER JOIN logistics_records l ON a.entity_type = 'logistics' AND a.entity_id = l.id
-      WHERE l.order_id = ?
+      WHERE l.order_id = ? AND l.deleted_at IS NULL
       ORDER BY a.id ASC
     `, [orderId]),
     dbAll<Record<string, unknown>[]>(`
@@ -570,7 +581,7 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
   const [orderRows, itemRows, financeRows, logisticsRows, packingRows, customsRows, planRows, summaryRows, pendingCountRows] =
     await Promise.all([
       dbAll<Record<string, unknown>[]>(
-        `SELECT o.*, c.name AS customer_name, c.display_id AS customer_display_id, c.country AS customer_country, c.contact AS customer_contact, c.logistics_preference AS customer_logistics_preference, c.payment_terms AS customer_payment_terms, cu.name AS created_by_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN users cu ON cu.id = o.created_by WHERE o.id IN (${ph})`,
+        `SELECT o.*, c.name AS customer_name, c.display_id AS customer_display_id, c.country AS customer_country, c.contact AS customer_contact, c.logistics_preference AS customer_logistics_preference, c.payment_terms AS customer_payment_terms, cu.name AS created_by_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN users cu ON cu.id = o.created_by WHERE o.id IN (${ph}) AND o.deleted_at IS NULL`,
         orderIds,
       ),
       dbAll<Record<string, unknown>[]>(
@@ -578,11 +589,11 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
         orderIds,
       ),
       dbAll<Record<string, unknown>[]>(
-        `SELECT f.*, p.name AS partner_name, p.partner_type AS partner_type, u.name AS created_by_name FROM finance_records f LEFT JOIN partners p ON p.id = f.partner_id LEFT JOIN users u ON u.id = f.created_by WHERE f.order_id IN (${ph}) ORDER BY f.order_id ASC, datetime(f.created_at) DESC, f.id DESC`,
+        `SELECT f.*, p.name AS partner_name, p.partner_type AS partner_type, u.name AS created_by_name FROM finance_records f LEFT JOIN partners p ON p.id = f.partner_id LEFT JOIN users u ON u.id = f.created_by WHERE f.order_id IN (${ph}) AND f.deleted_at IS NULL ORDER BY f.order_id ASC, datetime(f.created_at) DESC, f.id DESC`,
         orderIds,
       ),
       dbAll<Record<string, unknown>[]>(
-        `SELECT l.*, u.name AS created_by_name FROM logistics_records l LEFT JOIN users u ON u.id = l.created_by WHERE l.order_id IN (${ph}) ORDER BY l.order_id ASC, CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC, CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC, l.shipping_date DESC, datetime(l.created_at) DESC, l.id DESC`,
+        `SELECT l.*, u.name AS created_by_name FROM logistics_records l LEFT JOIN users u ON u.id = l.created_by WHERE l.order_id IN (${ph}) AND l.deleted_at IS NULL ORDER BY l.order_id ASC, CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC, CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC, l.shipping_date DESC, datetime(l.created_at) DESC, l.id DESC`,
         orderIds,
       ),
       dbAll<Record<string, unknown>[]>(
@@ -598,11 +609,11 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
         orderIds,
       ),
       dbAll<Record<string, unknown>[]>(
-        `SELECT order_id, type, currency, payment_category, COALESCE(SUM(amount), 0) AS total FROM finance_records WHERE order_id IN (${ph}) AND status = 'completed' GROUP BY order_id, type, currency, payment_category`,
+        `SELECT order_id, type, currency, payment_category, COALESCE(SUM(amount), 0) AS total FROM finance_records WHERE order_id IN (${ph}) AND status = 'completed' AND deleted_at IS NULL GROUP BY order_id, type, currency, payment_category`,
         orderIds,
       ),
       dbAll<Record<string, unknown>[]>(
-        `SELECT order_id, COUNT(*) AS count FROM finance_records WHERE order_id IN (${ph}) AND status = 'pending' GROUP BY order_id`,
+        `SELECT order_id, COUNT(*) AS count FROM finance_records WHERE order_id IN (${ph}) AND status = 'pending' AND deleted_at IS NULL GROUP BY order_id`,
         orderIds,
       ),
     ]);

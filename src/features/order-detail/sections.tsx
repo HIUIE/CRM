@@ -515,15 +515,15 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
   const hasCnyReceipt = receipts.some(r => r.currency === 'CNY');
 
   return (
-    <div className="fixed inset-0 z-[150] flex justify-end">
-      <button onClick={onClose} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 h-full w-full max-w-[560px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-6 bg-slate-50 dark:bg-navy-950/50">
+    <div className="fixed inset-0 z-[420] flex h-dvh justify-end overflow-hidden">
+      <button type="button" onClick={onClose} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm" />
+      <div className="relative z-10 flex h-dvh max-h-dvh min-h-0 w-full max-w-[560px] flex-col overflow-hidden border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl animate-in slide-in-from-right duration-500">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-6 py-5 sm:px-8 sm:py-6 bg-slate-50 dark:bg-navy-950/50">
           <h3 className="text-lg font-bold text-primary-navy dark:text-white tracking-tight uppercase">编辑利润核算</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-primary-navy dark:hover:text-white"><X size={20} /></button>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-primary-navy dark:hover:text-white"><X size={20} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 custom-scrollbar">
           {/* Revenue with dynamic receipts */}
           <section className="space-y-6">
             <h4 className="text-xs font-extrabold text-tertiary-sage uppercase tracking-widest">💰 收入 (Revenue)</h4>
@@ -533,7 +533,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-extrabold text-tertiary-sage uppercase tracking-widest">收款明细 {i + 1}</span>
                   {receipts.length > 1 && (
-                    <button onClick={() => delReceipt(i)} className="text-slate-300 hover:text-error transition-colors"><X size={14} /></button>
+                    <button type="button" onClick={() => delReceipt(i)} className="text-slate-300 hover:text-error transition-colors"><X size={14} /></button>
                   )}
                 </div>
 
@@ -565,7 +565,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
               </div>
             ))}
 
-            <button onClick={addReceipt} className="flex items-center gap-1.5 text-xs font-bold text-tertiary-sage hover:underline">
+            <button type="button" onClick={addReceipt} className="flex items-center gap-1.5 text-xs font-bold text-tertiary-sage hover:underline">
               <Plus size={12} /> 添加一笔收款
             </button>
 
@@ -617,10 +617,10 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                 <input value={fee.label} onChange={e => updMisc(i, 'label', e.target.value)} placeholder="费用名称" className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs outline-none text-primary-navy dark:text-white" />
                 <input type="number" step="0.01" value={fee.amount || ''} onChange={e => updMisc(i, 'amount', e.target.value)} className="w-full max-w-[120px] rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs outline-none data-field text-primary-navy dark:text-white" />
                 <span className="text-[10px] font-bold text-slate-400 w-8">CNY</span>
-                <button onClick={() => delMisc(i)} className="text-slate-300 hover:text-error"><X size={14} /></button>
+                <button type="button" onClick={() => delMisc(i)} className="text-slate-300 hover:text-error"><X size={14} /></button>
               </div>
             ))}
-            <button onClick={addMisc} className="flex items-center gap-1 text-[11px] font-bold text-tertiary-sage hover:underline"><Plus size={12} /> 添加杂费明细</button>
+            <button type="button" onClick={addMisc} className="flex items-center gap-1 text-[11px] font-bold text-tertiary-sage hover:underline"><Plus size={12} /> 添加杂费明细</button>
           </section>
 
           {/* Live Summary Card */}
@@ -643,9 +643,9 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           </div>
         </div>
 
-        <div className="border-t border-slate-100 dark:border-navy-800 px-8 py-5 flex justify-end gap-3">
-          <button onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-700 px-5 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-          <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false); }} disabled={saving} className="btn-primary shadow-md disabled:opacity-60">
+        <div className="shrink-0 border-t border-slate-100 dark:border-navy-800 px-6 py-4 sm:px-8 sm:py-5 flex justify-end gap-3 bg-white dark:bg-navy-900">
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-700 px-5 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+          <button type="button" onClick={async () => { setSaving(true); await onSave(form); setSaving(false); }} disabled={saving} className="btn-primary shadow-md disabled:opacity-60">
             {saving ? '保存中...' : '保存核算明细'}
           </button>
         </div>
