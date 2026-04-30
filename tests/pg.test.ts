@@ -9,7 +9,7 @@ describe('PostgreSQL Integration Tests', () => {
   before(async () => {
     // 1. Setup the test database
     const setupPool = new Pool({
-      host: process.env.PG_HOST || 'localhost',
+      host: process.env.PG_HOST || '127.0.0.1',
       port: Number(process.env.PG_PORT) || 5432,
       database: 'postgres', // connect to default db to manage databases
       user: process.env.PG_USER || 'postgres',

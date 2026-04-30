@@ -48,6 +48,25 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024, files: 6 },
 });
 
+function mapCustomsRecord(record: any, attachments: any[] = []) {
+  return {
+    id: record.id,
+    orderId: record.order_id,
+    status: record.status,
+    brokerName: record.broker_name,
+    declarationNo: record.declaration_no,
+    declarationDate: record.declaration_date,
+    releaseDate: record.release_date,
+    tradeMode: record.trade_mode,
+    remark: record.remark,
+    createdAt: record.created_at,
+    updatedAt: record.updated_at,
+    createdByName: record.created_by_name || null,
+    attachments,
+    attachmentCount: attachments.length,
+  };
+}
+
 export function createCustomsRouter() {
   const router = Router();
 
@@ -75,12 +94,8 @@ export function createCustomsRouter() {
         return res.json(null);
       }
       const attachments = await getAttachmentsByEntity('customs', [Number(record.id)]);
-      res.json({
-        ...record,
-        createdByName: record.created_by_name || null,
-        attachments: attachments.get(Number(record.id)) || [],
-        attachmentCount: (attachments.get(Number(record.id)) || []).length,
-      });
+      const attList = attachments.get(Number(record.id)) || [];
+      res.json(mapCustomsRecord(record, attList));
     } catch (error) {
       return handleRouteError(res, error, '读取报关信息失败');
     }
@@ -102,6 +117,7 @@ export function createCustomsRouter() {
         `
           INSERT INTO customs_records (order_id, status, broker_name, declaration_no, declaration_date, release_date, trade_mode, remark, created_by, updated_by, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          RETURNING id
         `,
         [
           result.payload.orderId,

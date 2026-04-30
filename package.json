@@ -13,6 +13,7 @@
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "test:frontend": "vitest run",
+    "seed:demo": "node --import tsx scripts/seed-demo.ts",
     "smoke:ui": "node --import tsx scripts/smoke-ui.ts",
     "release:check": "npm run lint && npm test && npm run build && npm run smoke:ui",
     "migrate": "node-pg-migrate",
@@ -28,7 +29,7 @@
     "cookie-parser": "^1.4.7",
     "dayjs": "^1.11.20",
     "dotenv": "^17.2.3",
-    "exceljs": "^3.4.0",
+    "exceljs": "3.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.4.1",
     "helmet": "^8.1.0",
@@ -45,6 +46,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.14.2",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "sonner": "^2.0.7",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -61,7 +65,6 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/sqlite3": "^3.1.11",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "@vitejs/plugin-react": "^5.0.4",
@@ -74,5 +77,9 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "fast-csv": "^4.3.6",
+    "tmp": "^0.2.4"
   }
 }

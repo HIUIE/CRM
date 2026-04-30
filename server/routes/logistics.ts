@@ -138,6 +138,7 @@ router.get('/', async (req, res) => {
             recipient_address, package_size, remark, created_by, updated_by
           )
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING id
         `,
         [
           result.payload.orderId,
@@ -265,6 +266,7 @@ router.get('/', async (req, res) => {
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
           `,
           [null, null, file.originalname, file.filename, file.mimetype, file.size, file.filename],
         );

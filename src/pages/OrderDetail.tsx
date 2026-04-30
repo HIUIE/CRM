@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -207,8 +207,7 @@ export default function OrderDetailPage() {
 
   const stageIndex = STAGE_STEPS.findIndex((s) => s.key === order?.status);
 
-  const queryClient = useQueryClient();
-  const refreshDetail = async () => { await queryClient.invalidateQueries({ queryKey: ['order-detail', orderNo] }); };
+  const refreshDetail = async () => { await loadDetail({ showLoading: false }); };
 
   // 4. Effects
   const loadDetail = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
@@ -331,7 +330,7 @@ export default function OrderDetailPage() {
   if (error || !detail || !order) return <div className="p-8 text-error font-bold bg-white dark:bg-navy-900 border border-[#E2E8F0] dark:border-navy-800 m-6 rounded-lg shadow-sm">加载失败: {error}</div>;
 
   return (
-    <>
+    <div className="animate-page-in">
       {/* 页面顶部滚动进度条 */}
       <div className="fixed top-0 left-0 h-1 bg-tertiary-sage/30 z-[200] w-full pointer-events-none">
         <div className="h-full bg-tertiary-sage transition-all duration-300 ease-out" style={{ width: `${scrollPercent}%` }} />
@@ -541,6 +540,6 @@ export default function OrderDetailPage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

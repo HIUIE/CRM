@@ -46,7 +46,7 @@ export default function HelpCenterPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 pb-12 animate-in fade-in duration-500">
+    <div className="mx-auto max-w-6xl space-y-8 pb-12 animate-page-in">
       <section className="relative overflow-hidden rounded-lg bg-primary-navy dark:bg-navy-900 px-8 py-16 text-white shadow-2xl transition-colors">
         <div className="absolute right-0 top-0 h-96 w-96 -translate-y-48 translate-x-32 rounded-full bg-white/5 blur-[100px]" />
         <div className="relative z-10 text-center">

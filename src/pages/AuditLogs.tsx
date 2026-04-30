@@ -25,21 +25,39 @@ export default function AuditLogsPage() {
   const [error, setError] = useState('');
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [copied, setCopied] = useState(false);
+  
+  // Filtering state
+  const [userId, setUserId] = useState('');
+  const [entityType, setEntityType] = useState('');
+  const [entityId, setEntityId] = useState('');
+  
   const navigate = useNavigate();
 
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (userId) params.append('userId', userId);
+      if (entityType) params.append('entityType', entityType);
+      if (entityId) params.append('entityId', entityId);
+      
+      const data = await apiFetch<AuditLog[]>(`/api/audit?${params.toString()}`);
+      setLogs(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(getErrorMessage(err, '读取审计日志失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const data = await apiFetch<AuditLog[]>('/api/audit');
-        setLogs(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setError(getErrorMessage(err, '读取审计日志失败'));
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchLogs();
-  }, []);
+  }, [userId, entityType]); // Refetch on filter change
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchLogs();
+  };
 
   const {
     currentPage,
@@ -61,7 +79,7 @@ export default function AuditLogsPage() {
   if (error) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error}</div>;
 
   return (
-    <div className="flex flex-col animate-in fade-in duration-500">
+    <div className="flex flex-col animate-page-in">
       {/* Standalone Header for Audit Logs */}
       <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
         <div className="flex items-center gap-4">
@@ -85,6 +103,48 @@ export default function AuditLogsPage() {
           <Printer size={14} /> 导出报告
         </button>
       </header>
+
+      {/* Filter Bar */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
+         <div className="space-y-1.5">
+           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">实体类型</label>
+           <select 
+             value={entityType}
+             onChange={(e) => setEntityType(e.target.value)}
+             className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-primary-navy transition-colors"
+           >
+             <option value="">全部类型</option>
+             <option value="CUSTOMER">客户 (CUSTOMER)</option>
+             <option value="ORDER">订单 (ORDER)</option>
+             <option value="TASK">任务 (TASK)</option>
+             <option value="FINANCE">财务 (FINANCE)</option>
+             <option value="PARTNER">合作伙伴 (PARTNER)</option>
+           </select>
+         </div>
+
+         <form onSubmit={handleSearch} className="md:col-span-2 space-y-1.5">
+           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">实体 ID (精确搜索)</label>
+           <div className="flex gap-2">
+             <input 
+               type="text"
+               placeholder="输入实体 ID (如 123 或 ORD-2024-001)..."
+               value={entityId}
+               onChange={(e) => setEntityId(e.target.value)}
+               className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-primary-navy transition-colors"
+             />
+             <button type="submit" className="px-4 py-2 bg-primary-navy text-white rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all uppercase tracking-widest">搜索</button>
+           </div>
+         </form>
+
+         <div className="flex items-end justify-end">
+            <button 
+              onClick={() => { setUserId(''); setEntityType(''); setEntityId(''); }}
+              className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-primary-navy uppercase tracking-widest transition-colors"
+            >
+              重置筛选
+            </button>
+         </div>
+      </div>
 
       <div className="flex-1 px-1">
         <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">

@@ -9,6 +9,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: smarttrade_crm_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,4 +35,10 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_DATABASE: smarttrade_crm_test
+          PG_USER: postgres
+          PG_PASSWORD: postgres
       - run: npm run build

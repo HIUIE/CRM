@@ -23,9 +23,9 @@ export function createCustomersRouter() {
     const params: (string | number | null | undefined)[] = [];
 
     if (q) {
-      whereSql += ` AND (c.name LIKE ? OR c.country LIKE ? OR c.contact LIKE ?)`;
+      whereSql += ` AND (c.name LIKE ? OR c.country LIKE ? OR c.contact LIKE ? OR c.display_id LIKE ?)`;
       const p = `%${q}%`;
-      params.push(p, p, p);
+      params.push(p, p, p, p);
     }
     if (startDate) {
       whereSql += ` AND c.created_at >= ?`;
@@ -176,6 +176,7 @@ export function createCustomersRouter() {
         `
           INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, created_by, updated_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING id
         `,
         [displayId, name, country, contact, sourceChannel, intentProducts, req.user?.id || null, req.user?.id || null],
       );

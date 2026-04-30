@@ -1,6 +1,5 @@
 import React from 'react';
 import { apiFetch, apiUpload, apiUploadSimple, getErrorMessage } from '../../lib/api';
-import { withTransition } from '../../lib/transition';
 import type {
   OrderFormState,
   FinanceFormState,
@@ -40,7 +39,7 @@ export async function handleSaveOrder(
     const payload = { ...orderForm, customerId: Number(orderForm.customerId), totalAmount: Number(orderForm.totalAmount), freightAmount: Number(orderForm.freightAmount), miscAmount: Number(orderForm.miscAmount), deletedItemIds };
     await apiFetch(`/api/orders/${order?.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
     showToast('同步成功'); closeDrawer();
-    withTransition(() => { void loadDetail({ showLoading: false }); });
+    void loadDetail({ showLoading: false });
   } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); } finally { setSaving(false); }
 };
 
@@ -78,7 +77,7 @@ export async function handleSaveFinance(
     const url = financeForm.id ? `/api/finance/${financeForm.id}` : `/api/finance`;
     await apiFetch(url, { method: financeForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
     showToast('同步成功'); closeDrawer();
-    withTransition(() => { void loadDetail({ showLoading: false }); });
+    void loadDetail({ showLoading: false });
   } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); setIsUploading(false); } finally { setSaving(false); }
 };
 
@@ -127,7 +126,7 @@ export async function handleSaveProduction(
     const url = productionForm.id ? `/api/orders/production/${productionForm.id}` : `/api/orders/${order?.id}/production`;
     await apiFetch(url, { method: productionForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
     showToast('同步成功'); closeDrawer();
-    withTransition(() => { void loadDetail({ showLoading: false }); });
+    void loadDetail({ showLoading: false });
   } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); } finally { setSaving(false); }
 };
 
@@ -223,7 +222,7 @@ export async function handleSaveProductionLog(
     const payload = { ...productionLogForm, attachmentIds: [...productionLogForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
     await apiFetch(`/api/orders/production/${productionPlan?.id}/logs`, { method: 'POST', body: JSON.stringify(payload) });
     showToast('进度已记录'); closeDrawer();
-    withTransition(() => { void loadDetail({ showLoading: false }); });
+    void loadDetail({ showLoading: false });
   } catch (err) { setDrawerError(getErrorMessage(err, '提交失败')); setIsUploading(false); } finally { setSaving(false); }
 };
 
@@ -261,7 +260,7 @@ export async function handleSaveCustoms(
     const url = customsForm.id ? `/api/customs/${customsForm.id}` : `/api/orders/${order?.id}/customs`;
     await apiFetch(url, { method: customsForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
     showToast('同步成功'); closeDrawer();
-    withTransition(() => { void loadDetail({ showLoading: false }); });
+    void loadDetail({ showLoading: false });
   } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); setIsUploading(false); } finally { setSaving(false); }
 };
 
@@ -299,7 +298,7 @@ export async function handleSaveLogistics(
     const url = logisticsForm.id ? `/api/logistics/${logisticsForm.id}` : `/api/logistics`;
     await apiFetch(url, { method: logisticsForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
     showToast('同步成功'); closeDrawer();
-    withTransition(() => { void loadDetail({ showLoading: false }); });
+    void loadDetail({ showLoading: false });
   } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); setIsUploading(false); } finally { setSaving(false); }
 };
 
@@ -322,7 +321,7 @@ export async function handleSavePacking(
   try {
     await apiFetch(`/api/orders/${order?.id}/packing`, { method: 'PATCH', body: JSON.stringify(packingForm) });
     showToast('装箱数据已更新'); closeDrawer();
-    withTransition(() => { void loadDetail({ showLoading: false }); });
+    void loadDetail({ showLoading: false });
   } catch (err) { setDrawerError(getErrorMessage(err, '保存失败')); } finally { setSaving(false); }
 };
 

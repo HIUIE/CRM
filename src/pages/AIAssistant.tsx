@@ -69,7 +69,7 @@ export default function AIAssistantPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-120px)] flex-col gap-4">
+    <div className="flex h-[calc(100vh-120px)] flex-col gap-4 animate-page-in">
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-tertiary-sage dark:text-emerald-400 mb-2">

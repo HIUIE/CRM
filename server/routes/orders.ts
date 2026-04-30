@@ -148,7 +148,7 @@ export function createOrdersRouter() {
         }
 
         return await tx.run(
-          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
           [displayId, result.payload.customerId, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null]
         );
       });
@@ -161,7 +161,7 @@ export function createOrdersRouter() {
         const conflictId = error.message.slice('ORDER_ID_CONFLICT:'.length);
         return fail(res, 400, `创建失败：单号 ${conflictId} 已存在，请核对后重新输入！`, 'ORDER_ID_CONFLICT');
       }
-      // 捕获 SQLite 唯一索引冲突（双保险）
+      // 捕获唯一索引冲突（如主键或单号重复）
       if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
         return fail(res, 400, '创建失败：该订单单号已存在，请核对！', 'ORDER_ID_CONFLICT');
       }
@@ -202,7 +202,7 @@ export function createOrdersRouter() {
             await tx.run(`UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ? WHERE id = ?`,
               [item.productName, item.specification, item.hsCode, item.quantity, item.unit, item.unitPrice, item.subtotal, item.imageUrl, item.id]);
           } else {
-            await tx.run(`INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            await tx.run(`INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
               [orderId, item.productName, item.specification, item.hsCode, item.quantity, item.unit, item.unitPrice, item.subtotal, item.imageUrl]);
           }
         }

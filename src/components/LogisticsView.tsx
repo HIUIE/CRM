@@ -168,7 +168,7 @@ export default function LogisticsView() {
   }, [formData.orderId, orders]);
 
   return (
-    <div className="flex flex-col space-y-4 animate-in fade-in duration-500">
+    <div className="flex flex-col space-y-4 animate-page-in">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px]">
           <div className="relative">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash, Plus, Clock, Upload } from 'lucide-react';
+import { Trash, Plus, Clock, Upload, FileCheck } from 'lucide-react';
 import { Field, AttachmentEditor } from './components';
 import { asNumber, formatDateOnly } from './utils';
 import type {
@@ -198,13 +198,27 @@ export function CustomsForm({
 }) {
   return (
     <div className="space-y-10">
+      <div className="p-8 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 flex gap-6 shadow-inner">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shadow-lg"><FileCheck size={28} /></div>
+        <div className="space-y-2 pt-1"><h5 className="text-[16px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">报关与清关信息同步</h5><p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">更新海关申报单据与状态，确保出口合规性与时效追踪。</p></div>
+      </div>
       <div className="grid gap-8 sm:grid-cols-2">
+        <Field label="报关当前状态">
+          <select value={customsForm.status} onChange={e=>setCustomsForm({...customsForm, status:e.target.value as any})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer">
+            <option value="not_started">未开始 (Pending)</option>
+            <option value="preparing">资料准备中 (Preparing)</option>
+            <option value="submitted">已提交申报 (Submitted)</option>
+            <option value="inspected">海关查验中 (Inspected)</option>
+            <option value="released">已放行/结关 (Released)</option>
+          </select>
+        </Field>
+        <Field label="合作报关行"><input value={customsForm.brokerName} onChange={e=>setCustomsForm({...customsForm, brokerName:e.target.value})} placeholder="输入报关行全称..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
         <Field label="正式报关单号"><input value={customsForm.declarationNo} onChange={e=>setCustomsForm({...customsForm, declarationNo:e.target.value})} placeholder="输入 18 位海关报关单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
         <Field label="贸易方式分类"><select value={customsForm.tradeMode} onChange={e=>setCustomsForm({...customsForm, tradeMode:e.target.value})} className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm cursor-pointer"><option value="一般贸易">一般贸易 (0110)</option><option value="进料加工">进料加工 (0615)</option><option value="来料加工">来料加工 (0214)</option><option value="其他">其他类型</option></select></Field>
-        <Field label="海关清关日期"><input type="date" value={customsForm.declarationDate} onChange={e=>setCustomsForm({...customsForm, declarationDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
-        <Field label="预计离港/出口日期"><input type="date" value={customsForm.releaseDate} onChange={e=>setCustomsForm({...customsForm, releaseDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+        <Field label="海关申报日期"><input type="date" value={customsForm.declarationDate} onChange={e=>setCustomsForm({...customsForm, declarationDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+        <Field label="海关放行日期"><input type="date" value={customsForm.releaseDate} onChange={e=>setCustomsForm({...customsForm, releaseDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
       </div>
-      <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="扫描件存档 (发票/装箱单/报关单)" attachments={customsForm.attachments} newFiles={customsForm.newFiles} onFilesSelected={fs=>setCustomsForm({...customsForm, newFiles:[...customsForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setCustomsForm({...customsForm, attachments:customsForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setCustomsForm({...customsForm, newFiles:customsForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
+      <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="正式报关文件存档 (发票/装箱单/报关单扫描件)" attachments={customsForm.attachments} newFiles={customsForm.newFiles} onFilesSelected={fs=>setCustomsForm({...customsForm, newFiles:[...customsForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setCustomsForm({...customsForm, attachments:customsForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setCustomsForm({...customsForm, newFiles:customsForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
     </div>
   );
 }

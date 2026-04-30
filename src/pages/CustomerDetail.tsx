@@ -159,7 +159,7 @@ export default function CustomerDetailPage() {
   if (error || !data) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error || '客户不存在'}</div>;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col animate-page-in">
       {/* Flattened Header: Action Unfold */}
       <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
         <div className="flex items-center gap-4">

@@ -16,6 +16,8 @@ function pgParams(sql: string, params: any[]): [string, any[]] {
     .replace(/\?/g, () => `$${++idx}`)
     // Strip datetime(col) → col (PG sorts TIMESTAMP natively)
     .replace(/\bdatetime\((\w+(?:\.\w+)?)\)/g, '$1')
+    // Convert LIKE to ILIKE for case-insensitive search (works great with pg_trgm GIN indexes)
+    .replace(/\bLIKE\b/g, 'ILIKE')
     // Quote camelCase aliases: " AS fooBar" → " AS \"fooBar\""
     .replace(/\bAS\s+([a-z]+[A-Z][a-zA-Z]*)\b/g, 'AS "$1"')
     // Auto-expand GROUP BY c.id to include joined columns (PG requires all non-aggregate cols)
@@ -62,7 +64,8 @@ function createExecutor(executor?: { query: (sql: string, params?: any[]) => Pro
     async run(sql: string, params: any[] = []) {
       const [q, p] = pgParams(sql, params);
       const result = await (executor || pool).query(q, p);
-      return { changes: result.rowCount || 0, lastID: 0 };
+      const lastID = (result.rows && result.rows[0] && result.rows[0].id) ? Number(result.rows[0].id) : 0;
+      return { changes: result.rowCount || 0, lastID };
     },
     async exec(sql: string) {
       await (executor || pool).query(sql);
