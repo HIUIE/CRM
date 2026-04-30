@@ -212,7 +212,7 @@ export function DocumentsVaultSection({
       </label>
     }>
       {orderDocuments.length ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-3 sm:grid-cols-2">
           {orderDocuments.map(doc => (
             <div key={doc.id} className="flex items-center h-14 px-4 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
               <button onClick={() => onPreview(doc)} className="shrink-0 mr-3"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
@@ -231,7 +231,7 @@ export function DocumentsVaultSection({
           ))}
         </div>
       ) : (
-        <EmptyStateBoard title="暂无核心交易凭证" description="请上传双方盖章版 PO、我方 PI 等核心交易凭证，方便业务核对与归档。" icon={FileText} actionLabel="+ 上传首份凭证" onAction={() => document.getElementById('doc-upload-input')?.click()} />
+        <EmptyStateBoard title="暂无核心交易凭证" description="请上传双方盖章版 PO、我方 PI、银行水单或合同附件，方便业务核对、财务追踪与长期归档。" icon={FileText} actionLabel="+ 上传首份凭证" onAction={() => document.getElementById('doc-upload-input')?.click()} />
       )}
       <input id="doc-upload-input" type="file" multiple className="hidden" onChange={e => e.target.files && onUploadDocument(e.target.files)} />
     </DocumentBoard>
@@ -279,7 +279,7 @@ export function FinanceSection({
       {financeRecords.length ? (
         <FinanceDashboard totalAmount={grandTotal} records={filteredRecords} receiptsByCurrency={summary.receiptsByCurrency} onPreview={onPreview} onEdit={onEdit} onDelete={onDelete} />
       ) : (
-        <EmptyStateBoard title="暂无账务往来" description="该订单目前尚无收付款记录。请及时登记预付、尾款或运费流水。" icon={Wallet} actionLabel="+ 登记第一笔收支" onAction={onAdd} />
+        <EmptyStateBoard title="暂无账务往来" description="请登记客户定金、尾款或需支付给合作伙伴的运费/报关费，并上传银行水单等凭证。" icon={Wallet} actionLabel="+ 登记第一笔收支" onAction={onAdd} />
       )}
     </DocumentBoard>
   );
@@ -779,7 +779,7 @@ export function CustomsSection({
           </div>
         </div>
       ) : (
-        <EmptyStateBoard title="暂无报关信息" description="货物发出前，请点击此处预录入海关单号与贸易方式。" icon={ShieldCheck} actionLabel="+ 初始化报关资料" onAction={onEditCustoms} />
+        <EmptyStateBoard title="暂无报关信息" description="出货前请维护报关单号、贸易方式、报关日期和官方附件，避免后续出口节点缺资料。" icon={ShieldCheck} actionLabel="+ 初始化报关资料" onAction={onEditCustoms} />
       )}
     </DocumentBoard>
   );
@@ -840,13 +840,45 @@ export function PackingSection({
           </table>
         </div>
       ) : (
-        <EmptyStateBoard title="暂无装箱数据" description="尚未录入物理包装参数。请点击此处维护各组箱体的尺寸与重量。" icon={Box} actionLabel="+ 初始化装箱单" onAction={onEditPacking} />
+        <EmptyStateBoard title="暂无装箱数据" description="请录入箱数、尺寸、毛重、净重和实物图，便于报关、订舱和物流交接。" icon={Box} actionLabel="+ 初始化装箱单" onAction={onEditPacking} />
       )}
     </DocumentBoard>
   );
 }
 
 // ==================== Logistics Section ====================
+
+function getLogisticsSegmentMeta(segment?: LogisticsRecord['segmentType']) {
+  if (segment === 'domestic') {
+    return {
+      label: '国内运输',
+      eyebrow: 'DOMESTIC LEG',
+      card: 'border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 hover:border-slate-300 dark:hover:border-navy-700',
+      badge: 'border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300',
+      icon: 'text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/40',
+    };
+  }
+
+  return {
+    label: '国际运输',
+    eyebrow: 'INTERNATIONAL LEG',
+    card: 'border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 hover:border-slate-300 dark:hover:border-navy-700',
+    badge: 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300',
+    icon: 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40',
+  };
+}
+
+function getLogisticsStatusMeta(status?: LogisticsRecord['status']) {
+  switch (status) {
+    case 'preparing':
+      return { label: '准备中', className: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' };
+    case 'arrived':
+      return { label: '已送达', className: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' };
+    case 'shipped':
+    default:
+      return { label: '运输中', className: 'text-sky-600 dark:text-sky-400', dot: 'bg-sky-500' };
+  }
+}
 
 export function LogisticsSection({
   sectionRef,
@@ -869,53 +901,63 @@ export function LogisticsSection({
 }) {
   return (
     <DocumentBoard ref={sectionRef} title="运输轨迹" action={logisticsRecords.length ? <LightActionButton onClick={() => onAddLogistics()} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 录入运单</LightActionButton> : null}>
-      {!hasAnyLogistics ? <EmptyStateBoard title="等待货件发运" description="当前订单尚未关联物流记录，请在发货后及时同步单号。" actionLabel="录入物流单号" onAction={() => onAddLogistics()} icon={Truck} /> :
+      {!hasAnyLogistics ? <EmptyStateBoard title="等待货件发运" description="发货后请录入国内或国际运单，维护货代、承运商、提单/运单号和预计到达信息。" actionLabel="录入物流单号" onAction={() => onAddLogistics()} icon={Truck} /> :
         <div className="grid gap-5 md:grid-cols-2">
-          {logisticsRecords.map((l) => (
-            <div key={l.id} className="p-6 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 transition-all group relative shadow-sm hover:shadow-md">
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
-                <button onClick={() => onEditLogistics(l)} className="p-2 bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 rounded-md text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm"><Edit3 size={16} /></button>
-              </div>
-              <div className="flex items-center justify-between mb-4">
-                <Chip tone="neutral">{l.segmentType === 'domestic' ? '国内运输' : '国际运输'}</Chip>
-                <span className="text-tertiary-sage dark:text-emerald-400 flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider"><div className="h-1.5 w-1.5 rounded-full bg-tertiary-sage dark:bg-emerald-400" /> {l.status === 'arrived' ? '已送达' : '运输中'}</span>
-              </div>
-              <div className="flex flex-col gap-2 mb-5">
-                <div className="flex justify-between items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none block mb-1">货运代理</span>
-                    <div className="text-sm font-bold text-primary-navy dark:text-white truncate">{l.freightForwarderPartnerName || l.freightForwarder || '直接委托'}</div>
-                    {l.freightForwarderPartnerId && <div className="mt-0.5 text-[10px] font-bold text-slate-400 truncate">{[l.freightForwarderPartnerCountry, l.freightForwarderPartnerContact].filter(Boolean).join(' · ') || '合作伙伴档案'}</div>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none block mb-1">实际承运商</span>
-                    <div className="text-sm font-bold text-primary-navy dark:text-white truncate">{l.carrier}</div>
-                  </div>
+          {logisticsRecords.map((l) => {
+            const segmentMeta = getLogisticsSegmentMeta(l.segmentType);
+            const statusMeta = getLogisticsStatusMeta(l.status);
+            return (
+              <div key={l.id} className={`relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all hover:shadow-md group ${segmentMeta.card}`}>
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => onEditLogistics(l)} className="p-2 bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 rounded-md text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm"><Edit3 size={16} /></button>
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-4">
-                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">提单/运单号</span>
-                  <span className="text-sm font-bold text-white bg-slate-900 dark:bg-navy-800 px-3 py-1 rounded-[3px] data-field shadow-md">{l.trackingNo}</span>
-                </div>
-              </div>
-              <div className="mt-2 pt-4 border-t border-slate-50 dark:border-navy-800 flex flex-col gap-2 text-xs font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest opacity-80">
-                <span>发货日期: {formatDateOnly(l.shippingDate, '待定')}</span>
-                {l.recipientAddress && <div className="truncate font-medium" title={l.recipientAddress}>收货地址: {l.recipientAddress}</div>}
-              </div>
-              {l.attachments && l.attachments.length > 0 && (
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {l.attachments.map((att: AttachmentMeta) => (
-                    <div key={att.id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-navy-950 rounded border border-slate-100 dark:border-navy-800 text-primary-navy dark:text-white hover:bg-white dark:hover:bg-navy-800 transition-all shadow-sm">
-                      <button onClick={() => onPreview(att)} className="flex items-center gap-1.5">
-                        <FileIcon fileName={att.fileName} size={12} />
-                        <span className="text-xs font-bold truncate max-w-[100px]">{att.fileName.split('.')[0]}</span>
-                      </button>
-                      {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(att.id)} className="ml-1 text-slate-300 dark:text-slate-700 hover:text-error"><X size={12} /></button>}
+                <div className="mb-5 flex items-start justify-between gap-4 pr-10">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border shadow-sm ${segmentMeta.icon}`}><Truck size={18} /></div>
+                    <div className="min-w-0">
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black tracking-wider ${segmentMeta.badge}`}>{segmentMeta.label}</span>
+                      <div className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{segmentMeta.eyebrow}</div>
                     </div>
-                  ))}
+                  </div>
+                  <span className={`mt-1 flex shrink-0 items-center gap-1.5 text-xs font-black uppercase tracking-wider ${statusMeta.className}`}><div className={`h-1.5 w-1.5 rounded-full ${statusMeta.dot}`} /> {statusMeta.label}</span>
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="mb-5 flex flex-col gap-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900/80">
+                      <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">货运代理</span>
+                      <div className="truncate text-sm font-black text-primary-navy dark:text-white">{l.freightForwarderPartnerName || l.freightForwarder || '直接委托'}</div>
+                      {l.freightForwarderPartnerId && <div className="mt-1 truncate text-[10px] font-bold text-slate-400">{[l.freightForwarderPartnerCountry, l.freightForwarderPartnerContact].filter(Boolean).join(' · ') || '合作伙伴档案'}</div>}
+                    </div>
+                    <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900/80">
+                      <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">实际承运商</span>
+                      <div className="truncate text-sm font-black text-primary-navy dark:text-white">{l.carrier || '待填写'}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 bg-slate-50/70 px-4 py-3 dark:border-navy-800 dark:bg-navy-950/50">
+                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">提单/运单号</span>
+                    <span className="rounded-[4px] bg-slate-900 px-3 py-1 text-sm font-black text-white shadow-md data-field dark:bg-navy-800">{l.trackingNo || '待同步'}</span>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-4 text-xs font-bold text-secondary-slate dark:border-navy-800 dark:text-slate-400 uppercase tracking-widest">
+                  <span>发货日期: <span className="data-field text-primary-navy dark:text-white">{formatDateOnly(l.shippingDate, '待定')}</span></span>
+                  {l.recipientAddress && <div className="truncate font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400" title={l.recipientAddress}>收货地址: {l.recipientAddress}</div>}
+                </div>
+                {l.attachments && l.attachments.length > 0 && (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {l.attachments.map((att: AttachmentMeta) => (
+                      <div key={att.id} className="flex items-center gap-1.5 rounded border border-slate-100 bg-slate-50/60 px-2.5 py-1.5 text-primary-navy shadow-sm transition-all hover:bg-white dark:border-navy-800 dark:bg-navy-900/80 dark:text-white dark:hover:bg-navy-800">
+                        <button onClick={() => onPreview(att)} className="flex items-center gap-1.5">
+                          <FileIcon fileName={att.fileName} size={12} />
+                          <span className="max-w-[100px] truncate text-xs font-bold">{att.fileName.split('.')[0]}</span>
+                        </button>
+                        {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(att.id)} className="ml-1 text-slate-300 dark:text-slate-700 hover:text-error"><X size={12} /></button>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>}
     </DocumentBoard>
   );
@@ -993,28 +1035,46 @@ export function FollowupsSection({
 export function NavRailSection({
   activeSection,
   scrollToSection,
+  moduleAlerts = {},
 }: {
   activeSection: string;
   scrollToSection: (section: string) => void;
+  moduleAlerts?: Partial<Record<string, { label: string; tone: 'warning' | 'error' | 'success' | 'neutral' }>>;
 }) {
+  const navGroups = [
+    { group: '订单', items: [{ section: 'items', label: '商品明细' }, { section: 'documents', label: '核心单据' }] },
+    { group: '履约', items: [{ section: 'production', label: '生产排产' }, { section: 'packing', label: '装箱明细' }, { section: 'logistics', label: '运输轨迹' }, { section: 'customs', label: '报关资料' }] },
+    { group: '结算', items: [{ section: 'finance', label: '财务信息' }, { section: 'profit', label: '利润核算' }] },
+    { group: '协同', items: [{ section: 'todos', label: '协同任务' }, { section: 'followups', label: '跟进时间轴' }] },
+  ];
+
+  const alertClass = (tone: 'warning' | 'error' | 'success' | 'neutral') => {
+    switch (tone) {
+      case 'error': return 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/40';
+      case 'warning': return 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-900/40';
+      case 'success': return 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-900/40';
+      default: return 'bg-slate-50 text-slate-500 border-slate-100 dark:bg-navy-800 dark:text-slate-300 dark:border-navy-700';
+    }
+  };
+
   return (
     <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm transition-colors">
-      <div className="text-xs font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 dark:bg-tertiary-sage rounded-full" /> 页面导航</div>
-      <div className="space-y-1.5">
-        {[
-          { section: 'items', label: '商品明细' },
-          { section: 'documents', label: '核心单据' },
-          { section: 'finance', label: '财务信息' },
-          { section: 'production', label: '生产排产' },
-          { section: 'customs', label: '报关资料' },
-          { section: 'packing', label: '装箱明细' },
-          { section: 'logistics', label: '运输轨迹' },
-          { section: 'profit', label: '利润核算' },
-          { section: 'followups', label: '跟进时间轴' },
-        ].map(item => (
-          <button key={item.section} onClick={() => scrollToSection(item.section)} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-bold text-sm transition-all ${activeSection === item.section ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}>
-            <span>{item.label}</span>
-          </button>
+      <div className="text-xs font-black text-slate-900 dark:text-white mb-5 uppercase tracking-widest flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 dark:bg-tertiary-sage rounded-full" /> 页面导航</div>
+      <div className="space-y-5">
+        {navGroups.map(group => (
+          <div key={group.group} className="space-y-1.5">
+            <div className="px-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{group.group}</div>
+            {group.items.map(item => {
+              const alert = moduleAlerts[item.section];
+              const isActive = activeSection === item.section;
+              return (
+                <button key={item.section} onClick={() => scrollToSection(item.section)} className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all ${isActive ? 'bg-slate-100 dark:bg-navy-800 text-slate-900 dark:text-white ring-1 ring-slate-200 dark:ring-navy-700' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}>
+                  <span className="truncate">{item.label}</span>
+                  {alert ? <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black ${alertClass(alert.tone)}`}>{alert.label}</span> : null}
+                </button>
+              );
+            })}
+          </div>
         ))}
       </div>
     </section>

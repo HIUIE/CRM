@@ -169,7 +169,7 @@ export default function OrderDetailPage() {
   const tasks = detail?.tasks || [];
   const domesticLogistics = detail?.domesticLogistics || null;
   const internationalLogistics = detail?.internationalLogistics || null;
-  const summary = detail?.summary || { receiptsByCurrency: {}, attachmentsSummary: { finance: 0, logistics: 0, customs: 0 } };
+  const summary = detail?.summary || { receiptsByCurrency: {}, paymentsByCurrency: {}, freightByCurrency: {}, pendingFinanceCount: 0, paidAmount: 0, outstandingAmount: 0, paymentStatus: 'unpaid' as const, settled: false, attachmentsSummary: { finance: 0, logistics: 0, customs: 0 } };
   const hasAnyLogistics = Boolean(domesticLogistics || internationalLogistics || logisticsRecords.length);
 
   const itemsTotal = items.reduce((sum, item) => sum + asNumber(item.subtotal), 0);
@@ -206,6 +206,16 @@ export default function OrderDetailPage() {
     if (days <= 7) return { label: `${days} 天内交货`, tone: 'warning' as const };
     return { label: formatDateOnly(order.deliveryDate), tone: 'info' as const };
   }, [order?.deliveryDate]);
+
+  const moduleAlerts = useMemo(() => ({
+    finance: summary.settled ? { label: '已结清', tone: 'success' as const } : { label: '未结清', tone: 'warning' as const },
+    production: productionPlan?.productionStatus === 'ready' ? { label: '完成', tone: 'success' as const } : { label: productionPlan ? '进行中' : '未排产', tone: productionPlan ? 'neutral' as const : 'warning' as const },
+    logistics: hasAnyLogistics ? { label: '已发运', tone: 'success' as const } : { label: '未发运', tone: 'warning' as const },
+    customs: customs ? { label: customs.status === 'released' ? '已放行' : '处理中', tone: customs.status === 'released' ? 'success' as const : 'neutral' as const } : { label: '缺失', tone: 'warning' as const },
+    packing: packingRecords.length ? { label: '已录入', tone: 'success' as const } : { label: '待录入', tone: 'warning' as const },
+    documents: orderDocuments.length ? { label: `${orderDocuments.length} 份`, tone: 'neutral' as const } : { label: '待上传', tone: 'warning' as const },
+    todos: tasks.some(t => t.status !== 'done') ? { label: `${tasks.filter(t => t.status !== 'done').length} 待办`, tone: 'warning' as const } : { label: '完成', tone: 'success' as const },
+  }), [summary.settled, productionPlan, hasAnyLogistics, customs, packingRecords.length, orderDocuments.length, tasks]);
 
   const stageIndex = STAGE_STEPS.findIndex((s) => s.key === order?.status);
 
@@ -258,8 +268,14 @@ export default function OrderDetailPage() {
       setScrollPercent(scrolled);
 
       const scrollPos = window.scrollY + 120;
-      for (const [key, ref] of Object.entries(sectionRefs)) {
-        if (ref.current && scrollPos >= ref.current.offsetTop && scrollPos < ref.current.offsetTop + ref.current.offsetHeight) {
+      const trackedSections: Array<[string, HTMLElement | null]> = [
+        ...Object.entries(sectionRefs).map(([key, ref]) => [key, ref.current] as [string, HTMLElement | null]),
+        ['documents', document.getElementById('documents-vault')],
+        ['profit', document.getElementById('profit-section')],
+        ['followups', document.getElementById('followups-timeline')],
+      ];
+      for (const [key, el] of trackedSections) {
+        if (el && scrollPos >= el.offsetTop && scrollPos < el.offsetTop + el.offsetHeight) {
           setActiveSection(key as SectionKey); break;
         }
       }
@@ -284,7 +300,7 @@ export default function OrderDetailPage() {
         const top = el.getBoundingClientRect().top + window.pageYOffset - 24;
         window.scrollTo({ top, behavior: 'smooth' });
       }
-      if (normalizedSection !== 'followups') setActiveSection(normalizedSection as SectionKey);
+      setActiveSection(normalizedSection as SectionKey);
       return;
     }
     const ref = sectionRefs[normalizedSection as keyof typeof sectionRefs];
@@ -435,7 +451,7 @@ export default function OrderDetailPage() {
       />
 
       {/* Physical 2-Column Main Layout */}
-      <main className="max-w-[1600px] mx-auto py-10 flex gap-8 items-start">
+      <main className="max-w-[1600px] mx-auto py-8 lg:py-10 flex flex-col gap-8 lg:flex-row lg:items-start">
 
         {/* Left Side: Vertical Business Feed */}
         <div className="flex-1 min-w-0 flex flex-col gap-8">
@@ -531,9 +547,9 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Right Nav Rail */}
-        <aside className="w-[280px] shrink-0 sticky top-6 self-start space-y-6">
+        <aside className="hidden w-[280px] shrink-0 self-start space-y-6 lg:sticky lg:top-6 lg:block">
           <Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />}>
-            <NavRailSection activeSection={activeSection} scrollToSection={scrollToSection} />
+            <NavRailSection activeSection={activeSection} scrollToSection={scrollToSection} moduleAlerts={moduleAlerts} />
             <QuickFollowUpSection
               followUpInput={followUpInput}
               onFollowUpChange={setFollowUpInput}

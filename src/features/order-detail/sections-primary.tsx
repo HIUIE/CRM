@@ -14,6 +14,9 @@ import {
   FileText,
   Plus,
   Package,
+  Wallet,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { WorkSection, EmptyStateBoard, LightActionButton } from './components';
@@ -27,6 +30,53 @@ import type {
   ProductionPlan,
   SectionKey,
 } from './types';
+
+function formatMoney(amount: number, currency = 'USD') {
+  return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function getProductionOverview(plan: ProductionPlan | null) {
+  if (!plan) return { label: '未排产', detail: '等待同步生产', tone: 'warning' as const, progress: 0 };
+  switch (plan.productionStatus) {
+    case 'ready': return { label: '已完工', detail: plan.partnerName || '生产完成', tone: 'success' as const, progress: 100 };
+    case 'in_progress': return { label: '生产中', detail: plan.partnerName || '工厂生产中', tone: 'info' as const, progress: 60 };
+    case 'scheduled': return { label: '已排产', detail: plan.partnerName || '等待开工', tone: 'info' as const, progress: 20 };
+    default: return { label: '未开始', detail: plan.partnerName || '等待生产', tone: 'warning' as const, progress: 0 };
+  }
+}
+
+function getLogisticsOverview(hasAnyLogistics: boolean) {
+  return hasAnyLogistics
+    ? { label: '已发运', detail: '查看运输轨迹', tone: 'success' as const }
+    : { label: '未发运', detail: '待录入运单', tone: 'warning' as const };
+}
+
+function toneClasses(tone: 'success' | 'warning' | 'error' | 'info' | 'neutral') {
+  switch (tone) {
+    case 'success': return 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-900/40';
+    case 'warning': return 'text-amber-600 bg-amber-50 border-amber-100 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-900/40';
+    case 'error': return 'text-red-600 bg-red-50 border-red-100 dark:text-red-300 dark:bg-red-900/20 dark:border-red-900/40';
+    case 'info': return 'text-sky-600 bg-sky-50 border-sky-100 dark:text-sky-300 dark:bg-sky-900/20 dark:border-sky-900/40';
+    default: return 'text-slate-500 bg-slate-50 border-slate-100 dark:text-slate-300 dark:bg-navy-800 dark:border-navy-700';
+  }
+}
+
+function OverviewMetric({ label, value, helper, icon, tone = 'neutral', onClick }: { label: string; value: React.ReactNode; helper: string; icon: React.ReactNode; tone?: 'success' | 'warning' | 'error' | 'info' | 'neutral'; onClick?: () => void }) {
+  const content = (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</span>
+        <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${toneClasses(tone)}`}>{icon}</span>
+      </div>
+      <div className="mt-3 text-lg font-black text-primary-navy dark:text-white data-field truncate">{value}</div>
+      <div className="mt-1 text-xs font-bold text-slate-400 dark:text-slate-500 truncate">{helper}</div>
+    </>
+  );
+  if (onClick) {
+    return <button type="button" onClick={onClick} className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 p-4 text-left transition-all hover:bg-white dark:hover:bg-navy-900 hover:border-slate-200 dark:hover:border-navy-700">{content}</button>;
+  }
+  return <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 p-4">{content}</div>;
+}
 
 export function OrderHeaderSection({
   headerRef,
@@ -69,6 +119,17 @@ export function OrderHeaderSection({
   hasAnyLogistics: boolean;
   packingRecords: PackingRecord[];
 }) {
+  const orderTotal = asNumber(order.total_amount) || items.reduce((sum, item) => sum + asNumber(item.subtotal), 0);
+  const paidUsd = financeRecords
+    .filter((record) => record.type === 'receipt' && record.status === 'completed' && record.currency === 'USD')
+    .reduce((sum, record) => sum + asNumber(record.amount), 0);
+  const outstandingUsd = Math.max(orderTotal - paidUsd, 0);
+  const collectionRate = orderTotal > 0 ? Math.min(Math.round((paidUsd / orderTotal) * 100), 100) : 0;
+  const productionMeta = getProductionOverview(productionPlan);
+  const logisticsMeta = getLogisticsOverview(hasAnyLogistics);
+  const openTasks = financeRecords.filter((record) => record.status === 'pending').length + (productionPlan ? 0 : 1) + (hasAnyLogistics ? 0 : 1);
+  const riskTone = outstandingUsd > 0 || openTasks > 0 ? 'warning' : 'success';
+
   return (
     <header ref={headerRef} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
       <div className="flex flex-col gap-6">
@@ -108,15 +169,32 @@ export function OrderHeaderSection({
             )}
           </div>
         </div>
-        <div className="rounded-md bg-[#F8FAFC] dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {STAGE_STEPS.map((s, i) => (
-              <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-white dark:bg-navy-800 shadow-md ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-40 hover:opacity-100'}`}>
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i <= stageIndex ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-200 dark:bg-navy-700 text-slate-500 dark:text-slate-400'}`}>{i + 1}</span>
-                <span className={`text-xs font-bold uppercase tracking-widest ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
-              </button>
-            ))}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <OverviewMetric label="订单总额" value={formatMoney(orderTotal)} helper={`${items.length} 个商品 · 回款 ${collectionRate}%`} icon={<DollarSign size={16} />} tone="neutral" onClick={() => scrollToSection('items')} />
+          <OverviewMetric label="已收 / 未收" value={`${formatMoney(paidUsd)} / ${formatMoney(outstandingUsd)}`} helper={outstandingUsd > 0 ? '仍有尾款待核销' : '回款已覆盖订单金额'} icon={<Wallet size={16} />} tone={outstandingUsd > 0 ? 'warning' : 'success'} onClick={() => scrollToSection('finance')} />
+          <OverviewMetric label="生产状态" value={productionMeta.label} helper={`${productionMeta.detail} · ${productionMeta.progress}%`} icon={<Factory size={16} />} tone={productionMeta.tone} onClick={() => scrollToSection('production')} />
+          <OverviewMetric label="物流状态" value={logisticsMeta.label} helper={logisticsMeta.detail} icon={<Truck size={16} />} tone={logisticsMeta.tone} onClick={() => scrollToSection('logistics')} />
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="rounded-md bg-[#F8FAFC] dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {STAGE_STEPS.map((s, i) => (
+                <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-white dark:bg-navy-800 shadow-sm ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-60 hover:opacity-100 hover:bg-white dark:hover:bg-navy-900'}`}>
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i <= stageIndex ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-200 dark:bg-navy-700 text-slate-500 dark:text-slate-400'}`}>{i + 1}</span>
+                  <span className={`text-xs font-bold uppercase tracking-widest ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
+          <button type="button" onClick={() => scrollToSection(openTasks > 0 ? 'finance' : 'followups')} className="rounded-md border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 px-4 py-3 text-left transition-all hover:bg-white dark:hover:bg-navy-900">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">当前风险 / 下一步</span>
+              <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${toneClasses(riskTone)}`}>{riskTone === 'success' ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}</span>
+            </div>
+            <div className="mt-2 text-sm font-black text-primary-navy dark:text-white">{riskTone === 'success' ? '暂无明显阻塞' : `${openTasks} 项需要跟进`}</div>
+            <div className="mt-1 text-xs font-bold text-slate-400 dark:text-slate-500">{outstandingUsd > 0 ? '优先核对回款与交付节点' : '继续维护跟进记录'}</div>
+          </button>
         </div>
       </div>
     </header>
@@ -189,7 +267,7 @@ export function ItemsSection({
           </table>
         </div>
       ) : (
-        <EmptyStateBoard title="暂无商品明细" description="尚未录入任何货物信息。请立即初始化本单的货物清单数据，以便后续核算。" icon={Package} actionLabel="+ 初始化货物清单" onAction={openOrderDrawer} />
+        <EmptyStateBoard title="暂无商品明细" description="请录入产品名称、规格、数量、单价和图片，后续财务、生产、装箱与利润核算都会基于清单展开。" icon={Package} actionLabel="+ 初始化货物清单" onAction={openOrderDrawer} />
       )}
     </WorkSection>
   );

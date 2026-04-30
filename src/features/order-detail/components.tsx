@@ -253,14 +253,20 @@ export function FinanceDashboard({
                   </div>
                   <div className="flex w-full flex-wrap items-center gap-2 lg:justify-end">
                     {attachments.length ? (
-                      <button
-                        type="button"
-                        onClick={() => onPreview?.(attachments[0])}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-3 py-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all"
-                        title={attachments.map(att => att.fileName).join('\n')}
-                      >
-                        <Paperclip size={13} /> 查看凭证（{attachments.length}）
-                      </button>
+                      <div className="flex max-w-full flex-wrap items-center gap-1.5 lg:justify-end">
+                        {attachments.map((att, index) => (
+                          <button
+                            key={att.id}
+                            type="button"
+                            onClick={() => onPreview?.(att)}
+                            className="inline-flex max-w-[180px] items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-3 py-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all"
+                            title={att.fileName}
+                          >
+                            <FileIcon fileName={att.fileName} url={att.url} size={13} />
+                            <span className="truncate">{attachments.length > 1 ? `${index + 1}. ${att.fileName}` : att.fileName}</span>
+                          </button>
+                        ))}
+                      </div>
                     ) : (
                       <span className="rounded-full border border-dashed border-slate-200 dark:border-navy-800 px-3 py-1.5 text-xs font-bold text-slate-300 dark:text-slate-600">暂无凭证</span>
                     )}
