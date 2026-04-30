@@ -9,6 +9,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import Chip from '../components/ui/Chip';
 import { Drawer } from '../components/ui/Drawer';
+import { OrderCreateDrawer } from '../components/ui/OrderCreateDrawer';
 import type { OrderSummary } from '../types/crm';
 
 interface DashboardData {
@@ -275,6 +276,13 @@ export default function DashboardView() {
 
   const [activityFilter, setActivityFilter] = useState<'all' | 'finance' | 'logistics'>('all');
   const [drawer, setDrawer] = useState<{ title: string; filter: { status?: string; label: string } } | null>(null);
+  const [showOrderDrawer, setShowOrderDrawer] = useState(false);
+
+  useEffect(() => {
+    const openOrderDrawer = () => setShowOrderDrawer(true);
+    window.addEventListener('dashboard:create-order', openOrderDrawer);
+    return () => window.removeEventListener('dashboard:create-order', openOrderDrawer);
+  }, []);
 
   if (isLoading) return <div className="p-8 text-sm text-slate-500 dark:text-slate-400 animate-pulse font-bold uppercase tracking-widest text-center">正在加载数字化指挥舱...</div>;
   if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{getErrorMessage(error, '无法读取控制台数据')}</div>;
@@ -483,7 +491,7 @@ export default function DashboardView() {
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
-              <QuickAction icon={<FilePlus size={20} />} label="新建订单" onClick={() => navigate('/orders?create=1')} />
+              <QuickAction icon={<FilePlus size={20} />} label="新建订单" onClick={() => setShowOrderDrawer(true)} />
               <QuickAction icon={<Wallet size={20} />} label="收款登记" onClick={() => navigate('/finance?create=1')} />
               <QuickAction icon={<Truck size={20} />} label="创建物流" onClick={() => navigate('/logistics?create=1')} />
               <QuickAction icon={<FileText size={20} />} label="报关资料" onClick={() => navigate('/orders')} />
@@ -548,6 +556,12 @@ export default function DashboardView() {
       <Drawer isOpen={drawer !== null} onClose={() => setDrawer(null)} title={drawer?.title || ''} width="max-w-[600px]">
         {drawer && <OrderListDrawerContent filter={drawer.filter} onClose={() => setDrawer(null)} />}
       </Drawer>
+
+      <OrderCreateDrawer
+        isOpen={showOrderDrawer}
+        onClose={() => setShowOrderDrawer(false)}
+        onSuccess={(displayId) => navigate(`/orders/${displayId.toLowerCase()}`)}
+      />
     </div>
   );
 }

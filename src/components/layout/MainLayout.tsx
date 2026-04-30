@@ -88,7 +88,7 @@ export default function MainLayout() {
 
   const getHeaderInfo = () => {
     switch (activeTab) {
-      case 'dashboard': return { title: '业务控制台', subtitle: '实时掌握业务全局，快速处理关键任务', actionLabel: '新建订单', actionPath: '/orders?create=1' };
+      case 'dashboard': return { title: '业务控制台', subtitle: '实时掌握业务全局，快速处理关键任务', actionLabel: '新建订单', actionPath: '#dashboard-create-order' };
       case 'orders': return {
         title: '订单台',
         subtitle: '稳定推进团队日常协作与订单流转。',
@@ -118,6 +118,8 @@ export default function MainLayout() {
   const handleHeaderAction = () => {
     if (headerInfo.actionPath === 'print') {
       window.print();
+    } else if (headerInfo.actionPath === '#dashboard-create-order') {
+      window.dispatchEvent(new CustomEvent('dashboard:create-order'));
     } else if (headerInfo.actionPath !== '#') {
       navigate(headerInfo.actionPath);
     }

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface DrawerProps {
@@ -50,21 +51,21 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
+  const drawerNode = (
     <div data-modal-layer="true" className="fixed inset-0 z-[650] flex h-dvh justify-end overflow-hidden">
-      <div 
+      <div
         className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
         onClick={handleOverlayClick}
       />
-      <div 
+      <div
         ref={drawerRef}
         className={`relative z-10 w-full ${width} h-dvh max-h-dvh min-h-0 overflow-hidden bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 shrink-0">
           <h2 className="text-[15px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">{title}</h2>
-          <button 
+          <button
             onClick={handleClose}
             className="p-2 -mr-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-colors"
           >
@@ -82,4 +83,6 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
       </div>
     </div>
   );
+
+  return createPortal(drawerNode, document.body);
 }
