@@ -205,6 +205,7 @@ export function createCustomsRouter() {
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
           `,
           ['customs', customsId, originalName, file.filename, file.mimetype, file.size, file.filename],
         );

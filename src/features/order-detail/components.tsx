@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import {
   ChevronDown,
   ChevronRight,
@@ -496,13 +497,14 @@ export function AttachmentEditor({
 
 export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMeta | null; onClose: () => void }) {
   if (!attachment) return null;
+  if (typeof document === 'undefined') return null;
   const isImage = attachment.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.fileName);
   const isPdf = attachment.mimeType === 'application/pdf' || /\.pdf$/i.test(attachment.fileName);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[500] flex h-dvh items-center justify-center overflow-hidden p-4">
       <button onClick={onClose} className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md transition-all" />
-      <div className="relative z-10 flex h-full max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
+      <div className="relative z-10 flex h-full max-h-[90dvh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-8 py-5 bg-white dark:bg-navy-950/50">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{attachment.fileName}</h3>
@@ -533,7 +535,8 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

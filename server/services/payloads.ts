@@ -68,6 +68,7 @@ export async function readProductionPayload(body: Record<string, unknown>, order
   const productionStatus = readString(body.productionStatus);
   const inspectionStatus = readString(body.inspectionStatus);
   const remark = readString(body.remark);
+  const attachmentIds = readAttachmentIds(body.attachmentIds);
 
   if (!(await ensureOrderExists(orderId))) {
     return { error: '关联订单不存在' };
@@ -102,6 +103,7 @@ export async function readProductionPayload(body: Record<string, unknown>, order
       productionStatus: productionStatus as ProductionStatus,
       inspectionStatus: inspectionStatus as InspectionStatus,
       remark,
+      attachmentIds,
     },
   };
 }

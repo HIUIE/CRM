@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -207,7 +208,14 @@ export default function OrderDetailPage() {
 
   const stageIndex = STAGE_STEPS.findIndex((s) => s.key === order?.status);
 
-  const refreshDetail = async () => { await loadDetail({ showLoading: false }); };
+  const refreshDetail = async () => {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+    await loadDetail({ showLoading: false });
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollTop, left: 0, behavior: 'auto' });
+      requestAnimationFrame(() => window.scrollTo({ top: scrollTop, left: 0, behavior: 'auto' }));
+    });
+  };
 
   // 4. Effects
   const loadDetail = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
@@ -331,10 +339,12 @@ export default function OrderDetailPage() {
 
   return (
     <div className="animate-page-in">
-      {/* 页面顶部滚动进度条 */}
-      <div className="fixed top-0 left-0 h-1 bg-tertiary-sage/30 z-[200] w-full pointer-events-none">
-        <div className="h-full bg-tertiary-sage transition-all duration-300 ease-out" style={{ width: `${scrollPercent}%` }} />
-      </div>
+      {typeof document !== 'undefined' && createPortal(
+        <div className="fixed left-0 top-0 z-[300] h-1 w-screen bg-tertiary-sage/30 pointer-events-none">
+          <div className="h-full bg-tertiary-sage transition-all duration-300 ease-out" style={{ width: `${scrollPercent}%` }} />
+        </div>,
+        document.body,
+      )}
 
       {/* Header Section */}
       <OrderHeaderSection
@@ -501,17 +511,17 @@ export default function OrderDetailPage() {
       </Suspense>
 
       {/* Drawer */}
-      {drawer.mode !== 'closed' && (
-        <div className="fixed inset-0 z-[150] flex justify-end">
+      {drawer.mode !== 'closed' && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[150] flex h-dvh justify-end overflow-hidden">
           <button onClick={closeDrawer} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm transition-all" />
-          <div className="relative z-10 h-full w-full max-w-[750px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
+          <div className="relative z-10 h-dvh max-h-dvh w-full max-w-[750px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex min-h-0 flex-col animate-in slide-in-from-right duration-500">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-10 py-8 bg-slate-50 dark:bg-navy-950/50">
               <div className="group cursor-default">
                 <h3 className="text-xl font-bold text-primary-navy dark:text-white tracking-tight uppercase leading-none">{currentDrawerTitle}</h3>
               </div>
               <button onClick={closeDrawer} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={26} /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-white dark:bg-navy-900">
+            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="min-h-0 flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-white dark:bg-navy-900">
               {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner uppercase "><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
               <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-widest uppercase">正在载入组件...</div>}>
                 {drawer.mode === 'order' ? (
@@ -538,7 +548,8 @@ export default function OrderDetailPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
