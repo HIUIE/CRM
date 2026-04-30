@@ -90,27 +90,56 @@ export function OrderEditForm({
 export function FinanceForm({
   financeForm,
   setFinanceForm,
+  customerName,
+  partners,
   isUploading,
   uploadProgress,
 }: {
   financeForm: FinanceFormState;
   setFinanceForm: React.Dispatch<React.SetStateAction<FinanceFormState>>;
+  customerName: string;
+  partners: Partner[];
   isUploading: boolean;
   uploadProgress: number;
 }) {
+  const paymentPartners = useMemo(() => partners, [partners]);
+  const selectedPartner = paymentPartners.find((p) => String(p.id) === financeForm.partnerId) || null;
+  const handleTypeChange = (type: FinanceType) => {
+    setFinanceForm({
+      ...financeForm,
+      type,
+      partnerId: type === 'receipt' ? '' : financeForm.partnerId,
+      target: type === 'receipt' ? customerName : financeForm.target,
+      recordCategory: type === 'receipt' ? 'deposit' : (financeForm.recordCategory === 'deposit' || financeForm.recordCategory === 'balance' ? 'goods' : financeForm.recordCategory),
+    });
+  };
+
   return (
     <div className="space-y-12">
       <div className="grid gap-12 sm:grid-cols-2">
-        <Field label="资产流转方向"><select value={financeForm.type} onChange={e=>setFinanceForm({...financeForm, type:e.target.value as FinanceType})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="receipt">资产流入 (收款)</option><option value="payment">资产流出 (付款)</option></select></Field>
+        <Field label="资产流转方向"><select value={financeForm.type} onChange={e=>handleTypeChange(e.target.value as FinanceType)} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="receipt">资产流入：客户付款</option><option value="payment">资产流出：付给合作伙伴</option></select></Field>
         <div className="flex gap-4 items-end">
           <div className="w-24"><Field label="币种"><select value={financeForm.currency} onChange={e=>setFinanceForm({...financeForm, currency:e.target.value})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="HKD">HKD</option></select></Field></div>
-          <div className="flex-1"><Field label="计价金额"><input type="number" step="0.01" value={financeForm.amount} onChange={e=>setFinanceForm({...financeForm, amount:e.target.value})} className="w-full bg-transparent p-2 text-[32px] font-bold text-primary-navy dark:text-white data-field focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors" /></Field></div>
+          <div className="flex-1"><Field label="计价金额"><input type="number" min="0.01" step="0.01" value={financeForm.amount} onChange={e=>setFinanceForm({...financeForm, amount:e.target.value})} placeholder="输入大于 0 的金额" className="w-full bg-transparent p-2 text-[32px] font-bold text-primary-navy dark:text-white data-field focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors" /></Field></div>
         </div>
       </div>
       <div className="grid gap-12 sm:grid-cols-2">
         <Field label="账务核销状态"><select value={financeForm.status} onChange={e=>setFinanceForm({...financeForm, status:e.target.value as FinanceStatus})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="completed">已核销同步 (Closed)</option><option value="pending">待处理流水 (Pending)</option></select></Field>
         <Field label="款项所属分类"><select value={financeForm.recordCategory} onChange={e=>setFinanceForm({...financeForm, recordCategory:e.target.value as FinanceCategory})} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="deposit">预付定金</option><option value="balance">尾款</option><option value="goods">货款</option><option value="freight">运费</option><option value="customs">报关费</option><option value="other">杂项其他</option></select></Field>
       </div>
+      {financeForm.type === 'receipt' ? (
+        <div className="rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/60 dark:bg-emerald-900/10 p-5">
+          <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">收款对象</div>
+          <div className="mt-2 text-base font-black text-primary-navy dark:text-white">{customerName || '当前订单客户'}</div>
+          <div className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">收款流水会自动使用订单客户，保存时不写入 partner_id。</div>
+        </div>
+      ) : (
+        <div className="grid gap-8 sm:grid-cols-2">
+          <Field label="付给合作伙伴"><select value={financeForm.partnerId} onChange={e=>{ const partner = paymentPartners.find(p => String(p.id) === e.target.value); setFinanceForm({...financeForm, partnerId:e.target.value, target: partner?.name || financeForm.target}); }} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm"><option value="">请选择合作伙伴...</option>{paymentPartners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.partner_type}</option>)}</select></Field>
+          <Field label="临时付款对象"><input value={financeForm.target} onChange={e=>setFinanceForm({...financeForm, target:e.target.value, partnerId:''})} placeholder={selectedPartner ? selectedPartner.name : '无档案时填写文本对象'} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+        </div>
+      )}
+      <Field label="备注说明"><textarea value={financeForm.remark} onChange={e=>setFinanceForm({...financeForm, remark:e.target.value})} placeholder="填写水单编号、付款备注或核销说明..." rows={3} className="w-full bg-[#F8FAFC] dark:bg-navy-950 p-4 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
       <div className="pt-8 border-t border-slate-100 dark:border-navy-800"><AttachmentEditor title="银行水单或支付凭证存档" attachments={financeForm.attachments} newFiles={financeForm.newFiles} onFilesSelected={fs=>setFinanceForm({...financeForm, newFiles:[...financeForm.newFiles,...fs.map(f=>({file:f,remark:''}))]})} onRemoveExisting={id=>setFinanceForm({...financeForm, attachments:financeForm.attachments.filter(a=>a.id!==id)})} onRemovePending={idx=>setFinanceForm({...financeForm, newFiles:financeForm.newFiles.filter((_,i)=>i!==idx)})} isUploading={isUploading} uploadProgress={uploadProgress} /></div>
     </div>
   );

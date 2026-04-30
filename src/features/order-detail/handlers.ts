@@ -61,7 +61,17 @@ export async function handleSaveFinance(
   }
 ) {
   const { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail, setDrawerError, setIsUploading, setUploadProgress } = deps;
-  e.preventDefault(); setSaving(true);
+  e.preventDefault();
+  const amount = Number(financeForm.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    setDrawerError('金额必须大于 0');
+    return;
+  }
+  if (financeForm.type === 'payment' && !financeForm.partnerId && !financeForm.target.trim()) {
+    setDrawerError('付款时请选择合作伙伴，或填写临时付款对象');
+    return;
+  }
+  setSaving(true);
   try {
     let newAtts: AttachmentMeta[] = [];
     if (financeForm.newFiles.length) {
@@ -73,7 +83,7 @@ export async function handleSaveFinance(
       newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
       setIsUploading(false);
     }
-    const payload = { ...financeForm, orderId: Number(order?.id), amount: Number(financeForm.amount), partnerId: Number(financeForm.partnerId) || null, attachmentIds: [...financeForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
+    const payload = { ...financeForm, orderId: Number(order?.id), amount, target: financeForm.type === 'receipt' ? (customer?.name || financeForm.target) : financeForm.target, partnerId: financeForm.type === 'payment' && financeForm.partnerId ? Number(financeForm.partnerId) : null, attachmentIds: [...financeForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
     const url = financeForm.id ? `/api/finance/${financeForm.id}` : `/api/finance`;
     await apiFetch(url, { method: financeForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
     showToast('同步成功'); closeDrawer();

@@ -215,7 +215,14 @@ export async function readFinancePayload(body: Record<string, unknown>) {
   if (!Number.isInteger(orderId) || orderId <= 0) {
     return { error: '请选择有效的关联订单' };
   }
-  if (!(await ensureOrderExists(orderId))) {
+  const orderCustomer = await dbGet<{ id: number; name: string; display_id: string }>(
+    `SELECT c.id, c.name, c.display_id
+     FROM orders o
+     LEFT JOIN customers c ON c.id = o.customer_id
+     WHERE o.id = ? AND o.deleted_at IS NULL AND c.deleted_at IS NULL`,
+    [orderId],
+  );
+  if (!orderCustomer) {
     return { error: '关联订单不存在' };
   }
   if (!isOneOf(type, FINANCE_TYPES)) {
@@ -231,10 +238,14 @@ export async function readFinancePayload(body: Record<string, unknown>) {
     return { error: '财务状态不正确' };
   }
 
-  const partnerId = Number.isInteger(partnerIdInput) && partnerIdInput > 0 ? partnerIdInput : null;
+  const partnerId = type === 'payment' && Number.isInteger(partnerIdInput) && partnerIdInput > 0 ? partnerIdInput : null;
   const partner = partnerId ? await ensurePartnerExists(partnerId) : null;
   if (partnerId && !partner) {
-    return { error: '收款方不存在，请先维护伙伴档案' };
+    return { error: '付款对象不存在，请先维护伙伴档案' };
+  }
+  const normalizedTarget = type === 'receipt' ? (orderCustomer.name || orderCustomer.display_id || '') : (partner?.name || target);
+  if (type === 'payment' && !partnerId && !normalizedTarget) {
+    return { error: '付款时请选择合作伙伴或填写付款对象' };
   }
 
   const recordCategory =
@@ -273,7 +284,7 @@ export async function readFinancePayload(body: Record<string, unknown>) {
       type: type as FinanceType,
       amount,
       currency: currency as Currency,
-      target: target || partner?.name || '',
+      target: normalizedTarget,
       status: status as FinanceStatus,
       remark,
       paymentCategory: paymentCategory as PaymentCategory,

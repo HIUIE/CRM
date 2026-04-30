@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Edit, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
+import { Edit, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock, Paperclip } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { apiFetch, getErrorMessage } from '../lib/api';
+import { apiFetch, apiUpload, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Chip from './ui/Chip';
 import Toast from './ui/Toast';
@@ -14,7 +14,8 @@ import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates, type StandardTimeRange } from '../lib/date';
 import { withTransition } from '../lib/transition';
-import type { FinanceCategory, FinanceListRecord, OrderOption, PartnerOption, PartnerRecord } from '../types/crm';
+import { AttachmentEditor } from '../features/order-detail/components';
+import type { FinanceCategory, FinanceListRecord, OrderOption, PartnerOption, PartnerRecord, AttachmentMeta } from '../types/crm';
 
 type FinanceFormState = {
   orderId: string;
@@ -26,18 +27,22 @@ type FinanceFormState = {
   status: 'pending' | 'completed';
   recordCategory: 'deposit' | 'balance' | 'goods' | 'freight' | 'customs' | 'other';
   remark: string;
+  attachments: AttachmentMeta[];
+  newFiles: Array<{ file: File; remark: string }>;
 };
 
 const EMPTY_FORM: FinanceFormState = {
   orderId: '',
   type: 'receipt',
-  amount: '0',
+  amount: '',
   currency: 'USD',
   target: '',
   partnerId: '',
   status: 'pending',
   recordCategory: 'deposit',
   remark: '',
+  attachments: [],
+  newFiles: [],
 };
 
 function formatTotal(amount: number, currency: string) {
@@ -56,6 +61,11 @@ function getPaymentCategoryLabel(category: string | undefined) {
   }
 }
 
+function getCounterparty(record: FinanceListRecord) {
+  if (record.type === 'receipt') return record.customer_name || record.target || '客户';
+  return record.partner_name || record.target || '未填写付款对象';
+}
+
 export default function FinanceView() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +77,9 @@ export default function FinanceView() {
   const [formData, setFormData] = useState<FinanceFormState>(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState<FinanceFormState>(EMPTY_FORM);
   const [toast, setToast] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
@@ -101,6 +114,9 @@ export default function FinanceView() {
   });
   const loading = recordsLoading || ordersLoading || partnersLoading;
   const error = recordsError ? getErrorMessage(recordsError, '读取财务数据失败') : ordersError ? getErrorMessage(ordersError, '读取财务数据失败') : partnersError ? getErrorMessage(partnersError, '读取财务数据失败') : '';
+
+  const selectedOrder = useMemo(() => orders.find((order) => String(order.id) === formData.orderId) || null, [orders, formData.orderId]);
+  const selectedPartner = useMemo(() => partners.find((partner) => String(partner.id) === formData.partnerId) || null, [partners, formData.partnerId]);
 
   const filteredRecords = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -143,13 +159,15 @@ export default function FinanceView() {
     setFormData(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
     setFormError('');
+    setUploadProgress(0);
     setShowForm(true);
   };
 
   const openEditForm = (record: FinanceListRecord) => {
     setEditingRecord(record);
     setFormError('');
-    const newForm = {
+    setUploadProgress(0);
+    const newForm: FinanceFormState = {
       orderId: String(record.order_id),
       type: record.type,
       amount: String(record.amount),
@@ -159,6 +177,8 @@ export default function FinanceView() {
       status: record.status,
       recordCategory: (record.recordCategory as FinanceCategory) || (record.type === 'payment' ? 'goods' : 'deposit'),
       remark: record.remark || '',
+      attachments: record.attachments || [],
+      newFiles: [],
     };
     setFormData(newForm);
     setInitialForm(newForm);
@@ -166,18 +186,72 @@ export default function FinanceView() {
   };
 
   const closeForm = () => {
+    if (isFormDirty && !window.confirm('有未保存的数据，确认放弃？')) return;
     setEditingRecord(null);
     setFormData(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
     setFormError('');
+    setIsUploading(false);
+    setUploadProgress(0);
     setShowForm(false);
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const setType = (type: 'receipt' | 'payment') => {
+    setFormData((prev) => ({
+      ...prev,
+      type,
+      partnerId: type === 'receipt' ? '' : prev.partnerId,
+      target: type === 'receipt' ? '' : prev.target,
+      recordCategory: type === 'receipt' ? 'deposit' : (prev.recordCategory === 'deposit' || prev.recordCategory === 'balance' ? 'goods' : prev.recordCategory),
+    }));
+  };
+
+  const handleSubmit = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    if (saving || isUploading) return;
     setFormError('');
-    const payload = { ...formData, orderId: Number(formData.orderId), amount: Number(formData.amount), partnerId: formData.partnerId ? Number(formData.partnerId) : null };
+
+    const amount = Number(formData.amount);
+    if (!formData.orderId) {
+      setFormError('请选择关联订单');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setFormError('金额必须大于 0');
+      return;
+    }
+    if (formData.type === 'payment' && !formData.partnerId && !formData.target.trim()) {
+      setFormError('付款时请选择合作伙伴，或填写临时付款对象');
+      return;
+    }
+
+    setSaving(true);
     try {
+      let newAttachments: AttachmentMeta[] = [];
+      if (formData.newFiles.length) {
+        setIsUploading(true);
+        setUploadProgress(0);
+        const uploadBody = new FormData();
+        uploadBody.append('customerId', String(selectedOrder?.customer_id || paramCustomerId || 'general'));
+        uploadBody.append('orderId', formData.orderId || 'misc');
+        formData.newFiles.forEach(file => uploadBody.append('files', file.file));
+        newAttachments = await apiUpload<AttachmentMeta[]>('/api/attachments', uploadBody, setUploadProgress);
+        setIsUploading(false);
+      }
+
+      const payload = {
+        orderId: Number(formData.orderId),
+        type: formData.type,
+        amount,
+        currency: formData.currency,
+        status: formData.status,
+        recordCategory: formData.recordCategory,
+        target: formData.type === 'receipt' ? selectedOrder?.customer_name || formData.target : (selectedPartner?.name || formData.target.trim()),
+        partnerId: formData.type === 'payment' && formData.partnerId ? Number(formData.partnerId) : null,
+        remark: formData.remark,
+        attachmentIds: [...formData.attachments.map(attachment => attachment.id), ...newAttachments.map(attachment => attachment.id)],
+      };
+
       if (editingRecord) {
         await apiFetch(`/api/finance/${editingRecord.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
         setToast('流水已更新');
@@ -186,10 +260,17 @@ export default function FinanceView() {
         setToast('流水登记成功');
       }
       setTimeout(() => setToast(''), 3000);
-      closeForm();
+      setEditingRecord(null);
+      setFormData(EMPTY_FORM);
+      setInitialForm(EMPTY_FORM);
+      setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, '保存财务记录失败'));
+      setIsUploading(false);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -243,14 +324,14 @@ export default function FinanceView() {
         {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">正在加载流水账目...</div> : (
           <div className="flex flex-col">
             <div className="overflow-x-auto">
-
               <table className="min-w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">日期 / 订单</th>
                     <th className="px-4 py-4 text-center">类型 / 分类</th>
                     <th className="px-4 py-4 text-right">金额</th>
-                    <th className="px-4 py-4 text-left">对象</th>
+                    <th className="px-4 py-4 text-left">交易对象 / 备注</th>
+                    <th className="px-4 py-4 text-center">凭证</th>
                     <th className="px-4 py-4 text-center">状态</th>
                     <th className="px-4 py-4 text-center">操作</th>
                   </tr>
@@ -265,30 +346,36 @@ export default function FinanceView() {
                       <td className="px-4 py-4 text-left">
                          <div className="font-bold text-primary-navy dark:text-white data-field">{formatDateOnly(r.created_at)}</div>
                          <div className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase hover:text-primary-navy transition-colors">{r.order_display_id || 'MISC'}</div>
+                         <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{r.createdByName ? `创建人：${r.createdByName}` : '—'}</div>
                       </td>
                       <td className="px-4 py-4 text-center">
                          <div className="flex items-center justify-center gap-2 mb-1"><Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip></div>
                          <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{getPaymentCategoryLabel(r.recordCategory || r.payment_category)}</div>
                       </td>
                       <td className={`px-4 py-4 text-right font-bold data-field text-sm ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
-                         {r.type === 'receipt' ? '+' : '-'}{r.currency} {Number(r.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                         {r.type === 'receipt' ? '+' : '-'}{formatTotal(Number(r.amount), r.currency || 'USD')}
                       </td>
                       <td className="px-4 py-4 text-left">
-                         <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={r.partner_name || r.target}>{r.partner_name || r.target || '—'}</div>
-                         <div className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[150px]">{r.remark || '—'}</div>
+                         <div className="font-bold text-primary-navy dark:text-white tracking-tight truncate max-w-[190px]" title={getCounterparty(r)}>{getCounterparty(r)}</div>
+                         <div className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[190px]">{r.remark || '无备注'}</div>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-800 px-2.5 py-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+                          <Paperclip size={12} /> {r.attachmentCount || r.attachments?.length || 0}
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-center"><Chip tone={r.status === 'completed' ? 'neutral' : 'warning'}>{r.status === 'completed' ? '已核销' : '待处理'}</Chip></td>
                       <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                            <button onClick={() => openEditForm(r)} className="p-2 text-secondary-slate dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
                            {user?.role === 'admin' && (
-                             <button 
+                             <button
                                onClick={() => {
                                  const reason = window.prompt('请输入作废/删除此笔流水的财务原因：');
                                  if (reason) {
                                    void deleteRecord(r);
                                  }
-                               }} 
+                               }}
                                className="p-2 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 rounded-lg border border-transparent shadow-sm transition-all"
                              >
                                <Trash2 size={14} />
@@ -297,7 +384,7 @@ export default function FinanceView() {
                         </div>
                       </td>
                     </tr>
-                  )) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest">暂无流水记录。</td></tr>}
+                  )) : <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest">暂无流水记录。</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -322,8 +409,8 @@ export default function FinanceView() {
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={handleSubmit} type="submit" className="btn-primary shadow-md">保存流水</button>
+            <button type="button" onClick={closeForm} disabled={saving || isUploading} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
+            <button onClick={() => void handleSubmit()} type="button" disabled={saving || isUploading} className="btn-primary shadow-md disabled:opacity-60">{saving || isUploading ? '保存中...' : '保存流水'}</button>
           </div>
         }
       >
@@ -333,7 +420,7 @@ export default function FinanceView() {
             <Field label="关联订单 *">
               <Combobox
                 value={formData.orderId}
-                onChange={val => setFormData({ ...formData, orderId: String(val) })}
+                onChange={val => setFormData({ ...formData, orderId: String(val), target: formData.type === 'receipt' ? '' : formData.target })}
                 onSearch={async (q) => {
                   const data = await apiFetch<OrderOption[]>(`/api/orders?q=${encodeURIComponent(q)}&customerId=${paramCustomerId}`);
                   return data.slice(0, 20).map(o => ({ value: o.id, label: o.display_id, subLabel: o.customer_name }));
@@ -342,14 +429,14 @@ export default function FinanceView() {
               />
             </Field>
             <Field label="流水类型 *">
-              <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as 'receipt' | 'payment' })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
-                <option value="receipt">收款 (In)</option>
-                <option value="payment">付款 (Out)</option>
+              <select value={formData.type} onChange={(e) => setType(e.target.value as 'receipt' | 'payment')} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+                <option value="receipt">收款 (客户 → 我们)</option>
+                <option value="payment">付款 (我们 → 合作伙伴)</option>
               </select>
             </Field>
             <div className="flex gap-4">
                 <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
-                <div className="flex-1"><Field label="金额 *"><input required type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field" /></Field></div>
+                <div className="flex-1"><Field label="金额 *"><input required type="number" min="0.01" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} placeholder="请输入大于 0 的金额" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field" /></Field></div>
             </div>
             <Field label="款项用途">
               <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
@@ -363,20 +450,50 @@ export default function FinanceView() {
             <Field label="核销状态">
               <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as 'pending' | 'completed'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
             </Field>
-            <Field label="对方/合作伙伴">
-              <Combobox
-                value={formData.partnerId}
-                onChange={val => setFormData({ ...formData, partnerId: String(val) })}
-                onSearch={async (q) => {
-                  const data = await apiFetch<PartnerRecord[]>(`/api/partners?q=${encodeURIComponent(q)}`);
-                  return data.slice(0, 20).map(p => ({ value: p.id, label: p.name, subLabel: p.partner_type }));
-                }}
-                placeholder="搜索并选择合作伙伴..."
-              />
-            </Field>
+
+            {formData.type === 'receipt' ? (
+              <div className="rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/60 dark:bg-emerald-900/10 px-4 py-3">
+                <div className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">收款对象</div>
+                <div className="mt-1 text-sm font-bold text-primary-navy dark:text-white">{selectedOrder?.customer_name || '选择订单后自动带出客户'}</div>
+                <div className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">收款记录不保存合作伙伴 partner_id，后端会按订单客户同步 target。</div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Field label="付款对象 / 合作伙伴">
+                  <Combobox
+                    value={formData.partnerId}
+                    onChange={val => {
+                      const partner = partners.find((p) => String(p.id) === String(val));
+                      setFormData({ ...formData, partnerId: String(val), target: partner?.name || formData.target });
+                    }}
+                    onSearch={async (q) => {
+                      const data = await apiFetch<PartnerRecord[]>(`/api/partners?q=${encodeURIComponent(q)}`);
+                      return data.slice(0, 20).map(p => ({ value: p.id, label: p.name, subLabel: p.partner_type }));
+                    }}
+                    placeholder="搜索并选择合作伙伴..."
+                  />
+                </Field>
+                <Field label="临时付款对象（无合作伙伴档案时填写）">
+                  <input value={formData.target} onChange={e=>setFormData({...formData, target:e.target.value, partnerId: ''})} placeholder="例如：临时供应商、个人垫付对象..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" />
+                </Field>
+              </div>
+            )}
+
             <Field label="备注">
-              <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言或打款参考号..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
+              <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言、打款参考号或凭证说明..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
             </Field>
+            <div className="pt-6 border-t border-slate-100 dark:border-navy-800">
+              <AttachmentEditor
+                title="银行水单 / 付款凭证 / 截图 / PDF"
+                attachments={formData.attachments}
+                newFiles={formData.newFiles}
+                onFilesSelected={files => setFormData({...formData, newFiles:[...formData.newFiles, ...files.map(file => ({ file, remark: '' }))]})}
+                onRemoveExisting={id => setFormData({...formData, attachments: formData.attachments.filter(attachment => attachment.id !== id)})}
+                onRemovePending={index => setFormData({...formData, newFiles: formData.newFiles.filter((_, idx) => idx !== index)})}
+                isUploading={isUploading}
+                uploadProgress={uploadProgress}
+              />
+            </div>
           </div>
           <button type="submit" className="hidden">Submit</button>
         </form>
@@ -387,7 +504,7 @@ export default function FinanceView() {
   );
 }
 
-function StatCard({ title, value, icon, currency }: { title: string; value: number; icon: React.ReactNode; currency: string }) {
+function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode; currency: string }) {
   return (
     <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors shadow-inner">
       <div>

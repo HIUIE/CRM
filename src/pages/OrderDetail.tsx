@@ -602,7 +602,7 @@ export default function OrderDetailPage() {
                   ) : drawer.mode === 'logistics' ? (
                     <LogisticsForm logisticsForm={logisticsForm} setLogisticsForm={setLogisticsForm} forwarderPartners={partners.filter((p) => p.partner_type === 'forwarder')} isUploading={isUploading} uploadProgress={uploadProgress} />
                   ) : drawer.mode === 'finance' ? (
-                    <FinanceForm financeForm={financeForm} setFinanceForm={setFinanceForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                    <FinanceForm financeForm={financeForm} setFinanceForm={setFinanceForm} customerName={customer.name || ''} partners={partners} isUploading={isUploading} uploadProgress={uploadProgress} />
                   ) : drawer.mode === 'production' ? (
                     <ProductionForm productionForm={productionForm} setProductionForm={setProductionForm} productionPartners={productionPartners} isUploading={isUploading} uploadProgress={uploadProgress} />
                   ) : (

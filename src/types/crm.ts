@@ -86,6 +86,10 @@ export type AttachmentMeta = {
   id: number;
   fileName: string;
   url: string;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  createdAt?: string;
+  remark?: string;
 };
 
 export type FinanceListRecord = {

@@ -90,7 +90,7 @@ export default function MainLayout() {
     switch (activeTab) {
       case 'dashboard': return { title: '业务控制台', subtitle: '实时掌握业务全局，快速处理关键任务', actionLabel: '新建订单', actionPath: '#dashboard-create-order' };
       case 'orders': return {
-        title: '订单台',
+        title: '订单列表',
         subtitle: '稳定推进团队日常协作与订单流转。',
         actionLabel: '新建订单',
         actionPath: '/orders?create=1',
@@ -153,7 +153,7 @@ export default function MainLayout() {
             <NavItem icon={<LayoutDashboard size={18} />} label="业务控制台" path="/dashboard" currentPath={location.pathname} />
             <NavItem icon={<PackageSearch size={18} />} label="客户档案" path="/customers" currentPath={location.pathname} />
             <NavItem icon={<Building2 size={18} />} label="合作伙伴" path="/partners" currentPath={location.pathname} />
-            <NavItem icon={<FileText size={18} />} label="订单台" path="/orders" currentPath={location.pathname} />
+            <NavItem icon={<FileText size={18} />} label="订单列表" path="/orders" currentPath={location.pathname} />
             <NavItem icon={<CheckCircle2 size={18} />} label="团队协同" path="/tasks" currentPath={location.pathname} />
             <NavItem icon={<DollarSign size={18} />} label="财务流水" path="/finance" currentPath={location.pathname} />
             <NavItem icon={<Truck size={18} />} label="物流打包" path="/logistics" currentPath={location.pathname} />

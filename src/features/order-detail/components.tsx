@@ -183,87 +183,112 @@ export function FinanceDashboard({
   const [activeCurrency, setActiveCurrency] = React.useState('USD');
   const currencies = Object.keys(receiptsByCurrency).length > 0 ? Object.keys(receiptsByCurrency) : ['USD'];
   const paid = receiptsByCurrency[activeCurrency] || 0;
-  const percentage = activeCurrency === 'USD' && totalAmount > 0 ? Math.round((paid / totalAmount) * 100) : 0;
-  
+  const canCalculateProgress = activeCurrency === 'USD' && totalAmount > 0;
+  const rawPercentage = canCalculateProgress ? Math.round((paid / totalAmount) * 100) : 0;
+  const progressWidth = Math.min(Math.max(rawPercentage, 0), 100);
+  const isOverpaid = rawPercentage > 100;
+
   return (
-    <div className="grid gap-8 lg:grid-cols-12 items-start">
-      <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8">
+    <div className="grid gap-8 xl:grid-cols-12 items-start">
+      <div className="xl:col-span-4 space-y-6 xl:border-r xl:border-slate-100 xl:dark:border-navy-800 xl:pr-8">
         <div className="flex items-center justify-between">
            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">回款汇总</div>
-           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 outline-none">
+           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-navy-900 px-2 py-1 rounded border border-slate-200 dark:border-navy-800 outline-none">
              {currencies.map(c=><option key={c} value={c}>{c}</option>)}
            </select>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 rounded-lg bg-slate-50/70 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-5">
            <div className="flex items-baseline gap-2">
-              <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tighter">{paid.toLocaleString()}</div>
+              <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tighter data-field">{paid.toLocaleString()}</div>
               <div className="text-sm font-semibold text-slate-500 uppercase">{activeCurrency}</div>
            </div>
-           {activeCurrency === 'USD' && (
+           {canCalculateProgress ? (
              <div className="space-y-3">
                 <div className="flex justify-between text-xs font-medium text-slate-500 uppercase tracking-wider">
-                   <span>订单总额 {totalAmount.toLocaleString()}</span>
-                   <span className="text-emerald-600 font-bold">{percentage}%</span>
+                   <span>订单总额 USD {totalAmount.toLocaleString()}</span>
+                   <span className={`font-bold ${isOverpaid ? 'text-amber-600' : 'text-emerald-600'}`}>{isOverpaid ? `超额 ${rawPercentage}%` : `${rawPercentage}%`}</span>
                 </div>
                 <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
-                   <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(percentage, 100)}%` }} />
+                   <div className={`h-full rounded-full transition-all duration-1000 ${isOverpaid ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${progressWidth}%` }} />
                 </div>
+             </div>
+           ) : (
+             <div className="rounded-md border border-amber-100 dark:border-amber-900/30 bg-amber-50/60 dark:bg-amber-900/10 px-3 py-2 text-xs font-bold text-amber-700 dark:text-amber-400">
+               当前币种与订单总额币种不一致，暂不计算回款百分比。
              </div>
            )}
         </div>
       </div>
 
-      <div className="lg:col-span-8 min-w-0">
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 dark:bg-navy-950/50 font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 text-xs">
-              <tr>
-                <th className="px-6 py-4">收支日期</th>
-                <th className="px-6 py-4">类目</th>
-                <th className="px-6 py-4">流水金额</th>
-                <th className="px-6 py-4 text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
-              {records.length > 0 ? records.map(record => (
-                <React.Fragment key={record.id}>
-                  <tr className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4 text-slate-600 font-medium">{formatDateOnly(record.createdAt)}</td>
-                    <td className="px-6 py-4">
-                      <Chip tone={record.type === 'receipt' ? 'success' : 'error'}>{record.type === 'receipt' ? '收款' : '付款'}</Chip>
-                    </td>
-                    <td className={`px-6 py-4 font-bold text-sm ${record.type === 'receipt' ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {record.type === 'receipt' ? '+' : '-'}{record.currency} {Number(record.amount).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1 flex-wrap">
-                        {record.attachments && record.attachments.length > 0 && record.attachments.map(att => (
-                          <button
-                            key={att.id}
-                            type="button"
-                            onClick={() => onPreview?.(att)}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-900 transition-all"
-                            title={att.fileName}
-                          >
-                            {getFileIcon(att.fileName, 12)}
-                            <span className="truncate max-w-[200px]">{att.fileName}</span>
-                          </button>
-                        ))}
-                        <button type="button" onClick={() => onEdit?.(record)} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-slate-200"><Edit3 size={14} /></button>
-                        <button type="button" onClick={() => onDelete?.(record)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all border border-transparent hover:border-red-100"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                </React.Fragment>
-              )) : (
-                <tr><td colSpan={4} className="p-0"><EmptyStateBoard title="暂无财务记录" description="点击右上角登记第一笔收支流水，开始追踪回款状态。" icon={Wallet} /></td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="xl:col-span-8 min-w-0 space-y-3">
+        {records.length > 0 ? records.map(record => {
+          const attachments = record.attachments || [];
+          const counterparty = record.type === 'payment'
+            ? (record.partnerName || record.target || '未填写付款对象')
+            : (record.target || '订单客户');
+          const categoryLabel = getFinanceCategoryLabel(record.recordCategory);
+          return (
+            <div key={record.id} className="group rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-all hover:border-primary-navy/20 dark:hover:border-tertiary-sage/30 hover:shadow-md">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip tone={record.type === 'receipt' ? 'success' : 'error'}>{record.type === 'receipt' ? '收款' : '付款'}</Chip>
+                    <span className="rounded-full bg-slate-100 dark:bg-navy-950 px-2.5 py-1 text-xs font-black text-slate-500 dark:text-slate-400">{categoryLabel}</span>
+                    <span className="text-xs font-bold text-slate-400 data-field">{formatDateOnly(record.createdAt)}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-primary-navy dark:text-white truncate" title={counterparty}>
+                      {record.type === 'receipt' ? '客户：' : record.partnerName ? '付款给：' : '历史对象：'}{counterparty}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-slate-400 dark:text-slate-500">
+                      <span className="truncate max-w-[360px]">{record.remark || '无备注'}</span>
+                      <span>{record.createdByName ? `创建人：${record.createdByName}` : '未记录创建人'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-col gap-3 lg:min-w-[300px] lg:items-end">
+                  <div className={`w-full text-left text-lg font-black data-field lg:text-right ${record.type === 'receipt' ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {record.type === 'receipt' ? '+' : '-'} {record.currency} {Number(record.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="flex w-full flex-wrap items-center gap-2 lg:justify-end">
+                    {attachments.length ? (
+                      <button
+                        type="button"
+                        onClick={() => onPreview?.(attachments[0])}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-3 py-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all"
+                        title={attachments.map(att => att.fileName).join('\n')}
+                      >
+                        <Paperclip size={13} /> 查看凭证（{attachments.length}）
+                      </button>
+                    ) : (
+                      <span className="rounded-full border border-dashed border-slate-200 dark:border-navy-800 px-3 py-1.5 text-xs font-bold text-slate-300 dark:text-slate-600">暂无凭证</span>
+                    )}
+                    <button type="button" onClick={() => onEdit?.(record)} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800 rounded-md transition-all border border-transparent hover:border-slate-200 dark:hover:border-navy-700"><Edit3 size={14} /></button>
+                    <button type="button" onClick={() => onDelete?.(record)} className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }) : (
+          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900"><EmptyStateBoard title="暂无财务记录" description="点击右上角登记第一笔收支流水，开始追踪回款状态。" icon={Wallet} /></div>
+        )}
       </div>
     </div>
   );
+}
+
+function getFinanceCategoryLabel(category?: string | null) {
+  switch (category) {
+    case 'deposit': return '定金';
+    case 'balance': return '尾款';
+    case 'goods': return '货款';
+    case 'freight': return '运费';
+    case 'customs': return '报关费';
+    case 'other': return '其他';
+    default: return '其他';
+  }
 }
 
 export function ProductionDashboard({
