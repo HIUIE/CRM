@@ -41,10 +41,4 @@ jobs:
           PG_DATABASE: smarttrade_crm_test
           PG_USER: postgres
           PG_PASSWORD: postgres
-        env:
-          PG_HOST: localhost
-          PG_PORT: 5432
-          PG_DATABASE: smarttrade_crm_test
-          PG_USER: postgres
-          PG_PASSWORD: postgres
       - run: npm run build
