@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Building2, MapPin, Phone, Package, Wallet, Clock,
   ArrowLeft, Star, Mail, Globe, Truck, DollarSign,
-  Factory, ShieldCheck, Hash, Calendar, BarChart3
+  Factory, ShieldCheck, Hash, Calendar, BarChart3, Edit
 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import Chip from '../components/ui/Chip';
 import EmptyStateBoard from '../components/ui/EmptyStateBoard';
 import Toast from '../components/ui/Toast';
+import { Drawer } from '../components/ui/Drawer';
+import Field from '../components/ui/Field';
+import CountrySelect from '../components/ui/CountrySelect';
 import { formatDateOnly } from '../features/order-detail/utils';
+import type { PartnerType } from '../types/crm';
 
 interface PartnerDetail {
   partner: {
@@ -34,7 +38,7 @@ interface PartnerDetail {
     total_amount: number;
     product_summary?: string;
     created_at: string;
-    linkType: 'production' | 'finance';
+    linkType: 'production' | 'finance' | 'logistics';
     production_status?: string;
     estimated_delivery_date?: string;
   }>;
@@ -54,8 +58,21 @@ interface PartnerDetail {
     lastMonthCount: number;
     totalFinanceAmount: number;
     productionCount: number;
+    logisticsCount?: number;
   };
 }
+
+type PartnerForm = {
+  name: string;
+  partnerType: PartnerType;
+  country: string;
+  contact: string;
+  contactPerson: string;
+  address: string;
+  rating: number;
+  paymentTerms: string;
+  remark: string;
+};
 
 type TabKey = 'orders' | 'finance';
 
@@ -87,8 +104,12 @@ function getStatusMeta(status: string) {
 export default function PartnerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>('orders');
   const [toast, setToast] = useState('');
+  const [showEdit, setShowEdit] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [savingPartner, setSavingPartner] = useState(false);
 
   const { data, isLoading, error: queryError } = useQuery<PartnerDetail>({
     queryKey: ['partner-detail', id],
@@ -97,11 +118,65 @@ export default function PartnerDetailPage() {
   });
   const loading = isLoading;
   const error = queryError ? getErrorMessage(queryError, '读取伙伴画像失败') : '';
+  const [form, setForm] = useState<PartnerForm>({ name: '', partnerType: 'factory', country: '', contact: '', contactPerson: '', address: '', rating: 3, paymentTerms: '', remark: '' });
 
   if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-sm text-slate-500 animate-pulse uppercase tracking-widest font-bold">正在加载伙伴数据...</div>;
   if (error || !data) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error || '伙伴不存在'}</div>;
 
   const { partner, orders, financeRecords, summary } = data;
+  const overviewItems = getOverviewItems(partner.partner_type, summary);
+
+  const openEdit = () => {
+    setForm({
+      name: partner.name || '',
+      partnerType: (partner.partner_type as PartnerType) || 'factory',
+      country: partner.country || '',
+      contact: partner.contact || '',
+      contactPerson: partner.contact_person || '',
+      address: partner.address || '',
+      rating: partner.rating || 3,
+      paymentTerms: partner.payment_terms || '',
+      remark: partner.remark || '',
+    });
+    setFormError('');
+    setShowEdit(true);
+  };
+
+  const handleSavePartner = async () => {
+    if (!form.name.trim()) {
+      setFormError('伙伴名称为必填项');
+      return;
+    }
+    setSavingPartner(true);
+    setFormError('');
+    try {
+      await apiFetch(`/api/partners/${partner.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: form.name.trim(),
+          partnerType: form.partnerType,
+          country: form.country.trim(),
+          contact: form.contact.trim(),
+          contactPerson: form.contactPerson.trim(),
+          address: form.address.trim(),
+          rating: form.rating,
+          paymentTerms: form.paymentTerms.trim(),
+          remark: form.remark.trim(),
+        }),
+      });
+      setToast('伙伴资料已更新');
+      setTimeout(() => setToast(''), 3000);
+      setShowEdit(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['partner-detail', id] }),
+        queryClient.invalidateQueries({ queryKey: ['partners'] }),
+      ]);
+    } catch (requestError) {
+      setFormError(getErrorMessage(requestError, '保存伙伴失败'));
+    } finally {
+      setSavingPartner(false);
+    }
+  };
 
   return (
     <div className="flex flex-col animate-page-in">
@@ -148,6 +223,9 @@ export default function PartnerDetailPage() {
                     ))}
                   </div>
                 )}
+                <button type="button" onClick={openEdit} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-xs font-black text-white transition-all hover:bg-white/20">
+                  <Edit size={13} /> 编辑基本信息
+                </button>
               </div>
               <div className="px-6 py-5 space-y-4">
                 {partner.contact_person && (
@@ -178,22 +256,12 @@ export default function PartnerDetailPage() {
                 <BarChart3 size={14} /> 合作概览
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-navy-950">
-                  <div className="text-2xl font-black text-primary-navy dark:text-white">{summary.totalOrders}</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">累计订单</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-navy-950">
-                  <div className="text-2xl font-black text-tertiary-sage">{summary.productionCount}</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">生产安排</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-navy-950">
-                  <div className="text-lg font-black text-primary-navy dark:text-white">{summary.thisMonthCount}</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">本月订单</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-navy-950">
-                  <div className="text-lg font-black text-slate-500 dark:text-slate-400">{summary.lastMonthCount}</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">上月订单</div>
-                </div>
+                {overviewItems.map((item) => (
+                  <div key={item.label} className="text-center p-3 rounded-lg bg-slate-50 dark:bg-navy-950">
+                    <div className={`text-2xl font-black ${item.color}`}>{item.value}</div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.label}</div>
+                  </div>
+                ))}
               </div>
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-navy-800">
                 <div className="flex justify-between items-center">
@@ -261,8 +329,8 @@ export default function PartnerDetailPage() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <Chip tone={o.linkType === 'production' ? 'info' : 'warning'}>
-                                {o.linkType === 'production' ? '生产' : '财务'}
+                              <Chip tone={o.linkType === 'production' ? 'info' : o.linkType === 'logistics' ? 'success' : 'warning'}>
+                                {o.linkType === 'production' ? '生产' : o.linkType === 'logistics' ? '物流' : '财务'}
                               </Chip>
                             </td>
                             <td className="px-6 py-4">
@@ -343,9 +411,74 @@ export default function PartnerDetailPage() {
         </div>
       </div>
 
+      <Drawer
+        isOpen={showEdit}
+        onClose={() => setShowEdit(false)}
+        title={`编辑伙伴档案：${partner.name}`}
+        isDirty={showEdit}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setShowEdit(false)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button type="button" disabled={savingPartner} onClick={() => void handleSavePartner()} className="btn-primary shadow-md active:scale-95 disabled:opacity-60">{savingPartner ? '保存中...' : '保存修改'}</button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          {formError ? <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="sm:col-span-2"><Field label="伙伴名称 *"><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
+            <Field label="伙伴类型 *"><select value={form.partnerType} onChange={(event) => setForm({ ...form, partnerType: event.target.value as PartnerType })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"><option value="factory">工厂 / 供应商</option><option value="forwarder">货代</option><option value="customs_broker">报关行</option><option value="other">其他合作方</option></select></Field>
+            <Field label="国家 / 地区"><CountrySelect value={form.country} onChange={(val) => setForm({ ...form, country: val })} /></Field>
+            <Field label="合作星级"><div className="flex gap-2 py-2">{[1, 2, 3, 4, 5].map(star => <button type="button" key={star} onClick={() => setForm({ ...form, rating: star })} className="transition-all hover:scale-110"><Star size={20} fill={form.rating >= star ? '#EAB308' : 'none'} color={form.rating >= star ? '#EAB308' : '#CBD5E1'} /></button>)}</div></Field>
+            <Field label="主要联系人"><input value={form.contactPerson} onChange={(event) => setForm({ ...form, contactPerson: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field>
+            <Field label="联系电话/邮箱"><input value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field>
+            <div className="sm:col-span-2"><Field label="详细地址"><input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
+            <div className="sm:col-span-2"><Field label="结算条件"><input value={form.paymentTerms} onChange={(event) => setForm({ ...form, paymentTerms: event.target.value })} placeholder="例如：月结30天..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
+            <div className="sm:col-span-2"><Field label="备注说明"><textarea value={form.remark} onChange={(event) => setForm({ ...form, remark: event.target.value })} placeholder="备用联系人或特殊条款..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[80px]" rows={3} /></Field></div>
+          </div>
+        </div>
+      </Drawer>
+
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
+}
+
+function getOverviewItems(partnerType: string, summary: PartnerDetail['summary']) {
+  const common = [
+    { label: '累计订单', value: summary.totalOrders, color: 'text-primary-navy dark:text-white' },
+    { label: '累计往来', value: `$${summary.totalFinanceAmount.toLocaleString()}`, color: 'text-primary-navy dark:text-white' },
+  ];
+  if (partnerType === 'factory') {
+    return [
+      { label: '生产安排', value: summary.productionCount, color: 'text-tertiary-sage' },
+      { label: '本月生产', value: summary.thisMonthCount, color: 'text-primary-navy dark:text-white' },
+      { label: '上月生产', value: summary.lastMonthCount, color: 'text-slate-500 dark:text-slate-400' },
+      common[1],
+    ];
+  }
+  if (partnerType === 'forwarder') {
+    return [
+      { label: '物流委托', value: summary.logisticsCount || 0, color: 'text-tertiary-sage' },
+      common[0],
+      { label: '本月协作', value: summary.thisMonthCount, color: 'text-primary-navy dark:text-white' },
+      common[1],
+    ];
+  }
+  if (partnerType === 'customs_broker') {
+    return [
+      { label: '报关协作', value: summary.totalOrders, color: 'text-tertiary-sage' },
+      { label: '财务记录', value: summary.totalFinanceAmount ? '已关联' : '暂无', color: 'text-primary-navy dark:text-white' },
+      { label: '本月业务', value: summary.thisMonthCount, color: 'text-primary-navy dark:text-white' },
+      common[1],
+    ];
+  }
+  return [
+    common[0],
+    { label: '物流委托', value: summary.logisticsCount || 0, color: 'text-tertiary-sage' },
+    { label: '生产安排', value: summary.productionCount, color: 'text-primary-navy dark:text-white' },
+    common[1],
+  ];
 }
 
 function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {

@@ -137,12 +137,32 @@ export function createPartnersRouter() {
         ORDER BY datetime(fr.created_at) DESC
       `, [partnerId]);
 
+      // Orders linked via logistics_records (forwarder)
+      let logisticsRecords: any[] = [];
+      try {
+        logisticsRecords = await dbAll(`
+          SELECT lr.*, o.display_id AS order_display_id, o.status AS order_status
+          FROM logistics_records lr
+          LEFT JOIN orders o ON o.id = lr.order_id
+          WHERE lr.freight_forwarder_partner_id = ? AND lr.deleted_at IS NULL
+          ORDER BY datetime(lr.created_at) DESC
+        `, [partnerId]);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('freight_forwarder_partner_id')) {
+          throw error;
+        }
+        logisticsRecords = [];
+      }
+
       // Orders linked via finance_records (forwarder/customs_broker)
       const financeOrderIds = [...new Set(financeRecords.map((r: any) => r.order_id).filter(Boolean))];
-      let financeOrders: any[] = [];
-      if (financeOrderIds.length) {
-        financeOrders = await dbAll(
-          `SELECT id, display_id, status, total_amount, product_summary, created_at FROM orders WHERE id IN (${financeOrderIds.join(',')})`
+      const logisticsOrderIds = [...new Set(logisticsRecords.map((r: any) => r.order_id).filter(Boolean))];
+      const linkedOrderIds = [...new Set([...financeOrderIds, ...logisticsOrderIds])];
+      let linkedOrders: any[] = [];
+      if (linkedOrderIds.length) {
+        linkedOrders = await dbAll(
+          `SELECT id, display_id, status, total_amount, product_summary, created_at FROM orders WHERE id IN (${linkedOrderIds.join(',')})`
         );
       }
 
@@ -160,12 +180,13 @@ export function createPartnersRouter() {
       const thisMonthCount = monthlyStats.find((m: any) => m.month === thisMonth)?.count || 0;
       const lastMonthCount = monthlyStats.find((m: any) => m.month === lastMonth)?.count || 0;
 
-      // Combine all orders (production + finance-linked), deduplicate
+      // Combine all orders (production + logistics + finance-linked), deduplicate
       const allOrderMap = new Map<number, any>();
       for (const o of productionOrders) { allOrderMap.set(o.id, { ...o, linkType: 'production' }); }
-      for (const o of financeOrders) {
+      for (const o of linkedOrders) {
+        const linkType = logisticsOrderIds.includes(o.id) ? 'logistics' : 'finance';
         if (!allOrderMap.has(o.id)) {
-          allOrderMap.set(o.id, { ...o, linkType: 'finance' });
+          allOrderMap.set(o.id, { ...o, linkType });
         }
       }
 
@@ -173,12 +194,14 @@ export function createPartnersRouter() {
         partner,
         orders: [...allOrderMap.values()],
         financeRecords,
+        logisticsRecords,
         summary: {
           totalOrders: allOrderMap.size,
           thisMonthCount,
           lastMonthCount,
           totalFinanceAmount: financeRecords.reduce((s: number, r: any) => s + Number(r.amount || 0), 0),
           productionCount: productionOrders.length,
+          logisticsCount: logisticsRecords.length,
         },
       });
     } catch (error) {

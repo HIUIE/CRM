@@ -55,20 +55,52 @@ export async function buildOrderDetail(idOrNo: number | string) {
     ORDER BY datetime(f.created_at) DESC, f.id DESC
   `, [orderId]);
 
-  const logisticsRecords = await dbAll<Record<string, unknown>[]>(`
-    SELECT
-      l.*,
-      u.name AS created_by_name
-    FROM logistics_records l
-    LEFT JOIN users u ON u.id = l.created_by
-    WHERE l.order_id = ? AND l.deleted_at IS NULL
-    ORDER BY
-      CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC,
-      CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC,
-      l.shipping_date DESC,
-      datetime(l.created_at) DESC,
-      id DESC
-    `, [orderId]);
+  let logisticsRecords: Record<string, unknown>[] = [];
+  try {
+    logisticsRecords = await dbAll<Record<string, unknown>[]>(`
+      SELECT
+        l.*,
+        fp.name AS freight_forwarder_partner_name,
+        fp.partner_type AS freight_forwarder_partner_type,
+        fp.country AS freight_forwarder_partner_country,
+        fp.contact AS freight_forwarder_partner_contact,
+        u.name AS created_by_name
+      FROM logistics_records l
+      LEFT JOIN partners fp ON fp.id = l.freight_forwarder_partner_id
+      LEFT JOIN users u ON u.id = l.created_by
+      WHERE l.order_id = ? AND l.deleted_at IS NULL
+      ORDER BY
+        CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC,
+        CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC,
+        l.shipping_date DESC,
+        datetime(l.created_at) DESC,
+        id DESC
+      `, [orderId]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('freight_forwarder_partner_id')) {
+      throw error;
+    }
+    logisticsRecords = await dbAll<Record<string, unknown>[]>(`
+      SELECT
+        l.*,
+        NULL AS freight_forwarder_partner_id,
+        NULL AS freight_forwarder_partner_name,
+        NULL AS freight_forwarder_partner_type,
+        NULL AS freight_forwarder_partner_country,
+        NULL AS freight_forwarder_partner_contact,
+        u.name AS created_by_name
+      FROM logistics_records l
+      LEFT JOIN users u ON u.id = l.created_by
+      WHERE l.order_id = ? AND l.deleted_at IS NULL
+      ORDER BY
+        CASE WHEN segment_type = 'domestic' THEN 0 ELSE 1 END ASC,
+        CASE WHEN shipping_date IS NULL OR shipping_date = '' THEN 1 ELSE 0 END ASC,
+        l.shipping_date DESC,
+        datetime(l.created_at) DESC,
+        id DESC
+      `, [orderId]);
+  }
 
   const packingRecords = await dbAll<Record<string, unknown>[]>(
     `
@@ -252,6 +284,11 @@ export async function buildOrderDetail(idOrNo: number | string) {
       ...record,
       segmentType: record.segment_type || 'international',
       freightForwarder: record.freight_forwarder || null,
+      freightForwarderPartnerId: record.freight_forwarder_partner_id || null,
+      freightForwarderPartnerName: record.freight_forwarder_partner_name || null,
+      freightForwarderPartnerType: record.freight_forwarder_partner_type || null,
+      freightForwarderPartnerCountry: record.freight_forwarder_partner_country || null,
+      freightForwarderPartnerContact: record.freight_forwarder_partner_contact || null,
       trackingNo: record.tracking_no,
       packingDetails: record.packing_details,
       shippingDate: record.shipping_date,

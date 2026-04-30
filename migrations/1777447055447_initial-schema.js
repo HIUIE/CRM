@@ -114,6 +114,7 @@ export const up = (pgm) => {
       tracking_no TEXT,
       carrier TEXT,
       freight_forwarder TEXT,
+      freight_forwarder_partner_id INTEGER REFERENCES partners(id),
       packing_details TEXT,
       status TEXT,
       shipping_date TEXT,

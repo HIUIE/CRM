@@ -17,7 +17,7 @@ import { withTransition } from '../lib/transition';
 import type { OrderOption } from '../types/crm';
 import { LogisticsForm } from '../features/order-detail/drawers';
 import { EMPTY_LOGISTICS_FORM } from '../features/order-detail/utils';
-import type { AttachmentMeta, LogisticsFormState } from '../features/order-detail/types';
+import type { AttachmentMeta, LogisticsFormState, Partner } from '../features/order-detail/types';
 
 interface LogisticsSummary {
   id: number;
@@ -88,6 +88,11 @@ export default function LogisticsView() {
     queryKey: ['orders'],
     queryFn: () => apiFetch<OrderOption[]>('/api/orders'),
   });
+  const { data: partners = [] } = useQuery<Partner[]>({
+    queryKey: ['partners'],
+    queryFn: () => apiFetch<Partner[]>('/api/partners'),
+  });
+  const forwarderPartners = useMemo(() => partners.filter((partner) => partner.partner_type === 'forwarder'), [partners]);
   const loading = recordsLoading || ordersLoading;
   const error = recordsError ? getErrorMessage(recordsError, '读取物流列表失败') : ordersError ? getErrorMessage(ordersError, '读取物流列表失败') : '';
 
@@ -156,6 +161,7 @@ export default function LogisticsView() {
       const { attachments, newFiles, ...payloadFields } = logisticsForm;
       const payload = {
         ...payloadFields,
+        freightForwarderPartnerId: payloadFields.freightForwarderPartnerId ? Number(payloadFields.freightForwarderPartnerId) : null,
         orderId: Number(orderId),
         attachmentIds: [...attachments.map(attachment => attachment.id), ...newAttachments.map(attachment => attachment.id)],
       };
@@ -329,6 +335,7 @@ export default function LogisticsView() {
             <LogisticsForm
               logisticsForm={logisticsForm}
               setLogisticsForm={setLogisticsForm}
+              forwarderPartners={forwarderPartners}
               isUploading={isUploading}
               uploadProgress={uploadProgress}
             />

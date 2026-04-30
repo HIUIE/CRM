@@ -1,5 +1,5 @@
-import React from 'react';
-import { Trash, Plus, Clock, Upload, FileCheck } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Check, Search, Trash, Plus, Clock, Upload, FileCheck, X } from 'lucide-react';
 import { Field, AttachmentEditor } from './components';
 import { asNumber, formatDateOnly } from './utils';
 import type {
@@ -228,14 +228,24 @@ export function CustomsForm({
 export function LogisticsForm({
   logisticsForm,
   setLogisticsForm,
+  forwarderPartners,
   isUploading,
   uploadProgress,
 }: {
   logisticsForm: LogisticsFormState;
   setLogisticsForm: React.Dispatch<React.SetStateAction<LogisticsFormState>>;
+  forwarderPartners: Partner[];
   isUploading: boolean;
   uploadProgress: number;
 }) {
+  const [forwarderQuery, setForwarderQuery] = useState('');
+  const selectedForwarder = forwarderPartners.find((p) => String(p.id) === logisticsForm.freightForwarderPartnerId) || null;
+  const filteredForwarders = useMemo(() => {
+    const q = forwarderQuery.trim().toLowerCase();
+    if (!q) return forwarderPartners;
+    return forwarderPartners.filter((p) => [p.name, p.country, p.contact, p.contact_person].filter(Boolean).join(' ').toLowerCase().includes(q));
+  }, [forwarderPartners, forwarderQuery]);
+
   return (
     <div className="space-y-10">
       <div className="flex gap-4 p-1.5 bg-slate-100 dark:bg-navy-950 rounded-lg">
@@ -243,7 +253,59 @@ export function LogisticsForm({
         <button type="button" onClick={()=>setLogisticsForm({...logisticsForm, segmentType:'international'})} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${logisticsForm.segmentType==='international'?'bg-white dark:bg-navy-800 text-primary-navy dark:text-white shadow-md':'text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white'}`}>国际/主线轨迹</button>
       </div>
       <div className="grid gap-10 sm:grid-cols-2">
-        <Field label="货运代理 (Freight Forwarder)"><input value={logisticsForm.freightForwarder} onChange={e=>setLogisticsForm({...logisticsForm, freightForwarder:e.target.value})} placeholder="记录委托的货代公司..." className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
+        <div className="sm:col-span-2"><Field label="货运代理 (Freight Forwarder)">
+          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-navy-800 px-3.5 py-2.5">
+              <Search size={14} className="text-slate-300 dark:text-slate-600" />
+              <input
+                value={forwarderQuery}
+                onChange={e => setForwarderQuery(e.target.value)}
+                placeholder={selectedForwarder ? selectedForwarder.name : logisticsForm.freightForwarder || '搜索并选择货代合作伙伴...'}
+                className="min-w-0 flex-1 bg-transparent text-[13px] font-bold text-primary-navy dark:text-white outline-none placeholder:text-slate-400"
+              />
+              {(selectedForwarder || logisticsForm.freightForwarder) && (
+                <button type="button" onClick={() => { setLogisticsForm({ ...logisticsForm, freightForwarderPartnerId: '', freightForwarder: '' }); setForwarderQuery(''); }} className="rounded-md p-1 text-slate-300 hover:bg-slate-100 hover:text-error dark:hover:bg-navy-800">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            {selectedForwarder && (
+              <div className="flex items-center justify-between gap-3 bg-emerald-50/60 dark:bg-emerald-900/10 px-3.5 py-2.5 text-xs">
+                <div className="min-w-0">
+                  <div className="font-black text-primary-navy dark:text-white truncate">已选择：{selectedForwarder.name}</div>
+                  <div className="mt-0.5 font-bold text-slate-400 truncate">{[selectedForwarder.country, selectedForwarder.contact_person || selectedForwarder.contact].filter(Boolean).join(' · ') || '货代合作伙伴'}</div>
+                </div>
+                <Check size={14} className="shrink-0 text-emerald-500" />
+              </div>
+            )}
+            <div className="max-h-44 overflow-y-auto custom-scrollbar">
+              {filteredForwarders.length > 0 ? filteredForwarders.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { setLogisticsForm({ ...logisticsForm, freightForwarderPartnerId: String(p.id), freightForwarder: p.name }); setForwarderQuery(''); }}
+                  className={`flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-navy-900 ${String(p.id) === logisticsForm.freightForwarderPartnerId ? 'bg-slate-50 dark:bg-navy-900' : ''}`}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-black text-primary-navy dark:text-white">{p.name}</div>
+                    <div className="mt-0.5 truncate text-[11px] font-bold text-slate-400">{[p.country, p.contact_person, p.contact].filter(Boolean).join(' · ') || '未补充国家/联系人'}</div>
+                  </div>
+                  {String(p.id) === logisticsForm.freightForwarderPartnerId && <Check size={14} className="shrink-0 text-emerald-500" />}
+                </button>
+              )) : (
+                <div className="px-3.5 py-5 text-center text-xs font-bold text-slate-400">暂无匹配货代，可先在合作伙伴中添加 forwarder 类型伙伴</div>
+              )}
+            </div>
+            {!selectedForwarder && logisticsForm.freightForwarder && (
+              <div className="border-t border-amber-100 dark:border-amber-900/30 bg-amber-50/60 dark:bg-amber-900/10 px-3.5 py-2 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                当前为历史文本记录：{logisticsForm.freightForwarder}。保存时将继续保留文本；选择上方伙伴后会转为结构化关联。
+              </div>
+            )}
+            <div className="border-t border-slate-100 dark:border-navy-800 px-3.5 py-2">
+              <input value={logisticsForm.freightForwarder} onChange={e=>setLogisticsForm({...logisticsForm, freightForwarder:e.target.value, freightForwarderPartnerId:''})} placeholder="或输入历史文本货代名称..." className="w-full bg-transparent text-[12px] font-bold text-slate-500 dark:text-slate-400 focus:outline-none" />
+            </div>
+          </div>
+        </Field></div>
         <Field label="实际承运商 (Actual Carrier)"><input required value={logisticsForm.carrier} onChange={e=>setLogisticsForm({...logisticsForm, carrier:e.target.value})} placeholder="例如: 顺丰 / 马士基 / DHL..." className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
         <Field label="主运单/提单识别码 *"><input required value={logisticsForm.trackingNo} onChange={e=>setLogisticsForm({...logisticsForm, trackingNo:e.target.value})} placeholder="请输入单号..." className="w-full bg-white dark:bg-navy-950 p-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm data-field" /></Field>
         <Field label={logisticsForm.segmentType === 'domestic' ? '实际发货日期' : '预计离港日期'}><input type="date" value={logisticsForm.shippingDate} onChange={e=>setLogisticsForm({...logisticsForm, shippingDate:e.target.value})} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>

@@ -71,6 +71,7 @@ export const EMPTY_PRODUCTION_FORM: ProductionFormState = {
 export const EMPTY_LOGISTICS_FORM: LogisticsFormState = {
   segmentType: 'international',
   freightForwarder: '',
+  freightForwarderPartnerId: '',
   carrier: '',
   trackingNo: '',
   status: 'preparing',
@@ -203,7 +204,8 @@ export function buildLogisticsForm(record: LogisticsRecord | null): LogisticsFor
   return {
     id: record?.id,
     segmentType: record?.segmentType || 'international',
-    freightForwarder: asText(record?.freightForwarder),
+    freightForwarder: asText(record?.freightForwarderPartnerName || record?.freightForwarder),
+    freightForwarderPartnerId: record?.freightForwarderPartnerId ? String(record.freightForwarderPartnerId) : '',
     carrier: asText(record?.carrier),
     trackingNo: asText(record?.trackingNo),
     status: record?.status || 'preparing',

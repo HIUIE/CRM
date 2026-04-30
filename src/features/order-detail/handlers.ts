@@ -294,7 +294,7 @@ export async function handleSaveLogistics(
       newAtts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
       setIsUploading(false);
     }
-    const payload = { ...logisticsForm, orderId: Number(order?.id), freightForwarder: logisticsForm.freightForwarder, attachmentIds: [...logisticsForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
+    const payload = { ...logisticsForm, orderId: Number(order?.id), freightForwarder: logisticsForm.freightForwarder, freightForwarderPartnerId: logisticsForm.freightForwarderPartnerId ? Number(logisticsForm.freightForwarderPartnerId) : null, attachmentIds: [...logisticsForm.attachments.map(a => a.id), ...newAtts.map(a => a.id)] };
     const url = logisticsForm.id ? `/api/logistics/${logisticsForm.id}` : `/api/logistics`;
     await apiFetch(url, { method: logisticsForm.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
     showToast('同步成功'); closeDrawer();

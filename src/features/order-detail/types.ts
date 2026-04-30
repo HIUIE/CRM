@@ -49,6 +49,7 @@ export type Partner = {
   partner_type: PartnerType;
   country?: string | null;
   contact?: string | null;
+  contact_person?: string | null;
   payment_terms?: string | null;
   remark?: string | null;
 };
@@ -154,6 +155,11 @@ export type LogisticsRecord = {
   id: number;
   segmentType: LogisticsSegment;
   freightForwarder?: string | null;
+  freightForwarderPartnerId?: number | null;
+  freightForwarderPartnerName?: string | null;
+  freightForwarderPartnerType?: PartnerType | null;
+  freightForwarderPartnerCountry?: string | null;
+  freightForwarderPartnerContact?: string | null;
   carrier: string;
   trackingNo: string;
   status: LogisticsStatus;
@@ -300,6 +306,7 @@ export type LogisticsFormState = {
   id?: number;
   segmentType: LogisticsSegment;
   freightForwarder: string;
+  freightForwarderPartnerId: string;
   carrier: string;
   trackingNo: string;
   status: LogisticsStatus;

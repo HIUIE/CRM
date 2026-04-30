@@ -133,11 +133,11 @@ router.get('/', async (req, res) => {
       const created = await dbRun(
         `
           INSERT INTO logistics_records (
-            order_id, tracking_no, carrier, freight_forwarder, packing_details, status, shipping_date, segment_type,
+            order_id, tracking_no, carrier, freight_forwarder, freight_forwarder_partner_id, packing_details, status, shipping_date, segment_type,
             package_count, volume_cbm, gross_weight_kg, incoterm, transport_mode, vessel_voyage, bill_no, etd, eta,
             recipient_address, package_size, remark, created_by, updated_by
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING id
         `,
         [
@@ -145,6 +145,7 @@ router.get('/', async (req, res) => {
           result.payload.trackingNo,
           result.payload.carrier,
           result.payload.freightForwarder,
+          result.payload.freightForwarderPartnerId,
           result.payload.packingDetails,
           result.payload.status,
           result.payload.shippingDate || null,
@@ -187,7 +188,7 @@ router.get('/', async (req, res) => {
       const updated = await dbRun(
         `
           UPDATE logistics_records
-          SET order_id = ?, tracking_no = ?, carrier = ?, freight_forwarder = ?, packing_details = ?, status = ?, shipping_date = ?, segment_type = ?,
+          SET order_id = ?, tracking_no = ?, carrier = ?, freight_forwarder = ?, freight_forwarder_partner_id = ?, packing_details = ?, status = ?, shipping_date = ?, segment_type = ?,
               package_count = ?, volume_cbm = ?, gross_weight_kg = ?, incoterm = ?, transport_mode = ?, vessel_voyage = ?, bill_no = ?, etd = ?, eta = ?,
               recipient_address = ?, package_size = ?, remark = ?, updated_by = ?
           WHERE id = ?
@@ -197,6 +198,7 @@ router.get('/', async (req, res) => {
           result.payload.trackingNo,
           result.payload.carrier,
           result.payload.freightForwarder,
+          result.payload.freightForwarderPartnerId,
           result.payload.packingDetails,
           result.payload.status,
           result.payload.shippingDate || null,

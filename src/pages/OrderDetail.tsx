@@ -600,7 +600,7 @@ export default function OrderDetailPage() {
                   ) : drawer.mode === 'packing' ? (
                     <PackingForm packingForm={packingForm} setPackingForm={setPackingForm} onUploadPhoto={(idx, file) => handleUploadPackingPhoto(idx, file, { packingForm, setPackingForm, order, customer, setSaving, setDrawerError, setIsUploading, setUploadProgress })} />
                   ) : drawer.mode === 'logistics' ? (
-                    <LogisticsForm logisticsForm={logisticsForm} setLogisticsForm={setLogisticsForm} isUploading={isUploading} uploadProgress={uploadProgress} />
+                    <LogisticsForm logisticsForm={logisticsForm} setLogisticsForm={setLogisticsForm} forwarderPartners={partners.filter((p) => p.partner_type === 'forwarder')} isUploading={isUploading} uploadProgress={uploadProgress} />
                   ) : drawer.mode === 'finance' ? (
                     <FinanceForm financeForm={financeForm} setFinanceForm={setFinanceForm} isUploading={isUploading} uploadProgress={uploadProgress} />
                   ) : drawer.mode === 'production' ? (

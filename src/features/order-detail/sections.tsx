@@ -840,7 +840,8 @@ export function LogisticsSection({
                 <div className="flex justify-between items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none block mb-1">货运代理</span>
-                    <div className="text-sm font-bold text-primary-navy dark:text-white truncate">{l.freightForwarder || '直接委托'}</div>
+                    <div className="text-sm font-bold text-primary-navy dark:text-white truncate">{l.freightForwarderPartnerName || l.freightForwarder || '直接委托'}</div>
+                    {l.freightForwarderPartnerId && <div className="mt-0.5 text-[10px] font-bold text-slate-400 truncate">{[l.freightForwarderPartnerCountry, l.freightForwarderPartnerContact].filter(Boolean).join(' · ') || '合作伙伴档案'}</div>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none block mb-1">实际承运商</span>

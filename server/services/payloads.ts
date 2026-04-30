@@ -288,6 +288,7 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
   const trackingNo = readString(body.trackingNo);
   const carrier = readString(body.carrier);
   const freightForwarder = readString(body.freightForwarder);
+  const freightForwarderPartnerId = readNumber(body.freightForwarderPartnerId);
   const packingDetails = readString(body.packingDetails);
   const status = readString(body.status);
   const shippingDate = readString(body.shippingDate);
@@ -313,6 +314,19 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
   if (!carrier) {
     return { error: '请填写物流公司或承运方' };
   }
+  let freightForwarderPartner: { id: number; name: string; partner_type: string } | undefined;
+  if (Number.isInteger(freightForwarderPartnerId) && freightForwarderPartnerId > 0) {
+    freightForwarderPartner = await dbGet<{ id: number; name: string; partner_type: string }>(
+      `SELECT id, name, partner_type FROM partners WHERE id = ? AND deleted_at IS NULL`,
+      [freightForwarderPartnerId],
+    );
+    if (!freightForwarderPartner) {
+      return { error: '选择的货运代理不存在' };
+    }
+    if (freightForwarderPartner.partner_type !== 'forwarder') {
+      return { error: '货运代理必须选择货代类型的合作伙伴' };
+    }
+  }
   if (!isOneOf(status, LOGISTICS_STATUSES)) {
     return { error: '物流状态不正确' };
   }
@@ -334,7 +348,8 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
       orderId,
       trackingNo,
       carrier,
-      freightForwarder,
+      freightForwarder: freightForwarderPartner?.name || freightForwarder,
+      freightForwarderPartnerId: freightForwarderPartner?.id || null,
       packingDetails,
       status: status as LogisticsStatus,
       shippingDate,

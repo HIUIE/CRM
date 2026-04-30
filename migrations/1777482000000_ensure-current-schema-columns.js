@@ -77,6 +77,7 @@ export const up = (pgm) => {
       ADD COLUMN IF NOT EXISTS tracking_no TEXT,
       ADD COLUMN IF NOT EXISTS carrier TEXT,
       ADD COLUMN IF NOT EXISTS freight_forwarder TEXT,
+      ADD COLUMN IF NOT EXISTS freight_forwarder_partner_id INTEGER,
       ADD COLUMN IF NOT EXISTS packing_details TEXT,
       ADD COLUMN IF NOT EXISTS status TEXT,
       ADD COLUMN IF NOT EXISTS shipping_date TEXT,
