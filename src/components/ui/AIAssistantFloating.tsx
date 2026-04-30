@@ -30,6 +30,7 @@ const QUICK_ACTIONS = [
 ];
 
 export default function AIAssistantFloating() {
+  const [isSuppressed, setIsSuppressed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -51,6 +52,19 @@ export default function AIAssistantFloating() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const syncSuppressedState = () => {
+      const hasBlockingLayer = Boolean(document.querySelector('[data-modal-layer="true"]'));
+      setIsSuppressed(hasBlockingLayer);
+      if (hasBlockingLayer) setIsOpen(false);
+    };
+
+    syncSuppressedState();
+    const observer = new MutationObserver(syncSuppressedState);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 300);
@@ -137,6 +151,8 @@ export default function AIAssistantFloating() {
     setMessages(initial);
     localStorage.removeItem(STORAGE_KEY);
   };
+
+  if (isSuppressed) return null;
 
   return (
     <>

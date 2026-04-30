@@ -108,6 +108,7 @@ export default function OrderDetailPage() {
   const [detail, setDetail] = useState<OrderDetailResponse | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [drawer, setDrawer] = useState<DrawerState>({ mode: 'closed' });
@@ -220,16 +221,25 @@ export default function OrderDetailPage() {
   const loadDetail = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
     if (!orderNo) { setError('无效单号'); setLoading(false); return; }
     if (showLoading) setLoading(true);
+    setTimedOut(false);
     setError('');
     try {
-      const [detailData, partnerData] = await Promise.all([
-        apiFetch<OrderDetailResponse>(`/api/orders/${encodeURIComponent(orderNo)}`),
-        apiFetch<Partner[]>('/api/partners').catch(() => null),
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error('数据加载拥堵，请重试')), 15_000);
+      });
+      const [detailData, partnerData] = await Promise.race([
+        Promise.all([
+          apiFetch<OrderDetailResponse>(`/api/orders/${encodeURIComponent(orderNo)}`),
+          apiFetch<Partner[]>('/api/partners').catch(() => null),
+        ]),
+        timeoutPromise,
       ]);
       setDetail(detailData);
       if (partnerData) setPartners(partnerData);
     } catch (err) {
-      setError(getErrorMessage(err, '读取详情失败'));
+      const message = getErrorMessage(err, '读取详情失败');
+      setError(message);
+      setTimedOut(message.includes('数据加载拥堵'));
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -327,8 +337,31 @@ export default function OrderDetailPage() {
   };
 
   // 6. View Helpers
-  if (loading) return <div className="p-12 text-secondary-slate dark:text-slate-400 animate-pulse font-medium bg-background dark:bg-navy-950">正在加载数据...</div>;
-  if (error || !detail || !order) return <div className="p-8 text-error font-bold bg-white dark:bg-navy-900 border border-[#E2E8F0] dark:border-navy-800 m-6 rounded-lg shadow-sm">加载失败: {error}</div>;
+  const orderDetailSkeleton = (
+    <div className="animate-page-in space-y-8 p-6">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
+        <div className="h-6 w-48 rounded bg-slate-200 dark:bg-navy-800 animate-pulse" />
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-20 rounded-lg bg-slate-100 dark:bg-navy-800 animate-pulse" />)}
+        </div>
+      </section>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          {[0, 1, 2].map((i) => <div key={i} className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />)}
+        </div>
+        <div className="h-80 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />
+      </div>
+    </div>
+  );
+
+  if (loading) return orderDetailSkeleton;
+  if (error || !detail || !order) return (
+    <div className="m-6 rounded-lg border border-red-100 dark:border-red-900/30 bg-white dark:bg-navy-900 p-8 text-center shadow-sm">
+      <div className="text-base font-black text-error">{timedOut ? '数据加载拥堵，请重试' : `加载失败: ${error || '订单不存在'}`}</div>
+      <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">请检查网络或稍后重试，刷新按钮会重新请求订单详情。</p>
+      <button onClick={() => void loadDetail()} className="btn-primary mt-5">重新加载</button>
+    </div>
+  );
 
   return (
     <div className="animate-page-in">

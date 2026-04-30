@@ -26,7 +26,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
 
   const handleClose = () => {
     if (isDirty) {
-      if (window.confirm('内容尚未保存，确定要放弃修改吗？')) {
+      if (window.confirm('有未保存的数据，确认放弃？')) {
         onClose();
       }
     } else {
@@ -53,7 +53,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[400] flex h-dvh justify-end overflow-hidden">
+    <div data-modal-layer="true" className="fixed inset-0 z-[650] flex h-dvh justify-end overflow-hidden">
       <div 
         className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
         onClick={handleOverlayClick}
@@ -75,7 +75,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
           {children}
         </div>
         {footer && (
-          <div className="shrink-0 p-6 border-t border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-900">
+          <div className="shrink-0 px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] border-t border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-[0_-12px_24px_rgba(15,23,42,0.04)]">
             {footer}
           </div>
         )}

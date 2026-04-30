@@ -4,7 +4,6 @@ import { Drawer } from './Drawer';
 import { Combobox } from './Combobox';
 import { Hash } from 'lucide-react';
 import Field from './Field';
-import { useNavigate } from 'react-router-dom';
 import type { CustomerListItem } from '../../types/crm';
 
 interface OrderCreateDrawerProps {
@@ -33,8 +32,20 @@ const EMPTY_FORM: OrderFormState = {
 
 export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerId, initialCustomerName }: OrderCreateDrawerProps) {
   const [formData, setFormData] = useState<OrderFormState>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<OrderFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
+
+  const resetAndClose = () => {
+    onClose();
+  };
+
+  const requestClose = () => {
+    if (!isFormDirty || window.confirm('有未保存的数据，确认放弃？')) {
+      resetAndClose();
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -43,18 +54,23 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
   }, [isOpen]);
 
   const loadNextId = async () => {
+    const lockedCustomerId = initialCustomerId ? String(initialCustomerId) : '';
     try {
       const { nextId } = await apiFetch<{ nextId: string }>('/api/orders/next-display-id');
-      setFormData({
+      const nextForm = {
         ...EMPTY_FORM,
         displayId: nextId,
-        customerId: initialCustomerId ? String(initialCustomerId) : '',
-      });
+        customerId: lockedCustomerId,
+      };
+      setFormData(nextForm);
+      setInitialForm(nextForm);
     } catch (err) {
-      setFormData({
+      const nextForm = {
         ...EMPTY_FORM,
-        customerId: initialCustomerId ? String(initialCustomerId) : '',
-      });
+        customerId: lockedCustomerId,
+      };
+      setFormData(nextForm);
+      setInitialForm(nextForm);
     }
   };
 
@@ -73,7 +89,7 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
         body: JSON.stringify(payload) 
       });
       onSuccess(created.display_id);
-      onClose();
+      resetAndClose();
     } catch (err) {
       setFormError(getErrorMessage(err, '创建订单失败'));
     } finally {
@@ -84,11 +100,12 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
   return (
     <Drawer
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={requestClose}
       title="创建新订单"
+      isDirty={isFormDirty}
       footer={
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase">取消</button>
+          <button type="button" onClick={requestClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '正在同步...' : '确认并进入详情'}
           </button>

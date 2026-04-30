@@ -145,12 +145,18 @@ export default function OrdersView() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
+  const resetFormState = () => {
     setEditingOrder(null);
     setFormData(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
     setFormError('');
     setShowForm(false);
+  };
+
+  const requestCloseForm = () => {
+    if (!isFormDirty || window.confirm('有未保存的数据，确认放弃？')) {
+      resetFormState();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,11 +166,11 @@ export default function OrdersView() {
     try {
       if (editingOrder) {
         await apiFetch(`/api/orders/${editingOrder.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-        closeForm();
+        resetFormState();
         queryClient.invalidateQueries({ queryKey: ['orders'] });
       } else {
         const created = await apiFetch<{ display_id: string }>('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
-        closeForm();
+        resetFormState();
         const navigateToDetail = () => navigate(`/orders/${created.display_id}`);
         withTransition(navigateToDetail);
       }
@@ -307,12 +313,12 @@ export default function OrdersView() {
 
       <Drawer
         isOpen={showForm}
-        onClose={closeForm}
+        onClose={requestCloseForm}
         title={editingOrder ? '编辑订单基本信息' : '创建新订单'}
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button type="button" onClick={requestCloseForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
             <button onClick={handleSubmit} type="submit" className="btn-primary shadow-md">确认并进入详情</button>
           </div>
         }

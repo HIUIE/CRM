@@ -162,19 +162,37 @@ function OrderListDrawerContent({ filter, onClose }: { filter: { status?: string
 // ==================== AI Briefing ====================
 
 function AIBriefing({ data }: { data: DashboardData }) {
-  const [briefing, setBriefing] = useState<string | null>(null);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const cacheKey = `smarttrade_ai_daily_briefing_${todayKey}`;
+  const fallbackBriefing = '早上好！今日控制台已就绪，请查看待处理任务和最新动态。';
+  const [briefing, setBriefing] = useState<string | null>(() => {
+    try {
+      return window.sessionStorage.getItem(cacheKey);
+    } catch (_error) {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(false);
-  const fired = useRef(false);
 
-  useEffect(() => {
-    if (fired.current) return;
-    fired.current = true;
+  const generateBriefing = async ({ force = false }: { force?: boolean } = {}) => {
+    if (loading) return;
+    if (!force && briefing) return;
     setLoading(true);
     const prompt = `请基于以下控制台数据生成一段50字以内的外贸业务早报（直接输出文本，不加任何前缀）：今日待处理${data.todos.length}项，活跃订单${data.overview.activeOrders}个，已收金额$${data.overview.receiptUsd.toLocaleString()}，运输中${data.overview.activeLogistics}笔。语气专业，带一点鼓励。`;
-    apiFetch<{ content: string }>('/api/ai/chat', { method: 'POST', body: JSON.stringify({ message: prompt }) })
-      .then(res => setBriefing(res.content || ''))
-      .catch(() => setBriefing('早上好！今日控制台已就绪，请查看待处理任务和最新动态。'))
-      .finally(() => setLoading(false));
+    try {
+      const res = await apiFetch<{ content: string }>('/api/ai/chat', { method: 'POST', body: JSON.stringify({ message: prompt }) });
+      const nextBriefing = res.content || fallbackBriefing;
+      setBriefing(nextBriefing);
+      try { window.sessionStorage.setItem(cacheKey, nextBriefing); } catch (_error) { /* ignore */ }
+    } catch (_error) {
+      setBriefing(fallbackBriefing);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!briefing) void generateBriefing();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -183,7 +201,17 @@ function AIBriefing({ data }: { data: DashboardData }) {
         <Sparkles size={14} className="text-indigo-500" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">AI 每日业务洞察</div>
+        <div className="mb-1 flex items-center justify-between gap-3">
+          <div className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">AI 每日业务洞察</div>
+          <button
+            type="button"
+            onClick={() => void generateBriefing({ force: true })}
+            disabled={loading}
+            className="text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-700 disabled:opacity-40"
+          >
+            刷新
+          </button>
+        </div>
         {loading ? (
           <div className="flex items-center gap-2 text-xs text-slate-400"><Loader2 size={12} className="animate-spin" /> 正在生成...</div>
         ) : (
