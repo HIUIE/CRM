@@ -63,7 +63,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
       />
       <div
         ref={drawerRef}
-        className={`relative z-10 w-full ${width} h-dvh max-h-dvh min-h-0 overflow-hidden bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer`}
+        className={`relative z-10 w-full ${width} h-dvh max-h-dvh min-h-0 overflow-hidden bg-surface dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 shrink-0">
           <h2 className="text-[15px] font-extrabold tracking-tight text-primary-navy dark:text-white">{title}</h2>
@@ -79,7 +79,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
           {children}
         </div>
         {footer && (
-          <div className="shrink-0 px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] border-t border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-[0_-12px_24px_rgba(15,23,42,0.04)]">
+          <div className="shrink-0 px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] border-t border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-[0_-12px_24px_rgba(15,23,42,0.04)]">
             {typeof footer === 'function' ? footer({ requestClose: handleClose, isBusy }) : footer}
           </div>
         )}

@@ -23,7 +23,7 @@ export default function EmptyStateBoard({
 
   return (
     <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-navy-950/30 rounded-lg border border-dashed border-slate-200 dark:border-navy-800 transition-colors">
-      <div className="h-12 w-12 rounded-full bg-white dark:bg-navy-900 flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-navy-800">
+      <div className="h-12 w-12 rounded-full bg-surface dark:bg-navy-900 flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-navy-800">
         {renderIcon()}
       </div>
       <h4 className="mb-1 text-sm font-bold tracking-tight text-slate-900 dark:text-white">{title}</h4>

@@ -106,7 +106,7 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
       isBusy={saving}
       footer={({ requestClose: reqClose, isBusy }) => (
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={reqClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all disabled:opacity-50">取消</button>
+          <button type="button" onClick={reqClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all disabled:opacity-50">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '正在同步...' : '确认并进入详情'}
           </button>
@@ -124,7 +124,7 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
                 required 
                 value={formData.displayId} 
                 onChange={e => setFormData({...formData, displayId: e.target.value.trim()})} 
-                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 pl-9 pr-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none"
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 pl-9 pr-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none"
               />
             </div>
           </Field>
@@ -152,7 +152,7 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
               step="0.01" 
               value={formData.totalAmount} 
               onChange={e => setFormData({...formData, totalAmount: e.target.value})} 
-              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none" 
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none" 
             />
           </Field>
 
@@ -162,7 +162,7 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
               value={formData.productSummary} 
               onChange={e => setFormData({...formData, productSummary: e.target.value})} 
               placeholder="例如：太阳能板 A-Type 500pcs..." 
-              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none" 
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none" 
             />
           </Field>
 
@@ -170,7 +170,7 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
              <textarea 
                value={formData.details}
                onChange={e => setFormData({...formData, details: e.target.value})}
-               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 text-sm font-medium outline-none min-h-[100px]"
+               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 text-sm font-medium outline-none min-h-[100px]"
              />
           </Field>
         </div>

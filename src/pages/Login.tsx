@@ -46,7 +46,7 @@ export default function LoginScreen() {
         <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-100 blur-[120px] dark:bg-emerald-900/20" />
       </div>
 
-      <div className="relative z-10 mx-4 w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white p-10 shadow-xl transition-all animate-in fade-in zoom-in-95 duration-500 dark:border-navy-800 dark:bg-navy-900">
+      <div className="relative z-10 mx-4 w-full max-w-[420px] rounded-2xl border border-slate-200 bg-surface p-10 shadow-xl transition-all animate-in fade-in zoom-in-95 duration-500 dark:border-navy-800 dark:bg-navy-900">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-slate-50 dark:bg-navy-950 shadow-inner border border-slate-100 dark:border-navy-800 overflow-hidden p-2">
             <img src={siteLogo} alt={siteName} className="h-full w-full object-contain" />
@@ -71,7 +71,7 @@ export default function LoginScreen() {
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 placeholder="请输入用户名"
-                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 dark:focus:bg-navy-900 dark:focus:ring-tertiary-sage/10 outline-none font-medium"
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-surface focus:ring-2 focus:ring-primary-navy/5 dark:focus:bg-navy-900 dark:focus:ring-tertiary-sage/10 outline-none font-medium"
                 required
               />
             </div>
@@ -86,7 +86,7 @@ export default function LoginScreen() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 dark:focus:bg-navy-900 dark:focus:ring-tertiary-sage/10 outline-none font-medium"
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-surface focus:ring-2 focus:ring-primary-navy/5 dark:focus:bg-navy-900 dark:focus:ring-tertiary-sage/10 outline-none font-medium"
                 required
               />
             </div>

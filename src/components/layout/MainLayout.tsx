@@ -135,7 +135,7 @@ export default function MainLayout() {
       )}
 
       {/* 1. 固定侧边栏 - position: fixed, 脱离文档流 */}
-      <aside className={`fixed left-0 top-0 flex h-screen w-[240px] flex-col border-r border-slate-200 bg-white shadow-sm transition-all duration-300 dark:border-navy-800 dark:bg-navy-900 z-50 px-6 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed left-0 top-0 flex h-screen w-[240px] flex-col border-r border-slate-200 bg-surface shadow-sm transition-all duration-300 dark:border-navy-800 dark:bg-navy-900 z-50 px-6 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         {/* Logo 区域：pt-8 pb-6 mb-8 确保与主导航视觉隔离 */}
         <div className="pt-8 pb-6 mb-8 border-b border-slate-50 dark:border-navy-800/50">
           <Link to="/" className="flex items-center gap-3 group">
@@ -188,7 +188,7 @@ export default function MainLayout() {
         <div className="relative py-4 border-t border-slate-50 dark:border-navy-800">
            {showUserMenu && (
              <div className="absolute bottom-full left-0 right-0 mb-2 z-[100]">
-               <div className="rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 shadow-lg overflow-hidden">
+               <div className="rounded-lg border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-800 shadow-lg overflow-hidden">
                  <div className="px-4 py-3 border-b border-slate-100 dark:border-navy-700">
                    <div className="text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400">当前账号</div>
                    <div className="text-sm font-black text-primary-navy dark:text-white mt-0.5">{user?.name}</div>
@@ -224,7 +224,7 @@ export default function MainLayout() {
       {/* 2. 主内容区 - margin-left 避开固定侧边栏，自然撑开文档流 */}
       <main className="lg:ml-[240px] min-h-screen flex flex-col relative">
         {/* Mobile header with hamburger */}
-        <div className="sticky top-0 z-40 flex items-center justify-between bg-white/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-4 py-3 lg:hidden">
+        <div className="sticky top-0 z-40 flex items-center justify-between bg-surface/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-4 py-3 lg:hidden">
           <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 transition-all">
             <Menu size={20} />
           </button>
@@ -238,7 +238,7 @@ export default function MainLayout() {
         </div>
         <CommandPalette />
         {!isDetailPage && (
-          <header className="sticky top-0 z-40 bg-white/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-8 py-5 flex items-center justify-between transition-all shrink-0">
+          <header className="sticky top-0 z-40 bg-surface/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-8 py-5 flex items-center justify-between transition-all shrink-0">
             <div>
               <h1 className="text-lg font-black tracking-tight text-primary-navy dark:text-white">{headerInfo.title}</h1>
               <p className="mt-0.5 text-[10px] font-bold tracking-tight text-slate-400">{headerInfo.subtitle}</p>

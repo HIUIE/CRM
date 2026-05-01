@@ -47,7 +47,7 @@ export const LightActionButton = ({ children, onClick, className = '' }: { child
   <button
     type="button"
     onClick={onClick}
-    className={`inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-4 py-2 text-xs font-bold text-slate-900 dark:text-white shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-navy-700 hover:border-slate-300 dark:hover:border-navy-600 active:scale-95 ${className}`}
+    className={`inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-800 px-4 py-2 text-xs font-bold text-slate-900 dark:text-white shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-navy-700 hover:border-slate-300 dark:hover:border-navy-600 active:scale-95 ${className}`}
   >
     {children}
   </button>
@@ -89,8 +89,8 @@ export const WorkSection = React.forwardRef<
     children: React.ReactNode;
   }
 >(({ section, title, icon, collapsed, onToggle, action, children }, ref) => (
-  <section ref={ref} data-section={section} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-sm transition-shadow hover:shadow-md">
-    <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
+  <section ref={ref} data-section={section} className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-sm transition-shadow hover:shadow-md">
+    <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
         <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">{title}</h3>
@@ -116,8 +116,8 @@ export const DocumentBoard = React.forwardRef<
     id?: string;
   }
 >(({ title, children, action, id }, ref) => (
-  <div id={id} ref={ref} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all">
-    <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
+  <div id={id} ref={ref} className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all">
+    <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 flex items-center justify-between">
       <div className="flex items-center gap-3">
          <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
          <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">{title}</h3>
@@ -135,8 +135,8 @@ DocumentBoard.displayName = 'DocumentBoard';
 
 export function RemarkBoard({ content, onEdit }: { content: string; onEdit: () => void }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
-      <div className="px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-sm dark:border-navy-800 dark:bg-navy-900">
+      <div className="px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 flex items-center justify-between">
         <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">内部备注 / Internal Notes</h3>
         <button onClick={onEdit} className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-all">编辑</button>
       </div>
@@ -179,7 +179,7 @@ export function FinanceDashboard({
       <div className="xl:col-span-4 space-y-6 xl:border-r xl:border-slate-100 xl:dark:border-navy-800 xl:pr-8">
         <div className="flex items-center justify-between">
            <div className="text-xs font-medium text-slate-500 tracking-tight">回款汇总</div>
-           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-navy-900 px-2 py-1 rounded border border-slate-200 dark:border-navy-800 outline-none">
+           <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-xs font-bold text-slate-900 dark:text-white bg-surface dark:bg-navy-900 px-2 py-1 rounded border border-slate-200 dark:border-navy-800 outline-none">
              {currencies.map(c=><option key={c} value={c}>{c}</option>)}
            </select>
         </div>
@@ -214,7 +214,7 @@ export function FinanceDashboard({
             : (record.target || '订单客户');
           const categoryLabel = getFinanceCategoryLabel(record.recordCategory);
           return (
-            <div key={record.id} className="group rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-all hover:border-primary-navy/20 dark:hover:border-tertiary-sage/30 hover:shadow-md">
+            <div key={record.id} className="group rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 shadow-sm transition-all hover:border-primary-navy/20 dark:hover:border-tertiary-sage/30 hover:shadow-md">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0 flex-1 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -245,7 +245,7 @@ export function FinanceDashboard({
                             key={att.id}
                             type="button"
                             onClick={() => onPreview?.(att)}
-                            className="inline-flex max-w-[180px] items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-3 py-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all"
+                            className="inline-flex max-w-[180px] items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-800 px-3 py-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white transition-all"
                             title={att.fileName}
                           >
                             <FileIcon fileName={att.fileName} url={att.url} size={13} />
@@ -264,7 +264,7 @@ export function FinanceDashboard({
             </div>
           );
         }) : (
-          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900"><EmptyStateBoard title="暂无财务记录" description="点击右上角登记第一笔收支流水，开始追踪回款状态。" icon={Wallet} /></div>
+          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900"><EmptyStateBoard title="暂无财务记录" description="点击右上角登记第一笔收支流水，开始追踪回款状态。" icon={Wallet} /></div>
         )}
       </div>
     </div>
@@ -325,7 +325,7 @@ export function ProductionDashboard({
       </div>
 
       {/* 右侧 col-span-8：白底 + 浅灰边框（镜像财务容器风格） */}
-      <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900 p-6">
+      <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-surface dark:bg-navy-900 p-6">
         <div className="grid grid-cols-4 gap-6">
           <GridItem label="制造工厂" value={<span className="truncate block font-bold text-slate-900">{plan?.partnerName || '待指派'}</span>} />
           <GridItem label="排产日期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
@@ -379,7 +379,7 @@ export function ProductionDashboard({
 }
 
 export const MetricCard = ({ label, value, icon, tone = 'neutral' }: { label: string; value: string | number; icon: React.ReactNode; tone?: 'success' | 'warning' | 'error' | 'info' | 'neutral' }) => (
-  <div className="p-6 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg shadow-sm hover:shadow-md transition-all">
+  <div className="p-6 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg shadow-sm hover:shadow-md transition-all">
     <div className="flex items-center gap-3 mb-4">
       <div className={`p-2 rounded-lg ${tone === 'success' ? 'chip-success' : tone === 'warning' ? 'chip-warning' : tone === 'error' ? 'chip-error' : tone === 'info' ? 'chip-info' : 'chip-neutral'} border`}>{icon}</div>
       <span className="text-xs font-medium text-slate-500 tracking-tight">{label}</span>
@@ -406,7 +406,7 @@ export function StatusFileRow({
   return (
     <div className="flex items-center justify-between group py-3 px-4 rounded-lg border border-transparent hover:bg-slate-50 dark:hover:bg-navy-800 hover:border-slate-200 dark:hover:border-navy-700 transition-all">
       <div className="flex items-center gap-4 min-w-0 flex-1">
-        <div className={`flex h-10 w-10 aspect-square shrink-0 items-center justify-center rounded border transition-all ${status === 'uploaded' ? 'bg-white dark:bg-navy-900 text-emerald-600 border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-slate-300 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
+        <div className={`flex h-10 w-10 aspect-square shrink-0 items-center justify-center rounded border transition-all ${status === 'uploaded' ? 'bg-surface dark:bg-navy-900 text-emerald-600 border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-slate-300 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
           {fileName ? getFileIcon(fileName, 18) : <FileCode size={18} />}
         </div>
         <div className="min-w-0">
@@ -417,8 +417,8 @@ export function StatusFileRow({
       <div className="flex items-center gap-2">
            {status === 'uploaded' ? (
              <>
-               <button type="button" onClick={onPreview} className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 transition-all"><CircleHelp size={16} /></button>
-               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 transition-all"><Download size={16} /></a> : null}
+               <button type="button" onClick={onPreview} className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-surface border border-transparent hover:border-slate-200 transition-all"><CircleHelp size={16} /></button>
+               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-surface border border-transparent hover:border-slate-200 transition-all"><Download size={16} /></a> : null}
              </>
            ) : (
              <button type="button" onClick={onUpload} className="p-2 rounded-md bg-primary-navy text-white hover:bg-navy-950 transition-all shadow-sm"><Upload size={16} /></button>
@@ -477,7 +477,7 @@ export function AttachmentEditor({
 
       <div className="grid gap-4">
         {attachments.map((att) => (
-          <div key={att.id} className="flex items-center justify-between p-4 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group shadow-sm">
+          <div key={att.id} className="flex items-center justify-between p-4 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group shadow-sm">
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
               <div className="text-slate-400 opacity-80">{getFileIcon(att.fileName)}</div>
               <div className="min-w-0">
@@ -504,7 +504,7 @@ export function AttachmentEditor({
                 placeholder="为此照片添加备注说明 (如：包装细节、大货实拍)..." 
                 value={item.remark}
                 onChange={e => onUpdatePendingRemark?.(idx, e.target.value)}
-                className="w-full bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-slate-900 transition-all"
+                className="w-full bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-slate-900 transition-all"
               />
             )}
           </div>
@@ -523,23 +523,23 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
   return createPortal(
     <div className="fixed inset-0 z-[500] flex h-dvh items-center justify-center overflow-hidden p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md transition-all" />
-      <div className="relative z-10 flex h-full max-h-[calc(100dvh-2rem)] w-full max-w-5xl min-h-0 flex-col overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-5 py-4 sm:px-8 sm:py-5 bg-white dark:bg-navy-950/50">
+      <div className="relative z-10 flex h-full max-h-[calc(100dvh-2rem)] w-full max-w-5xl min-h-0 flex-col overflow-hidden rounded-lg bg-surface dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-5 py-4 sm:px-8 sm:py-5 bg-surface dark:bg-navy-950/50">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white tracking-tight">{attachment.fileName}</h3>
             <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight data-field">
                {attachment.mimeType}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"><X size={22} /></button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"><X size={22} /></button>
         </div>
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50 dark:bg-navy-950/50 p-4 sm:p-8">
           {isPdf ? (
-            <iframe src={attachment.url} className="h-full w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-lg" title={attachment.fileName} />
+            <iframe src={attachment.url} className="h-full w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-lg" title={attachment.fileName} />
           ) : isImage ? (
-            <img src={attachment.url} alt={attachment.fileName} className="max-h-full max-w-full object-contain rounded-lg shadow-2xl bg-white dark:bg-navy-900 border-4 border-white dark:border-navy-800" />
+            <img src={attachment.url} alt={attachment.fileName} className="max-h-full max-w-full object-contain rounded-lg shadow-2xl bg-surface dark:bg-navy-900 border-4 border-white dark:border-navy-800" />
           ) : (
-            <div className="flex flex-col items-center justify-center space-y-6 rounded-lg border border-dashed border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-900 p-16 shadow-inner">
+            <div className="flex flex-col items-center justify-center space-y-6 rounded-lg border border-dashed border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-900 p-16 shadow-inner">
               <div className="h-24 w-24 rounded-full bg-slate-50 dark:bg-navy-950 flex items-center justify-center border border-slate-100 dark:border-navy-800">
                  <FileCode size={48} className="text-slate-200 dark:text-navy-800" />
               </div>
@@ -560,9 +560,9 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
 }
 
 export const LogisticsSnapshot = ({ title, record, fields, onEdit, onPreview }: { title: string; record: LogisticsRecord; fields: Array<[string, string]>; onEdit: () => void; onPreview?: (attachment: AttachmentMeta) => void }) => (
-  <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 transition-all hover:shadow-md relative group shadow-sm">
+  <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 transition-all hover:shadow-md relative group shadow-sm">
     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
-       <button onClick={onEdit} className="p-2 bg-white rounded-md border border-slate-200 text-slate-400 hover:text-slate-900 transition-all"><Edit3 size={16} /></button>
+       <button onClick={onEdit} className="p-2 bg-surface rounded-md border border-slate-200 text-slate-400 hover:text-slate-900 transition-all"><Edit3 size={16} /></button>
     </div>
     <div className="mb-6 flex items-center gap-3">
       <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100 shadow-inner"><Truck size={20} /></div>
@@ -589,10 +589,10 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
       <div className="relative space-y-6 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-100">
         {logs.map((log) => (
           <div key={log.id} className="relative pl-12 group">
-            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-white border-4 border-slate-900 flex items-center justify-center shadow-sm z-10">
-               <div className="h-1.5 w-1.5 rounded-full bg-white" />
+            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-surface border-4 border-slate-900 flex items-center justify-center shadow-sm z-10">
+               <div className="h-1.5 w-1.5 rounded-full bg-surface" />
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 group-hover:border-l-slate-900">
+            <div className="rounded-lg border border-slate-200 bg-surface p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 group-hover:border-l-slate-900">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                    <span className="text-sm font-bold text-slate-900">{log.createdByName}</span>
@@ -604,7 +604,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
               {log.attachments && log.attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-50">
                   {log.attachments.map(att => (
-                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-white hover:border-slate-200 transition-all shadow-sm">
+                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-surface hover:border-slate-200 transition-all shadow-sm">
                       <div className="text-slate-400 group-hover:text-slate-900">{getFileIcon(att.fileName, 12)}</div>
                       <span className="text-xs font-semibold text-slate-900 truncate max-w-[240px]">{att.fileName}</span>
                     </button>
@@ -620,7 +620,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
 }
 
 export const ProductImagePlaceholder = ({ url, name }: { url?: string; name: string }) => (
-  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all hover:border-slate-900 group">
+  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-sm transition-all hover:border-slate-900 group">
     {url ? (
       <img src={url} alt={name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
     ) : (

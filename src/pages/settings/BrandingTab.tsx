@@ -79,17 +79,17 @@ export default function BrandingTab() {
         <div className="space-y-6">
           <div className="grid gap-6 sm:grid-cols-2">
             <Field label="站点名称" description="显示在侧边栏、浏览器标签页及通知中。">
-              <input value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="如 SmartTrade AI CRM" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
+              <input value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="如 SmartTrade AI CRM" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
             </Field>
             <Field label="站点口号" description="显示在侧边栏 Logo 下方或欢迎页面。">
-              <input value={siteSlogan} onChange={e => setSiteSlogan(e.target.value)} placeholder="如 专业的外贸业务管理专家" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
+              <input value={siteSlogan} onChange={e => setSiteSlogan(e.target.value)} placeholder="如 专业的外贸业务管理专家" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
             </Field>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 pt-2">
             <Field label="站点 Logo" description="建议 200x200px, 透明背景 PNG。">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 overflow-hidden relative group">
+                <div className="h-16 w-16 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 overflow-hidden relative group">
                   {siteLogo ? (
                     <>
                       <img src={siteLogo} alt="Logo" className="h-full w-full object-contain" />
@@ -107,7 +107,7 @@ export default function BrandingTab() {
 
             <Field label="Favicon 图标" description="浏览器标签页显示的小图标 (ICO/PNG)。">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 overflow-hidden relative group">
+                <div className="h-16 w-16 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 overflow-hidden relative group">
                   {siteFavicon ? (
                     <>
                       <img src={siteFavicon} alt="Favicon" className="h-8 w-8 object-contain" />

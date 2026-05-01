@@ -82,11 +82,11 @@ export default function AuditLogsPage() {
   return (
     <div className="flex flex-col animate-page-in">
       {/* Standalone Header for Audit Logs */}
-      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
+      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-surface/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')} 
-            className="group flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-navy-800 text-slate-400 hover:border-primary-navy transition-all shadow-sm bg-white dark:bg-navy-900"
+            className="group flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-navy-800 text-slate-400 hover:border-primary-navy transition-all shadow-sm bg-surface dark:bg-navy-900"
             title="返回控制台"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -99,14 +99,14 @@ export default function AuditLogsPage() {
         </div>
         <button 
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-primary-navy dark:border-navy-800 dark:bg-navy-900 dark:text-slate-400 dark:hover:bg-navy-800 dark:hover:text-white"
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-surface px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-primary-navy dark:border-navy-800 dark:bg-navy-900 dark:text-slate-400 dark:hover:bg-navy-800 dark:hover:text-white"
         >
           <Printer size={14} /> 导出报告
         </button>
       </header>
 
       {/* Filter Bar */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
          <div className="space-y-1.5">
            <label className="text-[10px] font-bold text-slate-400 tracking-tight px-1">实体类型</label>
            <select 
@@ -148,7 +148,7 @@ export default function AuditLogsPage() {
       </div>
 
       <div className="flex-1 px-1">
-        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
           {logs && logs.length > 0 ? (
             <div className="flex flex-col">
               <div className="overflow-x-auto">
@@ -195,7 +195,7 @@ export default function AuditLogsPage() {
                         <td className="px-6 py-4 text-center">
                            <button 
                             onClick={() => setSelectedLog(log)}
-                            className="p-2 rounded-lg border border-slate-200 dark:border-navy-700 text-slate-400 hover:text-primary-navy dark:hover:text-tertiary-sage hover:bg-white dark:hover:bg-navy-800 transition-all shadow-sm"
+                            className="p-2 rounded-lg border border-slate-200 dark:border-navy-700 text-slate-400 hover:text-primary-navy dark:hover:text-tertiary-sage hover:bg-surface dark:hover:bg-navy-800 transition-all shadow-sm"
                            >
                              <Eye size={16} />
                            </button>
@@ -232,7 +232,7 @@ export default function AuditLogsPage() {
       {selectedLog && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setSelectedLog(null)} />
-          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in duration-300 flex flex-col max-h-[85vh]">
+          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-lg bg-surface dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in duration-300 flex flex-col max-h-[85vh]">
             <div className="bg-slate-50 dark:bg-navy-950 px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800">
                <div className="flex items-center gap-3">
                  <FileJson className="text-primary-navy dark:text-tertiary-sage" size={20} />
@@ -240,7 +240,7 @@ export default function AuditLogsPage() {
                </div>
                <button onClick={() => setSelectedLog(null)} className="p-2 text-slate-400 hover:text-primary-navy transition-colors"><X size={20} /></button>
             </div>
-            <div className="p-6 overflow-y-auto custom-scrollbar space-y-6 bg-white dark:bg-navy-900">
+            <div className="p-6 overflow-y-auto custom-scrollbar space-y-6 bg-surface dark:bg-navy-900">
                <div className="grid grid-cols-3 gap-4">
                   <DetailBox label="操作类型" value={selectedLog.action_type} />
                   <DetailBox label="影响实体" value={selectedLog.entity_type} />
@@ -253,7 +253,7 @@ export default function AuditLogsPage() {
                </div>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-navy-950 border-t border-slate-100 dark:border-navy-800 flex justify-end">
-               <button onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-8 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all tracking-tight">关闭</button>
+               <button onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-8 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all tracking-tight">关闭</button>
             </div>
           </div>
         </div>

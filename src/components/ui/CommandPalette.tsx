@@ -82,7 +82,7 @@ export function CommandPalette() {
         onClick={() => setIsOpen(false)} 
       />
       
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in-95 duration-200 flex flex-col">
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-lg bg-surface dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in-95 duration-200 flex flex-col">
         <div className="flex items-center px-5 py-4 border-b border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50">
            <Search size={20} className="text-slate-400 mr-4" />
            <input
@@ -143,9 +143,9 @@ export function CommandPalette() {
         </div>
 
         <div className="px-5 py-3 border-t border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 flex items-center gap-6 text-[10px] font-bold text-slate-400 tracking-tight shrink-0">
-           <span className="flex items-center gap-1.5"><kbd className="font-sans border rounded px-1 border-slate-300 bg-white">↑↓</kbd> 选择</span>
-           <span className="flex items-center gap-1.5"><kbd className="font-sans border rounded px-1 border-slate-300 bg-white">↵</kbd> 打开</span>
-           <span><kbd className="font-sans border rounded px-1 border-slate-300 bg-white">ESC</kbd> 关闭</span>
+           <span className="flex items-center gap-1.5"><kbd className="font-sans border rounded px-1 border-slate-300 bg-surface">↑↓</kbd> 选择</span>
+           <span className="flex items-center gap-1.5"><kbd className="font-sans border rounded px-1 border-slate-300 bg-surface">↵</kbd> 打开</span>
+           <span><kbd className="font-sans border rounded px-1 border-slate-300 bg-surface">ESC</kbd> 关闭</span>
         </div>
       </div>
     </div>

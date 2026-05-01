@@ -154,8 +154,8 @@ export default function OrderDetailPage() {
 
   const sectionChunkFallback = (
     <div className="space-y-6">
-      <div className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />
-      <div className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />
+      <div className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 animate-pulse" />
+      <div className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 animate-pulse" />
     </div>
   );
 
@@ -433,7 +433,7 @@ export default function OrderDetailPage() {
   // 6. View Helpers
   const orderDetailSkeleton = (
     <div className="animate-page-in space-y-8 p-6">
-      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
         <div className="h-6 w-48 rounded bg-slate-200 dark:bg-navy-800 animate-pulse" />
         <div className="mt-6 grid gap-4 md:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <div key={i} className="h-20 rounded-lg bg-slate-100 dark:bg-navy-800 animate-pulse" />)}
@@ -441,16 +441,16 @@ export default function OrderDetailPage() {
       </section>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
-          {[0, 1, 2].map((i) => <div key={i} className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />)}
+          {[0, 1, 2].map((i) => <div key={i} className="h-40 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 animate-pulse" />)}
         </div>
-        <div className="h-80 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />
+        <div className="h-80 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 animate-pulse" />
       </div>
     </div>
   );
 
   if (loading) return orderDetailSkeleton;
   if (error || !detail || !order) return (
-    <div className="m-6 rounded-lg border border-red-100 dark:border-red-900/30 bg-white dark:bg-navy-900 p-8 text-center shadow-sm">
+    <div className="m-6 rounded-lg border border-red-100 dark:border-red-900/30 bg-surface dark:bg-navy-900 p-8 text-center shadow-sm">
       <div className="text-base font-black text-error">{timedOut ? '数据加载拥堵，请重试' : `加载失败: ${error || '订单不存在'}`}</div>
       <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">请检查网络或稍后重试，刷新按钮会重新请求订单详情。</p>
       <button onClick={() => void loadDetail()} className="btn-primary mt-5">重新加载</button>
@@ -587,7 +587,7 @@ export default function OrderDetailPage() {
 
         {/* Right Nav Rail */}
         <aside className="hidden w-[280px] shrink-0 self-start space-y-6 lg:sticky lg:top-6 lg:block">
-          <Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 animate-pulse" />}>
+          <Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 animate-pulse" />}>
             <NavRailSection activeSection={activeSection} scrollToSection={scrollToSection} moduleAlerts={moduleAlerts} />
             <QuickFollowUpSection
               followUpInput={followUpInput}
@@ -601,7 +601,7 @@ export default function OrderDetailPage() {
       </main>
 
       <div className="fixed inset-x-3 bottom-3 z-[260] lg:hidden">
-        <div className="rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur-xl dark:border-navy-800 dark:bg-navy-900/95">
+        <div className="rounded-2xl border border-slate-200 bg-surface/95 p-2 shadow-2xl backdrop-blur-xl dark:border-navy-800 dark:bg-navy-900/95">
           <div className="grid grid-cols-4 gap-1">
             <button type="button" onClick={() => scrollToSection('items')} className="rounded-xl px-2 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-navy-800">商品</button>
             <button type="button" onClick={() => scrollToSection('finance')} className="rounded-xl px-2 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-navy-800">财务</button>
@@ -678,14 +678,14 @@ export default function OrderDetailPage() {
       {drawer.mode !== 'closed' && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[420] flex h-dvh justify-end overflow-hidden">
           <button type="button" onClick={closeDrawer} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm transition-all" />
-          <div className="relative z-10 h-dvh max-h-dvh w-full max-w-[750px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex min-h-0 flex-col animate-in slide-in-from-right duration-500">
+          <div className="relative z-10 h-dvh max-h-dvh w-full max-w-[750px] border-l border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-2xl flex min-h-0 flex-col animate-in slide-in-from-right duration-500">
             <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-6 py-5 sm:px-10 sm:py-8 bg-slate-50 dark:bg-navy-950/50">
               <div className="group cursor-default">
                 <h3 className="text-xl font-bold text-primary-navy dark:text-white tracking-tight leading-none">{currentDrawerTitle}</h3>
               </div>
-              <button type="button" onClick={closeDrawer} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={26} /></button>
+              <button type="button" onClick={closeDrawer} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={26} /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="flex min-h-0 flex-1 flex-col bg-white dark:bg-navy-900">
+            <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="flex min-h-0 flex-1 flex-col bg-surface dark:bg-navy-900">
               <div className="min-h-0 flex-1 overflow-y-auto p-6 sm:p-10 space-y-10 custom-scrollbar">
                 {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner"><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
                 <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-tight">正在载入组件...</div>}>
@@ -708,7 +708,7 @@ export default function OrderDetailPage() {
                   )}
                 </Suspense>
               </div>
-              <div className="shrink-0 flex gap-4 sm:gap-6 bg-white/95 dark:bg-navy-900/95 backdrop-blur-2xl px-6 py-5 sm:px-10 sm:py-8 border-t border-slate-100 dark:border-navy-800">
+              <div className="shrink-0 flex gap-4 sm:gap-6 bg-surface/95 dark:bg-navy-900/95 backdrop-blur-2xl px-6 py-5 sm:px-10 sm:py-8 border-t border-slate-100 dark:border-navy-800">
                 {drawer.mode === 'ai-analysis' ? (
                   <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-4 text-xs font-extrabold tracking-tight">关闭</button>
                 ) : (

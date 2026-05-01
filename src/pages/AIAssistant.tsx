@@ -111,21 +111,21 @@ export default function AIAssistantPage() {
   return (
     <div className="flex h-[calc(100vh-120px)] flex-col gap-4 animate-page-in">
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-tertiary-sage dark:text-emerald-400 mb-2">
             <Zap size={18} />
             <span className="text-xs font-bold tracking-tight">实时诊断</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">自动识别订单中的潜在逾期风险与财务缺口，并在详情页实时同步。</p>
         </div>
-        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400 mb-2">
             <Database size={18} />
             <span className="text-xs font-bold tracking-tight">知识增强</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">结合您的历史客户偏好与物流时效，提供智能化的排产与发货建议。</p>
         </div>
-        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
+        <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-primary-navy dark:text-white mb-2">
             <ShieldCheck size={18} />
             <span className="text-xs font-bold tracking-tight">合规审计</span>
@@ -134,7 +134,7 @@ export default function AIAssistantPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-xl transition-colors relative">
+      <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-xl transition-colors relative">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] dark:invert pointer-events-none" />
         
         {/* 对话框头部，增加清除记录按钮 */}
@@ -198,7 +198,7 @@ export default function AIAssistantPage() {
                 }
               }}
               placeholder="在这里输入业务咨询或指令 (Shift + Enter 换行)..."
-              className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-3.5 text-sm font-medium focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none shadow-inner text-primary-navy dark:text-white min-h-[52px] max-h-[200px] resize-none custom-scrollbar leading-relaxed"
+              className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-3.5 text-sm font-medium focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none shadow-inner text-primary-navy dark:text-white min-h-[52px] max-h-[200px] resize-none custom-scrollbar leading-relaxed"
               style={{ height: '52px' }}
             />
             <button

@@ -99,7 +99,7 @@ export default function ConfirmDeleteModal({
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative z-10 w-full max-w-md overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border ${borderClasses} animate-in zoom-in duration-300`}>
+      <div className={`relative z-10 w-full max-w-md overflow-hidden rounded-lg bg-surface dark:bg-navy-900 shadow-2xl border ${borderClasses} animate-in zoom-in duration-300`}>
         <div className={`flex items-center gap-3 border-b px-6 py-4 ${headerClasses}`}>
           <Icon className={iconClasses} size={20} />
           <h3 className={`text-sm font-extrabold tracking-tight ${titleClasses}`}>{finalTitle}</h3>

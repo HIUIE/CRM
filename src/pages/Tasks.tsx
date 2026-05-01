@@ -92,7 +92,7 @@ export default function TasksView() {
 
   return (
     <div className="flex flex-col space-y-4 animate-page-in">
-      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="flex items-center justify-between">
           <h1 className="text-base font-extrabold text-primary-navy dark:text-white tracking-tight">团队协同看板</h1>
           <button
@@ -122,7 +122,7 @@ export default function TasksView() {
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
            {columns.map(col => (
-             <div key={col.key} className="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
+             <div key={col.key} className="flex flex-col rounded-lg border border-slate-200 bg-surface shadow-sm dark:border-navy-800 dark:bg-navy-900">
                 <div className="flex shrink-0 items-center justify-between rounded-t-lg border-b border-slate-200 px-5 py-4 dark:border-navy-800">
                    <h3 className="flex items-center gap-2 text-xs font-extrabold tracking-tight text-slate-900 dark:text-white">
                       <div className={`h-1.5 w-1.5 rounded-full ${col.dot}`} />
@@ -181,7 +181,7 @@ function ViewToggle({ active, label, onClick }: { active: boolean; label: string
   return (
     <button 
       onClick={onClick}
-      className={`flex-1 py-1.5 px-4 rounded-lg text-xs font-bold tracking-tight transition-all ${active ? 'bg-white dark:bg-navy-800 text-primary-navy dark:text-tertiary-sage shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+      className={`flex-1 py-1.5 px-4 rounded-lg text-xs font-bold tracking-tight transition-all ${active ? 'bg-surface dark:bg-navy-800 text-primary-navy dark:text-tertiary-sage shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
     >
       {label}
     </button>
@@ -209,7 +209,7 @@ const TaskCard = React.memo(({ task, onSelect }: TaskCardProps) => {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={onSelect}
-      className="group relative cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-navy-800 dark:bg-navy-900"
+      className="group relative cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-surface p-4 shadow-sm transition-all hover:shadow-md dark:border-navy-800 dark:bg-navy-900"
     >
       <div className="mb-2 flex items-start justify-between gap-3">
          <h4 className="line-clamp-2 text-sm font-extrabold leading-tight text-primary-navy transition-colors group-hover:text-sky-600 dark:text-white dark:group-hover:text-sky-300">{task.title}</h4>

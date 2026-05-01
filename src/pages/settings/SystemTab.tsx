@@ -21,13 +21,13 @@ export default function SystemTab({ setImportEntityType }: { setImportEntityType
       <div className="flex items-center gap-2 p-1 w-fit rounded-xl bg-slate-100 dark:bg-navy-950/80 border border-slate-200 dark:border-navy-800">
         <button
           onClick={() => setActiveSubTab('data')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeSubTab === 'data' ? 'bg-white dark:bg-navy-800 text-primary-navy dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeSubTab === 'data' ? 'bg-surface dark:bg-navy-800 text-primary-navy dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
         >
           <Database size={14} /> 数据管理
         </button>
         <button
           onClick={() => setActiveSubTab('update')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeSubTab === 'update' ? 'bg-white dark:bg-navy-800 text-primary-navy dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeSubTab === 'update' ? 'bg-surface dark:bg-navy-800 text-primary-navy dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
         >
           <RefreshCw size={14} /> 版本更新
         </button>

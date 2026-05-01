@@ -74,7 +74,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = 'æ
               ? 'border-primary-navy dark:border-tertiary-sage ring-1 ring-primary-navy/20 dark:ring-tertiary-sage/20'
               : 'border-slate-200 dark:border-navy-800 hover:border-slate-300 dark:hover:border-navy-700'
           }
-          bg-white dark:bg-navy-900 text-primary-navy dark:text-white shadow-sm`}
+          bg-surface dark:bg-navy-900 text-primary-navy dark:text-white shadow-sm`}
       >
         <span className={`flex-1 text-left truncate ${!selectedCountry && !value ? 'text-slate-400 dark:text-slate-500' : ''}`}>
           {value ? displayValue : placeholder}
@@ -98,7 +98,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = 'æ
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-full mt-1.5 left-0 right-0 z-[110] rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute top-full mt-1.5 left-0 right-0 z-[110] rounded-lg border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Search bar */}
           <div className="p-2 border-b border-slate-100 dark:border-navy-800">
             <div className="relative">

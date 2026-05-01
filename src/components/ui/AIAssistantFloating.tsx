@@ -167,7 +167,7 @@ export default function AIAssistantFloating() {
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[500] w-[380px] max-h-[600px] flex flex-col rounded-2xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl animate-in slide-in-from-bottom-8 fade-in duration-300">
+        <div className="fixed bottom-24 right-6 z-[500] w-[380px] max-h-[600px] flex flex-col rounded-2xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-2xl animate-in slide-in-from-bottom-8 fade-in duration-300">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-navy-800 shrink-0">
             <div className="flex items-center gap-2.5">

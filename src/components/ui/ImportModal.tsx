@@ -129,7 +129,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-xl bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in duration-200">
+      <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-xl bg-surface dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in duration-200">
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 flex items-center justify-between">
@@ -205,7 +205,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
                 </h4>
                 <div className="flex flex-wrap gap-3">
                   {previewData.entries?.filter(e => e.endsWith('.csv')).map(e => (
-                    <div key={e} className="px-3 py-1.5 bg-white dark:bg-navy-900 rounded border border-slate-200 dark:border-navy-800 text-[11px] font-bold text-primary-navy dark:text-white shadow-sm">
+                    <div key={e} className="px-3 py-1.5 bg-surface dark:bg-navy-900 rounded border border-slate-200 dark:border-navy-800 text-[11px] font-bold text-primary-navy dark:text-white shadow-sm">
                       {e}
                     </div>
                   ))}
@@ -236,7 +236,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
                       <select 
                         value={mapping[field] || ''}
                         onChange={e => setMapping({ ...mapping, [field]: e.target.value })}
-                        className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-3 py-2 text-xs font-bold outline-none focus:border-primary-navy transition-all"
+                        className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-3 py-2 text-xs font-bold outline-none focus:border-primary-navy transition-all"
                       >
                         <option value="">-- 请选择对应列 --</option>
                         {previewData.headers?.map(h => (
@@ -248,7 +248,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden">
+              <div className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden">
                 <div className="px-4 py-2 bg-slate-50 dark:bg-navy-950 border-b border-slate-100 dark:border-navy-800 flex items-center justify-between">
                   <span className="text-[10px] font-extrabold text-slate-400 tracking-tight">数据预览 (前 5 行)</span>
                 </div>
@@ -324,7 +324,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
 function StepIndicator({ active, completed, label }: { active: boolean; completed: boolean; label: string }) {
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[13px] font-extrabold transition-all border-2 ${active ? 'bg-primary-navy border-primary-navy text-white shadow-lg shadow-primary-navy/20' : completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-800 text-slate-300'}`}>
+      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[13px] font-extrabold transition-all border-2 ${active ? 'bg-primary-navy border-primary-navy text-white shadow-lg shadow-primary-navy/20' : completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-surface dark:bg-navy-900 border-slate-200 dark:border-navy-800 text-slate-300'}`}>
         {completed ? <CheckCircle2 size={16} /> : active ? '•' : ''}
       </div>
       <span className={`text-[10px] font-bold tracking-tight ${active ? 'text-primary-navy dark:text-white' : completed ? 'text-emerald-500' : 'text-slate-300'}`}>{label}</span>

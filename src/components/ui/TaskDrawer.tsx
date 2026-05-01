@@ -92,7 +92,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
       isBusy={isSubmitting}
       footer={({ requestClose, isBusy }) => (
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800 disabled:opacity-50">取消</button>
+          <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 bg-surface px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800 disabled:opacity-50">取消</button>
           <button onClick={handleSubmit} disabled={isSubmitting} className="btn-primary shadow-md active:scale-95">{isSubmitting ? '指派中...' : '确认指派'}</button>
         </div>
       )}
@@ -107,7 +107,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
               value={formData.title} 
               onChange={e => setFormData({...formData, title: e.target.value})}
               placeholder="如：准备报关单据、催促付款..."
-              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-primary-navy"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-primary-navy"
             />
           </Field>
 
@@ -116,7 +116,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
                 <select 
                   value={formData.priority} 
                   onChange={e => setFormData({...formData, priority: e.target.value as 'P0' | 'P1' | 'P2'})}
-                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
                 >
                   <option value="P0">P0 - 紧急 (红色)</option>
                   <option value="P1">P1 - 高 (橙色)</option>
@@ -129,7 +129,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
                   required 
                   value={formData.dueDate}
                   onChange={e => setFormData({...formData, dueDate: e.target.value})}
-                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none"
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none"
                 />
              </Field>
           </div>
@@ -139,7 +139,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
               required 
               value={formData.assigneeId}
               onChange={e => setFormData({...formData, assigneeId: e.target.value})}
-              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none"
             >
               <option value="">选择负责人...</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -158,7 +158,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
               value={formData.description}
               onChange={val => setFormData({...formData, description: val})}
               placeholder="请输入任务详细说明... 输入 @ 提及同事"
-              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 text-sm font-medium outline-none focus:border-primary-navy min-h-[120px]"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 text-sm font-medium outline-none focus:border-primary-navy min-h-[120px]"
              />
           </Field>
         </div>

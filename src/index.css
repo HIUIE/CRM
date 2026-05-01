@@ -72,6 +72,7 @@
   --color-navy-950: #080C18;
   --color-navy-900: #1A2233;
   --color-navy-800: #253040;
+  --color-surface: #1A2233;
 }
 
 html {
@@ -89,12 +90,12 @@ body {
   transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Improve readability of slate text in light mode */
-:root .text-slate-400,
-:root .text-slate-500 {
+/* Improve readability of slate text in light mode - ONLY when not dark */
+:root:not(.dark) .text-slate-400,
+:root:not(.dark) .text-slate-500 {
   color: #4A5568 !important;
 }
-:root .text-secondary-slate {
+:root:not(.dark) .text-secondary-slate {
   color: #4A5568 !important;
 }
 
@@ -105,9 +106,9 @@ h1, h2, h3, h4, .headline {
   letter-spacing: -0.01em;
 }
 
-/* Improve readability of small labels in light mode */
-:root th.text-slate-400,
-:root th.text-slate-500 {
+/* Improve readability of small labels in light mode - ONLY when not dark */
+:root:not(.dark) th.text-slate-400,
+:root:not(.dark) th.text-slate-500 {
   color: #4A5568 !important;
   font-weight: 700 !important;
 }

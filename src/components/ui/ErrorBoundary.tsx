@@ -37,7 +37,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               组件渲染时发生错误，请刷新页面重试。
             </p>
             {this.state.error && (
-              <pre className="text-xs text-left bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-4 overflow-auto max-h-40 text-error">
+              <pre className="text-xs text-left bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-4 overflow-auto max-h-40 text-error">
                 {this.state.error.message}
               </pre>
             )}

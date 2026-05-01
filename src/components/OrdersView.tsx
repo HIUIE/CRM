@@ -230,7 +230,7 @@ export default function OrdersView() {
 
   return (
     <div className="flex flex-col space-y-4 animate-page-in">
-      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -263,7 +263,7 @@ export default function OrdersView() {
         {error && <div className="mt-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{error}</div>}
       </section>
 
-      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
         {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">读取订单列表中...</div> : (
           <div className="flex flex-col">
             <div className="overflow-x-auto">
@@ -278,7 +278,7 @@ export default function OrdersView() {
                     <th className="px-4 py-4 text-center">操作</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
+                <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                   {currentItems.length ? currentItems.map(o => {
                     const meta = getOrderStatusMeta(o.status);
                     return (
@@ -310,7 +310,7 @@ export default function OrdersView() {
                         </td>
                         <td className="px-4 py-4 text-center" onClick={e=>e.stopPropagation()}>
                            <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                              <button onClick={()=>openEditForm(o)} className="p-2 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
+                              <button onClick={()=>openEditForm(o)} className="p-2 text-slate-500 dark:text-slate-400 hover:bg-surface dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
                               {user?.role === 'admin' && (
                                 <button 
                                   onClick={() => void startDelete(o)} 
@@ -348,7 +348,7 @@ export default function OrdersView() {
         isDirty={isFormDirty}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={requestCloseForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button type="button" onClick={requestCloseForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
             <button onClick={handleSubmit} type="submit" className="btn-primary shadow-md">确认并进入详情</button>
           </div>
         }
@@ -364,7 +364,7 @@ export default function OrdersView() {
                     value={formData.displayId} 
                     onChange={e => setFormData({...formData, displayId: e.target.value.trim()})} 
                     placeholder="如: CQBX-2026-..."
-                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 pl-9 pr-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white data-field"
+                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 pl-9 pr-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white data-field"
                   />
                 </div>
             </Field>
@@ -384,7 +384,7 @@ export default function OrdersView() {
               />
             </Field>
             <Field label="订单总额 (USD) *">
-              <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+              <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
             </Field>
             <Field label="产品摘要 *" error={fieldErrors.productSummary}>
               <input required value={formData.productSummary} onChange={e => {
@@ -392,7 +392,7 @@ export default function OrdersView() {
                 if (fieldErrors.productSummary) setFieldErrors(prev => { const next = { ...prev }; delete next.productSummary; return next; });
               }} onBlur={() => {
                 if (!formData.productSummary.trim()) setFieldErrors(prev => ({ ...prev, productSummary: '请输入产品摘要' }));
-              }} placeholder="例如：太阳能板 A-Type 500pcs..." className={`w-full rounded-lg border ${fieldErrors.productSummary ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white`} />
+              }} placeholder="例如：太阳能板 A-Type 500pcs..." className={`w-full rounded-lg border ${fieldErrors.productSummary ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white`} />
             </Field>
           </div>
           <button type="submit" className="hidden">Submit</button>

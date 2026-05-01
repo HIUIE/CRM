@@ -185,11 +185,11 @@ export default function PartnerDetailPage() {
   return (
     <div className="flex flex-col animate-page-in">
       {/* Header */}
-      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
+      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-surface/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/partners')}
-            className="group flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-navy-800 text-slate-400 hover:border-primary-navy transition-all shadow-sm bg-white dark:bg-navy-900"
+            className="group flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-navy-800 text-slate-400 hover:border-primary-navy transition-all shadow-sm bg-surface dark:bg-navy-900"
             title="返回伙伴列表"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -209,9 +209,9 @@ export default function PartnerDetailPage() {
           {/* Left: Profile Sidebar */}
           <div className="space-y-6 lg:sticky lg:top-24 lg:z-10">
             {/* Partner Card */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-sm dark:border-navy-800 dark:bg-navy-900">
               <div className="border-b border-slate-100 bg-slate-50/70 px-6 py-8 text-center dark:border-navy-800 dark:bg-navy-950/50">
-                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-navy-700 dark:bg-navy-900 dark:text-slate-200">
+                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-surface text-slate-700 shadow-sm dark:border-navy-700 dark:bg-navy-900 dark:text-slate-200">
                   <Building2 size={32} />
                 </div>
                 <h2 className="text-lg font-black tracking-tight text-primary-navy dark:text-white">{partner.name}</h2>
@@ -255,7 +255,7 @@ export default function PartnerDetailPage() {
             </div>
 
             {/* Summary Card */}
-            <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm p-6">
+            <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm p-6">
               <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight mb-4 flex items-center gap-2">
                 <BarChart3 size={14} /> 合作概览
               </h3>
@@ -278,7 +278,7 @@ export default function PartnerDetailPage() {
             </div>
 
             {partner.remark && (
-              <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm p-6">
+              <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm p-6">
                 <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight mb-2">备注</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{partner.remark}</p>
               </div>
@@ -299,7 +299,7 @@ export default function PartnerDetailPage() {
 
             {/* Orders Tab */}
             {activeTab === 'orders' && (
-              <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
+              <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800">
                   <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight">关联订单</h3>
                 </div>
@@ -360,7 +360,7 @@ export default function PartnerDetailPage() {
 
             {/* Finance Tab */}
             {activeTab === 'finance' && (
-              <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
+              <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800">
                   <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight">财务流水</h3>
                 </div>
@@ -427,7 +427,7 @@ export default function PartnerDetailPage() {
         isBusy={savingPartner}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => { if (!savingPartner) setShowEdit(false); }} disabled={savingPartner} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
+            <button type="button" onClick={() => { if (!savingPartner) setShowEdit(false); }} disabled={savingPartner} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
             <button type="button" disabled={savingPartner} onClick={() => void handleSavePartner()} className="btn-primary shadow-md active:scale-95 disabled:opacity-60">{savingPartner ? '保存中...' : '保存修改'}</button>
           </div>
         }
@@ -435,15 +435,15 @@ export default function PartnerDetailPage() {
         <div className="space-y-6">
           {formError ? <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
           <div className="grid gap-6 sm:grid-cols-2">
-            <div className="sm:col-span-2"><Field label="伙伴名称 *"><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
-            <Field label="伙伴类型 *"><select value={form.partnerType} onChange={(event) => setForm({ ...form, partnerType: event.target.value as PartnerType })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"><option value="factory">工厂 / 供应商</option><option value="forwarder">货代</option><option value="customs_broker">报关行</option><option value="other">其他合作方</option></select></Field>
+            <div className="sm:col-span-2"><Field label="伙伴名称 *"><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
+            <Field label="伙伴类型 *"><select value={form.partnerType} onChange={(event) => setForm({ ...form, partnerType: event.target.value as PartnerType })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"><option value="factory">工厂 / 供应商</option><option value="forwarder">货代</option><option value="customs_broker">报关行</option><option value="other">其他合作方</option></select></Field>
             <Field label="国家 / 地区"><CountrySelect value={form.country} onChange={(val) => setForm({ ...form, country: val })} /></Field>
             <Field label="合作星级"><div className="flex gap-2 py-2">{[1, 2, 3, 4, 5].map(star => <button type="button" key={star} onClick={() => setForm({ ...form, rating: star })} className="transition-all hover:scale-110"><Star size={20} fill={form.rating >= star ? '#EAB308' : 'none'} color={form.rating >= star ? '#EAB308' : '#CBD5E1'} /></button>)}</div></Field>
-            <Field label="主要联系人"><input value={form.contactPerson} onChange={(event) => setForm({ ...form, contactPerson: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field>
-            <Field label="联系电话/邮箱"><input value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field>
-            <div className="sm:col-span-2"><Field label="详细地址"><input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
-            <div className="sm:col-span-2"><Field label="结算条件"><input value={form.paymentTerms} onChange={(event) => setForm({ ...form, paymentTerms: event.target.value })} placeholder="例如：月结30天..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
-            <div className="sm:col-span-2"><Field label="备注说明"><textarea value={form.remark} onChange={(event) => setForm({ ...form, remark: event.target.value })} placeholder="备用联系人或特殊条款..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[80px]" rows={3} /></Field></div>
+            <Field label="主要联系人"><input value={form.contactPerson} onChange={(event) => setForm({ ...form, contactPerson: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field>
+            <Field label="联系电话/邮箱"><input value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field>
+            <div className="sm:col-span-2"><Field label="详细地址"><input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
+            <div className="sm:col-span-2"><Field label="结算条件"><input value={form.paymentTerms} onChange={(event) => setForm({ ...form, paymentTerms: event.target.value })} placeholder="例如：月结30天..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
+            <div className="sm:col-span-2"><Field label="备注说明"><textarea value={form.remark} onChange={(event) => setForm({ ...form, remark: event.target.value })} placeholder="备用联系人或特殊条款..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[80px]" rows={3} /></Field></div>
           </div>
         </div>
       </Drawer>

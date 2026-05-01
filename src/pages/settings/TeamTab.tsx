@@ -132,7 +132,7 @@ export default function TeamTab() {
                 <th className="px-4 py-4 text-right">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
+            <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
               {users.map((managedUser) => (
                 <tr key={managedUser.id} className="hover:bg-slate-50 dark:hover:bg-navy-800">
                   <td className="px-4 py-4">
@@ -179,27 +179,27 @@ export default function TeamTab() {
 
           <div className="space-y-5">
             {!editingUser ? (
-              <Field label="用户名"><input value={userForm.username} onChange={(e) => setUserForm(c => ({ ...c, username: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
+              <Field label="用户名"><input value={userForm.username} onChange={(e) => setUserForm(c => ({ ...c, username: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-surface p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
             ) : (
               <Field label="用户名"><div className="rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500 dark:border-navy-800 dark:bg-navy-950 dark:text-slate-400">{editingUser.username}</div></Field>
             )}
-            <Field label="成员真实姓名"><input value={userForm.name} onChange={(e) => setUserForm(c => ({ ...c, name: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
+            <Field label="成员真实姓名"><input value={userForm.name} onChange={(e) => setUserForm(c => ({ ...c, name: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-surface p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
             <Field label="角色权限">
-              <select disabled={editingSelf} value={userForm.role} onChange={(e) => setUserForm(c => ({ ...c, role: e.target.value as UserRole }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage disabled:cursor-not-allowed disabled:opacity-60">
+              <select disabled={editingSelf} value={userForm.role} onChange={(e) => setUserForm(c => ({ ...c, role: e.target.value as UserRole }))} className="w-full rounded-lg border border-slate-200 bg-surface p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage disabled:cursor-not-allowed disabled:opacity-60">
                 <option value="staff">业务员 (普通权限)</option>
                 <option value="admin">管理员 (最高权限)</option>
               </select>
               {editingSelf && <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">当前登录管理员不能在此处降低自己的权限，避免误锁定账号。</p>}
             </Field>
             {!editingUser && (
-              <Field label="初始访问密码"><input type="password" value={userForm.password} onChange={(e) => setUserForm(c => ({ ...c, password: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
+              <Field label="初始访问密码"><input type="password" value={userForm.password} onChange={(e) => setUserForm(c => ({ ...c, password: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-surface p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
             )}
             <div className="flex gap-3 pt-2">
               <button onClick={saveUser} className="btn-primary shadow-md">{editingUser ? '保存修改' : '立即创建'}</button>
               {editingUser ? (
-                <button onClick={startCreateUser} className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 transition-colors hover:bg-slate-100 dark:border-navy-700 dark:bg-navy-900 dark:text-slate-300 dark:hover:bg-navy-800">取消编辑</button>
+                <button onClick={startCreateUser} className="rounded-lg border border-slate-200 bg-surface px-4 py-3 text-sm font-bold text-slate-500 transition-colors hover:bg-slate-100 dark:border-navy-700 dark:bg-navy-900 dark:text-slate-300 dark:hover:bg-navy-800">取消编辑</button>
               ) : (
-                <button onClick={startCreateUser} className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 transition-colors hover:bg-slate-100 dark:border-navy-700 dark:bg-navy-900 dark:text-slate-300 dark:hover:bg-navy-800">重置表单</button>
+                <button onClick={startCreateUser} className="rounded-lg border border-slate-200 bg-surface px-4 py-3 text-sm font-bold text-slate-500 transition-colors hover:bg-slate-100 dark:border-navy-700 dark:bg-navy-900 dark:text-slate-300 dark:hover:bg-navy-800">重置表单</button>
               )}
             </div>
           </div>
@@ -207,7 +207,7 @@ export default function TeamTab() {
           {/* Password Reset Modal */}
       {resettingUserId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-in fade-in p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-navy-900 shadow-2xl overflow-hidden animate-in zoom-in-95">
+          <div className="w-full max-w-md rounded-2xl bg-surface dark:bg-navy-900 shadow-2xl overflow-hidden animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-6 py-4">
               <h3 className="text-lg font-bold text-primary-navy dark:text-white">
                 {isResettingSelf ? '修改密码' : '重置密码'}
@@ -228,26 +228,26 @@ export default function TeamTab() {
                 {isResettingSelf ? (
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">原密码</label>
-                    <input type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError(''); }} placeholder="请输入当前登录账号的原密码" className={`w-full rounded-lg border ${confirmError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-white p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
+                    <input type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError(''); }} placeholder="请输入当前登录账号的原密码" className={`w-full rounded-lg border ${confirmError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-surface p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
                     {confirmError && <p className="mt-1.5 text-xs text-red-500">{confirmError}</p>}
                   </div>
                 ) : (
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">二次验证</label>
-                    <input type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError(''); }} placeholder="请输入您的管理员密码以确认操作" className={`w-full rounded-lg border ${confirmError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-white p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
+                    <input type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError(''); }} placeholder="请输入您的管理员密码以确认操作" className={`w-full rounded-lg border ${confirmError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-surface p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
                     {confirmError && <p className="mt-1.5 text-xs text-red-500">{confirmError}</p>}
                   </div>
                 )}
                 
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">新密码</label>
-                  <input type="password" value={resetPassword} onChange={(e) => { setResetPassword(e.target.value); setResetError(''); }} placeholder="请输入新密码（至少 6 位）" className={`w-full rounded-lg border ${resetError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-white p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
+                  <input type="password" value={resetPassword} onChange={(e) => { setResetPassword(e.target.value); setResetError(''); }} placeholder="请输入新密码（至少 6 位）" className={`w-full rounded-lg border ${resetError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-surface p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
                   {resetError && <p className="mt-1.5 text-xs text-red-500">{resetError}</p>}
                 </div>
                 
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">确认新密码</label>
-                  <input type="password" value={confirmNewPassword} onChange={(e) => { setConfirmNewPassword(e.target.value); setConfirmNewError(''); }} placeholder="请再次输入新密码" className={`w-full rounded-lg border ${confirmNewError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-white p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
+                  <input type="password" value={confirmNewPassword} onChange={(e) => { setConfirmNewPassword(e.target.value); setConfirmNewError(''); }} placeholder="请再次输入新密码" className={`w-full rounded-lg border ${confirmNewError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-surface p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
                   {confirmNewError && <p className="mt-1.5 text-xs text-red-500">{confirmNewError}</p>}
                 </div>
               </div>

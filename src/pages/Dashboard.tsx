@@ -197,7 +197,7 @@ function AIBriefing({ data }: { data: DashboardData }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900">
+    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-surface p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900">
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-100 bg-sky-50 dark:border-sky-900/40 dark:bg-sky-900/20">
         <Sparkles size={14} className="text-sky-600 dark:text-sky-300" />
       </div>
@@ -236,7 +236,7 @@ function CurrencyExchangeWidget() {
   const toggleMode = () => setMode(m => m === 'usd2cny' ? 'cny2usd' : 'usd2cny');
 
   return (
-    <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm shrink-0">
+    <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-5 shadow-sm shrink-0">
       <div className="flex items-center gap-2 mb-4">
         <ArrowRightLeft size={14} className="text-indigo-500" />
         <h2 className="text-xs font-extrabold text-slate-900 dark:text-white tracking-tight">汇率速算</h2>
@@ -341,7 +341,7 @@ export default function DashboardView() {
               </div>
               <div className="p-4 space-y-2">
                 {risks.map((risk, i) => (
-                  <div key={i} onClick={() => navigate(`/orders/${risk.displayId.toLowerCase()}`)} className="flex items-center justify-between p-3 bg-white dark:bg-navy-900 rounded-lg border border-red-100 dark:border-red-800/20 hover:border-red-300 dark:hover:border-red-700 cursor-pointer transition-all group">
+                  <div key={i} onClick={() => navigate(`/orders/${risk.displayId.toLowerCase()}`)} className="flex items-center justify-between p-3 bg-surface dark:bg-navy-900 rounded-lg border border-red-100 dark:border-red-800/20 hover:border-red-300 dark:hover:border-red-700 cursor-pointer transition-all group">
                     <div className="flex items-center gap-3">
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${risk.riskType === 'low_margin' ? 'bg-red-100 dark:bg-red-900/20 text-error' : 'bg-amber-100 dark:bg-amber-900/20 text-amber-500'}`}>
                         {risk.riskType === 'low_margin' ? <TrendingDown size={14} /> : <Truck size={14} />}
@@ -363,7 +363,7 @@ export default function DashboardView() {
           )}
 
           {/* Todos */}
-          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
+          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">今日待处理 ({data.todos.length})</h2>
@@ -373,7 +373,7 @@ export default function DashboardView() {
             </div>
             <div className="p-4 space-y-3">
               {data.todos.length > 0 ? data.todos.map((todo) => (
-                <div key={todo.id} onClick={() => navigate(`/orders/${String(todo.order_display_id).toLowerCase()}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
+                <div key={todo.id} onClick={() => navigate(`/orders/${String(todo.order_display_id).toLowerCase()}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
                   <div className="flex items-center gap-4">
                     <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${todo.urgency === 'high' ? 'bg-red-50 dark:bg-red-900/20 text-error' : todo.urgency === 'medium' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500'}`}>
                       {todo.urgency === 'high' ? <ArrowUpRight size={18} /> : <FileText size={18} />}
@@ -396,7 +396,7 @@ export default function DashboardView() {
           </section>
 
           {/* Activities */}
-          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
+          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">最近动态</h2>
@@ -444,7 +444,7 @@ export default function DashboardView() {
           {/* Monthly Trends */}
           <div className="grid gap-6">
             {data.monthlyTrends && data.monthlyTrends.length > 0 && (
-              <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
+              <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm shrink-0">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">业务趋势 (订单)</h2>
                 <div className="space-y-3">
                   {data.monthlyTrends.map(m => {
@@ -464,7 +464,7 @@ export default function DashboardView() {
             )}
 
             {data.profitTrends && data.profitTrends.length > 0 && (
-              <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
+              <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm shrink-0">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">利润趋势 (USD)</h2>
                 <div className="space-y-3">
                   {data.profitTrends.map(m => {
@@ -488,7 +488,7 @@ export default function DashboardView() {
           <CurrencyExchangeWidget />
 
           {/* Quick Actions */}
-          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
+          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm shrink-0">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
               <QuickAction icon={<FilePlus size={20} />} label="新建订单" onClick={() => setShowOrderDrawer(true)} />
@@ -505,7 +505,7 @@ export default function DashboardView() {
           </section>
 
           {/* AI CTA */}
-          <section className="relative shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900">
+          <section className="relative shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-surface p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900">
             <div className="relative z-10">
               <div className="mb-2 flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-100 bg-sky-50 text-sky-600 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300"><Sparkles size={15} /></span>
@@ -520,7 +520,7 @@ export default function DashboardView() {
           </section>
 
           {/* Status Distribution */}
-          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
+          <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
             <div className="mb-8 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">订单状态分布</h2>
               <select className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none">
@@ -572,7 +572,7 @@ function StatCard({ title, value, subValue, subValueColor = "text-slate-400", ic
   title: string; value: string; subValue: string; subValueColor?: string; icon: React.ReactNode; sparklineColor: string; sparklineData: number[]; onClick?: () => void;
 }) {
   return (
-    <button onClick={onClick} className="w-full text-left rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm hover:border-primary-navy/30 dark:hover:border-tertiary-sage/30 hover:shadow-md transition-all flex flex-col justify-between h-[130px] cursor-pointer">
+    <button onClick={onClick} className="w-full text-left rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm hover:border-primary-navy/30 dark:hover:border-tertiary-sage/30 hover:shadow-md transition-all flex flex-col justify-between h-[130px] cursor-pointer">
       <div className="flex items-center gap-3 mb-2">
         <div className="h-8 w-8 rounded bg-slate-50 dark:bg-navy-950 flex items-center justify-center shrink-0 border border-slate-100 dark:border-navy-800">{icon}</div>
         <div className="text-[12px] font-bold text-slate-500 dark:text-slate-400">{title}</div>

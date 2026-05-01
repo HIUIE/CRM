@@ -239,7 +239,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
 
              {/* Reply Box: Permanent at bottom */}
              <div className="shrink-0 pt-4 border-t border-slate-100 dark:border-navy-800">
-                <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-800 shadow-lg overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary-navy/5">
+                <div className="bg-surface dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-800 shadow-lg overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary-navy/5">
                    <MentionTextarea 
                      value={commentInput}
                      onChange={setCommentInput}
@@ -261,7 +261,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
 
                    <div className="px-4 py-3 bg-slate-50 dark:bg-navy-950 flex justify-between items-center border-t border-slate-100 dark:border-navy-800">
                       <div className="flex gap-2">
-                         <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 text-xs font-bold text-slate-500 hover:text-primary-navy dark:hover:text-white cursor-pointer transition-all shadow-sm">
+                         <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 text-xs font-bold text-slate-500 hover:text-primary-navy dark:hover:text-white cursor-pointer transition-all shadow-sm">
                             <Paperclip size={14} />
                             <span>上传交付物</span>
                             <input type="file" multiple className="hidden" onChange={e => e.target.files && setNewFiles([...newFiles, ...Array.from(e.target.files)])} />

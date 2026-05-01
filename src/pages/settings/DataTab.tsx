@@ -58,14 +58,14 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <button onClick={() => setImportEntityType('CUSTOMER')} className="flex items-start gap-4 p-5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 hover:border-primary-navy transition-all text-left">
+          <button onClick={() => setImportEntityType('CUSTOMER')} className="flex items-start gap-4 p-5 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 hover:border-primary-navy transition-all text-left">
             <div className="p-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shrink-0"><PackageSearch size={20} /></div>
             <div>
               <div className="text-sm font-bold text-primary-navy dark:text-white mb-1">导入客户数据</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">从 XLSX/CSV 文件中批量导入客户资料，支持自动匹配字段。</div>
             </div>
           </button>
-          <button onClick={() => setImportEntityType('ORDER')} className="flex items-start gap-4 p-5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 hover:border-primary-navy transition-all text-left">
+          <button onClick={() => setImportEntityType('ORDER')} className="flex items-start gap-4 p-5 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 hover:border-primary-navy transition-all text-left">
             <div className="p-2 rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shrink-0"><FileDigit size={20} /></div>
             <div>
               <div className="text-sm font-bold text-primary-navy dark:text-white mb-1">导入订单数据</div>
@@ -90,14 +90,22 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
         </div>
 
         <div className="space-y-4 mb-8">
-          {EXPORT_FORMATS.map(fmt => (
-            <div key={fmt.id} onClick={() => setExportFormat(fmt.id as typeof exportFormat)} className={`flex items-start gap-4 p-5 rounded-lg border cursor-pointer transition-all ${exportFormat === fmt.id ? 'border-primary-navy bg-primary-navy/5' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
-              <div className={`p-2 rounded-lg ${exportFormat === fmt.id ? 'bg-primary-navy text-white' : 'bg-slate-100 text-slate-500'}`}>{fmt.icon}</div>
+            {EXPORT_FORMATS.map(fmt => (
+            <div 
+              key={fmt.id} 
+              onClick={() => setExportFormat(fmt.id as typeof exportFormat)} 
+              className={`flex items-start gap-4 p-5 rounded-lg border cursor-pointer transition-all ${
+                exportFormat === fmt.id 
+                  ? 'border-primary-navy bg-primary-navy/5 dark:border-tertiary-sage dark:bg-tertiary-sage/15' 
+                  : 'border-slate-200 bg-surface dark:border-navy-800 hover:border-slate-300 dark:hover:border-navy-700'
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${exportFormat === fmt.id ? 'bg-primary-navy text-white' : 'bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-400'}`}>{fmt.icon}</div>
               <div className="flex-1">
                 <div className="text-sm font-bold text-primary-navy dark:text-white">{fmt.title}</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{fmt.desc}</div>
               </div>
-              {exportFormat === fmt.id && <CheckCircle2 size={18} className="text-primary-navy shrink-0 mt-1" />}
+              {exportFormat === fmt.id && <CheckCircle2 size={18} className="text-primary-navy dark:text-tertiary-sage shrink-0 mt-1" />}
             </div>
           ))}
         </div>

@@ -61,7 +61,7 @@ export function OrderHeaderSection({
   packingRecords: PackingRecord[];
 }) {
   return (
-    <header ref={headerRef} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
+    <header ref={headerRef} className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-6">
           <div className="min-w-0 flex-1">
@@ -102,7 +102,7 @@ export function OrderHeaderSection({
         <div className="rounded-md bg-[#F8FAFC] dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-3">
           <div className="flex flex-wrap items-center gap-2">
             {STAGE_STEPS.map((s, i) => (
-              <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-white dark:bg-navy-800 shadow-md ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-40 hover:opacity-100'}`}>
+              <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-surface dark:bg-navy-800 shadow-md ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-40 hover:opacity-100'}`}>
                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i <= stageIndex ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-200 dark:bg-navy-700 text-slate-500 dark:text-slate-400'}`}>{i + 1}</span>
                 <span className={`text-xs font-bold tracking-tight ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
               </button>
@@ -140,7 +140,7 @@ export function ItemsSection({
   return (
     <WorkSection ref={sectionRef} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed} onToggle={onToggle} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 编辑清单</LightActionButton> : null}>
       {items.length ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
           <table className="min-w-full text-left text-xs font-medium">
             <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
               <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">总价 (USD)</th></tr>
@@ -207,7 +207,7 @@ export function DocumentsVaultSection({
 }) {
   return (
     <DocumentBoard title="核心单据凭证库" id="documents-vault" action={
-      <label className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all ${uploadingDoc ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white dark:bg-navy-800 text-slate-900 dark:text-white border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700 hover:border-slate-300 dark:hover:border-navy-600 shadow-sm cursor-pointer active:scale-95'}`}>
+      <label className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all ${uploadingDoc ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-surface dark:bg-navy-800 text-slate-900 dark:text-white border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700 hover:border-slate-300 dark:hover:border-navy-600 shadow-sm cursor-pointer active:scale-95'}`}>
         {uploadingDoc ? '上传中...' : <><Upload size={14} className="mr-1 opacity-70" /> 上传凭证</>}
         {!uploadingDoc && <input type="file" multiple className="hidden" onChange={e => e.target.files && onUploadDocument(e.target.files)} />}
       </label>
@@ -215,7 +215,7 @@ export function DocumentsVaultSection({
       {orderDocuments.length ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {orderDocuments.map(doc => (
-            <div key={doc.id} className="flex items-center h-14 px-4 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
+            <div key={doc.id} className="flex items-center h-14 px-4 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
               <button onClick={() => onPreview(doc)} className="shrink-0 mr-3"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
               <div className="min-w-0 flex-1">
                 <button onClick={() => onPreview(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block w-full text-left hover:underline leading-tight" title={doc.fileName}>{doc.fileName}</button>
@@ -269,7 +269,7 @@ export function FinanceSection({
   return (
     <DocumentBoard ref={sectionRef} title="财务信息" action={financeRecords.length ? (
       <div className="flex items-center gap-3">
-        <div className="flex bg-white dark:bg-navy-800 p-0.5 rounded border border-slate-200 dark:border-navy-700">
+        <div className="flex bg-surface dark:bg-navy-800 p-0.5 rounded border border-slate-200 dark:border-navy-700">
           <FilterPill active={financeFilter==='all'} onClick={()=>onFilterChange('all')}>全部</FilterPill>
           <FilterPill active={financeFilter==='receipt'} onClick={()=>onFilterChange('receipt')}>收款</FilterPill>
           <FilterPill active={financeFilter==='payment'} onClick={()=>onFilterChange('payment')}>付款</FilterPill>
@@ -386,7 +386,7 @@ export function ProfitSection({
       }>
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Left: Revenue */}
-          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm">
+          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-100 dark:border-navy-800 pb-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
               <div className="text-base font-bold text-slate-900 dark:text-white tracking-tight">收入信息 / Revenue · {pd.receipts.length} 期</div>
@@ -407,7 +407,7 @@ export function ProfitSection({
           </div>
 
           {/* Right: Cost */}
-          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm">
+          <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-100 dark:border-navy-800 pb-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
               <div className="text-base font-bold text-slate-900 dark:text-white tracking-tight">成本费用 / Costs</div>
@@ -476,7 +476,7 @@ function InputRow({ label, value, onChange, suffix, step }: { label: string; val
       <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">{label}</span>
       <div className="flex min-w-0 items-center gap-3">
         <input type="number" step={step || '0.01'} value={value || ''} onChange={e => onChange(e.target.value)}
-          className="w-full min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
+          className="w-full min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
         <span className="w-12 shrink-0 text-right text-xs font-bold text-slate-400 tracking-tight">{suffix}</span>
       </div>
     </label>
@@ -557,19 +557,19 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
   return (
     <div className="fixed inset-0 z-[420] flex h-dvh justify-end overflow-hidden">
       <button type="button" onClick={handleClose} disabled={saving} className="absolute inset-0 bg-primary-navy/50 dark:bg-black/60 backdrop-blur-sm disabled:cursor-wait" />
-      <div className="relative z-10 flex h-dvh max-h-dvh min-h-0 w-full max-w-[750px] flex-col overflow-hidden border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl animate-in slide-in-from-right duration-500">
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 px-4 py-5 sm:px-8 sm:py-6">
+      <div className="relative z-10 flex h-dvh max-h-dvh min-h-0 w-full max-w-[750px] flex-col overflow-hidden border-l border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-2xl animate-in slide-in-from-right duration-500">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 px-4 py-5 sm:px-8 sm:py-6">
           <div className="min-w-0">
             <h3 className="text-lg font-black text-primary-navy dark:text-white tracking-tight">编辑利润核算</h3>
             <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2">统一维护收入、退税、成本与实时利润预估</p>
           </div>
-          <button type="button" onClick={handleClose} disabled={saving} className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm disabled:opacity-50"><X size={20} /></button>
+          <button type="button" onClick={handleClose} disabled={saving} className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm disabled:opacity-50"><X size={20} /></button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 custom-scrollbar">
           {/* Revenue with dynamic receipts */}
-          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 px-5 py-4 flex items-center gap-3">
+          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm overflow-hidden">
+            <div className="border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 px-5 py-4 flex items-center gap-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
               <h4 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">收入信息 / Revenue</h4>
             </div>
@@ -588,13 +588,13 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                     <label className="block space-y-1">
                       <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">收款金额</span>
                       <input type="number" step="0.01" value={r.amount || ''} onChange={e => updReceipt(i, 'amount', e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
+                        className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
                     </label>
                     <div className="flex w-full rounded-lg border border-slate-200 dark:border-navy-800 overflow-hidden shrink-0 sm:w-auto">
                       <button type="button" onClick={() => updReceipt(i, 'currency', 'CNY')}
-                        className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${r.currency === 'CNY' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-white dark:bg-navy-950 text-slate-400'}`}>CNY</button>
+                        className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${r.currency === 'CNY' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>CNY</button>
                       <button type="button" onClick={() => updReceipt(i, 'currency', 'USD')}
-                        className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${r.currency === 'USD' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-white dark:bg-navy-950 text-slate-400'}`}>USD</button>
+                        className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${r.currency === 'USD' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>USD</button>
                     </div>
                   </div>
 
@@ -611,7 +611,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                 </div>
               ))}
 
-              <button type="button" onClick={addReceipt} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-3 py-2 text-xs font-bold text-tertiary-sage hover:border-tertiary-sage/40 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">
+              <button type="button" onClick={addReceipt} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-3 py-2 text-xs font-bold text-tertiary-sage hover:border-tertiary-sage/40 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">
                 <Plus size={13} /> 添加一笔收款
               </button>
 
@@ -638,8 +638,8 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           </section>
 
           {/* Costs (unchanged from V3) */}
-          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 px-5 py-4 flex items-center gap-3">
+          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm overflow-hidden">
+            <div className="border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 px-5 py-4 flex items-center gap-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
               <h4 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">成本费用 / Costs</h4>
             </div>
@@ -653,12 +653,12 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                 <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">国际运费 (Freight)</span>
                 <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
                   <input type="number" step="0.01" value={form.freightValue || ''} onChange={e => updN('freightValue', e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
+                    className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
                   <div className="flex w-full rounded-lg border border-slate-200 dark:border-navy-800 overflow-hidden shrink-0 sm:w-auto">
                     <button type="button" onClick={() => updS('freightCurrency', 'CNY')}
-                      className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'CNY' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-white dark:bg-navy-950 text-slate-400'}`}>CNY</button>
+                      className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'CNY' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>CNY</button>
                     <button type="button" onClick={() => updS('freightCurrency', 'USD')}
-                      className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'USD' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-white dark:bg-navy-950 text-slate-400'}`}>USD</button>
+                      className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'USD' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>USD</button>
                   </div>
                 </div>
               </label>
@@ -667,13 +667,13 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
 
               {(form.miscFees || []).map((fee, i) => (
                 <div key={i} className="grid gap-2 border-l-2 border-tertiary-sage/30 pl-4 sm:grid-cols-[1fr_140px_40px_auto] sm:items-center">
-                  <input value={fee.label} onChange={e => updMisc(i, 'label', e.target.value)} placeholder="费用名称" className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage text-slate-900 dark:text-white" />
-                  <input type="number" step="0.01" value={fee.amount || ''} onChange={e => updMisc(i, 'amount', e.target.value)} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
+                  <input value={fee.label} onChange={e => updMisc(i, 'label', e.target.value)} placeholder="费用名称" className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage text-slate-900 dark:text-white" />
+                  <input type="number" step="0.01" value={fee.amount || ''} onChange={e => updMisc(i, 'amount', e.target.value)} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
                   <span className="text-xs font-bold text-slate-400 sm:text-right tracking-tight">CNY</span>
                   <button type="button" onClick={() => delMisc(i)} className="text-slate-300 hover:text-error"><X size={14} /></button>
                 </div>
               ))}
-              <button type="button" onClick={addMisc} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-3 py-2 text-xs font-bold text-tertiary-sage hover:border-tertiary-sage/40 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><Plus size={13} /> 添加杂费明细</button>
+              <button type="button" onClick={addMisc} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-3 py-2 text-xs font-bold text-tertiary-sage hover:border-tertiary-sage/40 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><Plus size={13} /> 添加杂费明细</button>
             </div>
           </section>
 
@@ -687,7 +687,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
             {hasCnyReceipt && <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">累计人民币收款 (Net CNY)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{(receipts.filter(r=>r.currency==='CNY').reduce((s,r)=>s+r.amount-r.bankFees-r.platformFees,0)).toFixed(2)}</span></div>}
             <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">预估总收入 (Total Income)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{calcRevenueCny.toFixed(2)}</span></div>
             <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">预估总成本 (Total Cost)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{calcTotalCost.toFixed(2)}</span></div>
-            <div className="flex justify-between gap-4 rounded-md border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-3 py-2.5 text-sm">
+            <div className="flex justify-between gap-4 rounded-md border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-3 py-2.5 text-sm">
               <span className="font-medium text-slate-500 dark:text-slate-400">预估净利润 (Net Profit)</span>
               <span className={`font-black data-field ${calcProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>¥{calcProfit.toFixed(2)}</span>
             </div>
@@ -700,7 +700,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-slate-100 dark:border-navy-800 px-4 py-4 sm:px-8 sm:py-5 flex justify-end gap-3 bg-white dark:bg-navy-900 shadow-[0_-12px_24px_rgba(15,23,42,0.04)]">
+        <div className="shrink-0 border-t border-slate-100 dark:border-navy-800 px-4 py-4 sm:px-8 sm:py-5 flex justify-end gap-3 bg-surface dark:bg-navy-900 shadow-[0_-12px_24px_rgba(15,23,42,0.04)]">
           <button type="button" onClick={handleClose} disabled={saving} className="rounded-lg border border-slate-200 dark:border-navy-700 px-4 py-2.5 sm:px-5 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
           <button type="button" onClick={handleSave} disabled={saving || !isDirty} className="btn-primary shadow-md disabled:opacity-60 min-w-[112px] sm:min-w-[132px]">
             {saving ? '保存中...' : isDirty ? '保存核算明细' : '已保存'}
@@ -779,7 +779,7 @@ export function CustomsSection({
             <GridItem label="报关日期" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
             <GridItem label="预计出口" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
           </div>
-          <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
+          <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-3">
               <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">官方凭证电子仓库</div>
               <button onClick={onEditCustoms} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">追加文件 +</button>
@@ -819,7 +819,7 @@ export function PackingSection({
   return (
     <DocumentBoard ref={sectionRef} title="装箱明细" action={packingRecords.length ? <LightActionButton onClick={onEditPacking} className="!py-1.5 !px-3 !text-xs"><Box size={14} className="mr-1 opacity-70" /> 更新装箱</LightActionButton> : null}>
       {packingRecords.length ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900">
+        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-surface dark:bg-navy-900">
           <table className="min-w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
               <tr><th className="px-5 py-3">序号</th><th className="px-5 py-3">件数 (箱)</th><th className="px-5 py-3">尺寸 / 体积</th><th className="px-5 py-3">毛重 / 净重 (kg)</th><th className="px-5 py-3 text-right">实物图</th></tr>
@@ -832,7 +832,7 @@ export function PackingSection({
                   <td className="px-5 py-3">{r.packageSize}</td>
                   <td className="px-5 py-3">{r.grossWeight} / {r.netWeight}</td>
                   <td className="px-5 py-3 text-right">
-                    <div className="inline-flex h-9 w-9 aspect-square shrink-0 rounded border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && onPreview({ id: -1, fileName: `序号 ${i+1} 装箱实拍.jpg`, url: r.imageUrl })}>
+                    <div className="inline-flex h-9 w-9 aspect-square shrink-0 rounded border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && onPreview({ id: -1, fileName: `序号 ${i+1} 装箱实拍.jpg`, url: r.imageUrl })}>
                       {r.imageUrl ? <img src={r.imageUrl} alt="" className="h-full w-full object-cover" /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
                     </div>
                   </td>
@@ -871,7 +871,7 @@ function getLogisticsSegmentMeta(segment?: LogisticsRecord['segmentType']) {
     return {
       label: '国内运输',
       eyebrow: 'DOMESTIC LEG',
-      card: 'border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 hover:border-slate-300 dark:hover:border-navy-700',
+      card: 'border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 hover:border-slate-300 dark:hover:border-navy-700',
       badge: 'border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300',
       icon: 'text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/40',
     };
@@ -880,7 +880,7 @@ function getLogisticsSegmentMeta(segment?: LogisticsRecord['segmentType']) {
   return {
     label: '国际运输',
     eyebrow: 'INTERNATIONAL LEG',
-    card: 'border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 hover:border-slate-300 dark:hover:border-navy-700',
+    card: 'border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 hover:border-slate-300 dark:hover:border-navy-700',
     badge: 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300',
     icon: 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40',
   };
@@ -927,7 +927,7 @@ export function LogisticsSection({
             return (
               <div key={l.id} className={`relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all hover:shadow-md group ${segmentMeta.card}`}>
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
-                  <button onClick={() => onEditLogistics(l)} className="p-2 bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 rounded-md text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm"><Edit3 size={16} /></button>
+                  <button onClick={() => onEditLogistics(l)} className="p-2 bg-surface dark:bg-navy-800 border border-slate-200 dark:border-navy-700 rounded-md text-secondary-slate dark:text-slate-400 hover:text-primary-navy dark:hover:text-white shadow-sm"><Edit3 size={16} /></button>
                 </div>
                 <div className="mb-5 flex items-start justify-between gap-4 pr-10">
                   <div className="flex min-w-0 items-center gap-3">
@@ -963,7 +963,7 @@ export function LogisticsSection({
                 {l.attachments && l.attachments.length > 0 && (
                   <div className="mt-5 flex flex-wrap gap-2">
                     {l.attachments.map((att: AttachmentMeta) => (
-                      <div key={att.id} className="flex items-center gap-1.5 rounded border border-slate-100 bg-slate-50/60 px-2.5 py-1.5 text-primary-navy shadow-sm transition-all hover:bg-white dark:border-navy-800 dark:bg-navy-900/80 dark:text-white dark:hover:bg-navy-800">
+                      <div key={att.id} className="flex items-center gap-1.5 rounded border border-slate-100 bg-slate-50/60 px-2.5 py-1.5 text-primary-navy shadow-sm transition-all hover:bg-surface dark:border-navy-800 dark:bg-navy-900/80 dark:text-white dark:hover:bg-navy-800">
                         <button onClick={() => onPreview(att)} className="flex items-center gap-1.5">
                           <FileIcon fileName={att.fileName} size={12} />
                           <span className="max-w-[100px] truncate text-xs font-bold">{att.fileName.split('.')[0]}</span>
@@ -999,9 +999,9 @@ export function TasksSection({
       {tasks.length > 0 ? (
         <div className="space-y-2">
           {tasks.map(t => (
-            <div key={t.id} onClick={() => navigate(`/tasks?detail=${t.id}`)} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 hover:ring-1 hover:ring-primary-navy/10 dark:hover:ring-tertiary-sage/10 cursor-pointer transition-all group">
+            <div key={t.id} onClick={() => navigate(`/tasks?detail=${t.id}`)} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 hover:ring-1 hover:ring-primary-navy/10 dark:hover:ring-tertiary-sage/10 cursor-pointer transition-all group">
               <div className="flex items-center gap-3">
-                <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${t.status === 'done' ? 'bg-emerald-50 text-emerald-500' : 'bg-white border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
+                <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${t.status === 'done' ? 'bg-emerald-50 text-emerald-500' : 'bg-surface border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
                   {t.status === 'done' ? <Check size={12} /> : <Clock size={12} />}
                 </div>
                 <div>
@@ -1032,7 +1032,7 @@ export function FollowupsSection({
       <div className="space-y-0">
         {followUps.length > 0 ? followUps.map((fu, i) => (
           <div key={fu.id || i} className="relative pl-8 pb-6 last:pb-0">
-            <div className="absolute left-0 top-1.5 h-[18px] w-[18px] rounded-full border-2 border-slate-900 dark:border-tertiary-sage bg-white dark:bg-navy-900" />
+            <div className="absolute left-0 top-1.5 h-[18px] w-[18px] rounded-full border-2 border-slate-900 dark:border-tertiary-sage bg-surface dark:bg-navy-900" />
             {i < followUps.length - 1 && <div className="absolute left-[8px] top-[22px] bottom-0 w-[2px] bg-slate-100 dark:bg-navy-800" />}
             <div className="flex items-center gap-3 mb-1.5">
               <span className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">{fu.createdByName || '未知用户'}</span>
@@ -1076,7 +1076,7 @@ export function NavRailSection({
   };
 
   return (
-    <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm transition-colors">
+    <section className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm transition-colors">
       <div className="text-xs font-black text-slate-900 dark:text-white mb-5 tracking-tight flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 dark:bg-tertiary-sage rounded-full" /> 页面导航</div>
       <div className="space-y-5">
         {navGroups.map(group => (
@@ -1113,7 +1113,7 @@ export function QuickFollowUpSection({
   saving: boolean;
 }) {
   return (
-    <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
+    <section className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
       <div className="text-xs font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 mb-4">
         <div className="w-1 h-4 bg-primary-navy rounded-full" /> 快捷跟进
       </div>
@@ -1122,7 +1122,7 @@ export function QuickFollowUpSection({
         onChange={e => onFollowUpChange(e.target.value)}
         placeholder="记录最新跟进动态，例如：今天发了最新版 PI 给客户..."
         rows={4}
-        className="w-full bg-slate-50 dark:bg-navy-950 px-3 py-2.5 rounded-lg border border-slate-100 dark:border-navy-800 text-sm font-bold text-slate-700 dark:text-white outline-none focus:bg-white dark:focus:bg-navy-900 transition-all resize-none"
+        className="w-full bg-slate-50 dark:bg-navy-950 px-3 py-2.5 rounded-lg border border-slate-100 dark:border-navy-800 text-sm font-bold text-slate-700 dark:text-white outline-none focus:bg-surface dark:focus:bg-navy-900 transition-all resize-none"
       />
       <button
         onClick={onSubmitFollowUp}
@@ -1145,7 +1145,7 @@ export function AIAnalysisPanel({
   analyzing: boolean;
 }) {
   return (
-    <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
+    <section className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
       <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-white tracking-tight mb-4"><div className="w-1 h-4 bg-emerald-500 rounded-full" /> AI 智能辅助诊断</div>
       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed mb-6">正在实时分析订单风险、回款率及交付合规性...</p>
       <button onClick={onOpenAnalysis} disabled={analyzing} className="w-full flex items-center justify-center gap-3 rounded-lg bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-md group active:scale-95">

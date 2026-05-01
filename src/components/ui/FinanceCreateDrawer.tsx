@@ -88,7 +88,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
       isBusy={saving}
       footer={({ requestClose, isBusy }) => (
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all disabled:opacity-50">取消</button>
+          <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all disabled:opacity-50">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '正在同步...' : '保存流水记录'}
           </button>
@@ -116,7 +116,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
           </Field>
 
           <Field label="流水类型 *">
-            <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as 'receipt' | 'payment' })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
+            <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as 'receipt' | 'payment' })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
               <option value="receipt">收款 (In)</option>
               <option value="payment">付款 (Out)</option>
             </select>
@@ -125,7 +125,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
           <div className="flex gap-4">
               <div className="w-32">
                 <Field label="币种">
-                  <select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
+                  <select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
                     <option value="USD">USD</option>
                     <option value="CNY">CNY</option>
                     <option value="EUR">EUR</option>
@@ -134,14 +134,14 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
               </div>
               <div className="flex-1">
                 <Field label="金额 *">
-                  <input required type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none data-field" />
+                  <input required type="number" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none data-field" />
                 </Field>
               </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="款项用途">
-              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
+              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
                 <option value="deposit">首付款 / 定金</option>
                 <option value="balance">尾款</option>
                 <option value="goods">货款</option>
@@ -151,7 +151,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
               </select>
             </Field>
             <Field label="核销状态">
-              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as 'pending' | 'completed'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
+              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as 'pending' | 'completed'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer">
                 <option value="pending">待核销</option>
                 <option value="completed">已完成</option>
               </select>
@@ -171,7 +171,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
           </Field>
 
           <Field label="备注">
-            <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言或打款参考号..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 text-sm font-medium outline-none min-h-[80px]" rows={2} />
+            <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言或打款参考号..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 text-sm font-medium outline-none min-h-[80px]" rows={2} />
           </Field>
         </div>
       </form>

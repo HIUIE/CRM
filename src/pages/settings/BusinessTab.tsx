@@ -68,14 +68,14 @@ export default function BusinessTab() {
                   value={orderNumberPrefix}
                   onChange={(event) => setOrderNumberPrefix(event.target.value)}
                   placeholder="如 ORD- / PO-"
-                  className="w-full max-w-xs rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+                  className="w-full max-w-xs rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
                 />
               </Field>
               <button type="button" onClick={saveDocumentSettings} className="btn-primary shadow-md h-[46px] px-8">
                 {savedDocument ? '规则已保存' : '保存规则'}
               </button>
             </div>
-            <div className="mt-4 rounded-full bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 px-4 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 inline-flex items-center gap-2">
+            <div className="mt-4 rounded-full bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-700 px-4 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 inline-flex items-center gap-2">
               <Globe size={12} /> 实时预览：{orderNumberPrefix}{new Date().getFullYear()}-{String(new Date().getMonth() + 1).padStart(2, '0')}{String(new Date().getDate()).padStart(2, '0')}01
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function BusinessTab() {
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">系统将自动为新建订单填充此币种，减少重复输入。</p>
             <div className="flex flex-wrap gap-3">
               {['USD', 'CNY', 'EUR', 'GBP', 'JPY'].map(currency => (
-                <label key={currency} className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 cursor-pointer hover:border-primary-navy transition-all">
+                <label key={currency} className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 cursor-pointer hover:border-primary-navy transition-all">
                   <input type="radio" name="currency" defaultChecked={currency === 'USD'} className="accent-primary-navy" />
                   <span className="text-sm font-black text-primary-navy dark:text-white">{currency}</span>
                 </label>
@@ -110,7 +110,7 @@ export default function BusinessTab() {
           <div className="flex flex-col gap-4">
             <Field label="企业微信机器人 Webhook 地址" description="当订单状态变更或有新订单时，自动推送到指定群组。">
               <div className="flex gap-3">
-                <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 p-3.5 text-sm outline-none focus:border-primary-navy text-primary-navy dark:text-white font-mono" />
+                <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm outline-none focus:border-primary-navy text-primary-navy dark:text-white font-mono" />
                 <button onClick={saveWebhook} className="btn-primary shadow-md px-8">{savedWebhook ? '已保存' : '保存配置'}</button>
               </div>
             </Field>

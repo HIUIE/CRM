@@ -205,7 +205,7 @@ export default function LogisticsView() {
 
   return (
     <div className="flex flex-col space-y-4 animate-page-in">
-      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -238,7 +238,7 @@ export default function LogisticsView() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
         {loading ? (
           <div className="text-sm text-slate-500 dark:text-slate-400 p-8 text-center animate-pulse">正在同步物流状态...</div>
         ) : (
@@ -254,7 +254,7 @@ export default function LogisticsView() {
                     <th className="px-4 py-4 text-center">状态</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
+                <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                   {currentItems.length ? currentItems.map((r) => (
                     <tr
                       key={r.id}
@@ -327,7 +327,7 @@ export default function LogisticsView() {
         isBusy={isUploading}
         footer={({ requestClose, isBusy }) => (
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
+            <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
             <button onClick={handleSubmit} type="submit" disabled={isBusy} className="btn-primary shadow-md">保存物流</button>
           </div>
         )}

@@ -106,7 +106,7 @@ export default function UpdateTab() {
             <div className="flex items-center gap-2 text-sm font-bold text-primary-navy dark:text-white">
               <RefreshCw size={16} className="text-blue-500" /> 检查更新
             </div>
-            <button onClick={checkForUpdates} disabled={checkingUpdate} className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 transition-all disabled:opacity-50">
+            <button onClick={checkForUpdates} disabled={checkingUpdate} className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-navy-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-surface dark:hover:bg-navy-800 transition-all disabled:opacity-50">
               {checkingUpdate ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
               {checkingUpdate ? '检测中...' : '检测更新'}
             </button>
@@ -122,7 +122,7 @@ export default function UpdateTab() {
                 </div>
                 <div className="rounded-lg bg-blue-50 dark:bg-blue-900/10 p-4 border border-blue-100 dark:border-blue-900/30">
                   <p className="text-xs text-blue-700 dark:text-blue-400 font-medium leading-relaxed">请拉取最新代码并重新构建以更新系统：</p>
-                  <code className="mt-2 block text-xs bg-white dark:bg-navy-900 px-3 py-2 rounded border border-blue-100 dark:border-blue-900/30 font-mono text-slate-700 dark:text-slate-300">
+                  <code className="mt-2 block text-xs bg-surface dark:bg-navy-900 px-3 py-2 rounded border border-blue-100 dark:border-blue-900/30 font-mono text-slate-700 dark:text-slate-300">
                     git pull && npm install && npm run build && npm start
                   </code>
                 </div>

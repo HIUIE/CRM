@@ -317,7 +317,7 @@ export default function FinanceView() {
 
   return (
     <div className="flex flex-col space-y-4 animate-page-in">
-      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
+      <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -351,7 +351,7 @@ export default function FinanceView() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
         {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">正在加载流水账目...</div> : (
           <div className="flex flex-col">
             <div className="overflow-x-auto">
@@ -367,7 +367,7 @@ export default function FinanceView() {
                     <th className="px-4 py-4 text-center">操作</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
+                <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                   {currentItems.length ? currentItems.map((r) => (
                     <tr key={r.id} onClick={() => {
                         if (r.order_display_id) {
@@ -398,7 +398,7 @@ export default function FinanceView() {
                       <td className="px-4 py-4 text-center"><Chip tone={r.status === 'completed' ? 'neutral' : 'warning'}>{r.status === 'completed' ? '已核销' : '待处理'}</Chip></td>
                       <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                           <button onClick={() => openEditForm(r)} className="p-2 text-secondary-slate dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
+                           <button onClick={() => openEditForm(r)} className="p-2 text-secondary-slate dark:text-slate-400 hover:bg-surface dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
                            {user?.role === 'admin' && (
                              <button
                                onClick={() => setRecordToDelete(r)}
@@ -436,7 +436,7 @@ export default function FinanceView() {
         isBusy={saving || isUploading}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} disabled={saving || isUploading} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
+            <button type="button" onClick={closeForm} disabled={saving || isUploading} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
             <button onClick={() => void handleSubmit()} type="button" disabled={saving || isUploading} className="btn-primary shadow-md disabled:opacity-60">{saving || isUploading ? '保存中...' : '保存流水'}</button>
           </div>
         }
@@ -459,23 +459,23 @@ export default function FinanceView() {
               />
             </Field>
             <Field label="流水类型 *">
-              <select value={formData.type} onChange={(e) => setType(e.target.value as 'receipt' | 'payment')} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+              <select value={formData.type} onChange={(e) => setType(e.target.value as 'receipt' | 'payment')} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
                 <option value="receipt">收款 (客户 → 我们)</option>
                 <option value="payment">付款 (我们 → 合作伙伴)</option>
               </select>
             </Field>
             <div className="flex gap-4">
-                <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
+                <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
                 <div className="flex-1"><Field label="金额 *" error={fieldErrors.amount}><input required type="number" min="0.01" step="0.01" value={formData.amount} onChange={e => {
                   setFormData({...formData, amount:e.target.value});
                   if (fieldErrors.amount) setFieldErrors(prev => { const next = { ...prev }; delete next.amount; return next; });
                 }} onBlur={() => {
                   const amt = Number(formData.amount);
                   if (!Number.isFinite(amt) || amt <= 0) setFieldErrors(prev => ({ ...prev, amount: '金额必须大于 0' }));
-                }} placeholder="请输入大于 0 的金额" className={`w-full rounded-lg border ${fieldErrors.amount ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field`} /></Field></div>
+                }} placeholder="请输入大于 0 的金额" className={`w-full rounded-lg border ${fieldErrors.amount ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field`} /></Field></div>
             </div>
             <Field label="款项用途">
-              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
+              <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">
                 <option value="deposit">首付款 / 定金</option>
                 <option value="balance">尾款</option>
                 <option value="goods">货款</option>
@@ -484,7 +484,7 @@ export default function FinanceView() {
                 <option value="other">其他</option>
             </select></Field>
             <Field label="核销状态">
-              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as 'pending' | 'completed'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
+              <select value={formData.status} onChange={e=>setFormData({...formData, status:e.target.value as 'pending' | 'completed'})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="pending">待核销</option><option value="completed">已完成</option></select>
             </Field>
 
             {formData.type === 'receipt' ? (
@@ -510,13 +510,13 @@ export default function FinanceView() {
                   />
                 </Field>
                 <Field label="临时付款对象（无合作伙伴档案时填写）">
-                  <input value={formData.target} onChange={e=>setFormData({...formData, target:e.target.value, partnerId: ''})} placeholder="例如：临时供应商、个人垫付对象..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" />
+                  <input value={formData.target} onChange={e=>setFormData({...formData, target:e.target.value, partnerId: ''})} placeholder="例如：临时供应商、个人垫付对象..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" />
                 </Field>
               </div>
             )}
 
             <Field label="备注">
-              <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言、打款参考号或凭证说明..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
+              <textarea value={formData.remark} onChange={e=>setFormData({...formData, remark:e.target.value})} placeholder="附言、打款参考号或凭证说明..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={2} />
             </Field>
             <div className="pt-6 border-t border-slate-100 dark:border-navy-800">
               <AttachmentEditor
@@ -564,7 +564,7 @@ function StatCard({ title, value, icon }: { title: string; value: number; icon: 
         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">{title}</div>
         <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{value.toLocaleString()}</div>
       </div>
-      <div className="h-8 w-8 rounded-lg bg-white dark:bg-navy-800 shadow-sm flex items-center justify-center border border-slate-100 dark:border-navy-700">{icon}</div>
+      <div className="h-8 w-8 rounded-lg bg-surface dark:bg-navy-800 shadow-sm flex items-center justify-center border border-slate-100 dark:border-navy-700">{icon}</div>
     </div>
   );
 }

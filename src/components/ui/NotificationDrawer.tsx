@@ -53,7 +53,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
   return (
     <div className="fixed inset-0 z-[500] flex justify-end">
       <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-sm h-full bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="relative z-10 w-full max-w-sm h-full bg-surface dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-navy-800">
           <div className="flex items-center gap-3">
              <Bell size={18} className="text-primary-navy dark:text-tertiary-sage" />

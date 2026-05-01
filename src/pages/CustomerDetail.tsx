@@ -164,11 +164,11 @@ export default function CustomerDetailPage() {
   return (
     <div className="flex flex-col animate-page-in">
       {/* Flattened Header: Action Unfold */}
-      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-white/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
+      <header className="sticky top-0 z-[60] -mx-2 -mt-2 mb-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800 bg-surface/95 dark:bg-navy-950/95 px-6 py-4 backdrop-blur-md transition-colors shadow-sm">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/customers')} 
-            className="group flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-navy-800 text-slate-400 hover:border-primary-navy transition-all shadow-sm bg-white dark:bg-navy-900"
+            className="group flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-navy-800 text-slate-400 hover:border-primary-navy transition-all shadow-sm bg-surface dark:bg-navy-900"
             title="返回客户列表"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -182,13 +182,13 @@ export default function CustomerDetailPage() {
         <div className="flex items-center gap-3">
            <button 
              onClick={() => setShowFinanceDrawer(true)}
-             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all tracking-tight shadow-sm"
+             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all tracking-tight shadow-sm"
            >
              <DollarSign size={14} /> 录入收款
            </button>
            <button 
              onClick={() => navigate(`/logistics?customerId=${data.id}&create=1`)}
-             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all tracking-tight shadow-sm"
+             className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all tracking-tight shadow-sm"
            >
              <Truck size={14} /> 创建物流
            </button>
@@ -206,7 +206,7 @@ export default function CustomerDetailPage() {
         <div className="grid gap-6 lg:grid-cols-[380px_1fr] items-start pb-12">
           {/* Left Column: Fixed Profile */}
           <div className="space-y-6 lg:sticky lg:top-0">
-            <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-colors overflow-hidden relative group">
+            <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-8 shadow-sm transition-colors overflow-hidden relative group">
               <div className="absolute top-0 right-0 h-32 w-32 translate-x-16 -translate-y-16 rounded-full bg-slate-50 dark:bg-navy-800 pointer-events-none" />
               <div className="relative z-10">
                 <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-slate-50 dark:bg-navy-950 shadow-inner border border-slate-100 dark:border-navy-800">
@@ -260,7 +260,7 @@ export default function CustomerDetailPage() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
+            <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
               <h3 className="text-xs font-extrabold text-primary-navy dark:text-white tracking-tight mb-4">意向偏好</h3>
               <div className="p-4 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800 group relative cursor-pointer" onClick={() => setEditingField('intent_products')}>
                 {editingField === 'intent_products' ? (
@@ -302,12 +302,12 @@ export default function CustomerDetailPage() {
               {activeTab === 'followups' && (
                 <div className="space-y-6">
                   {/* Followup Posting Box */}
-                  <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm">
+                  <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-4 shadow-sm">
                     <textarea 
                       value={followupInput}
                       onChange={(e) => setFollowupInput(e.target.value)}
                       placeholder="记录今天的沟通摘要：聊了什么？重点需求？"
-                      className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-4 text-sm font-medium focus:bg-white dark:focus:bg-navy-900 focus:ring-2 focus:ring-primary-navy/5 outline-none transition-all resize-none min-h-[100px] border border-slate-100 dark:border-navy-800"
+                      className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-4 text-sm font-medium focus:bg-surface dark:focus:bg-navy-900 focus:ring-2 focus:ring-primary-navy/5 outline-none transition-all resize-none min-h-[100px] border border-slate-100 dark:border-navy-800"
                     />
                     <div className="mt-3 flex justify-end">
                        <button 
@@ -327,7 +327,7 @@ export default function CustomerDetailPage() {
                         <div className="absolute -left-8 top-1 h-6 w-6 rounded-full border-4 border-white dark:border-navy-950 flex items-center justify-center z-10 shadow-sm bg-primary-navy">
                            <MessageSquare size={10} className="text-white" />
                         </div>
-                        <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-100 dark:border-navy-800 p-5 shadow-sm">
+                        <div className="bg-surface dark:bg-navy-900 rounded-lg border border-slate-100 dark:border-navy-800 p-5 shadow-sm">
                           <div className="flex items-center justify-between mb-3">
                              <span className="text-sm font-extrabold text-primary-navy dark:text-white">{f.created_by_name || '当前用户'}</span>
                              <span className="text-xs font-bold text-slate-400 data-field">{String(f.created_at).slice(0, 16).replace('T', ' ')}</span>
@@ -357,7 +357,7 @@ export default function CustomerDetailPage() {
                       <div className={`absolute -left-8 top-1 h-6 w-6 rounded-full border-4 border-white dark:border-navy-950 flex items-center justify-center z-10 shadow-sm transition-transform group-hover:scale-110 ${activity.type === 'finance' ? 'bg-emerald-500' : activity.type === 'logistics' ? 'bg-blue-500' : activity.type === 'customs' ? 'bg-amber-500' : 'bg-slate-400'}`}>
                           {activity.type === 'finance' ? <DollarSign size={10} className="text-white" /> : activity.type === 'logistics' ? <Truck size={10} className="text-white" /> : <Clock size={10} className="text-white" />}
                       </div>
-                      <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-100 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all">
+                      <div className="bg-surface dark:bg-navy-900 rounded-lg border border-slate-100 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
                               <span className="text-sm font-extrabold text-primary-navy dark:text-white tracking-tight">{activity.title}</span>
@@ -382,7 +382,7 @@ export default function CustomerDetailPage() {
               )}
 
               {activeTab === 'orders' && (
-                <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm flex flex-col">
+                <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm flex flex-col">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
                         <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
@@ -393,7 +393,7 @@ export default function CustomerDetailPage() {
                             <th className="px-6 py-4 text-center">状态</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
+                        <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                           {data.orders && data.orders.length ? data.orders.map((order) => (
                             <tr key={order.id} onClick={() => navigate(`/orders/${String(order.display_id).toLowerCase()}`)} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                               <td className="px-6 py-4">
@@ -420,7 +420,7 @@ export default function CustomerDetailPage() {
               )}
 
               {activeTab === 'finance' && (
-                <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm flex flex-col">
+                <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm flex flex-col">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
                         <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
@@ -432,7 +432,7 @@ export default function CustomerDetailPage() {
                             <th className="px-6 py-4 text-center">状态</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-white dark:bg-navy-900">
+                        <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                           {data.finance_records && data.finance_records.length ? data.finance_records.map((r) => (
                             <tr key={r.id} onClick={() => navigate(`/orders/${String(r.order_display_id).toLowerCase()}`)} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                               <td className="px-6 py-4">
@@ -463,16 +463,16 @@ export default function CustomerDetailPage() {
               )}
 
               {activeTab === 'tasks' && (
-                 <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
+                 <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
                     <div className="mb-6 flex items-center justify-between">
                       <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">关联协同任务</h2>
                       <button onClick={() => setShowTaskDrawer(true)} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">+ 指派新任务</button>
                     </div>
                     <div className="space-y-3">
                       {data.tasks && data.tasks.length > 0 ? data.tasks.map(t => (
-                        <div key={t.id} className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 transition-all group">
+                        <div key={t.id} className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 transition-all group">
                            <div className="flex min-w-0 items-center gap-4">
-                              <div className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center ${t.status === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' : 'bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
+                              <div className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center ${t.status === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' : 'bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
                                  {t.status === 'done' ? <Check size={14} /> : <Clock size={14} />}
                               </div>
                               <div className="min-w-0">
@@ -483,7 +483,7 @@ export default function CustomerDetailPage() {
                                        订单：{t.source_order_display_id}
                                      </button>
                                    ) : (
-                                     <span className="rounded-full border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">客户任务</span>
+                                     <span className="rounded-full border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">客户任务</span>
                                    )}
                                  </div>
                                  <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mt-0.5">负责人: {t.assignee_name || '未指派'} · 截止: {t.due_date ? formatDateOnly(t.due_date) : '未设置'}</div>
@@ -499,14 +499,14 @@ export default function CustomerDetailPage() {
               )}
 
               {activeTab === 'contacts' && (
-                <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm flex flex-col p-6">
+                <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm flex flex-col p-6">
                     <div className="mb-6 flex items-center justify-between">
                       <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">企业联系人矩阵</h2>
                       <button onClick={() => setShowContactDrawer(true)} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">+ 新增联系人</button>
                       </div>                    <div className="grid gap-4 sm:grid-cols-2">
                       {data.contacts && data.contacts.length ? data.contacts.map(c => (
                         <div key={c.id} className="flex items-center gap-4 p-4 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 shadow-sm hover:border-primary-navy/20 transition-colors cursor-pointer group">
-                          <div className="h-12 w-12 rounded-full bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 flex items-center justify-center text-primary-navy dark:text-white font-bold text-sm shadow-inner group-hover:scale-105 transition-transform">
+                          <div className="h-12 w-12 rounded-full bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-700 flex items-center justify-center text-primary-navy dark:text-white font-bold text-sm shadow-inner group-hover:scale-105 transition-transform">
                             {String(c.name).charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -614,7 +614,7 @@ function InfoRow({ icon, label, value, isEditable, onSave, type = 'text', option
               value={val}
               onChange={(e) => setVal(e.target.value)}
               onBlur={() => { setIsEditing(false); if (val !== value) onSave?.(val); }}
-              className="text-sm font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-white dark:bg-navy-900 border border-slate-200 rounded p-1 outline-none"
+              className="text-sm font-bold text-primary-navy dark:text-white mt-0.5 w-full bg-surface dark:bg-navy-900 border border-slate-200 rounded p-1 outline-none"
             >
                <option value="">请选择...</option>
                {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -677,7 +677,7 @@ function EditableField({ value, onSave, className }: { value: string; onSave: (v
 
 function StatBox({ title, value, icon, color = "text-primary-navy dark:text-white" }: { title: string; value: string; icon: React.ReactNode; color?: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm transition-all hover:shadow-md">
+    <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-5 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-slate-400">{icon}</span>
         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">{title}</span>

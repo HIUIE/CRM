@@ -26,7 +26,7 @@ export default function Settings() {
 
   return (
     <div className="mx-auto w-full max-w-[1440px] space-y-6 animate-page-in">
-      <div className="flex w-fit flex-wrap rounded-xl border border-slate-200 bg-white p-1 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900">
+      <div className="flex w-fit flex-wrap rounded-xl border border-slate-200 bg-surface p-1 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900">
         <button 
           onClick={() => setActiveTab('branding')} 
           className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'branding' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}
@@ -64,7 +64,7 @@ export default function Settings() {
         )}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 sm:p-8">
+      <div className="rounded-xl border border-slate-200 bg-surface p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 sm:p-8">
         <Suspense fallback={<Fallback />}>
           {activeTab === 'branding' && <BrandingTab />}
           {activeTab === 'business' && isAdmin && <BusinessTab />}

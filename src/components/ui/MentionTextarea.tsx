@@ -112,7 +112,7 @@ export function MentionTextarea({ value, onChange, placeholder, className }: Men
       />
       {showPopup && filteredUsers.length > 0 && (
         <div 
-          className="absolute z-[200] w-48 bg-white dark:bg-navy-800 rounded-lg border border-slate-200 dark:border-navy-700 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          className="absolute z-[200] w-48 bg-surface dark:bg-navy-800 rounded-lg border border-slate-200 dark:border-navy-700 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
           style={{ top: popupPos.top, left: Math.min(popupPos.left, 200) }}
         >
           <div className="p-2 bg-slate-50 dark:bg-navy-950 border-b border-slate-100 dark:border-navy-800 text-[9px] font-bold text-slate-400 tracking-tight">选择要提及的同事</div>

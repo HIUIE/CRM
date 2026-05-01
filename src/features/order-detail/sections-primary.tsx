@@ -73,7 +73,7 @@ function OverviewMetric({ label, value, helper, icon, tone = 'neutral', onClick 
     </>
   );
   if (onClick) {
-    return <button type="button" onClick={onClick} className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 p-4 text-left transition-all hover:bg-white dark:hover:bg-navy-900 hover:border-slate-200 dark:hover:border-navy-700">{content}</button>;
+    return <button type="button" onClick={onClick} className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 p-4 text-left transition-all hover:bg-surface dark:hover:bg-navy-900 hover:border-slate-200 dark:hover:border-navy-700">{content}</button>;
   }
   return <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 p-4">{content}</div>;
 }
@@ -131,7 +131,7 @@ export function OrderHeaderSection({
   const riskTone = outstandingUsd > 0 || openTasks > 0 ? 'warning' : 'success';
 
   return (
-    <header ref={headerRef} className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
+    <header ref={headerRef} className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-6">
           <div className="min-w-0 flex-1">
@@ -180,14 +180,14 @@ export function OrderHeaderSection({
           <div className="rounded-md bg-[#F8FAFC] dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-3">
             <div className="flex flex-wrap items-center gap-2">
               {STAGE_STEPS.map((s, i) => (
-                <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-white dark:bg-navy-800 shadow-sm ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-60 hover:opacity-100 hover:bg-white dark:hover:bg-navy-900'}`}>
+                <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-surface dark:bg-navy-800 shadow-sm ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-60 hover:opacity-100 hover:bg-surface dark:hover:bg-navy-900'}`}>
                   <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i <= stageIndex ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-200 dark:bg-navy-700 text-slate-500 dark:text-slate-400'}`}>{i + 1}</span>
                   <span className={`text-xs font-bold tracking-tight ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
                 </button>
               ))}
             </div>
           </div>
-          <button type="button" onClick={() => scrollToSection(openTasks > 0 ? 'finance' : 'followups')} className="rounded-md border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 px-4 py-3 text-left transition-all hover:bg-white dark:hover:bg-navy-900">
+          <button type="button" onClick={() => scrollToSection(openTasks > 0 ? 'finance' : 'followups')} className="rounded-md border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 px-4 py-3 text-left transition-all hover:bg-surface dark:hover:bg-navy-900">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">当前风险 / 下一步</span>
               <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${toneClasses(riskTone)}`}>{riskTone === 'success' ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}</span>
@@ -225,7 +225,7 @@ export function ItemsSection({
   return (
     <WorkSection ref={sectionRef} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed} onToggle={onToggle} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!text-xs !px-3"><Plus size={12} className="mr-1" /> 编辑清单</LightActionButton> : null}>
       {items.length ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
           <table className="min-w-full text-left text-xs font-medium">
             <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
               <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">总价 (USD)</th></tr>

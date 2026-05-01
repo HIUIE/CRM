@@ -21,19 +21,19 @@ export function Pagination({
   if (totalItems === 0) return null;
 
   return (
-    <div className="flex items-center justify-between border-t border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 sm:px-6">
+    <div className="flex items-center justify-between border-t border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 sm:px-6">
       <div className="flex flex-1 justify-between sm:hidden">
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="relative inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700 disabled:opacity-50"
+          className="relative inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700 disabled:opacity-50"
         >
           上一页
         </button>
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700 disabled:opacity-50"
+          className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700 disabled:opacity-50"
         >
           下一页
         </button>
@@ -66,7 +66,7 @@ export function Pagination({
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
             
-            <div className="relative inline-flex items-center px-4 py-2 text-xs font-bold text-primary-navy dark:text-white ring-1 ring-inset ring-slate-200 dark:ring-navy-700 bg-white dark:bg-navy-900">
+            <div className="relative inline-flex items-center px-4 py-2 text-xs font-bold text-primary-navy dark:text-white ring-1 ring-inset ring-slate-200 dark:ring-navy-700 bg-surface dark:bg-navy-900">
               {currentPage} / {totalPages || 1}
             </div>
 
