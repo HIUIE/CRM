@@ -18,6 +18,7 @@ SETUP.md
 check_layout.txt
 CHANGELOG.md
 AI_CONTEXT.md
+CONTEXT.md
 test_db.ts
 test_ls.ts
 version.json
