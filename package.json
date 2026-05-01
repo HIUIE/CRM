@@ -100,6 +100,7 @@
     },
     "files": [
       "dist/**/*",
+      "server.ts",
       "server/**/*",
       "electron/**/*",
       "migrations/**/*",
