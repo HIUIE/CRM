@@ -2,11 +2,6 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const http = require('http');
 
-// ── Register tsx ESM loader so we can import() TypeScript files ──
-const { register } = require('node:module');
-const { pathToFileURL } = require('url');
-register('tsx/esm', pathToFileURL(__filename));
-
 // ── Config ────────────────────────────────────────────────────────
 const isDev = !app.isPackaged;
 const PORT = process.env.PORT || 3000;

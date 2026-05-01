@@ -23,7 +23,7 @@
     "migrate:up": "node-pg-migrate up",
     "migrate:create": "node-pg-migrate create",
     "postinstall": "electron-builder install-app-deps",
-    "electron:dev": "npm run build && DB_DRIVER=sqlite NODE_ENV=development electron . --dev",
+    "electron:dev": "npm run build && NODE_OPTIONS='--import tsx/esm' DB_DRIVER=sqlite electron . --dev",
     "electron:build": "npm run build && electron-builder --mac"
   },
   "dependencies": {
@@ -113,7 +113,12 @@
       ],
       "category": "public.app-category.business",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "icon": "public/icon.icns"
+      "icon": "public/icon.icns",
+      "extendInfo": {
+        "LSEnvironment": {
+          "NODE_OPTIONS": "--import tsx/esm"
+        }
+      }
     },
     "dmg": {
       "title": "SmartTrade CRM"
