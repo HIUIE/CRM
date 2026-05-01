@@ -375,19 +375,19 @@ export default function FinanceView() {
                         }
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                       <td className="px-4 py-4 text-left">
-                         <div className="font-bold text-primary-navy dark:text-white data-field">{formatDateOnly(r.created_at)}</div>
-                         <div className="text-xs font-bold text-slate-400 transition-colors hover:text-primary-navy dark:text-slate-500">{r.order_display_id || 'MISC'}</div>
-                         <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{r.createdByName ? `创建人：${r.createdByName}` : '—'}</div>
+                         <div className="font-bold text-primary-navy dark:text-white data-field group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors">{formatDateOnly(r.created_at)}</div>
+                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors">{r.order_display_id || 'MISC'}</div>
+                         <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{r.createdByName ? `创建人：${r.createdByName}` : '—'}</div>
                       </td>
                       <td className="px-4 py-4 text-center">
                          <div className="flex items-center justify-center gap-2 mb-1"><Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip></div>
                          <div className="text-xs font-bold text-slate-500 dark:text-slate-400">{getPaymentCategoryLabel(r.recordCategory || r.payment_category)}</div>
                       </td>
-                      <td className={`px-4 py-4 text-right font-bold data-field text-sm ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
+                      <td className={`px-4 py-4 text-right font-bold data-field text-sm transition-colors ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'} group-hover:text-primary-navy dark:group-hover:text-tertiary-sage`}>
                          {r.type === 'receipt' ? '+' : '-'}{formatTotal(Number(r.amount), r.currency || 'USD')}
                       </td>
                       <td className="px-4 py-4 text-left">
-                         <div className="font-bold text-primary-navy dark:text-white tracking-tight truncate max-w-[190px]" title={getCounterparty(r)}>{getCounterparty(r)}</div>
+                         <div className="font-bold text-primary-navy dark:text-white tracking-tight truncate max-w-[190px] group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors" title={getCounterparty(r)}>{getCounterparty(r)}</div>
                          <div className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[190px]">{r.remark || '无备注'}</div>
                       </td>
                       <td className="px-4 py-4 text-center">
