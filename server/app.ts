@@ -16,7 +16,12 @@ const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
 
 let brandCache: { siteName: string; siteLogo: string; siteFavicon: string } | null = null;
 let brandCacheTime = 0;
-const BRAND_CACHE_TTL = 5000; // 5 seconds
+const BRAND_CACHE_TTL = 3600000; // 1 hour
+
+export function invalidateBrandCache() {
+  brandCache = null;
+  brandCacheTime = 0;
+}
 
 async function getBrandSettings() {
   const now = Date.now();
@@ -117,7 +122,17 @@ export async function createApp() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(PROJECT_ROOT, 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        // Vite puts hashed assets in the /assets/ folder, they are immutable
+        if (filePath.includes('/assets/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          // HTML and other root files should validate
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      }
+    }));
     app.use(async (_req, res) => {
       try {
         const htmlPath = path.join(distPath, 'index.html');

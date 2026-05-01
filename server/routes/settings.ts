@@ -12,6 +12,7 @@ import { buildLegacyExportZip, getExportFileName, streamCustomerArchiveZip } fro
 import { buildExcelWorkbook } from '../services/excel-export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
 import { resolveAiProvider, resolveAiProviderApiKey, runGeminiModel, runOpenAiCompatibleModel } from '../services/ai.js';
+import { invalidateBrandCache } from '../app.js';
 
 const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
 const DEFAULT_SYSTEM_UPDATE_STATUS_PATH = path.join(PROJECT_ROOT, 'data', 'system-update-status.json');
@@ -324,6 +325,7 @@ export function createSettingsRouter() {
       await setSettingValue('site_slogan', siteSlogan);
       await setSettingValue('site_logo', siteLogo);
       await setSettingValue('site_favicon', siteFavicon);
+      invalidateBrandCache();
       res.json({ success: true, siteName, siteSlogan });
     } catch (error) {
       return handleRouteError(res, error, '保存站点设置失败');
