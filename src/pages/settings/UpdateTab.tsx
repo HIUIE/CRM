@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, CheckCircle2, Loader2, ExternalLink, Clock } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
+import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 
 export default function UpdateTab() {
   const [loading, setLoading] = useState(true);
@@ -11,6 +12,8 @@ export default function UpdateTab() {
   const [updateLog, setUpdateLog] = useState<string[]>([]);
   const [updateStatus, setUpdateStatus] = useState<any>(null);
   const [updateHistory, setUpdateHistory] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -35,24 +38,26 @@ export default function UpdateTab() {
 
   const checkForUpdates = async () => {
     setCheckingUpdate(true);
+    setError('');
     try {
       const res = await apiFetch<any>('/api/settings/system/check-update', { method: 'POST' });
       setRemoteVersion(res);
     } catch (e) {
-      alert(getErrorMessage(e, '检查更新失败'));
+      setError(getErrorMessage(e, '检查更新失败'));
     } finally {
       setCheckingUpdate(false);
     }
   };
 
   const doUpdate = async () => {
-    if (!confirm('此操作将中断当前服务约 1-2 分钟，在线用户可能会受到影响。确定要执行系统更新吗？')) return;
+    setShowUpdateConfirm(false);
     setUpdating(true);
+    setError('');
     setUpdateLog(['正在初始化更新环境...']);
     try {
       await apiFetch('/api/settings/system/update', { method: 'POST' });
     } catch (e) {
-      alert(getErrorMessage(e, '触发更新失败'));
+      setError(getErrorMessage(e, '触发更新失败'));
       setUpdating(false);
     }
   };
@@ -68,6 +73,8 @@ export default function UpdateTab() {
         </h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">查看当前版本并检查更新。</p>
       </div>
+
+      {error && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400">{error}</div>}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
@@ -129,7 +136,7 @@ export default function UpdateTab() {
 
           {remoteVersion && remoteVersion.version !== localVersion?.version && (
             <div className="mt-5 pt-5 border-t border-slate-200 dark:border-navy-800">
-              <button onClick={doUpdate} disabled={updating} className="btn-primary w-full justify-center shadow-md disabled:opacity-60">
+              <button onClick={() => setShowUpdateConfirm(true)} disabled={updating} className="btn-primary w-full justify-center shadow-md disabled:opacity-60">
                 {updating ? <Loader2 size={16} className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />}
                 {updating ? '正在更新...' : '一键更新系统'}
               </button>
@@ -155,6 +162,21 @@ export default function UpdateTab() {
           </p>
         </div>
       )}
+
+      <ConfirmDeleteModal
+        isOpen={showUpdateConfirm}
+        onClose={() => setShowUpdateConfirm(false)}
+        onConfirm={() => void doUpdate()}
+        title="确认执行系统更新"
+        warning="此操作将中断当前服务约 1-2 分钟，在线用户可能会受到影响。确认后将开始执行更新流程。"
+        isDeleting={updating}
+        showCopy={false}
+        variant="warning"
+        requireTextConfirm={false}
+        cancelLabel="暂不更新"
+        confirmLabel="开始更新"
+        loadingLabel="正在更新..."
+      />
 
       {updateHistory.length > 0 && (
         <div className="mt-6 rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">

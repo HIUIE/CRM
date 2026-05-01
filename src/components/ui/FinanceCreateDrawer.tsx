@@ -41,16 +41,20 @@ const EMPTY_FORM: FinanceFormState = {
 
 export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId, initialOrderDisplayId, initialCustomerId, initialCustomerName }: FinanceCreateDrawerProps) {
   const [formData, setFormData] = useState<FinanceFormState>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<FinanceFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const isDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({
+      const nextForm = {
         ...EMPTY_FORM,
         orderId: initialOrderId ? String(initialOrderId) : '',
         target: initialCustomerName || '',
-      });
+      };
+      setFormData(nextForm);
+      setInitialForm(nextForm);
     }
   }, [isOpen, initialOrderId, initialCustomerName]);
 
@@ -80,14 +84,16 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
       isOpen={isOpen}
       onClose={onClose}
       title="登记收支流水"
-      footer={
+      isDirty={isDirty}
+      isBusy={saving}
+      footer={({ requestClose, isBusy }) => (
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all">取消</button>
+          <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all disabled:opacity-50">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '正在同步...' : '保存流水记录'}
           </button>
         </div>
-      }
+      )}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {formError && <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600">{formError}</div>}

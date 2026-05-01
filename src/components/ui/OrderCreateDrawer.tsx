@@ -4,7 +4,6 @@ import { Drawer } from './Drawer';
 import { Combobox } from './Combobox';
 import { Hash } from 'lucide-react';
 import Field from './Field';
-import ConfirmDeleteModal from './ConfirmDeleteModal';
 import type { CustomerListItem } from '../../types/crm';
 
 interface OrderCreateDrawerProps {
@@ -36,7 +35,6 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
   const [initialForm, setInitialForm] = useState<OrderFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
   const resetAndClose = () => {
@@ -44,11 +42,8 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
   };
 
   const requestClose = () => {
-    if (!isFormDirty) {
-      resetAndClose();
-      return;
-    }
-    setShowDiscardConfirm(true);
+    if (saving) return;
+    onClose();
   };
 
   useEffect(() => {
@@ -108,14 +103,15 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
       onClose={requestClose}
       title="创建新订单"
       isDirty={isFormDirty}
-      footer={
+      isBusy={saving}
+      footer={({ requestClose: reqClose, isBusy }) => (
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={requestClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all">取消</button>
+          <button type="button" onClick={reqClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all disabled:opacity-50">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '正在同步...' : '确认并进入详情'}
           </button>
         </div>
-      }
+      )}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {formError && <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600">{formError}</div>}
@@ -180,17 +176,6 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
         </div>
       </form>
     </Drawer>
-    <ConfirmDeleteModal
-      isOpen={showDiscardConfirm}
-      onClose={() => setShowDiscardConfirm(false)}
-      onConfirm={() => { setShowDiscardConfirm(false); resetAndClose(); }}
-      title="放弃未保存修改"
-      warning="当前订单表单还有未保存内容，确认放弃这些修改并关闭抽屉吗？"
-      entityLabel="确认文本"
-      entityId="放弃修改"
-      isDeleting={false}
-      showCopy={false}
-    />
     </>
   );
 }

@@ -64,7 +64,6 @@ export default function OrdersView() {
   const [toast, setToast] = useState('');
   const [orderToDelete, setOrderToDelete] = useState<OrderSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const q = searchParams.get('q') || '';
   const status = searchParams.get('status') || '';
@@ -155,11 +154,7 @@ export default function OrdersView() {
   };
 
   const requestCloseForm = () => {
-    if (!isFormDirty) {
-      resetFormState();
-      return;
-    }
-    setShowDiscardConfirm(true);
+    resetFormState();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -363,18 +358,6 @@ export default function OrdersView() {
           <button type="submit" className="hidden">Submit</button>
         </form>
       </Drawer>
-
-      <ConfirmDeleteModal
-        isOpen={showDiscardConfirm}
-        onClose={() => setShowDiscardConfirm(false)}
-        onConfirm={() => { setShowDiscardConfirm(false); resetFormState(); }}
-        title="放弃未保存修改"
-        warning="当前订单表单还有未保存内容，确认放弃这些修改并关闭抽屉吗？"
-        entityLabel="确认文本"
-        entityId="放弃修改"
-        isDeleting={false}
-        showCopy={false}
-      />
 
       <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}

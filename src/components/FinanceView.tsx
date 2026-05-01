@@ -83,7 +83,6 @@ export default function FinanceView() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [recordToDelete, setRecordToDelete] = useState<FinanceListRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
@@ -200,10 +199,7 @@ export default function FinanceView() {
   };
 
   const closeForm = () => {
-    if (isFormDirty) {
-      setShowDiscardConfirm(true);
-      return;
-    }
+    if (saving || isUploading) return;
     resetAndCloseForm();
   };
 
@@ -417,6 +413,7 @@ export default function FinanceView() {
         onClose={closeForm}
         title={editingRecord ? '编辑财务流水' : '新增财务流水'}
         isDirty={isFormDirty}
+        isBusy={saving || isUploading}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" onClick={closeForm} disabled={saving || isUploading} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
@@ -508,18 +505,6 @@ export default function FinanceView() {
           <button type="submit" className="hidden">Submit</button>
         </form>
       </Drawer>
-
-      <ConfirmDeleteModal
-        isOpen={showDiscardConfirm}
-        onClose={() => setShowDiscardConfirm(false)}
-        onConfirm={() => { setShowDiscardConfirm(false); resetAndCloseForm(); }}
-        title="放弃未保存修改"
-        warning="当前财务流水表单还有未保存内容，确认放弃这些修改并关闭抽屉吗？"
-        entityLabel="确认文本"
-        entityId="放弃修改"
-        isDeleting={false}
-        showCopy={false}
-      />
 
       <ConfirmDeleteModal
         isOpen={Boolean(recordToDelete)}

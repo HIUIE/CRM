@@ -144,12 +144,28 @@ export function createCustomersRouter() {
           LIMIT 20
         `, [actualId, actualId, actualId, actualId]),
         dbAll(`
-          SELECT t.*, u.name as assignee_name
+          SELECT
+            t.*,
+            u.name as assignee_name,
+            'CUSTOMER' as source_type,
+            NULL as source_order_id,
+            NULL as source_order_display_id
           FROM tasks t
           JOIN users u ON t.assignee_id = u.id
           WHERE t.entity_type = 'CUSTOMER' AND t.entity_id = ?
-          ORDER BY t.due_date ASC
-        `, [actualId]),
+          UNION ALL
+          SELECT
+            t.*,
+            u.name as assignee_name,
+            'ORDER' as source_type,
+            o.id as source_order_id,
+            o.display_id as source_order_display_id
+          FROM tasks t
+          JOIN users u ON t.assignee_id = u.id
+          JOIN orders o ON t.entity_type = 'ORDER' AND t.entity_id = o.display_id
+          WHERE o.customer_id = ? AND o.deleted_at IS NULL
+          ORDER BY due_date ASC, created_at DESC
+        `, [actualId, actualId]),
         dbAll(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId])
       ]);
 

@@ -27,12 +27,15 @@ const EMPTY_FORM: ContactForm = {
 
 export function ContactCreateDrawer({ isOpen, onClose, onSuccess, customerId }: ContactCreateDrawerProps) {
   const [form, setForm] = useState<ContactForm>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<ContactForm>(EMPTY_FORM);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   useEffect(() => {
     if (isOpen) {
       setForm(EMPTY_FORM);
+      setInitialForm(EMPTY_FORM);
       setError('');
     }
   }, [isOpen]);
@@ -63,14 +66,16 @@ export function ContactCreateDrawer({ isOpen, onClose, onSuccess, customerId }: 
       isOpen={isOpen}
       onClose={onClose}
       title="新增关键联系人"
-      footer={
+      isDirty={isDirty}
+      isBusy={saving}
+      footer={({ requestClose, isBusy }) => (
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800">取消</button>
+          <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800 disabled:opacity-50">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '同步中...' : '确认添加'}
           </button>
         </div>
-      }
+      )}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg border border-red-100 text-xs font-bold">{error}</div>}

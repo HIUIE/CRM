@@ -50,6 +50,9 @@ interface CustomerTask {
   due_date: string;
   priority: string;
   status: string;
+  source_type?: 'CUSTOMER' | 'ORDER';
+  source_order_id?: number | null;
+  source_order_display_id?: string | null;
 }
 
 interface CustomerDetailData {
@@ -467,17 +470,26 @@ export default function CustomerDetailPage() {
                     </div>
                     <div className="space-y-3">
                       {data.tasks && data.tasks.length > 0 ? data.tasks.map(t => (
-                        <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 transition-all group">
-                           <div className="flex items-center gap-4">
-                              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${t.status === 'done' ? 'bg-emerald-50 text-emerald-500' : 'bg-white border border-slate-200 text-slate-400'}`}>
+                        <div key={t.id} className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-white dark:hover:bg-navy-800 transition-all group">
+                           <div className="flex min-w-0 items-center gap-4">
+                              <div className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center ${t.status === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' : 'bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
                                  {t.status === 'done' ? <Check size={14} /> : <Clock size={14} />}
                               </div>
-                              <div>
-                                 <div className={`text-sm font-bold ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-primary-navy dark:text-white'}`}>{t.title}</div>
-                                 <div className="text-xs font-bold text-slate-400 tracking-tight mt-0.5">负责人: {t.assignee_name} · 截止: {t.due_date}</div>
+                              <div className="min-w-0">
+                                 <div className="mb-1 flex flex-wrap items-center gap-2">
+                                   <div className={`truncate text-sm font-bold ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-primary-navy dark:text-white'}`}>{t.title}</div>
+                                   {t.source_type === 'ORDER' && t.source_order_display_id ? (
+                                     <button type="button" onClick={() => navigate(`/orders/${encodeURIComponent(t.source_order_display_id!)}?section=tasks`)} className="rounded-full border border-sky-100 dark:border-sky-900/40 bg-sky-50 dark:bg-sky-900/20 px-2 py-0.5 text-[11px] font-bold text-sky-700 dark:text-sky-300 hover:underline">
+                                       订单：{t.source_order_display_id}
+                                     </button>
+                                   ) : (
+                                     <span className="rounded-full border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">客户任务</span>
+                                   )}
+                                 </div>
+                                 <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mt-0.5">负责人: {t.assignee_name || '未指派'} · 截止: {t.due_date ? formatDateOnly(t.due_date) : '未设置'}</div>
                               </div>
                            </div>
-                           <Chip tone={t.priority === 'P0' ? 'error' : t.priority === 'P1' ? 'warning' : 'info'}>{t.priority}</Chip>
+                           <div className="shrink-0"><Chip tone={t.priority === 'P0' ? 'error' : t.priority === 'P1' ? 'warning' : 'info'}>{t.priority}</Chip></div>
                         </div>
                       )) : (
                         <EmptyStateBoard title="暂无关联任务" description="您可以为该客户指派特定的跟进任务或待办事项。" icon={<CheckCircle2 size={40} className="text-slate-100" />} />

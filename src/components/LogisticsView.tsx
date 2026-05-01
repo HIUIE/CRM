@@ -209,8 +209,11 @@ export default function LogisticsView() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <TimeRangeFilter value={timeRange} onChange={(key) => updateParam('timeRange', key)} />
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+            按发货日期筛选；未填写发货日期时按物流创建时间归入区间。
+          </span>
         </div>
       </section>
 
@@ -300,12 +303,13 @@ export default function LogisticsView() {
         onClose={closeForm}
         title="创建物流单"
         isDirty={isFormDirty}
-        footer={
+        isBusy={isUploading}
+        footer={({ requestClose, isBusy }) => (
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
-            <button onClick={handleSubmit} type="submit" className="btn-primary shadow-md">保存物流</button>
+            <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
+            <button onClick={handleSubmit} type="submit" disabled={isBusy} className="btn-primary shadow-md">保存物流</button>
           </div>
-        }
+        )}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {formError && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div>}

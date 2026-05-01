@@ -28,7 +28,7 @@ export function createUsersRouter() {
     }
   });
 
-  router.post('/', requireAdmin, async (req, res) => {
+  router.post('/', requireAuth, requireAdmin, async (req: AuthedRequest, res) => {
     const username = readString(req.body?.username).toLowerCase();
     const password = readString(req.body?.password);
     const name = readString(req.body?.name);
@@ -64,7 +64,7 @@ export function createUsersRouter() {
     }
   });
 
-  router.patch('/:id', requireAdmin, async (req, res) => {
+  router.patch('/:id', requireAuth, requireAdmin, async (req: AuthedRequest, res) => {
     const userId = Number(req.params.id);
     const name = readString(req.body?.name);
     const role = readString(req.body?.role);
@@ -81,25 +81,51 @@ export function createUsersRouter() {
     }
 
     try {
-      const existing = await dbGet<{ id: number; username: string }>(`SELECT id, username FROM users WHERE id = ?`, [userId]);
+      const existing = await dbGet<{ id: number; username: string; role: string; active: number }>(
+        `SELECT id, username, role, active FROM users WHERE id = ?`,
+        [userId],
+      );
       if (!existing) {
         return fail(res, 404, '用户不存在', 'USER_NOT_FOUND');
       }
+      const isSelf = req.user?.id === userId;
       if (existing.username === 'root' && active === 0) {
         return fail(res, 409, '默认管理员账号不能停用', 'ROOT_PROTECTED');
+      }
+      if (isSelf && active === 0) {
+        return fail(res, 409, '不能停用当前登录账号，请使用其他管理员账号操作', 'SELF_DEACTIVATE_BLOCKED');
+      }
+      if (isSelf && existing.role === 'admin' && role !== 'admin') {
+        return fail(res, 409, '不能直接降低当前登录管理员账号权限，请使用其他管理员账号操作', 'SELF_DEMOTE_BLOCKED');
+      }
+      if (existing.role === 'admin' && (role !== 'admin' || active === 0)) {
+        const adminCount = await dbGet<{ count: number }>(
+          `SELECT COUNT(*) AS count FROM users WHERE role = 'admin' AND active != 0`,
+        );
+        if ((adminCount?.count || 0) <= 1) {
+          return fail(res, 409, '系统至少需要保留一个启用中的管理员账号', 'LAST_ADMIN_BLOCKED');
+        }
       }
 
       await dbRun(
         `UPDATE users SET name = ?, role = ?, active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         [name, role, active, userId],
       );
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'UPDATE',
+        entityType: 'USER',
+        entityId: userId,
+        newValue: { action: 'update_user', targetUser: existing.username, role, active: active !== 0, self: isSelf },
+      });
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新用户失败');
     }
   });
 
-  router.post('/:id/reset-password', requireAdmin, async (req: AuthedRequest, res) => {
+  router.post('/:id/reset-password', requireAuth, requireAdmin, async (req: AuthedRequest, res) => {
     const userId = Number(req.params.id);
     const password = readString(req.body?.password);
     const confirmPassword = readString(req.body?.confirmPassword);
@@ -116,7 +142,7 @@ export function createUsersRouter() {
     }
     const admin = await dbGet<{ password: string }>(`SELECT password FROM users WHERE id = ?`, [req.user?.id]);
     if (!admin || !(await bcrypt.compare(confirmPassword, admin.password))) {
-      return fail(res, 403, '当前密码验证失败，无权限执行此操作', 'ADMIN_CONFIRM_FAILED');
+      return fail(res, 403, '当前密码验证失败，请检查输入的密码是否正确', 'ADMIN_CONFIRM_FAILED');
     }
 
     try {
@@ -132,7 +158,7 @@ export function createUsersRouter() {
         action: 'UPDATE',
         entityType: 'USER',
         entityId: userId,
-        newValue: { action: 'reset_password', targetUser: existing.name },
+        newValue: { action: 'reset_password', targetUser: existing.name, selfReset: req.user?.id === userId },
       });
       res.json({ success: true });
     } catch (error) {

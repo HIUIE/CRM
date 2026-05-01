@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
-import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
@@ -73,12 +73,13 @@ router.get('/', async (req, res) => {
     whereSql += ` AND l.status = ?`;
     params.push(status);
   }
+  const filterDateExpr = `COALESCE(NULLIF(l.shipping_date, ''), date(l.created_at)::text)`;
   if (startDate) {
-    whereSql += ` AND l.created_at >= ?`;
+    whereSql += ` AND ${filterDateExpr} >= ?`;
     params.push(startDate);
   }
   if (endDate) {
-    whereSql += ` AND l.created_at <= ?`;
+    whereSql += ` AND ${filterDateExpr} <= ?`;
     params.push(endDate);
   }
 
@@ -95,11 +96,10 @@ router.get('/', async (req, res) => {
         LEFT JOIN customers c ON o.customer_id = c.id
         LEFT JOIN users u ON u.id = l.created_by
         ${whereSql}
-        ORDER BY 
-          CASE WHEN l.segment_type = 'domestic' THEN 0 ELSE 1 END ASC,
-          CASE WHEN l.shipping_date IS NULL OR l.shipping_date = '' THEN 1 ELSE 0 END ASC,
-          l.shipping_date DESC,
-          datetime(l.created_at) DESC
+        ORDER BY
+          COALESCE(NULLIF(l.shipping_date, ''), date(l.created_at)::text) DESC,
+          datetime(l.created_at) DESC,
+          CASE WHEN l.segment_type = 'domestic' THEN 0 ELSE 1 END ASC
         ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
       `, params);
       const attachments = await getAttachmentsByEntity('logistics', records.map((record) => Number(record.id)));
@@ -314,7 +314,7 @@ router.get('/', async (req, res) => {
     }
   });
 
-  router.delete('/:id', requireAdmin, async (req, res) => {
+  router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
     const recordId = Number(req.params.id);
     if (!Number.isInteger(recordId) || recordId <= 0) {
       return fail(res, 400, '物流记录编号无效', 'INVALID_LOGISTICS_ID');

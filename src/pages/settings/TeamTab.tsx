@@ -65,19 +65,24 @@ export default function TeamTab() {
 
   const submitResetPassword = async () => {
     if (!resetPassword) return setError('请输入新密码');
-    if (!confirmPassword) return setError('请输入当前管理员密码');
+    if (!confirmPassword) return setError('请输入当前登录账号密码');
     setError('');
     try {
       await apiFetch(`/api/users/${resettingUserId}/reset-password`, { method: 'POST', body: JSON.stringify({ password: resetPassword, confirmPassword }) });
       setResettingUserId(null); setResetPassword(''); setConfirmPassword('');
-    } catch (e) { setError(getErrorMessage(e, '重置密码失败')); }
+      await loadUsers();
+    } catch (e) { setError(getErrorMessage(e, '密码更新失败')); }
   };
+
+  const resettingUser = users.find((item) => item.id === resettingUserId) || null;
+  const isResettingSelf = resettingUserId === user?.id;
+  const editingSelf = editingUser?.id === user?.id;
 
   if (loading) return <div className="p-8 text-sm text-slate-500 animate-pulse">正在读取团队配置...</div>;
 
   return (
     <div className="space-y-8">
-      {error && <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
 
       <div className="mb-8 flex items-center justify-between gap-3">
         <div>
@@ -129,7 +134,7 @@ export default function TeamTab() {
                   <td className="px-4 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => startEditUser(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-navy-700 dark:text-slate-300 dark:hover:bg-navy-800">编辑</button>
-                      <button onClick={() => { setResettingUserId(managedUser.id); setResetPassword(''); setConfirmPassword(''); }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-navy-700 dark:text-slate-300 dark:hover:bg-navy-800">重置</button>
+                      <button onClick={() => { setResettingUserId(managedUser.id); setResetPassword(''); setConfirmPassword(''); }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-navy-700 dark:text-slate-300 dark:hover:bg-navy-800">{managedUser.id === user?.id ? '改密' : '重置'}</button>
                       {managedUser.username !== 'root' && (
                         <button onClick={() => toggleUserStatus(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-navy-700 dark:text-slate-300 dark:hover:bg-navy-800">
                           {managedUser.active === false ? '启用' : '停用'}
@@ -157,10 +162,11 @@ export default function TeamTab() {
             )}
             <Field label="成员真实姓名"><input value={userForm.name} onChange={(e) => setUserForm(c => ({ ...c, name: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
             <Field label="角色权限">
-              <select value={userForm.role} onChange={(e) => setUserForm(c => ({ ...c, role: e.target.value as UserRole }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage">
+              <select disabled={editingSelf} value={userForm.role} onChange={(e) => setUserForm(c => ({ ...c, role: e.target.value as UserRole }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage disabled:cursor-not-allowed disabled:opacity-60">
                 <option value="staff">业务员 (普通权限)</option>
                 <option value="admin">管理员 (最高权限)</option>
               </select>
+              {editingSelf && <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">当前登录管理员不能在此处降低自己的权限，避免误锁定账号。</p>}
             </Field>
             {!editingUser && (
               <Field label="初始访问密码"><input type="password" value={userForm.password} onChange={(e) => setUserForm(c => ({ ...c, password: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
@@ -174,11 +180,12 @@ export default function TeamTab() {
           {resettingUserId && (
             <div className="mt-8 border-t border-slate-200 pt-6 relative animate-in fade-in">
               <button onClick={() => { setResettingUserId(null); setResetPassword(''); setConfirmPassword(''); }} className="absolute top-6 right-0 text-slate-400 hover:text-primary-navy"><X size={16} /></button>
-              <div className="mb-4 text-xs font-bold text-primary-navy tracking-tight">强制重置密码</div>
+              <div className="mb-2 text-xs font-bold text-primary-navy dark:text-white tracking-tight">{isResettingSelf ? '修改我的密码' : `重置成员密码${resettingUser ? `：${resettingUser.name || resettingUser.username}` : ''}`}</div>
+              <p className="mb-4 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">{isResettingSelf ? '请输入当前登录账号密码和新密码。此流程用于修改自己的账号密码，不会改变角色或启用状态。' : '为安全起见，管理员重置成员密码时仍需输入当前登录账号密码进行确认。'}</p>
               <div className="space-y-3">
-                <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码" className="w-full flex-1 rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" />
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="当前管理员密码" className="w-full flex-1 rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" />
-                <button onClick={submitResetPassword} className="w-full rounded-lg bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-black">提交</button>
+                <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码（至少 6 位）" className="w-full flex-1 rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" />
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="当前登录账号密码" className="w-full flex-1 rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" />
+                <button onClick={submitResetPassword} className="w-full rounded-lg bg-slate-900 dark:bg-tertiary-sage px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-black dark:hover:bg-emerald-700">{isResettingSelf ? '保存我的新密码' : '提交重置'}</button>
               </div>
             </div>
           )}

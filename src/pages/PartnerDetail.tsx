@@ -119,6 +119,8 @@ export default function PartnerDetailPage() {
   const loading = isLoading;
   const error = queryError ? getErrorMessage(queryError, '读取伙伴画像失败') : '';
   const [form, setForm] = useState<PartnerForm>({ name: '', partnerType: 'factory', country: '', contact: '', contactPerson: '', address: '', rating: 3, paymentTerms: '', remark: '' });
+  const [initialForm, setInitialForm] = useState<PartnerForm>({ name: '', partnerType: 'factory', country: '', contact: '', contactPerson: '', address: '', rating: 3, paymentTerms: '', remark: '' });
+  const isFormDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-sm text-slate-500 animate-pulse tracking-tight font-bold">正在加载伙伴数据...</div>;
   if (error || !data) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error || '伙伴不存在'}</div>;
@@ -127,7 +129,7 @@ export default function PartnerDetailPage() {
   const overviewItems = getOverviewItems(partner.partner_type, summary);
 
   const openEdit = () => {
-    setForm({
+    const nextForm = {
       name: partner.name || '',
       partnerType: (partner.partner_type as PartnerType) || 'factory',
       country: partner.country || '',
@@ -137,7 +139,9 @@ export default function PartnerDetailPage() {
       rating: partner.rating || 3,
       paymentTerms: partner.payment_terms || '',
       remark: partner.remark || '',
-    });
+    };
+    setForm(nextForm);
+    setInitialForm(nextForm);
     setFormError('');
     setShowEdit(true);
   };
@@ -413,12 +417,13 @@ export default function PartnerDetailPage() {
 
       <Drawer
         isOpen={showEdit}
-        onClose={() => setShowEdit(false)}
+        onClose={() => { if (!savingPartner) setShowEdit(false); }}
         title={`编辑伙伴档案：${partner.name}`}
-        isDirty={showEdit}
+        isDirty={isFormDirty}
+        isBusy={savingPartner}
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setShowEdit(false)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button type="button" onClick={() => { if (!savingPartner) setShowEdit(false); }} disabled={savingPartner} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all disabled:opacity-50">取消</button>
             <button type="button" disabled={savingPartner} onClick={() => void handleSavePartner()} className="btn-primary shadow-md active:scale-95 disabled:opacity-60">{savingPartner ? '保存中...' : '保存修改'}</button>
           </div>
         }

@@ -89,12 +89,13 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
       onClose={onClose}
       title="指派协同任务"
       isDirty={isDirty}
-      footer={
+      isBusy={isSubmitting}
+      footer={({ requestClose, isBusy }) => (
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800">取消</button>
+          <button type="button" onClick={requestClose} disabled={isBusy} className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800 disabled:opacity-50">取消</button>
           <button onClick={handleSubmit} disabled={isSubmitting} className="btn-primary shadow-md active:scale-95">{isSubmitting ? '指派中...' : '确认指派'}</button>
         </div>
-      }
+      )}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg border border-red-100 text-xs font-bold">{error}</div>}

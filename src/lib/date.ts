@@ -40,7 +40,7 @@ export function getRangeDates(range: StandardTimeRange) {
   }
   
   return {
-    start: start.toISOString(),
-    end: end.toISOString()
+    start: start.format('YYYY-MM-DD'),
+    end: end.format('YYYY-MM-DD')
   };
 }

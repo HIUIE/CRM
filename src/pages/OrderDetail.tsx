@@ -618,7 +618,7 @@ export default function OrderDetailPage() {
           onClose={() => setShowTaskDrawer(false)}
           onSuccess={() => refreshDetail()}
           entityType="ORDER"
-          entityId={String(order?.id)}
+          entityId={order?.display_id}
           entityName={order?.display_id}
         />
       </Suspense>

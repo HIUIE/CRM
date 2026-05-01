@@ -1,19 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import ConfirmDeleteModal from './ConfirmDeleteModal';
+import { ConfirmActionModal } from './ConfirmDeleteModal';
 
 interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  footer?: React.ReactNode;
+  footer?: React.ReactNode | ((helpers: { requestClose: () => void; isBusy: boolean }) => React.ReactNode);
   isDirty?: boolean;
   width?: string;
+  isBusy?: boolean;
 }
 
-export function Drawer({ isOpen, onClose, title, children, footer, isDirty = false, width = 'max-w-[760px]' }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, children, footer, isDirty = false, width = 'max-w-[760px]', isBusy = false }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
@@ -25,9 +26,10 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isDirty]);
+  }, [isOpen, isDirty, isBusy]);
 
   const handleClose = () => {
+    if (isBusy) return;
     if (isDirty) {
       setShowDiscardConfirm(true);
       return;
@@ -67,7 +69,8 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
           <h2 className="text-[15px] font-extrabold tracking-tight text-primary-navy dark:text-white">{title}</h2>
           <button
             onClick={handleClose}
-            className="p-2 -mr-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-colors"
+            disabled={isBusy}
+            className="p-2 -mr-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-colors disabled:cursor-wait disabled:opacity-50"
           >
             <X size={18} />
           </button>
@@ -77,20 +80,18 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
         </div>
         {footer && (
           <div className="shrink-0 px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] border-t border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-[0_-12px_24px_rgba(15,23,42,0.04)]">
-            {footer}
+            {typeof footer === 'function' ? footer({ requestClose: handleClose, isBusy }) : footer}
           </div>
         )}
       </div>
-      <ConfirmDeleteModal
+      <ConfirmActionModal
         isOpen={showDiscardConfirm}
         onClose={() => setShowDiscardConfirm(false)}
         onConfirm={() => { setShowDiscardConfirm(false); onClose(); }}
         title="放弃未保存修改"
-        warning="当前抽屉中还有未保存内容，确认放弃这些修改并关闭吗？"
-        entityLabel="确认文本"
-        entityId="放弃修改"
-        isDeleting={false}
-        showCopy={false}
+        warning="当前表单还有未保存内容，关闭后这些修改不会保留。"
+        cancelLabel="继续编辑"
+        confirmLabel="放弃修改"
       />
     </div>
   );

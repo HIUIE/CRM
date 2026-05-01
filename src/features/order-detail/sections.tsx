@@ -712,11 +712,13 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
         onClose={() => setShowDiscardConfirm(false)}
         onConfirm={() => { setShowDiscardConfirm(false); onClose(); }}
         title="放弃未保存修改"
-        warning="当前利润核算表单还有未保存内容，确认放弃这些修改并关闭抽屉吗？"
-        entityLabel="确认文本"
-        entityId="放弃修改"
+        warning="当前利润核算表单还有未保存内容，关闭后这些修改不会保留。"
         isDeleting={false}
         showCopy={false}
+        variant="warning"
+        requireTextConfirm={false}
+        cancelLabel="继续编辑"
+        confirmLabel="放弃修改"
       />
     </div>
   );
