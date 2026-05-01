@@ -382,7 +382,11 @@ export default function PartnerDetailPage() {
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
                         {financeRecords.map((r) => (
-                          <tr key={r.id} className="group hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
+                          <tr
+                            key={r.id}
+                            onClick={() => { if (r.order_display_id) navigate(`/orders/${r.order_display_id.toLowerCase()}`); }}
+                            className={`group transition-colors ${r.order_display_id ? 'hover:bg-slate-50 dark:hover:bg-navy-800 cursor-pointer' : 'hover:bg-slate-50 dark:hover:bg-navy-800'}`}
+                          >
                             <td className="px-6 py-4">
                               <Chip tone={r.type === 'receipt' ? 'success' : 'error'}>
                                 {r.type === 'receipt' ? '收款' : '付款'}
@@ -395,9 +399,9 @@ export default function PartnerDetailPage() {
                             <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-bold">{r.currency || 'USD'}</td>
                             <td className="px-6 py-4">
                               {r.order_display_id ? (
-                                <Link to={`/orders/${r.order_display_id.toLowerCase()}`} className="text-primary-navy dark:text-tertiary-sage font-bold text-xs hover:underline data-field">
-                                  {r.order_display_id}
-                                </Link>
+                                <span className="font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">
+                                  <Link to={`/orders/${r.order_display_id.toLowerCase()}`} className="group-hover:underline">{r.order_display_id}</Link>
+                                </span>
                               ) : <span className="text-slate-400">—</span>}
                             </td>
                             <td className="px-6 py-4 text-slate-500 dark:text-slate-500 text-xs font-bold">
