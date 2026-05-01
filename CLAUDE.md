@@ -55,4 +55,34 @@ Preserve visual consistency across modules. Section titles, action buttons, fiel
 
 For order detail page improvements, work one module at a time and avoid broad visual rewrites unless requested. Before changing a module, compare it with neighboring modules and reuse existing primitives such as `DocumentBoard`, `WorkSection`, `LightActionButton`, `GridItem`, `Chip`, `StatusFileRow`, `AttachmentEditor`, and shared drawer patterns. Maintain existing edit, upload, preview, delete, permission, routing, and responsive behavior.
 
-After UI or TypeScript changes, run `npm run lint` at minimum. For broader changes, also run the relevant tests or `npm run release:check` when practical.
+## Agent skills
+
+### Issue tracker
+
+GitHub issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical roles mapped to needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+## AI 行为准则 (Andrej Karpathy 启发)
+
+### 1. 编码前思考 (Think Before Coding)
+- **不要假设**：明确说明假设。如果不确定，询问而不是猜测。
+- **呈现权衡**：当存在多种解释或歧义时，呈现它们，不要默默选择。
+- **适时提出异议**：如果存在更简单的方法，说出来。
+- **困惑时停下来**：指出不清楚的地方并要求澄清。
+
+### 2. 简洁优先 (Simplicity First)
+- **最少代码**：用最少的代码解决问题。不要添加要求之外的功能。
+- **避免过度工程**：不要为一次性代码创建抽象，不要添加未要求的“灵活性”。
+- **精简实现**：如果 200 行代码可以写成 50 行，重写它。资深工程师会觉得复杂吗？如果是，简化。
+
+### 3. 精准修改 (Surgical Changes)
+- **只碰必须碰的**：匹配现有风格。不要“改进”相邻的代码、注释或格式。
+- **不重构没坏的东西**：不要删除预先存在的死代码，除非被明确要求。
+- **清理自己的改动**：仅删除因你的改动而变得无用的导入/变量/函数。
+
+### 4. 目标驱动执行 (Goal-Driven Execution)
+- **定义成功标准**：将指令转化为可验证的目标（例如：“先写重现 Bug 的测试，再修复”）。
+- **简短计划**：对于多步骤任务，说明计划：`1. [步骤] -> 验证: [检查]`。
