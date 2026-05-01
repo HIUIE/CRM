@@ -176,10 +176,10 @@ export default function AIAssistantFloating() {
               </div>
               <div>
                 <div className="text-sm font-bold text-primary-navy dark:text-white">AI 助手</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">随时为您服务</div>
+                <div className="text-[10px] font-bold text-slate-400 tracking-tight">随时为您服务</div>
               </div>
             </div>
-            <button onClick={clearHistory} className="text-[10px] font-bold text-slate-400 hover:text-error transition-colors uppercase tracking-widest">清空</button>
+            <button onClick={clearHistory} className="text-[10px] font-bold text-slate-400 hover:text-error transition-colors tracking-tight">清空</button>
           </div>
 
           {/* Quick Actions */}

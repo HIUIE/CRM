@@ -98,7 +98,7 @@ export function CommandPalette() {
 
         <div className="flex-1 max-h-[60vh] overflow-y-auto custom-scrollbar p-2">
            {loading && query ? (
-             <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest animate-pulse">正在穿透海量数据...</div>
+             <div className="py-12 text-center text-slate-400 text-xs font-bold tracking-tight animate-pulse">正在穿透海量数据...</div>
            ) : results.length > 0 ? (
              <div className="space-y-1">
                 {results.map((res, i) => (
@@ -112,19 +112,19 @@ export function CommandPalette() {
                     className="flex items-center justify-between p-4 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-navy-950/50 transition-all border border-transparent hover:border-slate-100 dark:hover:border-navy-800 group"
                   >
                     <div className="flex items-center gap-4">
-                       <div className={`h-10 w-10 rounded-lg flex items-center justify-center border shadow-sm ${res.type === 'order' ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-emerald-50 text-emerald-500 border-emerald-100'}`}>
+                       <div className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-sm ${res.type === 'order' ? 'border-sky-100 bg-sky-50 text-sky-500 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300' : 'border-emerald-100 bg-emerald-50 text-emerald-500 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300'}`}>
                           {res.type === 'order' ? <Package size={20} /> : <Users size={20} />}
                        </div>
                        <div>
-                          <div className="text-[14px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">
+                          <div className="text-[14px] font-extrabold text-primary-navy dark:text-white tracking-tight">
                             {res.type === 'order' ? res.display_id : res.name}
                           </div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                          <div className="text-[11px] font-bold text-slate-400 tracking-tight mt-0.5">
                              {res.type === 'order' ? `客户: ${res.customer_name}` : `地区: ${res.country || '—'}`}
                           </div>
                        </div>
                     </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all text-primary-navy dark:text-tertiary-sage text-[10px] font-bold uppercase tracking-widest">
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all text-primary-navy dark:text-tertiary-sage text-[10px] font-bold tracking-tight">
                        立即穿透 <ArrowRight size={14} />
                     </div>
                   </div>
@@ -133,16 +133,16 @@ export function CommandPalette() {
            ) : query ? (
              <div className="py-20 text-center text-slate-400">
                 <Search size={40} className="mx-auto mb-4 opacity-20" />
-                <div className="text-xs font-bold uppercase tracking-widest">未找到匹配项</div>
+                <div className="text-xs font-bold tracking-tight">未找到匹配项</div>
              </div>
            ) : (
              <div className="py-12 text-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">输入关键字开始搜索</p>
+                <p className="text-[10px] font-bold text-slate-400 tracking-tight">输入关键字开始搜索</p>
              </div>
            )}
         </div>
 
-        <div className="px-5 py-3 border-t border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 flex items-center gap-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">
+        <div className="px-5 py-3 border-t border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 flex items-center gap-6 text-[10px] font-bold text-slate-400 tracking-tight shrink-0">
            <span className="flex items-center gap-1.5"><kbd className="font-sans border rounded px-1 border-slate-300 bg-white">↑↓</kbd> 选择</span>
            <span className="flex items-center gap-1.5"><kbd className="font-sans border rounded px-1 border-slate-300 bg-white">↵</kbd> 打开</span>
            <span><kbd className="font-sans border rounded px-1 border-slate-300 bg-white">ESC</kbd> 关闭</span>

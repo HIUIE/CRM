@@ -5,6 +5,7 @@ import {
   FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles, Eye, EyeOff,
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
+import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 import { apiFetch } from '../../lib/api';
 import {
   WorkSection, DocumentBoard, EmptyStateBoard, FinanceDashboard, ProductionDashboard,
@@ -64,7 +65,7 @@ export function OrderHeaderSection({
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-6">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest leading-none">
+            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight leading-none">
               <Link to="/orders" className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单管理</Link>
               <ChevronRight size={12} className="opacity-30" />
               <span className="text-primary-navy dark:text-tertiary-sage data-field" style={{ viewTransitionName: 'order-id' }}>{order.display_id}</span>
@@ -72,7 +73,7 @@ export function OrderHeaderSection({
             <h1 className="text-2xl font-bold text-primary-navy dark:text-white tracking-tight truncate mb-4 hover:text-blue-600 cursor-pointer transition-colors" onClick={() => navigate(`/customers/${customer.display_id}`)}>
               {asText(customer.name, '未命名客户')}
             </h1>
-            <div className="flex flex-wrap gap-4 text-xs font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest">
+            <div className="flex flex-wrap gap-4 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight">
               <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tertiary-sage" />{asText(customer.country)}</span>
               <span className="flex items-center gap-1.5"><Mail size={12} className="text-info dark:text-blue-400" />{asText(customer.contact)}</span>
             </div>
@@ -103,7 +104,7 @@ export function OrderHeaderSection({
             {STAGE_STEPS.map((s, i) => (
               <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-white dark:bg-navy-800 shadow-md ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-40 hover:opacity-100'}`}>
                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i <= stageIndex ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-200 dark:bg-navy-700 text-slate-500 dark:text-slate-400'}`}>{i + 1}</span>
-                <span className={`text-xs font-bold uppercase tracking-widest ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
+                <span className={`text-xs font-bold tracking-tight ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
               </button>
             ))}
           </div>
@@ -141,14 +142,14 @@ export function ItemsSection({
       {items.length ? (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
           <table className="min-w-full text-left text-xs font-medium">
-            <thead className="bg-slate-50 dark:bg-navy-950 font-bold uppercase tracking-widest border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
+            <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
               <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">总价 (USD)</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-medium tracking-tight">
               {items.map(item => (
                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
-                  <td className="px-5 py-4 font-bold text-primary-navy dark:text-white uppercase">{asText(item.product_name)}</td>
-                  <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 text-xs data-field uppercase font-bold">{asText(item.specification, '通用')}</td>
+                  <td className="px-5 py-4 font-bold text-primary-navy dark:text-white">{asText(item.product_name)}</td>
+                  <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 text-xs data-field font-bold">{asText(item.specification, '通用')}</td>
                   <td className="px-5 py-4 text-center font-bold text-primary-navy dark:text-white data-field">{item.quantity}</td>
                   <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 font-bold">{item.unit || 'pcs'}</td>
                   <td className="px-5 py-4 text-right text-secondary-slate dark:text-slate-400 data-field font-bold">{asNumber(item.unit_price).toLocaleString()}</td>
@@ -158,23 +159,23 @@ export function ItemsSection({
             </tbody>
             <tfoot className="bg-[#F1F5F9] dark:bg-navy-950 border-t border-slate-200 dark:border-navy-800">
               <tr className="text-secondary-slate dark:text-slate-400">
-                <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">商品小计 (Subtotal)</td>
+                <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">商品小计 (Subtotal)</td>
                 <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {itemsTotal.toLocaleString()}</td>
               </tr>
               {freightAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
-                  <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">运费估算 (Freight)</td>
+                  <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">运费估算 (Freight)</td>
                   <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {freightAmount.toLocaleString()}</td>
                 </tr>
               )}
               {miscAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
-                  <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">其他杂费 (Misc)</td>
+                  <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">其他杂费 (Misc)</td>
                   <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {miscAmount.toLocaleString()}</td>
                 </tr>
               )}
               <tr className="text-primary-navy dark:text-white font-extrabold border-t border-slate-200 dark:border-navy-700">
-                <td colSpan={5} className="px-5 py-5 text-right text-xs uppercase tracking-widest">合计总值 (Grand Total)</td>
+                <td colSpan={5} className="px-5 py-5 text-right text-xs tracking-tight">合计总值 (Grand Total)</td>
                 <td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td>
               </tr>
             </tfoot>
@@ -388,12 +389,12 @@ export function ProfitSection({
           <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-100 dark:border-navy-800 pb-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
-              <div className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">收入信息 / Revenue · {pd.receipts.length} 期</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white tracking-tight">收入信息 / Revenue · {pd.receipts.length} 期</div>
             </div>
             <div className="space-y-3">
               {pd.receipts.map((r, i) => (
                 <div key={i} className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/30 p-4 space-y-1.5">
-                  <div className="mb-2 text-xs font-bold text-tertiary-sage uppercase tracking-wider">收款明细 {i + 1} ({r.currency})</div>
+                  <div className="mb-2 text-xs font-bold text-tertiary-sage tracking-tight">收款明细 {i + 1} ({r.currency})</div>
                   <Row label="收款金额" value={fmt(r.amount, r.currency)} />
                   <Row label="手续费" value={fmt(r.bankFees + r.platformFees, r.currency)} />
                   {r.currency === 'USD' && <Row label="结汇汇率" value={revealed ? String(r.exchangeRate) : '***'} />}
@@ -409,7 +410,7 @@ export function ProfitSection({
           <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-100 dark:border-navy-800 pb-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
-              <div className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">成本费用 / Costs</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white tracking-tight">成本费用 / Costs</div>
             </div>
             <div className="space-y-1.5">
               <Row label="工厂采购价" value={fmtCny(pd.factoryCostCny)} />
@@ -453,7 +454,7 @@ export function ProfitSection({
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
     <div className={`flex items-center justify-between gap-4 rounded-md px-3 py-2 ${bold ? 'bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800' : ''}`}>
-      <span className="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</span>
+      <span className="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">{label}</span>
       <span className={`shrink-0 text-sm data-field ${bold ? 'font-black text-primary-navy dark:text-white' : 'font-bold text-slate-900 dark:text-slate-200'}`}>{value}</span>
     </div>
   );
@@ -462,7 +463,7 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 function SummaryBox({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="rounded-lg bg-slate-50/70 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-5 text-center shadow-sm">
-      <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{label}</div>
+      <div className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight mb-2">{label}</div>
       <div className={`text-xl font-black data-field ${color}`}>{value}</div>
     </div>
   );
@@ -472,11 +473,11 @@ function SummaryBox({ label, value, color }: { label: string; value: string; col
 function InputRow({ label, value, onChange, suffix, step }: { label: string; value: number; onChange: (v: string) => void; suffix: string; step?: string }) {
   return (
     <label className="block space-y-1.5 min-w-0">
-      <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</span>
+      <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">{label}</span>
       <div className="flex min-w-0 items-center gap-3">
         <input type="number" step={step || '0.01'} value={value || ''} onChange={e => onChange(e.target.value)}
           className="w-full min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
-        <span className="w-12 shrink-0 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">{suffix}</span>
+        <span className="w-12 shrink-0 text-right text-xs font-bold text-slate-400 tracking-tight">{suffix}</span>
       </div>
     </label>
   );
@@ -485,6 +486,7 @@ function InputRow({ label, value, onChange, suffix, step }: { label: string; val
 function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
   const [form, setForm] = useState(data);
   const [saving, setSaving] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const updN = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: Number(v) || 0 });
   const updS = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: v });
@@ -535,7 +537,10 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
   const isDirty = JSON.stringify(form) !== JSON.stringify(data);
   const handleClose = () => {
     if (saving) return;
-    if (isDirty && !window.confirm('有未保存的利润核算数据，确认放弃？')) return;
+    if (isDirty) {
+      setShowDiscardConfirm(true);
+      return;
+    }
     onClose();
   };
 
@@ -555,7 +560,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
       <div className="relative z-10 flex h-dvh max-h-dvh min-h-0 w-full max-w-[750px] flex-col overflow-hidden border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl animate-in slide-in-from-right duration-500">
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 px-4 py-5 sm:px-8 sm:py-6">
           <div className="min-w-0">
-            <h3 className="text-lg font-black text-primary-navy dark:text-white tracking-tight uppercase">编辑利润核算</h3>
+            <h3 className="text-lg font-black text-primary-navy dark:text-white tracking-tight">编辑利润核算</h3>
             <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2">统一维护收入、退税、成本与实时利润预估</p>
           </div>
           <button type="button" onClick={handleClose} disabled={saving} className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm disabled:opacity-50"><X size={20} /></button>
@@ -566,13 +571,13 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
             <div className="border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 px-5 py-4 flex items-center gap-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
-              <h4 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">收入信息 / Revenue</h4>
+              <h4 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">收入信息 / Revenue</h4>
             </div>
             <div className="space-y-5 p-5">
               {receipts.map((r, i) => (
                 <div key={i} className="p-4 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/30 space-y-4 relative">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-tertiary-sage uppercase tracking-wider">收款明细 {i + 1}</span>
+                    <span className="text-xs font-bold text-tertiary-sage tracking-tight">收款明细 {i + 1}</span>
                     {receipts.length > 1 && (
                       <button type="button" onClick={() => delReceipt(i)} className="text-slate-300 hover:text-error transition-colors"><X size={14} /></button>
                     )}
@@ -581,7 +586,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                   {/* Currency toggle */}
                   <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
                     <label className="block space-y-1">
-                      <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">收款金额</span>
+                      <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">收款金额</span>
                       <input type="number" step="0.01" value={r.amount || ''} onChange={e => updReceipt(i, 'amount', e.target.value)}
                         className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
                     </label>
@@ -612,7 +617,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
 
               {/* Tax Refund Automation */}
               <div className="p-4 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
-                <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">退税自动化组件</div>
+                <div className="text-xs font-bold text-blue-600 dark:text-blue-400 tracking-tight">退税自动化组件</div>
                 <div className="grid gap-4 sm:grid-cols-[1fr_140px] sm:items-end">
                   <div>
                     <InputRow label="开票金额 (Invoice)" value={form.invoiceAmount} onChange={v => updN('invoiceAmount', v)} suffix="CNY" />
@@ -636,7 +641,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
             <div className="border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 px-5 py-4 flex items-center gap-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
-              <h4 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">成本费用 / Costs</h4>
+              <h4 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">成本费用 / Costs</h4>
             </div>
             <div className="space-y-5 p-5">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -645,7 +650,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
               </div>
 
               <label className="block space-y-1 min-w-0">
-                <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">国际运费 (Freight)</span>
+                <span className="ml-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">国际运费 (Freight)</span>
                 <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
                   <input type="number" step="0.01" value={form.freightValue || ''} onChange={e => updN('freightValue', e.target.value)}
                     className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
@@ -664,7 +669,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                 <div key={i} className="grid gap-2 border-l-2 border-tertiary-sage/30 pl-4 sm:grid-cols-[1fr_140px_40px_auto] sm:items-center">
                   <input value={fee.label} onChange={e => updMisc(i, 'label', e.target.value)} placeholder="费用名称" className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage text-slate-900 dark:text-white" />
                   <input type="number" step="0.01" value={fee.amount || ''} onChange={e => updMisc(i, 'amount', e.target.value)} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-950 px-3 py-2.5 text-sm font-semibold outline-none transition-all focus:border-primary-navy dark:focus:border-tertiary-sage data-field text-slate-900 dark:text-white" />
-                  <span className="text-xs font-bold text-slate-400 sm:text-right uppercase tracking-wider">CNY</span>
+                  <span className="text-xs font-bold text-slate-400 sm:text-right tracking-tight">CNY</span>
                   <button type="button" onClick={() => delMisc(i)} className="text-slate-300 hover:text-error"><X size={14} /></button>
                 </div>
               ))}
@@ -676,7 +681,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           <div className="rounded-lg bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 p-5 space-y-3 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-200 dark:border-navy-800 pb-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
-              <div className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">实时计算结果</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white tracking-tight">实时计算结果</div>
             </div>
             <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">累计净美金 (Total Net USD)</span><span className="font-bold data-field text-primary-navy dark:text-white">${calcTotalNetUsd.toFixed(2)}</span></div>
             {hasCnyReceipt && <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">累计人民币收款 (Net CNY)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{(receipts.filter(r=>r.currency==='CNY').reduce((s,r)=>s+r.amount-r.bankFees-r.platformFees,0)).toFixed(2)}</span></div>}
@@ -702,6 +707,17 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           </button>
         </div>
       </div>
+      <ConfirmDeleteModal
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={() => { setShowDiscardConfirm(false); onClose(); }}
+        title="放弃未保存修改"
+        warning="当前利润核算表单还有未保存内容，确认放弃这些修改并关闭抽屉吗？"
+        entityLabel="确认文本"
+        entityId="放弃修改"
+        isDeleting={false}
+        showCopy={false}
+      />
     </div>
   );
 }
@@ -756,14 +772,14 @@ export function CustomsSection({
       {customs ? (
         <div className="grid gap-8 lg:grid-cols-12 items-start">
           <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
-            <GridItem label="报关单号" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
+            <GridItem label="报关单号" value={<span className="data-field font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
             <GridItem label="贸易方式" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
-            <GridItem label="报关日期" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
-            <GridItem label="预计出口" value={<span className="data-field uppercase font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
+            <GridItem label="报关日期" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
+            <GridItem label="预计出口" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
           </div>
           <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-3">
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">官方凭证电子仓库</div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">官方凭证电子仓库</div>
               <button onClick={onEditCustoms} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">追加文件 +</button>
             </div>
             <div className="space-y-1">
@@ -773,7 +789,7 @@ export function CustomsSection({
                   {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(att.id)} className="p-2 text-slate-300 dark:text-slate-600 hover:text-error opacity-0 group-hover:opacity-100 transition-all"><Trash size={16} /></button>}
                 </div>
               )) : (
-                <div className="py-12 text-center bg-slate-50/50 dark:bg-navy-950/30 rounded border border-dashed border-slate-200 dark:border-navy-800 text-slate-400 text-xs font-bold uppercase tracking-widest">暂无报关凭证存档</div>
+                <div className="py-12 text-center bg-slate-50/50 dark:bg-navy-950/30 rounded border border-dashed border-slate-200 dark:border-navy-800 text-slate-400 text-xs font-bold tracking-tight">暂无报关凭证存档</div>
               )}
             </div>
           </div>
@@ -803,7 +819,7 @@ export function PackingSection({
       {packingRecords.length ? (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900">
           <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+            <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
               <tr><th className="px-5 py-3">序号</th><th className="px-5 py-3">件数 (箱)</th><th className="px-5 py-3">尺寸 / 体积</th><th className="px-5 py-3">毛重 / 净重 (kg)</th><th className="px-5 py-3 text-right">实物图</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-bold text-primary-navy dark:text-white data-field">
@@ -828,7 +844,7 @@ export function PackingSection({
                 const totalNet = packingRecords.reduce((s, r) => s + asNumber(r.netWeight), 0);
                 return (
                   <tr className="bg-background dark:bg-navy-950/50 font-extrabold border-t border-slate-200 dark:border-navy-800">
-                    <td className="px-5 py-4 text-primary-navy dark:text-white text-xs uppercase tracking-widest">合计 Total</td>
+                    <td className="px-5 py-4 text-primary-navy dark:text-white text-xs tracking-tight">合计 Total</td>
                     <td className="px-5 py-4 text-primary-navy dark:text-white data-field">{totalBoxes} 箱</td>
                     <td className="px-5 py-4 text-primary-navy dark:text-white data-field text-xs">见明细</td>
                     <td className="px-5 py-4 text-primary-navy dark:text-white data-field">{totalGross.toFixed(1)} / {totalNet.toFixed(1)} kg</td>
@@ -916,29 +932,29 @@ export function LogisticsSection({
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border shadow-sm ${segmentMeta.icon}`}><Truck size={18} /></div>
                     <div className="min-w-0">
                       <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black tracking-wider ${segmentMeta.badge}`}>{segmentMeta.label}</span>
-                      <div className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{segmentMeta.eyebrow}</div>
+                      <div className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-tight">{segmentMeta.eyebrow}</div>
                     </div>
                   </div>
-                  <span className={`mt-1 flex shrink-0 items-center gap-1.5 text-xs font-black uppercase tracking-wider ${statusMeta.className}`}><div className={`h-1.5 w-1.5 rounded-full ${statusMeta.dot}`} /> {statusMeta.label}</span>
+                  <span className={`mt-1 flex shrink-0 items-center gap-1.5 text-xs font-black tracking-tight ${statusMeta.className}`}><div className={`h-1.5 w-1.5 rounded-full ${statusMeta.dot}`} /> {statusMeta.label}</span>
                 </div>
                 <div className="mb-5 flex flex-col gap-4">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900/80">
-                      <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">货运代理</span>
+                      <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight leading-none">货运代理</span>
                       <div className="truncate text-sm font-black text-primary-navy dark:text-white">{l.freightForwarderPartnerName || l.freightForwarder || '直接委托'}</div>
                       {l.freightForwarderPartnerId && <div className="mt-1 truncate text-[10px] font-bold text-slate-400">{[l.freightForwarderPartnerCountry, l.freightForwarderPartnerContact].filter(Boolean).join(' · ') || '合作伙伴档案'}</div>}
                     </div>
                     <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900/80">
-                      <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">实际承运商</span>
+                      <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight leading-none">实际承运商</span>
                       <div className="truncate text-sm font-black text-primary-navy dark:text-white">{l.carrier || '待填写'}</div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 bg-slate-50/70 px-4 py-3 dark:border-navy-800 dark:bg-navy-950/50">
-                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">提单/运单号</span>
+                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">提单/运单号</span>
                     <span className="rounded-[4px] bg-slate-900 px-3 py-1 text-sm font-black text-white shadow-md data-field dark:bg-navy-800">{l.trackingNo || '待同步'}</span>
                   </div>
                 </div>
-                <div className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-4 text-xs font-bold text-secondary-slate dark:border-navy-800 dark:text-slate-400 uppercase tracking-widest">
+                <div className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-4 text-xs font-bold text-secondary-slate dark:border-navy-800 dark:text-slate-400 tracking-tight">
                   <span>发货日期: <span className="data-field text-primary-navy dark:text-white">{formatDateOnly(l.shippingDate, '待定')}</span></span>
                   {l.recipientAddress && <div className="truncate font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400" title={l.recipientAddress}>收货地址: {l.recipientAddress}</div>}
                 </div>
@@ -988,7 +1004,7 @@ export function TasksSection({
                 </div>
                 <div>
                   <div className={`text-xs font-bold ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-primary-navy dark:text-white'}`}>{t.title}</div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">负责人: {t.assignee_name} · 截止: {formatDateOnly(t.due_date)}</div>
+                  <div className="text-xs font-bold text-slate-400 tracking-tight mt-0.5">负责人: {t.assignee_name} · 截止: {formatDateOnly(t.due_date)}</div>
                 </div>
               </div>
               <Chip tone={t.priority === 'P0' ? 'error' : t.priority === 'P1' ? 'warning' : 'info'}>{t.priority}</Chip>
@@ -1017,13 +1033,13 @@ export function FollowupsSection({
             <div className="absolute left-0 top-1.5 h-[18px] w-[18px] rounded-full border-2 border-slate-900 dark:border-tertiary-sage bg-white dark:bg-navy-900" />
             {i < followUps.length - 1 && <div className="absolute left-[8px] top-[22px] bottom-0 w-[2px] bg-slate-100 dark:bg-navy-800" />}
             <div className="flex items-center gap-3 mb-1.5">
-              <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">{fu.createdByName || '未知用户'}</span>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{formatDateTime(fu.createdAt)}</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">{fu.createdByName || '未知用户'}</span>
+              <span className="text-xs font-bold text-slate-400 tracking-tight">{formatDateTime(fu.createdAt)}</span>
             </div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{fu.content}</p>
           </div>
         )) : (
-          <div className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">暂无跟进记录</div>
+          <div className="py-12 text-center text-xs font-bold text-slate-400 tracking-tight">暂无跟进记录</div>
         )}
       </div>
     </DocumentBoard>
@@ -1059,11 +1075,11 @@ export function NavRailSection({
 
   return (
     <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm transition-colors">
-      <div className="text-xs font-black text-slate-900 dark:text-white mb-5 uppercase tracking-widest flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 dark:bg-tertiary-sage rounded-full" /> 页面导航</div>
+      <div className="text-xs font-black text-slate-900 dark:text-white mb-5 tracking-tight flex items-center gap-2"><div className="w-1 h-4 bg-slate-900 dark:bg-tertiary-sage rounded-full" /> 页面导航</div>
       <div className="space-y-5">
         {navGroups.map(group => (
           <div key={group.group} className="space-y-1.5">
-            <div className="px-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{group.group}</div>
+            <div className="px-2 text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-tight">{group.group}</div>
             {group.items.map(item => {
               const alert = moduleAlerts[item.section];
               const isActive = activeSection === item.section;
@@ -1096,7 +1112,7 @@ export function QuickFollowUpSection({
 }) {
   return (
     <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
-      <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2 mb-4">
+      <div className="text-xs font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 mb-4">
         <div className="w-1 h-4 bg-primary-navy rounded-full" /> 快捷跟进
       </div>
       <textarea
@@ -1128,7 +1144,7 @@ export function AIAnalysisPanel({
 }) {
   return (
     <section className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
-      <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4"><div className="w-1 h-4 bg-emerald-500 rounded-full" /> AI 智能辅助诊断</div>
+      <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-white tracking-tight mb-4"><div className="w-1 h-4 bg-emerald-500 rounded-full" /> AI 智能辅助诊断</div>
       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed mb-6">正在实时分析订单风险、回款率及交付合规性...</p>
       <button onClick={onOpenAnalysis} disabled={analyzing} className="w-full flex items-center justify-center gap-3 rounded-lg bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-md group active:scale-95">
         <Sparkles size={16} className={`${analyzing ? 'animate-spin opacity-50' : 'group-hover:scale-110 transition-transform'}`} />

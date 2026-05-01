@@ -2,7 +2,6 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronDown,
-  ChevronRight,
   ChevronUp,
   Download,
   Edit3,
@@ -10,34 +9,21 @@ import {
   Paperclip,
   Trash2,
   Wallet,
-  CheckCircle2,
-  Clock,
   FileText,
-  Factory,
-  ShieldCheck,
   Truck,
-  Plus,
   CircleHelp,
   Upload,
   FileCode,
-  Box,
-  MessageSquarePlus,
   X,
-  AlertTriangle,
-  Copy,
-  Check,
   Package
 } from 'lucide-react';
 import type { 
   SectionKey, 
   AttachmentMeta, 
   FinanceRecord, 
-  ProductionPlan, 
-  ProductionLog, 
+  ProductionPlan,
+  ProductionLog,
   LogisticsRecord,
-  LogisticsStatus,
-  PackingRecord,
-  ProductionStatus,
   InspectionStatus
 } from './types';
 import { formatDateOnly, formatDateTime, getProductionStatusLabel, getInspectionStatusLabel } from './utils';
@@ -71,14 +57,14 @@ export { default as Chip } from '../../components/ui/Chip';
 
 export const GridItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="space-y-1">
-    <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">{label}</div>
+    <div className="text-xs font-medium text-slate-500 tracking-tight">{label}</div>
     <div className="text-sm font-semibold text-slate-900 dark:text-white leading-tight">{value}</div>
   </div>
 );
 
 export const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <label className="block space-y-1.5">
-    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-0.5">{label}</span>
+    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight ml-0.5">{label}</span>
     <div className="relative transition-all overflow-hidden min-h-[42px] flex items-center">
       {children}
     </div>
@@ -107,7 +93,7 @@ export const WorkSection = React.forwardRef<
     <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
-        <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
+        <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">{title}</h3>
       </div>
       <div className="flex items-center gap-2">
         {action}
@@ -134,7 +120,7 @@ export const DocumentBoard = React.forwardRef<
     <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
       <div className="flex items-center gap-3">
          <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
-         <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
+         <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">{title}</h3>
       </div>
       <div className="flex gap-2 items-center">
         {action}
@@ -149,9 +135,9 @@ DocumentBoard.displayName = 'DocumentBoard';
 
 export function RemarkBoard({ content, onEdit }: { content: string; onEdit: () => void }) {
   return (
-    <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden shadow-sm border-l-4 border-l-amber-400">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
       <div className="px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-white dark:bg-navy-950/50 flex items-center justify-between">
-        <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">内部备注 / Internal Notes</h3>
+        <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">内部备注 / Internal Notes</h3>
         <button onClick={onEdit} className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-all">编辑</button>
       </div>
       <div className="p-6 bg-slate-50/50 dark:bg-navy-950/30 min-h-[100px]">
@@ -192,7 +178,7 @@ export function FinanceDashboard({
     <div className="grid gap-8 xl:grid-cols-12 items-start">
       <div className="xl:col-span-4 space-y-6 xl:border-r xl:border-slate-100 xl:dark:border-navy-800 xl:pr-8">
         <div className="flex items-center justify-between">
-           <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">回款汇总</div>
+           <div className="text-xs font-medium text-slate-500 tracking-tight">回款汇总</div>
            <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-navy-900 px-2 py-1 rounded border border-slate-200 dark:border-navy-800 outline-none">
              {currencies.map(c=><option key={c} value={c}>{c}</option>)}
            </select>
@@ -200,11 +186,11 @@ export function FinanceDashboard({
         <div className="space-y-4 rounded-lg bg-slate-50/70 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-5">
            <div className="flex items-baseline gap-2">
               <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tighter data-field">{paid.toLocaleString()}</div>
-              <div className="text-sm font-semibold text-slate-500 uppercase">{activeCurrency}</div>
+              <div className="text-sm font-semibold text-slate-500">{activeCurrency}</div>
            </div>
            {canCalculateProgress ? (
              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <div className="flex justify-between text-xs font-medium text-slate-500 tracking-tight">
                    <span>订单总额 USD {totalAmount.toLocaleString()}</span>
                    <span className={`font-bold ${isOverpaid ? 'text-amber-600' : 'text-emerald-600'}`}>{isOverpaid ? `超额 ${rawPercentage}%` : `${rawPercentage}%`}</span>
                 </div>
@@ -318,12 +304,12 @@ export function ProductionDashboard({
       {/* 左侧 col-span-4：核心状态总览 */}
       <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8">
         <div>
-          <h4 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight uppercase mb-2">{statusLabel}</h4>
+          <h4 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight mb-2">{statusLabel}</h4>
           <Chip tone={status==='ready'?'success':'warning'}>{getProductionStatusLabel(status)}</Chip>
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">生产进度</span>
+            <span className="text-xs font-bold text-slate-500 tracking-tight">生产进度</span>
             <span className="text-sm font-bold text-emerald-600 data-field">{percentage}%</span>
           </div>
           <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
@@ -341,7 +327,7 @@ export function ProductionDashboard({
       {/* 右侧 col-span-8：白底 + 浅灰边框（镜像财务容器风格） */}
       <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-white dark:bg-navy-900 p-6">
         <div className="grid grid-cols-4 gap-6">
-          <GridItem label="制造工厂" value={<span className="truncate block font-bold text-slate-900 uppercase">{plan?.partnerName || '待指派'}</span>} />
+          <GridItem label="制造工厂" value={<span className="truncate block font-bold text-slate-900">{plan?.partnerName || '待指派'}</span>} />
           <GridItem label="排产日期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
           <GridItem label="预期交期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.estimatedDeliveryDate) : '待定'}</span>} />
           <GridItem label="质检结论" value={
@@ -355,7 +341,7 @@ export function ProductionDashboard({
                  <option value="passed">质检通过</option>
                  <option value="failed">质检异常</option>
                </select>
-               <div className="flex items-center gap-1.5 text-blue-600 font-bold uppercase cursor-pointer hover:underline text-xs">
+               <div className="flex items-center gap-1.5 text-blue-600 font-bold cursor-pointer hover:underline text-xs">
                   <span>{getInspectionStatusLabel(plan?.inspectionStatus || 'pending')}</span>
                   <ChevronDown size={14} />
                </div>
@@ -364,7 +350,7 @@ export function ProductionDashboard({
         </div>
         {plan?.photos && plan.photos.length > 0 && (
           <div className="mt-6 pt-6 border-t border-slate-100 dark:border-navy-800">
-            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">计划单附件 ({plan.photos.length})</div>
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight mb-3">计划单附件 ({plan.photos.length})</div>
             <div className="flex flex-wrap gap-3">
               {plan.photos.map(att => {
                 const isImage = att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.fileName || '');
@@ -396,7 +382,7 @@ export const MetricCard = ({ label, value, icon, tone = 'neutral' }: { label: st
   <div className="p-6 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg shadow-sm hover:shadow-md transition-all">
     <div className="flex items-center gap-3 mb-4">
       <div className={`p-2 rounded-lg ${tone === 'success' ? 'chip-success' : tone === 'warning' ? 'chip-warning' : tone === 'error' ? 'chip-error' : tone === 'info' ? 'chip-info' : 'chip-neutral'} border`}>{icon}</div>
-      <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-medium text-slate-500 tracking-tight">{label}</span>
     </div>
     <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">{value}</div>
   </div>
@@ -424,8 +410,8 @@ export function StatusFileRow({
           {fileName ? getFileIcon(fileName, 18) : <FileCode size={18} />}
         </div>
         <div className="min-w-0">
-           <button type="button" onClick={onPreview} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-slate-600 transition-all block truncate text-left w-full uppercase tracking-tight">{label}</button>
-           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">{status === 'uploaded' ? '已归档 · Official' : '待处理'}</span>
+           <button type="button" onClick={onPreview} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-slate-600 transition-all block truncate text-left w-full tracking-tight">{label}</button>
+           <span className="text-xs font-bold text-slate-400 tracking-tight mt-0.5 block">{status === 'uploaded' ? '已归档 · Official' : '待处理'}</span>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -470,7 +456,7 @@ export function AttachmentEditor({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest">{title}</h4>
+        <h4 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">{title}</h4>
         <label className={`btn-secondary text-xs px-5 py-2 cursor-pointer ${isUploading ? 'opacity-40 pointer-events-none' : ''}`}>
           {isUploading ? '正在上传...' : '选择文件 +'}
           {!isUploading && <input type="file" multiple className="hidden" onChange={(e) => e.target.files && onFilesSelected(Array.from(e.target.files))} />}
@@ -479,7 +465,7 @@ export function AttachmentEditor({
 
       {isUploading && (
         <div className="space-y-2.5 animate-in fade-in zoom-in duration-300">
-           <div className="flex justify-between items-center text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">
+           <div className="flex justify-between items-center text-xs font-extrabold text-slate-900 dark:text-white tracking-tight">
               <span>文件上传进度</span>
               <span className="data-field">{uploadProgress}%</span>
            </div>
@@ -540,8 +526,8 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
       <div className="relative z-10 flex h-full max-h-[calc(100dvh-2rem)] w-full max-w-5xl min-h-0 flex-col overflow-hidden rounded-lg bg-white dark:bg-navy-900 shadow-2xl border border-slate-200 dark:border-navy-800 animate-in zoom-in fade-in duration-300">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-5 py-4 sm:px-8 sm:py-5 bg-white dark:bg-navy-950/50">
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{attachment.fileName}</h3>
-            <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest data-field">
+            <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white tracking-tight">{attachment.fileName}</h3>
+            <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight data-field">
                {attachment.mimeType}
             </p>
           </div>
@@ -558,10 +544,10 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
                  <FileCode size={48} className="text-slate-200 dark:text-navy-800" />
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tighter">预览暂不支持</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white tracking-tighter">预览暂不支持</p>
                 <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">请下载后在本地查看此文件类型。</p>
               </div>
-              <a href={attachment.url} download className="mt-4 rounded-lg bg-slate-900 dark:bg-tertiary-sage px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition-all uppercase tracking-widest active:scale-95">
+              <a href={attachment.url} download className="mt-4 rounded-lg bg-slate-900 dark:bg-tertiary-sage px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition-all tracking-tight active:scale-95">
                 立即下载文件
               </a>
             </div>
@@ -581,8 +567,8 @@ export const LogisticsSnapshot = ({ title, record, fields, onEdit, onPreview }: 
     <div className="mb-6 flex items-center gap-3">
       <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100 shadow-inner"><Truck size={20} /></div>
       <div>
-        <div className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">{title}</div>
-        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
+        <div className="text-sm font-bold text-slate-900 tracking-tight leading-none">{title}</div>
+        <div className="text-xs font-bold text-slate-400 tracking-tight mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
       </div>
     </div>
     <div className="grid gap-6 text-sm sm:grid-cols-2 bg-slate-50/50 p-6 rounded-lg border border-slate-100">
@@ -599,7 +585,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
   if (!logs || logs.length === 0) return null;
   return (
     <div className="mt-8 space-y-6">
-      <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-3"><div className="h-px w-8 bg-slate-200" /> 生产进度时间轴 / Production Timeline</div>
+      <div className="text-xs font-bold text-slate-400 tracking-tight flex items-center gap-3"><div className="h-px w-8 bg-slate-200" /> 生产进度时间轴 / Production Timeline</div>
       <div className="relative space-y-6 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-100">
         {logs.map((log) => (
           <div key={log.id} className="relative pl-12 group">
@@ -609,10 +595,10 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
             <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 group-hover:border-l-slate-900">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                   <span className="text-sm font-bold text-slate-900 uppercase">{log.createdByName}</span>
-                   <span className="text-xs font-bold text-white bg-slate-900 px-2 py-0.5 rounded uppercase tracking-wider">{formatDateOnly(log.logDate || log.createdAt)}</span>
+                   <span className="text-sm font-bold text-slate-900">{log.createdByName}</span>
+                   <span className="text-xs font-bold text-white bg-slate-900 px-2 py-0.5 rounded tracking-tight">{formatDateOnly(log.logDate || log.createdAt)}</span>
                 </div>
-                <span className="text-xs font-medium text-slate-400 uppercase">{formatDateTime(log.createdAt)}</span>
+                <span className="text-xs font-medium text-slate-400">{formatDateTime(log.createdAt)}</span>
               </div>
               <p className="text-sm font-medium text-slate-600 leading-relaxed mb-4">{log.content}</p>
               {log.attachments && log.attachments.length > 0 && (

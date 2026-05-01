@@ -126,13 +126,13 @@ function OrderListDrawerContent({ filter, onClose }: { filter: { status?: string
   return (
     <div className="space-y-3">
       {loading ? (
-        <div className="py-16 text-center text-slate-400 animate-pulse font-bold uppercase tracking-widest">加载中...</div>
+        <div className="py-16 text-center text-slate-400 animate-pulse font-bold tracking-tight">加载中...</div>
       ) : orders.length === 0 ? (
-        <div className="py-16 text-center text-slate-400 font-bold uppercase tracking-widest">暂无数据</div>
+        <div className="py-16 text-center text-slate-400 font-bold tracking-tight">暂无数据</div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800">
           <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-navy-950 font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+            <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
               <tr>
                 <th className="px-4 py-3">订单号</th>
                 <th className="px-4 py-3">客户</th>
@@ -197,18 +197,18 @@ function AIBriefing({ data }: { data: DashboardData }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="rounded-lg bg-gradient-to-r from-indigo-50 via-white to-blue-50 dark:from-navy-800 dark:via-navy-900 dark:to-indigo-900/30 border border-indigo-100 dark:border-navy-700 p-4 flex items-start gap-3">
-      <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 mt-0.5">
-        <Sparkles size={14} className="text-indigo-500" />
+    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-100 bg-sky-50 dark:border-sky-900/40 dark:bg-sky-900/20">
+        <Sparkles size={14} className="text-sky-600 dark:text-sky-300" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="mb-1 flex items-center justify-between gap-3">
-          <div className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">AI 每日业务洞察</div>
+          <div className="text-[11px] font-extrabold tracking-tight text-sky-600 dark:text-sky-300">AI 每日业务洞察</div>
           <button
             type="button"
             onClick={() => void generateBriefing({ force: true })}
             disabled={loading}
-            className="text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-700 disabled:opacity-40"
+            className="text-[10px] font-black text-sky-600 hover:text-sky-700 disabled:opacity-40 dark:text-sky-300 dark:hover:text-sky-200"
           >
             刷新
           </button>
@@ -239,7 +239,7 @@ function CurrencyExchangeWidget() {
     <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-5 shadow-sm shrink-0">
       <div className="flex items-center gap-2 mb-4">
         <ArrowRightLeft size={14} className="text-indigo-500" />
-        <h2 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">汇率速算</h2>
+        <h2 className="text-xs font-extrabold text-slate-900 dark:text-white tracking-tight">汇率速算</h2>
         <span className="text-[10px] font-bold text-slate-400 ml-auto">参考</span>
       </div>
       <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-3">
@@ -247,14 +247,14 @@ function CurrencyExchangeWidget() {
       </div>
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{mode === 'usd2cny' ? 'USD' : 'CNY'}</label>
+          <label className="text-[10px] font-bold text-slate-400 tracking-tight">{mode === 'usd2cny' ? 'USD' : 'CNY'}</label>
           <input type="number" value={inputVal} onChange={e => setInputVal(e.target.value)} className="w-full bg-slate-50 dark:bg-navy-950 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-indigo-300" />
         </div>
         <button onClick={toggleMode} className="mt-4 h-7 w-7 rounded-full bg-slate-100 dark:bg-navy-800 flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors shrink-0">
           <ArrowRightLeft size={12} className="text-slate-400" />
         </button>
         <div className="flex-1">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{mode === 'usd2cny' ? 'CNY' : 'USD'}</label>
+          <label className="text-[10px] font-bold text-slate-400 tracking-tight">{mode === 'usd2cny' ? 'CNY' : 'USD'}</label>
           <div className="w-full bg-slate-50 dark:bg-navy-950 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white">
             {result.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
@@ -284,7 +284,7 @@ export default function DashboardView() {
     return () => window.removeEventListener('dashboard:create-order', openOrderDrawer);
   }, []);
 
-  if (isLoading) return <div className="p-8 text-sm text-slate-500 dark:text-slate-400 animate-pulse font-bold uppercase tracking-widest text-center">正在加载数字化指挥舱...</div>;
+  if (isLoading) return <div className="p-8 text-sm text-slate-500 dark:text-slate-400 animate-pulse font-bold tracking-tight text-center">正在加载数字化指挥舱...</div>;
   if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{getErrorMessage(error, '无法读取控制台数据')}</div>;
 
   const revenueGrowth = formatGrowth(data.overview.growth.revenue);
@@ -334,8 +334,8 @@ export default function DashboardView() {
                 <div className="flex items-center gap-3">
                   <AlertTriangle size={16} className="text-error" />
                   <div>
-                    <h2 className="text-sm font-extrabold text-error uppercase tracking-tight">风控预警 ({risks.length})</h2>
-                    <p className="text-[11px] text-red-400 dark:text-red-500 font-bold uppercase tracking-widest mt-0.5">以下订单触发利润红线或成本倒挂</p>
+                    <h2 className="text-sm font-extrabold text-error tracking-tight">风控预警 ({risks.length})</h2>
+                    <p className="text-[11px] text-red-400 dark:text-red-500 font-bold tracking-tight mt-0.5">以下订单触发利润红线或成本倒挂</p>
                   </div>
                 </div>
               </div>
@@ -366,8 +366,8 @@ export default function DashboardView() {
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">今日待处理 ({data.todos.length})</h2>
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">优先处理以下业务阻点</p>
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">今日待处理 ({data.todos.length})</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold tracking-tight mt-0.5">优先处理以下业务阻点</p>
               </div>
               <button onClick={() => navigate('/orders')} className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看全部 <ChevronRight size={14} /></button>
             </div>
@@ -380,7 +380,7 @@ export default function DashboardView() {
                     </div>
                     <div>
                       <div className="text-[13px] font-extrabold text-primary-navy dark:text-white mb-0.5">{todo.type === 'payment_overdue' ? '收款提醒' : todo.type === 'customs_missing' ? '报关资料' : '创建物流'}</div>
-                      <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase">{todo.order_display_id} · {todo.customer_name}</div>
+                      <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1">{todo.order_display_id} · {todo.customer_name}</div>
                       <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{todo.desc}</div>
                     </div>
                   </div>
@@ -399,8 +399,8 @@ export default function DashboardView() {
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
               <div className="flex items-center gap-6">
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">最近动态</h2>
-                <div className="hidden sm:flex gap-4 text-xs font-bold uppercase tracking-widest">
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">最近动态</h2>
+                <div className="hidden sm:flex gap-4 text-xs font-bold tracking-tight">
                   {(['all', 'finance', 'logistics'] as const).map(tab => (
                     <button
                       key={tab}
@@ -423,7 +423,7 @@ export default function DashboardView() {
                     </div>
                     <div>
                       <div className="text-[13px] font-extrabold text-primary-navy dark:text-white mb-0.5 group-hover:text-blue-600 transition-colors">{activity.title}</div>
-                      <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase">{activity.order_display_id} · {activity.customer_name}</div>
+                      <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{activity.order_display_id} · {activity.customer_name}</div>
                     </div>
                     <div className="ml-8 text-[12px] font-medium text-slate-500 hidden sm:block truncate max-w-[200px] mt-0.5">{activity.desc}</div>
                   </div>
@@ -445,7 +445,7 @@ export default function DashboardView() {
           <div className="grid gap-6">
             {data.monthlyTrends && data.monthlyTrends.length > 0 && (
               <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">业务趋势 (订单)</h2>
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">业务趋势 (订单)</h2>
                 <div className="space-y-3">
                   {data.monthlyTrends.map(m => {
                     const maxOrders = Math.max(...data.monthlyTrends.map(x => x.orders), 1);
@@ -465,7 +465,7 @@ export default function DashboardView() {
 
             {data.profitTrends && data.profitTrends.length > 0 && (
               <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">利润趋势 (USD)</h2>
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">利润趋势 (USD)</h2>
                 <div className="space-y-3">
                   {data.profitTrends.map(m => {
                     const maxProfit = Math.max(...data.profitTrends.map(x => x.profit), 1);
@@ -489,7 +489,7 @@ export default function DashboardView() {
 
           {/* Quick Actions */}
           <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm shrink-0">
-            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight mb-6">快捷操作</h2>
+            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">快捷操作</h2>
             <div className="grid grid-cols-3 gap-3">
               <QuickAction icon={<FilePlus size={20} />} label="新建订单" onClick={() => setShowOrderDrawer(true)} />
               <QuickAction icon={<Wallet size={20} />} label="收款登记" onClick={() => navigate('/finance?create=1')} />
@@ -505,25 +505,25 @@ export default function DashboardView() {
           </section>
 
           {/* AI CTA */}
-          <section className="rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-navy-800 dark:to-indigo-900/30 border border-blue-100 dark:border-navy-700 p-6 relative overflow-hidden transition-colors shrink-0">
+          <section className="relative shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900">
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={16} className="text-blue-500" />
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-100 bg-sky-50 text-sky-600 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300"><Sparkles size={15} /></span>
                 <h3 className="text-[14px] font-extrabold text-primary-navy dark:text-white tracking-tight">使用 AI 助手，提升效率</h3>
               </div>
               <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-4 max-w-[200px]">智能分析订单数据，自动生成业务建议</p>
               <Link to="/ai" className="btn-primary text-xs px-4 py-2">立即体验 <ArrowUpRight size={14} /></Link>
             </div>
-            <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-50 dark:opacity-20 pointer-events-none">
-              <FileText size={100} className="text-blue-200 dark:text-blue-400" />
+            <div className="pointer-events-none absolute bottom-0 right-0 translate-x-4 translate-y-4 opacity-10 dark:opacity-10">
+              <FileText size={100} className="text-slate-400 dark:text-slate-500" />
             </div>
           </section>
 
           {/* Status Distribution */}
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm">
             <div className="mb-8 flex items-center justify-between shrink-0">
-              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">订单状态分布</h2>
-              <select className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none uppercase">
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">订单状态分布</h2>
+              <select className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none">
                 <option>本月</option>
                 <option>本周</option>
                 <option>今年</option>
@@ -596,7 +596,7 @@ function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: s
       <div className="h-10 w-10 rounded-full bg-slate-50 dark:bg-navy-900 border border-slate-100 dark:border-navy-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mb-2 group-hover:text-primary-navy dark:group-hover:text-white transition-colors shadow-sm">
         {icon}
       </div>
-      <div className="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-primary-navy dark:group-hover:text-white transition-colors uppercase tracking-tight">{label}</div>
+      <div className="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-primary-navy dark:group-hover:text-white transition-colors tracking-tight">{label}</div>
     </div>
   );
 }
@@ -643,7 +643,7 @@ const DonutChart = React.memo(function DonutChart({ data }: { data: { status: st
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
     <div className="rounded-lg border border-dashed border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 px-4 py-12 text-center">
-      <div className="text-sm font-bold text-primary-navy dark:text-white tracking-widest">{title}</div>
+      <div className="text-sm font-bold tracking-tight text-primary-navy dark:text-white">{title}</div>
       <div className="mt-2 text-[11px] font-medium text-slate-400 dark:text-slate-500">{description}</div>
     </div>
   );

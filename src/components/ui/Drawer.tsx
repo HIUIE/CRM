@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface DrawerProps {
 
 export function Drawer({ isOpen, onClose, title, children, footer, isDirty = false, width = 'max-w-[760px]' }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,12 +29,10 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
 
   const handleClose = () => {
     if (isDirty) {
-      if (window.confirm('有未保存的数据，确认放弃？')) {
-        onClose();
-      }
-    } else {
-      onClose();
+      setShowDiscardConfirm(true);
+      return;
     }
+    onClose();
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -64,7 +64,7 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
         className={`relative z-10 w-full ${width} h-dvh max-h-dvh min-h-0 overflow-hidden bg-white dark:bg-navy-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 transition-drawer`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950/50 shrink-0">
-          <h2 className="text-[15px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">{title}</h2>
+          <h2 className="text-[15px] font-extrabold tracking-tight text-primary-navy dark:text-white">{title}</h2>
           <button
             onClick={handleClose}
             className="p-2 -mr-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-colors"
@@ -81,6 +81,17 @@ export function Drawer({ isOpen, onClose, title, children, footer, isDirty = fal
           </div>
         )}
       </div>
+      <ConfirmDeleteModal
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={() => { setShowDiscardConfirm(false); onClose(); }}
+        title="放弃未保存修改"
+        warning="当前抽屉中还有未保存内容，确认放弃这些修改并关闭吗？"
+        entityLabel="确认文本"
+        entityId="放弃修改"
+        isDeleting={false}
+        showCopy={false}
+      />
     </div>
   );
 

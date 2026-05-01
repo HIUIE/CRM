@@ -24,7 +24,7 @@ export default function Settings() {
 
   return (
     <div className="mx-auto w-full max-w-[1440px] space-y-6 animate-page-in">
-      <div className="flex bg-white dark:bg-navy-900 p-1 rounded-lg border border-slate-200 dark:border-navy-800 w-fit transition-colors flex-wrap">
+      <div className="flex w-fit flex-wrap rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900">
         <button onClick={() => setActiveTab('general')} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'}`}><SettingsIcon size={16} /> 常规配置</button>
         {isAdmin && (
           <>
@@ -36,7 +36,7 @@ export default function Settings() {
         )}
       </div>
 
-      <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-8 shadow-sm transition-colors">
+      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 sm:p-8">
         <Suspense fallback={<Fallback />}>
           {activeTab === 'general' && <GeneralTab />}
           {activeTab === 'data' && isAdmin && <DataTab setImportEntityType={setImportEntityType} />}

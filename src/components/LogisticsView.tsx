@@ -221,7 +221,7 @@ export default function LogisticsView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">关联订单</th>
                     <th className="px-4 py-4 text-left">承运商 / 单号</th>
@@ -240,13 +240,13 @@ export default function LogisticsView() {
                       className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                     >
                       <td className="px-4 py-4 text-left">
-                        <div className="font-bold text-primary-navy dark:text-white uppercase data-field">{r.order_display_id || '—'}</div>
+                        <div className="font-bold text-primary-navy dark:text-white data-field">{r.order_display_id || '—'}</div>
                         <div className="text-xs text-slate-400 dark:text-slate-500 font-bold mt-1 max-w-[150px] truncate">{r.customer_name || '—'}</div>
                       </td>
                       <td className="px-4 py-4 text-left">
                         <div className="flex items-center gap-2 mb-1">
                           <Truck size={14} className="text-slate-400 dark:text-slate-500" />
-                          <span className="font-bold text-primary-navy dark:text-white uppercase">{r.carrier || '—'}</span>
+                          <span className="font-bold text-primary-navy dark:text-white">{r.carrier || '—'}</span>
                         </div>
                         <div className="text-xs font-bold text-slate-700 dark:text-slate-300 data-field">{r.tracking_no || '—'}</div>
                       </td>
@@ -262,10 +262,10 @@ export default function LogisticsView() {
                       </td>
                       <td className="px-4 py-4 text-center">
                         <div className="text-xs font-bold text-primary-navy dark:text-white data-field mb-1">{r.shipping_date || '待定'}</div>
-                        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{r.package_count || 0} 箱</div>
+                        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">{r.package_count || 0} 箱</div>
                       </td>
                       <td className="px-4 py-4 text-center">
-                         <div className="flex items-center justify-center gap-1.5 text-tertiary-sage dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                         <div className="flex items-center justify-center gap-1.5 text-tertiary-sage dark:text-emerald-400 font-bold text-xs tracking-tight">
                            <div className={`h-1.5 w-1.5 rounded-full ${r.status === 'arrived' ? 'bg-success' : r.status === 'shipped' ? 'bg-tertiary-sage dark:bg-emerald-400 animate-pulse' : 'bg-slate-300 dark:bg-navy-700'}`} />
                            {getStatusLabel(r.status)}
                          </div>
@@ -273,7 +273,7 @@ export default function LogisticsView() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center text-slate-400 font-medium uppercase tracking-widest">
+                      <td colSpan={5} className="px-4 py-12 text-center text-slate-400 font-medium tracking-tight">
                         未找到匹配的物流记录
                       </td>
                     </tr>
@@ -323,8 +323,8 @@ export default function LogisticsView() {
             </Field>
 
             {selectedOrder && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">自动带出：收货方 / 地址</div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-navy-800 dark:bg-navy-950/50">
+                <div className="mb-1 text-xs font-bold tracking-tight text-sky-600 dark:text-sky-300">自动带出：收货方 / 地址</div>
                 <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {selectedOrder.customer_name}<br/>
                   <span className="text-xs">{selectedOrder.customer_country}</span>

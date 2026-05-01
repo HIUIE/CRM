@@ -78,10 +78,10 @@ export default function TasksView() {
     setSearchParams(next);
   };
 
-  const columns: { key: ColumnKey; label: string; color: string }[] = [
-    { key: 'todo', label: '待处理 (To Do)', color: 'bg-slate-100/50 dark:bg-navy-950/30' },
-    { key: 'in_progress', label: '进行中 (In Progress)', color: 'bg-blue-50/20 dark:bg-blue-900/5' },
-    { key: 'done', label: '已完成 (Done)', color: 'bg-emerald-50/20 dark:bg-emerald-900/5' }
+  const columns: { key: ColumnKey; label: string; dot: string }[] = [
+    { key: 'todo', label: '待处理 (To Do)', dot: 'bg-slate-400' },
+    { key: 'in_progress', label: '进行中 (In Progress)', dot: 'bg-sky-500' },
+    { key: 'done', label: '已完成 (Done)', dot: 'bg-emerald-500' }
   ];
 
   const updateTaskStatus = (taskId: number, newStatus: ColumnKey) => {
@@ -94,7 +94,7 @@ export default function TasksView() {
     <div className="flex flex-col space-y-4 animate-page-in">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-6 shadow-sm transition-colors">
         <div className="flex items-center justify-between">
-          <h1 className="text-base font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">团队协同看板</h1>
+          <h1 className="text-base font-extrabold text-primary-navy dark:text-white tracking-tight">团队协同看板</h1>
           <button
             onClick={() => setShowCreateDrawer(true)}
             className="btn-primary text-xs px-5 py-2"
@@ -116,16 +116,16 @@ export default function TasksView() {
         <div className="flex items-center justify-center py-32 col-span-full">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-navy border-t-transparent dark:border-tertiary-sage dark:border-t-transparent" />
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">正在加载任务...</div>
+            <div className="text-[11px] font-bold text-slate-400 tracking-tight animate-pulse">正在加载任务...</div>
           </div>
         </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
            {columns.map(col => (
-             <div key={col.key} className={`flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm ${col.color}`}>
-                <div className="px-5 py-4 border-b border-slate-200 dark:border-navy-800 flex items-center justify-between shrink-0 rounded-t-lg">
-                   <h3 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
-                      <div className={`h-1.5 w-1.5 rounded-full ${col.key === 'todo' ? 'bg-slate-400' : col.key === 'in_progress' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+             <div key={col.key} className="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
+                <div className="flex shrink-0 items-center justify-between rounded-t-lg border-b border-slate-200 px-5 py-4 dark:border-navy-800">
+                   <h3 className="flex items-center gap-2 text-xs font-extrabold tracking-tight text-slate-900 dark:text-white">
+                      <div className={`h-1.5 w-1.5 rounded-full ${col.dot}`} />
                       {col.label}
                    </h3>
                    <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-navy-800 text-[9px] font-bold text-slate-600 dark:text-slate-400">{tasks.filter(t => t.status === col.key).length}</span>
@@ -138,14 +138,13 @@ export default function TasksView() {
                           key={`task-${task.id}`}
                           task={task}
                           onSelect={() => setSelectedTaskId(task.id)}
-                          onStatusChange={updateTaskStatus}
                         />
                       ))}
                    </AnimatePresence>
                    {tasks.filter(t => t.status === col.key).length === 0 && (
                      <div className="py-20 flex flex-col items-center justify-center text-slate-300 dark:text-navy-800">
                         <CheckCircle2 size={32} strokeWidth={1} />
-                        <div className="mt-2 text-xs font-bold uppercase tracking-widest">无此状态任务</div>
+                        <div className="mt-2 text-xs font-bold tracking-tight">无此状态任务</div>
                      </div>
                    )}
                 </div>
@@ -182,7 +181,7 @@ function ViewToggle({ active, label, onClick }: { active: boolean; label: string
   return (
     <button 
       onClick={onClick}
-      className={`flex-1 py-1.5 px-4 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${active ? 'bg-white dark:bg-navy-800 text-primary-navy dark:text-tertiary-sage shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+      className={`flex-1 py-1.5 px-4 rounded-lg text-xs font-bold tracking-tight transition-all ${active ? 'bg-white dark:bg-navy-800 text-primary-navy dark:text-tertiary-sage shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
     >
       {label}
     </button>
@@ -192,34 +191,36 @@ function ViewToggle({ active, label, onClick }: { active: boolean; label: string
 interface TaskCardProps {
   task: Task;
   onSelect: () => void;
-  onStatusChange: (taskId: number, newStatus: ColumnKey) => void;
 }
 
-const TaskCard = React.memo(({ task, onSelect, onStatusChange }: TaskCardProps) => {
+const TaskCard = React.memo(({ task, onSelect }: TaskCardProps) => {
   const navigate = useNavigate();
   const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'done';
-  const priorityColor = task.priority === 'P0' ? 'bg-red-500' : task.priority === 'P1' ? 'bg-amber-500' : 'bg-blue-500';
+  const priorityMeta = task.priority === 'P0'
+    ? { label: 'P0', className: 'border-red-100 bg-red-50 text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300' }
+    : task.priority === 'P1'
+      ? { label: 'P1', className: 'border-amber-100 bg-amber-50 text-amber-600 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-300' }
+      : { label: 'P2', className: 'border-sky-100 bg-sky-50 text-sky-600 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300' };
 
   return (
-    <motion.div 
+    <motion.div
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={onSelect}
-      className="bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-800 p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden cursor-pointer"
+      className="group relative cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-navy-800 dark:bg-navy-900"
     >
-      <div className={`absolute top-0 left-0 bottom-0 w-1 ${priorityColor}`} />
-      
-      <div className="flex justify-between items-start mb-2 pl-2">
-         <h4 className="text-sm font-extrabold text-primary-navy dark:text-white leading-tight group-hover:text-blue-600 transition-colors line-clamp-2">{task.title}</h4>
+      <div className="mb-2 flex items-start justify-between gap-3">
+         <h4 className="line-clamp-2 text-sm font-extrabold leading-tight text-primary-navy transition-colors group-hover:text-sky-600 dark:text-white dark:group-hover:text-sky-300">{task.title}</h4>
+         <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black ${priorityMeta.className}`}>{priorityMeta.label}</span>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4 pl-2">
+      <div className="mb-4 flex flex-wrap gap-2">
          {task.entity_id && (
-           <div 
+           <div
              onClick={(e) => { e.stopPropagation(); navigate(task.entity_type === 'ORDER' ? `/orders/${encodeURIComponent(task.entity_id || '')}?section=tasks` : `/customers/detail/${task.entity_id?.toLowerCase()}`); }}
-             className="flex items-center gap-1 text-[9px] font-extrabold text-blue-500 dark:text-emerald-400 bg-blue-50/50 dark:bg-emerald-900/10 px-2 py-0.5 rounded uppercase tracking-tighter hover:bg-blue-100 transition-colors"
+             className="flex items-center gap-1 rounded border border-sky-100 bg-sky-50 px-2 py-0.5 text-[10px] font-extrabold text-sky-600 transition-colors hover:bg-sky-100 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300"
            >
               <Package size={10} />
               {task.entity_id}
@@ -237,8 +238,8 @@ const TaskCard = React.memo(({ task, onSelect, onStatusChange }: TaskCardProps) 
          )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-50 dark:border-navy-800 pt-3 pl-2">
-         <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
+      <div className="flex items-center justify-between border-t border-slate-50 pt-3 dark:border-navy-800">
+         <div className={`flex items-center gap-1.5 text-xs font-bold tracking-tight ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
             <Clock size={12} />
             {task.due_date.slice(5)}
          </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bot, Send, Sparkles, Zap, ShieldCheck, Database, LayoutDashboard, Trash2 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -40,6 +41,8 @@ export default function AIAssistantPage() {
   const [input, setFormInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   // 2. 每当消息列表更新时，自动同步到本地存储
   useEffect(() => {
@@ -47,11 +50,12 @@ export default function AIAssistantPage() {
   }, [messages]);
 
   const clearHistory = () => {
-    if (window.confirm('确定要清空所有对话记录吗？')) {
-      const initialMsg: Message[] = [{ role: 'assistant', content: '对话已重置。请问还有什么可以帮您？' }];
-      setMessages(initialMsg);
-      localStorage.removeItem(STORAGE_KEY);
-    }
+    setIsClearing(true);
+    const initialMsg: Message[] = [{ role: 'assistant', content: '对话已重置。请问还有什么可以帮您？' }];
+    setMessages(initialMsg);
+    localStorage.removeItem(STORAGE_KEY);
+    setShowClearConfirm(false);
+    setIsClearing(false);
   };
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -110,21 +114,21 @@ export default function AIAssistantPage() {
         <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-tertiary-sage dark:text-emerald-400 mb-2">
             <Zap size={18} />
-            <span className="text-xs font-bold uppercase tracking-widest">实时诊断</span>
+            <span className="text-xs font-bold tracking-tight">实时诊断</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">自动识别订单中的潜在逾期风险与财务缺口，并在详情页实时同步。</p>
         </div>
         <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400 mb-2">
             <Database size={18} />
-            <span className="text-xs font-bold uppercase tracking-widest">知识增强</span>
+            <span className="text-xs font-bold tracking-tight">知识增强</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">结合您的历史客户偏好与物流时效，提供智能化的排产与发货建议。</p>
         </div>
         <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 p-4 shadow-sm transition-colors">
           <div className="flex items-center gap-3 text-primary-navy dark:text-white mb-2">
             <ShieldCheck size={18} />
-            <span className="text-xs font-bold uppercase tracking-widest">合规审计</span>
+            <span className="text-xs font-bold tracking-tight">合规审计</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">基于最新 HS Code 库，预先校验报关资料的逻辑严密性，减少清关障碍。</p>
         </div>
@@ -135,10 +139,10 @@ export default function AIAssistantPage() {
         
         {/* 对话框头部，增加清除记录按钮 */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-slate-50/30 dark:bg-navy-950/30 z-20">
-           <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+           <div className="flex items-center gap-2 text-xs font-bold text-slate-400 tracking-tight">
               <Bot size={14} /> 实时 AI 会话
            </div>
-           <button onClick={clearHistory} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="清空对话历史">
+           <button onClick={() => setShowClearConfirm(true)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="清空对话历史">
               <Trash2 size={16} />
            </button>
         </div>
@@ -211,6 +215,18 @@ export default function AIAssistantPage() {
           </div>
         </form>
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={clearHistory}
+        title="清空 AI 对话"
+        warning="确定要清空所有 AI 对话记录吗？此操作只会清除当前浏览器中的对话历史，不会影响业务数据。"
+        entityLabel="确认文本"
+        entityId="清空对话"
+        isDeleting={isClearing}
+        showCopy={false}
+      />
     </div>
   );
 }

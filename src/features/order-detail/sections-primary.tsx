@@ -65,7 +65,7 @@ function OverviewMetric({ label, value, helper, icon, tone = 'neutral', onClick 
   const content = (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">{label}</span>
         <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${toneClasses(tone)}`}>{icon}</span>
       </div>
       <div className="mt-3 text-lg font-black text-primary-navy dark:text-white data-field truncate">{value}</div>
@@ -135,7 +135,7 @@ export function OrderHeaderSection({
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-6">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest leading-none">
+            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight leading-none">
               <Link to="/orders" className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单管理</Link>
               <ChevronRight size={12} className="opacity-30" />
               <span className="text-primary-navy dark:text-tertiary-sage data-field" style={{ viewTransitionName: 'order-id' }}>{order.display_id}</span>
@@ -143,7 +143,7 @@ export function OrderHeaderSection({
             <h1 className="text-2xl font-bold text-primary-navy dark:text-white tracking-tight truncate mb-4 hover:text-blue-600 cursor-pointer transition-colors" onClick={() => navigate(`/customers/${customer.display_id}`)}>
               {asText(customer.name, '未命名客户')}
             </h1>
-            <div className="flex flex-wrap gap-4 text-xs font-bold text-secondary-slate dark:text-slate-400 uppercase tracking-widest">
+            <div className="flex flex-wrap gap-4 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight">
               <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tertiary-sage" />{asText(customer.country)}</span>
               <span className="flex items-center gap-1.5"><Mail size={12} className="text-info dark:text-blue-400" />{asText(customer.contact)}</span>
             </div>
@@ -182,14 +182,14 @@ export function OrderHeaderSection({
               {STAGE_STEPS.map((s, i) => (
                 <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-white dark:bg-navy-800 shadow-sm ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-60 hover:opacity-100 hover:bg-white dark:hover:bg-navy-900'}`}>
                   <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i <= stageIndex ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-slate-200 dark:bg-navy-700 text-slate-500 dark:text-slate-400'}`}>{i + 1}</span>
-                  <span className={`text-xs font-bold uppercase tracking-widest ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
+                  <span className={`text-xs font-bold tracking-tight ${s.key === order.status ? 'text-primary-navy dark:text-white' : 'text-secondary-slate dark:text-slate-400'}`}>{s.label}</span>
                 </button>
               ))}
             </div>
           </div>
           <button type="button" onClick={() => scrollToSection(openTasks > 0 ? 'finance' : 'followups')} className="rounded-md border border-slate-100 dark:border-navy-800 bg-slate-50/60 dark:bg-navy-950/40 px-4 py-3 text-left transition-all hover:bg-white dark:hover:bg-navy-900">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">当前风险 / 下一步</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">当前风险 / 下一步</span>
               <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${toneClasses(riskTone)}`}>{riskTone === 'success' ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}</span>
             </div>
             <div className="mt-2 text-sm font-black text-primary-navy dark:text-white">{riskTone === 'success' ? '暂无明显阻塞' : `${openTasks} 项需要跟进`}</div>
@@ -227,14 +227,14 @@ export function ItemsSection({
       {items.length ? (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
           <table className="min-w-full text-left text-xs font-medium">
-            <thead className="bg-slate-50 dark:bg-navy-950 font-bold uppercase tracking-widest border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
+            <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
               <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">总价 (USD)</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-medium tracking-tight">
               {items.map(item => (
                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
-                  <td className="px-5 py-4 font-bold text-primary-navy dark:text-white uppercase">{asText(item.product_name)}</td>
-                  <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 text-xs data-field uppercase font-bold">{asText(item.specification, '通用')}</td>
+                  <td className="px-5 py-4 font-bold text-primary-navy dark:text-white">{asText(item.product_name)}</td>
+                  <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 text-xs data-field font-bold">{asText(item.specification, '通用')}</td>
                   <td className="px-5 py-4 text-center font-bold text-primary-navy dark:text-white data-field">{item.quantity}</td>
                   <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 font-bold">{item.unit || 'pcs'}</td>
                   <td className="px-5 py-4 text-right text-secondary-slate dark:text-slate-400 data-field font-bold">{asNumber(item.unit_price).toLocaleString()}</td>
@@ -244,23 +244,23 @@ export function ItemsSection({
             </tbody>
             <tfoot className="bg-[#F1F5F9] dark:bg-navy-950 border-t border-slate-200 dark:border-navy-800">
               <tr className="text-secondary-slate dark:text-slate-400">
-                <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">商品小计 (Subtotal)</td>
+                <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">商品小计 (Subtotal)</td>
                 <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {itemsTotal.toLocaleString()}</td>
               </tr>
               {freightAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
-                  <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">运费估算 (Freight)</td>
+                  <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">运费估算 (Freight)</td>
                   <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {freightAmount.toLocaleString()}</td>
                 </tr>
               )}
               {miscAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
-                  <td colSpan={5} className="px-5 py-3 text-right text-xs uppercase tracking-widest">其他杂费 (Misc)</td>
+                  <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">其他杂费 (Misc)</td>
                   <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {miscAmount.toLocaleString()}</td>
                 </tr>
               )}
               <tr className="text-primary-navy dark:text-white font-extrabold border-t border-slate-200 dark:border-navy-700">
-                <td colSpan={5} className="px-5 py-5 text-right text-xs uppercase tracking-widest">合计总值 (Grand Total)</td>
+                <td colSpan={5} className="px-5 py-5 text-right text-xs tracking-tight">合计总值 (Grand Total)</td>
                 <td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td>
               </tr>
             </tfoot>

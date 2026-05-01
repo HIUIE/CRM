@@ -111,7 +111,7 @@ export function Combobox({ value, onChange, onSearch, placeholder = '请选择..
           
           <div className="max-h-[240px] overflow-y-auto custom-scrollbar p-1">
             {loading ? (
-              <div className="flex items-center justify-center py-8 gap-3 text-slate-400 text-xs font-bold uppercase tracking-widest">
+              <div className="flex items-center justify-center py-8 gap-3 text-slate-400 text-xs font-bold tracking-tight">
                 <Loader2 size={16} className="animate-spin" />
                 正在检索...
               </div>
@@ -124,13 +124,13 @@ export function Combobox({ value, onChange, onSearch, placeholder = '请选择..
                 >
                   <div className="min-w-0">
                     <div className={`text-[13px] font-bold truncate ${opt.value === value ? 'text-primary-navy dark:text-tertiary-sage' : 'text-slate-700 dark:text-slate-200'}`}>{opt.label}</div>
-                    {opt.subLabel && <div className="text-[10px] text-slate-400 font-medium truncate uppercase mt-0.5">{opt.subLabel}</div>}
+                    {opt.subLabel && <div className="mt-0.5 truncate text-[10px] font-medium text-slate-400">{opt.subLabel}</div>}
                   </div>
                   {opt.value === value && <Check size={14} className="text-primary-navy dark:text-tertiary-sage" />}
                 </div>
               ))
             ) : (
-              <div className="py-8 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">未找到匹配结果</div>
+              <div className="py-8 text-center text-xs text-slate-400 font-bold tracking-tight">未找到匹配结果</div>
             )}
           </div>
         </div>

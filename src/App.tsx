@@ -33,7 +33,7 @@ function PageLoader() {
     <div className="flex h-[400px] w-full items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-navy border-t-transparent dark:border-tertiary-sage dark:border-t-transparent" />
-        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">正在进入工作舱...</div>
+        <div className="text-[11px] font-bold text-slate-400 tracking-tight animate-pulse">正在进入工作舱...</div>
       </div>
     </div>
   );
@@ -48,7 +48,7 @@ function CustomerRedirect() {
 export default function App() {
   const { user, loading } = useAuth();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-navy-950 font-sans text-[11px] font-bold uppercase tracking-widest text-slate-400">系统初始化中...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-navy-950 font-sans text-[11px] font-bold tracking-tight text-slate-400">系统初始化中...</div>;
 
   return (
     <ErrorBoundary>

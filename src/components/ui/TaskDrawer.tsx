@@ -91,7 +91,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
       isDirty={isDirty}
       footer={
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase">取消</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800">取消</button>
           <button onClick={handleSubmit} disabled={isSubmitting} className="btn-primary shadow-md active:scale-95">{isSubmitting ? '指派中...' : '确认指派'}</button>
         </div>
       }
@@ -147,8 +147,8 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
 
           <Field label="关联业务 (自动锁定)">
              <div className="p-3 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{entityType === 'ORDER' ? '关联订单' : '关联客户'}</div>
-                <div className="text-[13px] font-extrabold text-primary-navy dark:text-white uppercase">{entityName || '全局任务'}</div>
+                <div className="mb-1 text-[10px] font-bold tracking-tight text-slate-400">{entityType === 'ORDER' ? '关联订单' : '关联客户'}</div>
+                <div className="text-[13px] font-extrabold text-primary-navy dark:text-white">{entityName || '全局任务'}</div>
              </div>
           </Field>
 

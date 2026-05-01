@@ -138,8 +138,8 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
               <Upload size={18} className="text-white dark:text-tertiary-sage" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">批量导入与数据还原</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">支持 XLSX, CSV 或 系统备份 ZIP</p>
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">批量导入与数据还原</h3>
+              <p className="text-[10px] text-slate-400 font-bold tracking-tight mt-0.5">支持 XLSX, CSV 或 系统备份 ZIP</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-full transition-colors">
@@ -179,7 +179,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
               ) : (
                 <Archive className="text-slate-300 group-hover:text-primary-navy transition-colors mb-4" size={48} />
               )}
-              <div className="text-sm font-extrabold text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
+              <div className="text-sm font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">
                 {isProcessing ? '正在解析文件...' : '点击或拖拽文件/备份包到此处'}
               </div>
               <p className="text-xs font-medium text-slate-400 dark:text-slate-500 text-center max-w-sm">
@@ -200,7 +200,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
               </p>
               
               <div className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-6 border border-slate-100 dark:border-navy-800 mb-8">
-                <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <h4 className="text-[10px] font-extrabold text-slate-400 tracking-tight mb-4 flex items-center gap-2">
                   <DatabaseBackup size={14} /> 包含的数据表
                 </h4>
                 <div className="flex flex-wrap gap-3">
@@ -213,7 +213,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
               </div>
 
               <div className="flex gap-4">
-                <button onClick={reset} className="px-8 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors uppercase tracking-widest border border-slate-200 dark:border-navy-800 rounded-lg">取消</button>
+                <button onClick={reset} className="px-8 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors tracking-tight border border-slate-200 dark:border-navy-800 rounded-lg">取消</button>
                 <button 
                   onClick={handleExecute}
                   disabled={isProcessing}
@@ -228,7 +228,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
           {step === 'mapping' && previewData && (
             <div className="space-y-6">
               <div className="bg-slate-50 dark:bg-navy-950 rounded-lg p-4 border border-slate-100 dark:border-navy-800">
-                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">设置字段对应关系</h4>
+                <h4 className="text-[11px] font-extrabold text-slate-400 tracking-tight mb-4">设置字段对应关系</h4>
                 <div className="grid grid-cols-2 gap-x-12 gap-y-4">
                   {Object.entries(FIELD_LABELS[entityType]).map(([field, label]) => (
                     <div key={field} className="flex flex-col gap-1.5">
@@ -250,7 +250,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
 
               <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg overflow-hidden">
                 <div className="px-4 py-2 bg-slate-50 dark:bg-navy-950 border-b border-slate-100 dark:border-navy-800 flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">数据预览 (前 5 行)</span>
+                  <span className="text-[10px] font-extrabold text-slate-400 tracking-tight">数据预览 (前 5 行)</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[11px] text-left">
@@ -275,7 +275,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <button onClick={reset} className="px-6 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors uppercase tracking-widest">重新上传</button>
+                <button onClick={reset} className="px-6 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors tracking-tight">重新上传</button>
                 <button 
                   onClick={handleExecute}
                   disabled={isProcessing}
@@ -289,7 +289,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
 
           {step === 'result' && result && (
             <div className="flex flex-col items-center py-6">
-              <div className={`h-16 w-16 rounded-full flex items-center justify-center mb-6 ${result.errorCount === 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'}`}>
+              <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-full ${result.errorCount === 0 ? 'bg-emerald-50 text-emerald-500 dark:bg-emerald-900/20 dark:text-emerald-300' : 'bg-amber-50 text-amber-500 dark:bg-amber-900/20 dark:text-amber-300'}`}>
                 {result.errorCount === 0 ? <CheckCircle2 size={40} /> : <AlertCircle size={40} />}
               </div>
               <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">导入完成</h3>
@@ -300,7 +300,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
 
               {result.errors.length > 0 && (
                 <div className="w-full max-h-48 overflow-y-auto bg-red-50 dark:bg-red-900/10 rounded-lg p-4 mb-8 border border-red-100 dark:border-red-900/30">
-                  <h4 className="text-[10px] font-extrabold text-error uppercase tracking-widest mb-2">错误详情</h4>
+                  <h4 className="text-[10px] font-extrabold text-error tracking-tight mb-2">错误详情</h4>
                   <ul className="space-y-1">
                     {result.errors.map((err, i) => (
                       <li key={i} className="text-[11px] font-medium text-red-700 dark:text-red-400">• {err}</li>
@@ -310,7 +310,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
               )}
 
               <div className="flex gap-4">
-                <button onClick={reset} className="px-6 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors uppercase tracking-widest border border-slate-200 dark:border-navy-800 rounded-lg">继续导入</button>
+                <button onClick={reset} className="px-6 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors tracking-tight border border-slate-200 dark:border-navy-800 rounded-lg">继续导入</button>
                 <button onClick={onClose} className="btn-primary px-10 py-2 text-xs">完成并关闭</button>
               </div>
             </div>
@@ -327,7 +327,7 @@ function StepIndicator({ active, completed, label }: { active: boolean; complete
       <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[13px] font-extrabold transition-all border-2 ${active ? 'bg-primary-navy border-primary-navy text-white shadow-lg shadow-primary-navy/20' : completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-800 text-slate-300'}`}>
         {completed ? <CheckCircle2 size={16} /> : active ? '•' : ''}
       </div>
-      <span className={`text-[10px] font-bold uppercase tracking-widest ${active ? 'text-primary-navy dark:text-white' : completed ? 'text-emerald-500' : 'text-slate-300'}`}>{label}</span>
+      <span className={`text-[10px] font-bold tracking-tight ${active ? 'text-primary-navy dark:text-white' : completed ? 'text-emerald-500' : 'text-slate-300'}`}>{label}</span>
     </div>
   );
 }

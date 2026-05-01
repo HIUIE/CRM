@@ -141,8 +141,8 @@ export default function MainLayout() {
           <Link to="/" className="flex items-center gap-3 group">
             <img src={siteLogo} alt={siteName} className="h-8 w-8 rounded-lg object-contain shadow-md" />
             <div className="min-w-0">
-              <div className="text-sm font-black tracking-tighter text-primary-navy dark:text-white uppercase leading-none">{siteName}</div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Management</div>
+              <div className="text-sm font-black leading-none tracking-tight text-primary-navy dark:text-white">{siteName}</div>
+              <div className="mt-1 text-[9px] font-bold tracking-tight text-slate-400">Management</div>
             </div>
           </Link>
         </div>
@@ -190,7 +190,7 @@ export default function MainLayout() {
              <div className="absolute bottom-full left-0 right-0 mb-2 z-[100]">
                <div className="rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 shadow-lg overflow-hidden">
                  <div className="px-4 py-3 border-b border-slate-100 dark:border-navy-700">
-                   <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">当前账号</div>
+                   <div className="text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400">当前账号</div>
                    <div className="text-sm font-black text-primary-navy dark:text-white mt-0.5">{user?.name}</div>
                  </div>
                  <button
@@ -212,8 +212,8 @@ export default function MainLayout() {
                   {user?.name?.charAt(0) || 'U'}
                 </div>
                 <div className="min-w-0 text-left">
-                  <div className="text-[11px] font-black text-primary-navy dark:text-white truncate uppercase">{user?.name}</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">{user?.role}</div>
+                  <div className="truncate text-[11px] font-black text-primary-navy dark:text-white">{user?.name}</div>
+                  <div className="mt-0.5 text-[9px] font-bold leading-none tracking-tight text-slate-400">{user?.role}</div>
                 </div>
               </div>
               <ChevronDown size={14} className={`text-slate-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
@@ -240,14 +240,14 @@ export default function MainLayout() {
         {!isDetailPage && (
           <header className="sticky top-0 z-40 bg-white/80 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-navy-800 px-8 py-5 flex items-center justify-between transition-all shrink-0">
             <div>
-              <h1 className="text-lg font-black tracking-tight text-primary-navy dark:text-white uppercase">{headerInfo.title}</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{headerInfo.subtitle}</p>
+              <h1 className="text-lg font-black tracking-tight text-primary-navy dark:text-white">{headerInfo.title}</h1>
+              <p className="mt-0.5 text-[10px] font-bold tracking-tight text-slate-400">{headerInfo.subtitle}</p>
             </div>
             <div className="flex items-center gap-4">
                <button onClick={() => setShowNotifications(true)} className="p-2.5 rounded-lg border border-slate-200 dark:border-navy-800 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm">
                   <Bell size={18} />
                </button>
-               <button onClick={handleHeaderAction} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-xl transition-all active:scale-95">
+               <button onClick={handleHeaderAction} className="rounded-lg bg-slate-900 px-6 py-2.5 text-xs font-black tracking-tight text-white shadow-xl transition-all active:scale-95 dark:bg-tertiary-sage">
                   {headerInfo.actionLabel}
                </button>
             </div>

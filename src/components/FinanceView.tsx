@@ -9,6 +9,7 @@ import Chip from './ui/Chip';
 import Toast from './ui/Toast';
 import { Drawer } from './ui/Drawer';
 import { Pagination } from './ui/Pagination';
+import ConfirmDeleteModal from './ui/ConfirmDeleteModal';
 import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
@@ -80,6 +81,9 @@ export default function FinanceView() {
   const [saving, setSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [recordToDelete, setRecordToDelete] = useState<FinanceListRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
@@ -185,8 +189,7 @@ export default function FinanceView() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
-    if (isFormDirty && !window.confirm('有未保存的数据，确认放弃？')) return;
+  const resetAndCloseForm = () => {
     setEditingRecord(null);
     setFormData(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
@@ -194,6 +197,14 @@ export default function FinanceView() {
     setIsUploading(false);
     setUploadProgress(0);
     setShowForm(false);
+  };
+
+  const closeForm = () => {
+    if (isFormDirty) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    resetAndCloseForm();
   };
 
   const setType = (type: 'receipt' | 'payment') => {
@@ -260,10 +271,7 @@ export default function FinanceView() {
         setToast('流水登记成功');
       }
       setTimeout(() => setToast(''), 3000);
-      setEditingRecord(null);
-      setFormData(EMPTY_FORM);
-      setInitialForm(EMPTY_FORM);
-      setShowForm(false);
+      resetAndCloseForm();
       queryClient.invalidateQueries({ queryKey: ['finance'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     } catch (requestError) {
@@ -274,13 +282,20 @@ export default function FinanceView() {
     }
   };
 
-  const deleteRecord = async (record: FinanceListRecord) => {
-    if (!window.confirm(`确定删除这条记录吗？`)) return;
+  const deleteRecord = async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
     try {
-      await apiFetch(`/api/finance/${record.id}`, { method: 'DELETE' });
+      await apiFetch(`/api/finance/${recordToDelete.id}`, { method: 'DELETE' });
+      setToast('财务流水已删除');
+      setTimeout(() => setToast(''), 3000);
+      setRecordToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['finance'] });
     } catch (requestError) {
-      console.error(getErrorMessage(requestError, '删除财务记录失败'));
+      setToast(getErrorMessage(requestError, '删除财务记录失败'));
+      setTimeout(() => setToast(''), 3000);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -312,7 +327,7 @@ export default function FinanceView() {
            <StatCard title="CNY 付款" value={totals.payment.CNY || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="CNY" />
            <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors">
               <div>
-                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">待核销</div>
+                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">待核销</div>
                 <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{totals.pending} 笔</div>
               </div>
               <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500"><Clock size={16} /></div>
@@ -325,7 +340,7 @@ export default function FinanceView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">日期 / 订单</th>
                     <th className="px-4 py-4 text-center">类型 / 分类</th>
@@ -345,12 +360,12 @@ export default function FinanceView() {
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                       <td className="px-4 py-4 text-left">
                          <div className="font-bold text-primary-navy dark:text-white data-field">{formatDateOnly(r.created_at)}</div>
-                         <div className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase hover:text-primary-navy transition-colors">{r.order_display_id || 'MISC'}</div>
+                         <div className="text-xs font-bold text-slate-400 transition-colors hover:text-primary-navy dark:text-slate-500">{r.order_display_id || 'MISC'}</div>
                          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{r.createdByName ? `创建人：${r.createdByName}` : '—'}</div>
                       </td>
                       <td className="px-4 py-4 text-center">
                          <div className="flex items-center justify-center gap-2 mb-1"><Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip></div>
-                         <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{getPaymentCategoryLabel(r.recordCategory || r.payment_category)}</div>
+                         <div className="text-xs font-bold text-slate-500 dark:text-slate-400">{getPaymentCategoryLabel(r.recordCategory || r.payment_category)}</div>
                       </td>
                       <td className={`px-4 py-4 text-right font-bold data-field text-sm ${r.type === 'receipt' ? 'text-emerald-500' : 'text-error'}`}>
                          {r.type === 'receipt' ? '+' : '-'}{formatTotal(Number(r.amount), r.currency || 'USD')}
@@ -370,12 +385,7 @@ export default function FinanceView() {
                            <button onClick={() => openEditForm(r)} className="p-2 text-secondary-slate dark:text-slate-400 hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 rounded-lg border border-transparent shadow-sm transition-all"><Edit size={14} /></button>
                            {user?.role === 'admin' && (
                              <button
-                               onClick={() => {
-                                 const reason = window.prompt('请输入作废/删除此笔流水的财务原因：');
-                                 if (reason) {
-                                   void deleteRecord(r);
-                                 }
-                               }}
+                               onClick={() => setRecordToDelete(r)}
                                className="p-2 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 rounded-lg border border-transparent shadow-sm transition-all"
                              >
                                <Trash2 size={14} />
@@ -384,7 +394,7 @@ export default function FinanceView() {
                         </div>
                       </td>
                     </tr>
-                  )) : <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest">暂无流水记录。</td></tr>}
+                  )) : <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight">暂无流水记录。</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -453,7 +463,7 @@ export default function FinanceView() {
 
             {formData.type === 'receipt' ? (
               <div className="rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/60 dark:bg-emerald-900/10 px-4 py-3">
-                <div className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">收款对象</div>
+                <div className="text-xs font-black tracking-tight text-emerald-600 dark:text-emerald-400">收款对象</div>
                 <div className="mt-1 text-sm font-bold text-primary-navy dark:text-white">{selectedOrder?.customer_name || '选择订单后自动带出客户'}</div>
                 <div className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">收款记录不保存合作伙伴 partner_id，后端会按订单客户同步 target。</div>
               </div>
@@ -499,6 +509,35 @@ export default function FinanceView() {
         </form>
       </Drawer>
 
+      <ConfirmDeleteModal
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={() => { setShowDiscardConfirm(false); resetAndCloseForm(); }}
+        title="放弃未保存修改"
+        warning="当前财务流水表单还有未保存内容，确认放弃这些修改并关闭抽屉吗？"
+        entityLabel="确认文本"
+        entityId="放弃修改"
+        isDeleting={false}
+        showCopy={false}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={Boolean(recordToDelete)}
+        onClose={() => setRecordToDelete(null)}
+        onConfirm={() => void deleteRecord()}
+        title="删除财务流水"
+        warning={
+          <>
+            确定要删除这条财务流水吗？
+            <br /><br />
+            删除后对应收付款记录和凭证关联将从财务列表中移除，请先确认已经完成内部核对。
+          </>
+        }
+        entityLabel="流水编号"
+        entityId={recordToDelete ? String(recordToDelete.id) : ''}
+        isDeleting={isDeleting}
+      />
+
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
@@ -508,7 +547,7 @@ function StatCard({ title, value, icon }: { title: string; value: number; icon: 
   return (
     <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors shadow-inner">
       <div>
-        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{title}</div>
+        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">{title}</div>
         <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{value.toLocaleString()}</div>
       </div>
       <div className="h-8 w-8 rounded-lg bg-white dark:bg-navy-800 shadow-sm flex items-center justify-center border border-slate-100 dark:border-navy-700">{icon}</div>

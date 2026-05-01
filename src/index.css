@@ -105,8 +105,7 @@ h1, h2, h3, h4, .headline {
   letter-spacing: -0.01em;
 }
 
-/* Improve readability of small uppercase labels in light mode */
-:root .uppercase.tracking-widest.text-slate-400,
+/* Improve readability of small labels in light mode */
 :root th.text-slate-400,
 :root th.text-slate-500 {
   color: #4A5568 !important;
@@ -152,11 +151,10 @@ h1, h2, h3, h4, .headline {
     border-radius: 8px;
     background-color: #0F172A;
     color: #FFFFFF;
-    font-family: "DM Sans", sans-serif;
+    font-family: "DM Sans", "PingFang SC", sans-serif;
     font-size: 14px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: -0.01em;
     border: none;
     cursor: pointer;
     transition: all 0.15s ease-in-out;
@@ -177,7 +175,7 @@ h1, h2, h3, h4, .headline {
     background-color: #0B7A5A;
   }
 
-  /* Secondary: transparent fill, Navy text, Navy border */
+  /* Secondary: light surface, subtle border */
   .btn-secondary {
     display: inline-flex;
     align-items: center;
@@ -185,19 +183,19 @@ h1, h2, h3, h4, .headline {
     gap: 8px;
     padding: 10px 22px;
     border-radius: 8px;
-    background-color: transparent;
+    background-color: #FFFFFF;
     color: #0F172A;
-    font-family: "DM Sans", sans-serif;
+    font-family: "DM Sans", "PingFang SC", sans-serif;
     font-size: 14px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border: 1px solid #0F172A;
+    letter-spacing: -0.01em;
+    border: 1px solid #E2E8F0;
     cursor: pointer;
     transition: all 0.15s ease-in-out;
   }
   .btn-secondary:hover {
-    background-color: rgba(15, 23, 42, 0.04);
+    background-color: #F8FAFC;
+    border-color: #CBD5E1;
   }
   .btn-secondary:disabled {
     opacity: 0.4;
@@ -206,10 +204,12 @@ h1, h2, h3, h4, .headline {
   }
   .dark .btn-secondary {
     color: #F8FAFC;
-    border-color: #F8FAFC;
+    background-color: var(--color-navy-900);
+    border-color: var(--color-navy-700);
   }
   .dark .btn-secondary:hover {
-    background-color: rgba(248, 250, 252, 0.06);
+    background-color: var(--color-navy-800);
+    border-color: #475569;
   }
 
 
@@ -226,8 +226,7 @@ h1, h2, h3, h4, .headline {
     font-family: "DM Sans", sans-serif;
     font-size: 14px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: -0.01em;
     border: none;
     cursor: pointer;
     transition: all 0.15s ease-in-out;
@@ -252,12 +251,11 @@ h1, h2, h3, h4, .headline {
   .chip-base {
     display: inline-flex;
     align-items: center;
-    border-radius: 4px;
-    padding: 4px 12px;
+    border-radius: 9999px;
+    padding: 4px 10px;
     font-size: 12px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     line-height: 1.4;
   }
   .chip-success {

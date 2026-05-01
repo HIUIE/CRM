@@ -39,20 +39,20 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-tr from-slate-950 via-slate-900 to-slate-900 transition-all duration-700">
+    <div className="flex min-h-screen w-full items-center justify-center bg-slate-100 transition-colors duration-700 dark:bg-navy-950">
       {/* Background patterns */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary-navy rounded-full blur-[120px]" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-tertiary-sage rounded-full blur-[120px]" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-60 dark:opacity-30">
+        <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-slate-200 blur-[120px] dark:bg-navy-800" />
+        <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-100 blur-[120px] dark:bg-emerald-900/20" />
       </div>
 
-      <div className="relative z-10 w-full max-w-[420px] rounded-[24px] bg-white dark:bg-navy-900 p-10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all animate-in fade-in zoom-in-95 duration-500 mx-4">
+      <div className="relative z-10 mx-4 w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white p-10 shadow-xl transition-all animate-in fade-in zoom-in-95 duration-500 dark:border-navy-800 dark:bg-navy-900">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-slate-50 dark:bg-navy-950 shadow-inner border border-slate-100 dark:border-navy-800 overflow-hidden p-2">
             <img src={siteLogo} alt={siteName} className="h-full w-full object-contain" />
           </div>
-          <h1 className="text-[24px] font-extrabold tracking-tight text-primary-navy dark:text-white uppercase">{siteName}</h1>
-          <p className="mt-2 text-[13px] font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">{siteSlogan || '统一化外贸业务管理与 AI 协同平台'}</p>
+          <h1 className="text-[24px] font-extrabold tracking-tight text-primary-navy dark:text-white">{siteName}</h1>
+          <p className="mt-2 text-[13px] font-medium text-slate-500 dark:text-slate-400">{siteSlogan || '统一化外贸业务管理与 AI 协同平台'}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -63,7 +63,7 @@ export default function LoginScreen() {
           )}
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">登录账号</label>
+            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-tight ml-1">登录账号</label>
             <div className="relative">
               <User className="absolute left-4 top-3.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
               <input
@@ -71,14 +71,14 @@ export default function LoginScreen() {
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 placeholder="请输入用户名"
-                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 dark:focus:bg-navy-900 dark:focus:ring-tertiary-sage/10 outline-none font-medium"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">访问密码</label>
+            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-tight ml-1">访问密码</label>
             <div className="relative">
               <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
               <input
@@ -86,7 +86,7 @@ export default function LoginScreen() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 outline-none font-medium"
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-3.5 pl-11 pr-4 text-sm text-primary-navy dark:text-white transition-all focus:bg-white focus:ring-2 focus:ring-primary-navy/5 dark:focus:bg-navy-900 dark:focus:ring-tertiary-sage/10 outline-none font-medium"
                 required
               />
             </div>

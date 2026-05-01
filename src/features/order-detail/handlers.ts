@@ -376,7 +376,6 @@ export async function handleDeleteAttachment(
   }
 ) {
   const { showToast, loadDetail } = deps;
-  if (!window.confirm('确认彻底删除此附件？')) return;
   try {
     await apiFetch(`/api/attachments/${id}`, { method: 'DELETE' });
     showToast('文件已移除');

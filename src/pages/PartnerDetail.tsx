@@ -120,7 +120,7 @@ export default function PartnerDetailPage() {
   const error = queryError ? getErrorMessage(queryError, '读取伙伴画像失败') : '';
   const [form, setForm] = useState<PartnerForm>({ name: '', partnerType: 'factory', country: '', contact: '', contactPerson: '', address: '', rating: 3, paymentTerms: '', remark: '' });
 
-  if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-sm text-slate-500 animate-pulse uppercase tracking-widest font-bold">正在加载伙伴数据...</div>;
+  if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-sm text-slate-500 animate-pulse tracking-tight font-bold">正在加载伙伴数据...</div>;
   if (error || !data) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error || '伙伴不存在'}</div>;
 
   const { partner, orders, financeRecords, summary } = data;
@@ -191,9 +191,9 @@ export default function PartnerDetailPage() {
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
           <div className="flex items-center gap-2 text-sm font-bold tracking-tight">
-            <Link to="/partners" className="text-slate-400 uppercase tracking-widest hover:text-primary-navy dark:hover:text-white transition-colors">合作伙伴</Link>
+            <Link to="/partners" className="text-slate-400 tracking-tight hover:text-primary-navy dark:hover:text-white transition-colors">合作伙伴</Link>
             <span className="text-slate-200 dark:text-navy-800">/</span>
-            <span className="text-primary-navy dark:text-white uppercase truncate max-w-[200px] flex items-center gap-2">
+            <span className="text-primary-navy dark:text-white truncate max-w-[200px] flex items-center gap-2">
               {PARTNER_TYPE_ICONS[partner.partner_type]} {partner.name}
             </span>
           </div>
@@ -205,12 +205,12 @@ export default function PartnerDetailPage() {
           {/* Left: Profile Sidebar */}
           <div className="space-y-6 lg:sticky lg:top-24 lg:z-10">
             {/* Partner Card */}
-            <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-900 to-slate-700 dark:from-navy-800 dark:to-navy-900 px-6 py-8 text-center">
-                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-white shadow-lg backdrop-blur-sm">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
+              <div className="border-b border-slate-100 bg-slate-50/70 px-6 py-8 text-center dark:border-navy-800 dark:bg-navy-950/50">
+                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-navy-700 dark:bg-navy-900 dark:text-slate-200">
                   <Building2 size={32} />
                 </div>
-                <h2 className="text-lg font-black text-white uppercase tracking-tight">{partner.name}</h2>
+                <h2 className="text-lg font-black tracking-tight text-primary-navy dark:text-white">{partner.name}</h2>
                 <div className="mt-2">
                   <Chip tone={partner.partner_type === 'factory' ? 'info' : partner.partner_type === 'forwarder' ? 'warning' : 'neutral'}>
                     {PARTNER_TYPE_LABELS[partner.partner_type] || partner.partner_type}
@@ -219,11 +219,11 @@ export default function PartnerDetailPage() {
                 {partner.rating && (
                   <div className="mt-2 flex items-center justify-center gap-1">
                     {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} size={14} className={i < partner.rating! ? 'text-amber-400 fill-amber-400' : 'text-white/20'} />
+                      <Star key={i} size={14} className={i < partner.rating! ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-navy-700'} />
                     ))}
                   </div>
                 )}
-                <button type="button" onClick={openEdit} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-xs font-black text-white transition-all hover:bg-white/20">
+                <button type="button" onClick={openEdit} className="btn-secondary mt-5 px-4 py-2 text-xs">
                   <Edit size={13} /> 编辑基本信息
                 </button>
               </div>
@@ -252,20 +252,20 @@ export default function PartnerDetailPage() {
 
             {/* Summary Card */}
             <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm p-6">
-              <h3 className="text-xs font-black text-primary-navy dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+              <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight mb-4 flex items-center gap-2">
                 <BarChart3 size={14} /> 合作概览
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 {overviewItems.map((item) => (
                   <div key={item.label} className="text-center p-3 rounded-lg bg-slate-50 dark:bg-navy-950">
                     <div className={`text-2xl font-black ${item.color}`}>{item.value}</div>
-                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.label}</div>
+                    <div className="text-[9px] font-bold text-slate-400 tracking-tight mt-1">{item.label}</div>
                   </div>
                 ))}
               </div>
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-navy-800">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">累计往来金额</span>
+                  <span className="text-xs font-bold text-slate-400 tracking-tight">累计往来金额</span>
                   <span className="text-sm font-black text-primary-navy dark:text-white">
                     ${summary.totalFinanceAmount.toLocaleString()}
                   </span>
@@ -275,7 +275,7 @@ export default function PartnerDetailPage() {
 
             {partner.remark && (
               <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm p-6">
-                <h3 className="text-xs font-black text-primary-navy dark:text-white uppercase tracking-widest mb-2">备注</h3>
+                <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight mb-2">备注</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{partner.remark}</p>
               </div>
             )}
@@ -297,7 +297,7 @@ export default function PartnerDetailPage() {
             {activeTab === 'orders' && (
               <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800">
-                  <h3 className="text-xs font-black text-primary-navy dark:text-white uppercase tracking-widest">关联订单</h3>
+                  <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight">关联订单</h3>
                 </div>
                 {orders.length === 0 ? (
                   <div className="p-12">
@@ -307,7 +307,7 @@ export default function PartnerDetailPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <tr className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                           <th className="px-6 py-4 text-left">订单号</th>
                           <th className="px-6 py-4 text-left">关联类型</th>
                           <th className="px-6 py-4 text-left">状态</th>
@@ -324,7 +324,7 @@ export default function PartnerDetailPage() {
                             className="group hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                           >
                             <td className="px-6 py-4">
-                              <span className="font-bold text-primary-navy dark:text-tertiary-sage uppercase data-field text-sm">
+                              <span className="font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">
                                 <Link to={`/orders/${o.display_id.toLowerCase()}`} className="hover:underline">{o.display_id}</Link>
                               </span>
                             </td>
@@ -358,7 +358,7 @@ export default function PartnerDetailPage() {
             {activeTab === 'finance' && (
               <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800">
-                  <h3 className="text-xs font-black text-primary-navy dark:text-white uppercase tracking-widest">财务流水</h3>
+                  <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight">财务流水</h3>
                 </div>
                 {financeRecords.length === 0 ? (
                   <div className="p-12">
@@ -368,7 +368,7 @@ export default function PartnerDetailPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <tr className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                           <th className="px-6 py-4 text-left">类型</th>
                           <th className="px-6 py-4 text-right">金额</th>
                           <th className="px-6 py-4 text-left">货币</th>
@@ -391,7 +391,7 @@ export default function PartnerDetailPage() {
                             <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-bold">{r.currency || 'USD'}</td>
                             <td className="px-6 py-4">
                               {r.order_display_id ? (
-                                <Link to={`/orders/${r.order_display_id.toLowerCase()}`} className="text-primary-navy dark:text-tertiary-sage font-bold uppercase text-xs hover:underline data-field">
+                                <Link to={`/orders/${r.order_display_id.toLowerCase()}`} className="text-primary-navy dark:text-tertiary-sage font-bold text-xs hover:underline data-field">
                                   {r.order_display_id}
                                 </Link>
                               ) : <span className="text-slate-400">—</span>}
@@ -486,7 +486,7 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: strin
     <div className="flex items-start gap-3">
       <div className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500">{icon}</div>
       <div className="min-w-0">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</div>
+        <div className="text-[10px] font-bold text-slate-400 tracking-tight">{label}</div>
         <div className="text-sm font-bold text-primary-navy dark:text-white mt-0.5 break-all">{value}</div>
       </div>
     </div>
@@ -497,7 +497,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all uppercase tracking-widest ${
+      className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all tracking-tight ${
         active
           ? 'bg-primary-navy dark:bg-navy-900 text-white shadow-sm'
           : 'text-slate-500 dark:text-slate-400 hover:text-primary-navy dark:hover:text-white'

@@ -144,6 +144,10 @@ export default function OrderDetailPage() {
   const [followUpInput, setFollowUpInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [financeRecordToDelete, setFinanceRecordToDelete] = useState<FinanceRecord | null>(null);
+  const [isFinanceDeleting, setIsFinanceDeleting] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<AttachmentMeta | null>(null);
+  const [isAttachmentDeleting, setIsAttachmentDeleting] = useState(false);
   const [scrollPercent, setScrollPercent] = useState(0);
 
   const toastTimerRef = useRef<any>(null);
@@ -391,6 +395,41 @@ export default function OrderDetailPage() {
     setDrawer({ mode: 'packing' });
   };
 
+  const requestDeleteAttachment = async (id: number) => {
+    const attachments = [
+      ...orderDocuments,
+      ...(customs?.attachments || []),
+      ...logisticsRecords.flatMap(record => record.attachments || []),
+    ];
+    setAttachmentToDelete(attachments.find(att => att.id === id) || null);
+  };
+
+  const deleteFinanceRecord = async () => {
+    if (!financeRecordToDelete) return;
+    setIsFinanceDeleting(true);
+    try {
+      await apiFetch(`/api/finance/${financeRecordToDelete.id}`, { method: 'DELETE' });
+      showToast('财务流水已删除');
+      setFinanceRecordToDelete(null);
+      await refreshDetail();
+    } catch (err) {
+      showToast(getErrorMessage(err, '删除财务流水失败'));
+    } finally {
+      setIsFinanceDeleting(false);
+    }
+  };
+
+  const deleteAttachment = async () => {
+    if (!attachmentToDelete) return;
+    setIsAttachmentDeleting(true);
+    try {
+      await handleDeleteAttachment(attachmentToDelete.id, { showToast, loadDetail: refreshDetail });
+      setAttachmentToDelete(null);
+    } finally {
+      setIsAttachmentDeleting(false);
+    }
+  };
+
   // 6. View Helpers
   const orderDetailSkeleton = (
     <div className="animate-page-in space-y-8 p-6">
@@ -473,7 +512,7 @@ export default function OrderDetailPage() {
               uploadingDoc={uploadingDoc}
               onUploadDocument={(files) => handleUploadOrderDocument(files, { order, customer, setUploadingDoc, showToast, loadDetail: refreshDetail })}
               onPreview={setPreviewAttachment}
-              onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
+              onDeleteAttachment={requestDeleteAttachment}
               user={user}
             />
 
@@ -486,7 +525,7 @@ export default function OrderDetailPage() {
               onPreview={setPreviewAttachment}
               onEdit={openFinanceDrawer}
               onAdd={() => openFinanceDrawer()}
-              onDelete={(r: FinanceRecord) => { if(window.confirm('确认删除？')) apiFetch(`/api/finance/${r.id}`,{method:'DELETE'}).then(()=>refreshDetail()) }}
+              onDelete={(r: FinanceRecord) => setFinanceRecordToDelete(r)}
               financeFilter={financeFilter}
               onFilterChange={setFinanceFilter}
             />
@@ -504,7 +543,7 @@ export default function OrderDetailPage() {
               sectionRef={sectionRefs.customs}
               customs={customs}
               onEditCustoms={openCustomsDrawer}
-              onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
+              onDeleteAttachment={requestDeleteAttachment}
               onPreview={setPreviewAttachment}
               user={user}
             />
@@ -522,7 +561,7 @@ export default function OrderDetailPage() {
               hasAnyLogistics={hasAnyLogistics}
               onAddLogistics={() => openLogisticsDrawer()}
               onEditLogistics={openLogisticsDrawer}
-              onDeleteAttachment={(id) => handleDeleteAttachment(id, { showToast, loadDetail: refreshDetail })}
+              onDeleteAttachment={requestDeleteAttachment}
               onPreview={setPreviewAttachment}
               user={user}
             />
@@ -561,6 +600,17 @@ export default function OrderDetailPage() {
         </aside>
       </main>
 
+      <div className="fixed inset-x-3 bottom-3 z-[260] lg:hidden">
+        <div className="rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur-xl dark:border-navy-800 dark:bg-navy-900/95">
+          <div className="grid grid-cols-4 gap-1">
+            <button type="button" onClick={() => scrollToSection('items')} className="rounded-xl px-2 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-navy-800">商品</button>
+            <button type="button" onClick={() => scrollToSection('finance')} className="rounded-xl px-2 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-navy-800">财务</button>
+            <button type="button" onClick={() => setShowTaskDrawer(true)} className="rounded-xl px-2 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-navy-800">任务</button>
+            <button type="button" onClick={() => setDrawer({ mode: 'ai-analysis' })} className="rounded-xl bg-primary-navy px-2 py-2 text-[11px] font-bold text-white transition-colors hover:bg-navy-950 dark:bg-tertiary-sage">AI</button>
+          </div>
+        </div>
+      </div>
+
       <Suspense fallback={null}>
         {previewAttachment && <PreviewModal attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
         <TaskDrawer
@@ -575,6 +625,38 @@ export default function OrderDetailPage() {
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
 
       <Suspense fallback={null}>
+        <ConfirmDeleteModal
+          isOpen={Boolean(attachmentToDelete)}
+          onClose={() => setAttachmentToDelete(null)}
+          onConfirm={() => void deleteAttachment()}
+          title="删除附件"
+          warning={
+            <>
+              确定要删除附件“{attachmentToDelete?.fileName || ''}”吗？
+              <br /><br />
+              删除后该文件将从当前订单记录中移除，且无法在系统内恢复。
+            </>
+          }
+          entityLabel="附件名称"
+          entityId={attachmentToDelete?.fileName || ''}
+          isDeleting={isAttachmentDeleting}
+        />
+        <ConfirmDeleteModal
+          isOpen={Boolean(financeRecordToDelete)}
+          onClose={() => setFinanceRecordToDelete(null)}
+          onConfirm={() => void deleteFinanceRecord()}
+          title="删除财务流水"
+          warning={
+            <>
+              确定要删除这条财务流水吗？
+              <br /><br />
+              删除后该订单的回款/付款统计会同步更新，请先确认凭证与内部记录已经核对。
+            </>
+          }
+          entityLabel="流水编号"
+          entityId={financeRecordToDelete ? String(financeRecordToDelete.id) : ''}
+          isDeleting={isFinanceDeleting}
+        />
         <ConfirmDeleteModal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
@@ -599,14 +681,14 @@ export default function OrderDetailPage() {
           <div className="relative z-10 h-dvh max-h-dvh w-full max-w-[750px] border-l border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-2xl flex min-h-0 flex-col animate-in slide-in-from-right duration-500">
             <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-navy-800 px-6 py-5 sm:px-10 sm:py-8 bg-slate-50 dark:bg-navy-950/50">
               <div className="group cursor-default">
-                <h3 className="text-xl font-bold text-primary-navy dark:text-white tracking-tight uppercase leading-none">{currentDrawerTitle}</h3>
+                <h3 className="text-xl font-bold text-primary-navy dark:text-white tracking-tight leading-none">{currentDrawerTitle}</h3>
               </div>
               <button type="button" onClick={closeDrawer} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-800 p-2 text-slate-400 hover:text-error hover:border-red-200 dark:hover:border-red-900 transition-all shadow-sm"><X size={26} /></button>
             </div>
             <form onSubmit={e => { e.preventDefault(); if (drawer.mode === 'order') handleSaveOrder(e, { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); else if (drawer.mode === 'finance') handleSaveFinance(e, { financeForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production') handleSaveProduction(e, { productionForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'production-log') handleSaveProductionLog(e, { productionLogForm, order, customer, productionPlan, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'customs') handleSaveCustoms(e, { customsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'logistics') handleSaveLogistics(e, { logisticsForm, order, customer, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError, setIsUploading, setUploadProgress }); else if (drawer.mode === 'packing') handleSavePacking(e, { packingForm, order, setSaving, showToast, closeDrawer, loadDetail: refreshDetail, setDrawerError }); }} className="flex min-h-0 flex-1 flex-col bg-white dark:bg-navy-900">
               <div className="min-h-0 flex-1 overflow-y-auto p-6 sm:p-10 space-y-10 custom-scrollbar">
-                {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner uppercase "><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
-                <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-widest uppercase">正在载入组件...</div>}>
+                {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner"><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
+                <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-tight">正在载入组件...</div>}>
                   {drawer.mode === 'order' ? (
                     <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} />
                   ) : drawer.mode === 'production-log' ? (
@@ -628,11 +710,11 @@ export default function OrderDetailPage() {
               </div>
               <div className="shrink-0 flex gap-4 sm:gap-6 bg-white/95 dark:bg-navy-900/95 backdrop-blur-2xl px-6 py-5 sm:px-10 sm:py-8 border-t border-slate-100 dark:border-navy-800">
                 {drawer.mode === 'ai-analysis' ? (
-                  <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-4 text-xs font-extrabold uppercase tracking-[0.35em]">关闭</button>
+                  <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-4 text-xs font-extrabold tracking-tight">关闭</button>
                 ) : (
                   <>
-                    <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-4 text-xs font-extrabold uppercase tracking-[0.35em]">放弃修改</button>
-                    <button type="submit" disabled={saving} className="btn-primary flex-[3] py-4 text-sm font-extrabold uppercase tracking-[0.35em]">{saving ? '同步中...' : '确认并同步数据'}</button>
+                    <button type="button" onClick={closeDrawer} className="btn-secondary flex-1 py-4 text-xs font-extrabold tracking-tight">放弃修改</button>
+                    <button type="submit" disabled={saving} className="btn-primary flex-[3] py-4 text-sm font-extrabold tracking-tight">{saving ? '同步中...' : '确认并同步数据'}</button>
                   </>
                 )}
               </div>

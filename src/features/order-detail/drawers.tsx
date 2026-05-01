@@ -52,11 +52,11 @@ export function OrderEditForm({
 
       <section className="space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-4">
-          <h4 className="text-sm font-bold text-primary-navy dark:text-white uppercase tracking-widest">产品项目清单</h4>
+          <h4 className="text-sm font-bold text-primary-navy dark:text-white tracking-tight">产品项目清单</h4>
           <button type="button" onClick={() => setOrderForm({ ...orderForm, items: [...orderForm.items, { clientKey: Math.random().toString(36).slice(2), productName: '', specification: '', quantity: '1', unit: 'pcs', unitPrice: '0', subtotal: '0', imageUrl: '' }] })} className="btn-primary text-xs px-5 py-2 rounded-md">+ 新增产品</button>
         </div>
         <div className="space-y-4">
-          {orderForm.items.length === 0 && <div className="py-16 text-center border border-dashed border-slate-300 dark:border-navy-800 rounded-lg text-slate-400 text-xs font-bold uppercase tracking-widest">点击上方按钮添加产品明细</div>}
+          {orderForm.items.length === 0 && <div className="py-16 text-center border border-dashed border-slate-300 dark:border-navy-800 rounded-lg text-slate-400 text-xs font-bold tracking-tight">点击上方按钮添加产品明细</div>}
           {orderForm.items.map((item, idx) => (
             <div key={item.clientKey} className="relative p-5 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-200 dark:border-navy-800 group hover:bg-white dark:hover:bg-navy-800 hover:border-primary-navy/30 dark:hover:border-tertiary-sage/30 transition-all shadow-sm">
               <button type="button" onClick={() => { if (item.id) setDeletedItemIds([...deletedItemIds, item.id]); setOrderForm({ ...orderForm, items: orderForm.items.filter((_, i) => i !== idx) }); }} className="absolute -right-2 -top-2 h-7 w-7 rounded-full bg-error text-white shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"><Trash size={12} /></button>
@@ -66,7 +66,7 @@ export function OrderEditForm({
                 <div className="sm:col-span-4"><Field label="单位"><select value={item.unit} onChange={e => { const next = [...orderForm.items]; next[idx].unit = e.target.value; setOrderForm({ ...orderForm, items: next }); }} className="w-full bg-transparent p-1 text-sm font-bold text-primary-navy dark:text-white appearance-none focus:outline-none cursor-pointer"><option value="pcs">pcs (件)</option><option value="sets">sets (套)</option><option value="kg">kg (公斤)</option><option value="m">m (米)</option><option value="rolls">rolls (卷)</option></select></Field></div>
                 <div className="sm:col-span-4"><Field label="单价 (USD)"><input type="number" step="0.0001" value={item.unitPrice} onChange={e => { const next = [...orderForm.items]; next[idx].unitPrice = e.target.value; next[idx].subtotal = String(asNumber(e.target.value) * asNumber(next[idx].quantity)); setOrderForm({ ...orderForm, items: next }); }} className="w-full bg-transparent p-1 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none data-field border-b border-slate-100 dark:border-navy-800" /></Field></div>
                 <div className="sm:col-span-4"><Field label="数量"><input type="number" value={item.quantity} onChange={e => { const next = [...orderForm.items]; next[idx].quantity = e.target.value; next[idx].subtotal = String(asNumber(e.target.value) * asNumber(next[idx].unitPrice)); setOrderForm({ ...orderForm, items: next }); }} className="w-full bg-transparent p-1 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none data-field border-b border-slate-100 dark:border-navy-800 text-center" /></Field></div>
-                <div className="sm:col-span-4 flex flex-col justify-end items-end"><div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Row Total</div><div className="text-[18px] font-extrabold text-primary-navy dark:text-tertiary-sage data-field leading-none">USD {asNumber(item.subtotal).toLocaleString()}</div></div>
+                <div className="sm:col-span-4 flex flex-col justify-end items-end"><div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">Row Total</div><div className="text-[18px] font-extrabold text-primary-navy dark:text-tertiary-sage data-field leading-none">USD {asNumber(item.subtotal).toLocaleString()}</div></div>
               </div>
             </div>
           ))}
@@ -74,7 +74,7 @@ export function OrderEditForm({
       </section>
 
       <section className="space-y-8">
-        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-navy-800 pb-4"><h4 className="text-sm font-bold text-primary-navy dark:text-white uppercase tracking-widest">财务补差与运杂费</h4></div>
+        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-navy-800 pb-4"><h4 className="text-sm font-bold text-primary-navy dark:text-white tracking-tight">财务补差与运杂费</h4></div>
         <div className="grid gap-12 sm:grid-cols-2">
           <Field label="预估出口运费 (USD)"><input type="number" value={orderForm.freightAmount} onChange={e => setOrderForm({ ...orderForm, freightAmount: e.target.value })} className="w-full bg-transparent p-2 text-lg font-bold text-primary-navy dark:text-white focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors data-field" /></Field>
           <Field label="其他税杂补差 (USD)"><input type="number" value={orderForm.miscAmount} onChange={e => setOrderForm({ ...orderForm, miscAmount: e.target.value })} className="w-full bg-transparent p-2 text-lg font-bold text-primary-navy dark:text-white focus:outline-none border-b-2 border-slate-200 dark:border-navy-800 focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors data-field" /></Field>
@@ -129,7 +129,7 @@ export function FinanceForm({
       </div>
       {financeForm.type === 'receipt' ? (
         <div className="rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/60 dark:bg-emerald-900/10 p-5">
-          <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">收款对象</div>
+          <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 tracking-tight">收款对象</div>
           <div className="mt-2 text-base font-black text-primary-navy dark:text-white">{customerName || '当前订单客户'}</div>
           <div className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">收款流水会自动使用订单客户，保存时不写入 partner_id。</div>
         </div>
@@ -201,7 +201,7 @@ export function ProductionLogForm({
     <div className="space-y-10">
       <div className="p-8 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 flex gap-6 shadow-inner">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shadow-lg"><Clock size={28} /></div>
-        <div className="space-y-2 pt-1"><h5 className="text-[16px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">记录生产进度更新</h5><p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">实时同步制造链路数据，确保持续的可追溯性。</p></div>
+        <div className="space-y-2 pt-1"><h5 className="text-[16px] font-bold text-primary-navy dark:text-white tracking-tight">记录生产进度更新</h5><p className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">实时同步制造链路数据，确保持续的可追溯性。</p></div>
       </div>
       <div className="grid gap-10 sm:grid-cols-2">
         <Field label="生产记录日期"><input type="date" value={productionLogForm.logDate} onChange={e => setProductionLogForm({ ...productionLogForm, logDate: e.target.value })} className="w-full bg-white dark:bg-navy-950 py-2.5 px-3.5 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" /></Field>
@@ -229,7 +229,7 @@ export function CustomsForm({
     <div className="space-y-10">
       <div className="p-8 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 flex gap-6 shadow-inner">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white shadow-lg"><FileCheck size={28} /></div>
-        <div className="space-y-2 pt-1"><h5 className="text-[16px] font-bold text-primary-navy dark:text-white uppercase tracking-tight">报关与清关信息同步</h5><p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">更新海关申报单据与状态，确保出口合规性与时效追踪。</p></div>
+        <div className="space-y-2 pt-1"><h5 className="text-[16px] font-bold text-primary-navy dark:text-white tracking-tight">报关与清关信息同步</h5><p className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">更新海关申报单据与状态，确保出口合规性与时效追踪。</p></div>
       </div>
       <div className="grid gap-8 sm:grid-cols-2">
         <Field label="报关当前状态">
@@ -360,11 +360,11 @@ export function PackingForm({
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-5">
-        <div className="space-y-1"><h4 className="text-[16px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">装箱明细数据维护</h4><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">维护物理包装参数，支持一单多规格录入。</p></div>
+        <div className="space-y-1"><h4 className="text-[16px] font-extrabold text-primary-navy dark:text-white tracking-tight">装箱明细数据维护</h4><p className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">维护物理包装参数，支持一单多规格录入。</p></div>
         <button type="button" onClick={() => setPackingForm({ items: [...packingForm.items, { clientKey: Math.random().toString(36).slice(2), packageCount: '1', packageSize: '', grossWeight: '', netWeight: '' }] })} className="btn-primary text-xs px-6 py-2.5 rounded-lg">+ 新增包装组</button>
       </div>
       <div className="space-y-5">
-        {packingForm.items.length === 0 && <div className="py-20 text-center border border-dashed border-slate-200 dark:border-navy-800 rounded-lg text-slate-400 font-bold uppercase tracking-widest">尚未添加任何装箱组</div>}
+        {packingForm.items.length === 0 && <div className="py-20 text-center border border-dashed border-slate-200 dark:border-navy-800 rounded-lg text-slate-400 font-bold tracking-tight">尚未添加任何装箱组</div>}
         {packingForm.items.map((item, idx) => (
           <div key={item.clientKey} className="relative p-6 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-200 dark:border-navy-800 group shadow-inner">
             <button type="button" onClick={() => setPackingForm({ items: packingForm.items.filter((_, i) => i !== idx) })} className="absolute -right-2.5 -top-2.5 h-8 w-8 rounded-full bg-error text-white shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-30 hover:scale-110"><Trash size={14} /></button>
@@ -382,7 +382,7 @@ export function PackingForm({
                   {item.imageUrl ? <img src={item.imageUrl} alt="" className="h-full w-full object-cover" /> : <Upload size={20} className="text-slate-200 dark:text-navy-800" />}
                   <input type="file" className="hidden" onChange={e => e.target.files?.[0] && onUploadPhoto(idx, e.target.files[0])} />
                 </label>
-                <span className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">箱体实拍</span>
+                <span className="text-xs font-extrabold text-slate-400 dark:text-slate-500 tracking-tight">箱体实拍</span>
               </div>
             </div>
           </div>
@@ -405,7 +405,7 @@ export function AIAnalysisContent({
     return (
       <div className="text-center py-48 flex flex-col items-center animate-in fade-in">
         <div className="h-16 w-16 border-[8px] border-slate-100 dark:border-navy-800 border-t-primary-navy dark:border-t-tertiary-sage rounded-full animate-spin mb-10 shadow-md" />
-        <span className="text-xs font-extrabold text-primary-navy dark:text-tertiary-sage uppercase tracking-[0.8em] animate-pulse">核心引擎诊断中...</span>
+        <span className="text-xs font-extrabold text-primary-navy dark:text-tertiary-sage tracking-tight animate-pulse">核心引擎诊断中...</span>
       </div>
     );
   }
@@ -413,20 +413,19 @@ export function AIAnalysisContent({
   if (!aiResult) return null;
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-1000">
-      <div className="p-10 bg-primary-navy dark:bg-navy-950 rounded-lg text-white flex items-center justify-between shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 h-96 w-96 bg-white/5 rounded-full blur-[100px] -translate-y-48 translate-x-32" />
+    <div className="space-y-8 animate-in fade-in duration-1000">
+      <div className="relative flex items-center justify-between overflow-hidden rounded-lg border border-slate-200 bg-white p-8 shadow-sm dark:border-navy-800 dark:bg-navy-900">
         <div>
-          <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.6em] mb-4 opacity-70">Consolidated Risk Score</h4>
-          <p className="text-xl font-bold text-slate-300 uppercase tracking-[0.4em]">健康评估分值</p>
+          <h4 className="mb-3 text-xs font-extrabold tracking-tight text-slate-400">Consolidated Risk Score</h4>
+          <p className="text-xl font-bold tracking-tight text-primary-navy dark:text-white">健康评估分值</p>
         </div>
-        <div className={`text-[110px] font-extrabold italic tracking-tighter leading-none pr-6 data-field ${aiResult.score>=80?'text-success':aiResult.score>=60?'text-warning':'text-error'}`}>{aiResult.score}</div>
+        <div className={`pr-2 text-[96px] font-extrabold italic leading-none tracking-tighter data-field ${aiResult.score>=80?'text-success':aiResult.score>=60?'text-warning':'text-error'}`}>{aiResult.score}</div>
       </div>
-      <div className="p-12 bg-slate-50 dark:bg-navy-950/50 border-l-[12px] border-l-tertiary-sage rounded-r-2xl text-primary-navy dark:text-white font-bold text-[24px] leading-snug shadow-inner tracking-tighter uppercase">"{aiResult.summary}"</div>
-      <section className="space-y-10 px-2">
-        <div className="flex items-center gap-5 px-4"><div className="h-6 w-1.5 rounded-full bg-error" /><h5 className="text-[14px] font-extrabold text-primary-navy dark:text-white uppercase tracking-[0.5em]">识别到的关键异常与偏差</h5></div>
-        <div className="space-y-8">
-          {aiResult.risks.map((r, i) => <div key={i} className="p-10 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg text-[18px] font-bold text-slate-700 dark:text-slate-300 leading-relaxed shadow-md border-l-[20px] border-l-error/20 hover:border-l-error transition-all duration-300">"{r.content}"</div>)}
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-[20px] font-bold leading-snug tracking-tight text-primary-navy shadow-sm dark:border-navy-800 dark:bg-navy-950/50 dark:text-white">“{aiResult.summary}”</div>
+      <section className="space-y-5 px-2">
+        <div className="flex items-center gap-3 px-2"><div className="h-4 w-1 rounded-full bg-error" /><h5 className="text-[14px] font-extrabold tracking-tight text-primary-navy dark:text-white">识别到的关键异常与偏差</h5></div>
+        <div className="space-y-4">
+          {aiResult.risks.map((r, i) => <div key={i} className="rounded-lg border border-red-100 bg-white p-6 text-[16px] font-bold leading-relaxed text-slate-700 shadow-sm transition-all hover:border-red-200 dark:border-red-900/30 dark:bg-navy-900 dark:text-slate-300">“{r.content}”</div>)}
         </div>
       </section>
     </div>

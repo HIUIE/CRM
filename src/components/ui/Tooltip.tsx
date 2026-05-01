@@ -71,7 +71,7 @@ export function Tooltip({ text, children, disabled = false }: TooltipProps) {
           }}
           className={`fixed pointer-events-none w-max max-w-[240px] animate-in fade-in zoom-in-95 duration-200`}
         >
-          <div className="relative bg-slate-900/95 dark:bg-navy-800/95 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-3.5 py-2 rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-white/10 text-center leading-relaxed">
+          <div className="relative rounded-lg border border-white/10 bg-slate-900/95 px-3.5 py-2 text-center text-[10px] font-bold leading-relaxed tracking-tight text-white shadow-[0_10px_30px_rgba(0,0,0,0.3)] backdrop-blur-md dark:bg-navy-800/95">
             {text}
             {/* 三角形指示器 */}
             <div 

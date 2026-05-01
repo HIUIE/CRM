@@ -134,7 +134,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = 'æ
                   <span className="text-lg w-7 shrink-0 text-center drop-shadow-sm">{country.flag}</span>
                   <div className="flex flex-col">
                     <span className="font-semibold leading-tight">{country.nameZh}</span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">{country.name}</span>
+                    <span className="text-[10px] tracking-tight text-slate-400 dark:text-slate-500">{country.name}</span>
                   </div>
                   {selectedCountry?.code === country.code && (
                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-navy dark:bg-tertiary-sage" />

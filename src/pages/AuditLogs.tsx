@@ -76,7 +76,7 @@ export default function AuditLogsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-center text-slate-400 font-bold animate-pulse uppercase tracking-widest">正在检索全库审计轨迹...</div>;
+  if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-center text-sm font-bold text-slate-400 animate-pulse">正在检索全库审计轨迹...</div>;
   if (error) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error}</div>;
 
   return (
@@ -92,14 +92,14 @@ export default function AuditLogsPage() {
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
           <div className="flex items-center gap-2 text-sm font-bold tracking-tight">
-            <Link to="/dashboard" className="text-slate-400 uppercase tracking-widest hover:text-primary-navy dark:hover:text-white transition-colors">系统管理</Link>
+            <Link to="/dashboard" className="text-slate-400 transition-colors hover:text-primary-navy dark:hover:text-white">系统管理</Link>
             <span className="text-slate-200 dark:text-navy-800">/</span>
-            <span className="text-primary-navy dark:text-white uppercase tracking-widest">操作审计日志</span>
+            <span className="text-primary-navy dark:text-white">操作审计日志</span>
           </div>
         </div>
         <button 
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white transition-all uppercase tracking-widest shadow-sm"
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-primary-navy dark:border-navy-800 dark:bg-navy-900 dark:text-slate-400 dark:hover:bg-navy-800 dark:hover:text-white"
         >
           <Printer size={14} /> 导出报告
         </button>
@@ -108,7 +108,7 @@ export default function AuditLogsPage() {
       {/* Filter Bar */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 shadow-sm">
          <div className="space-y-1.5">
-           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">实体类型</label>
+           <label className="text-[10px] font-bold text-slate-400 tracking-tight px-1">实体类型</label>
            <select 
              value={entityType}
              onChange={(e) => setEntityType(e.target.value)}
@@ -124,7 +124,7 @@ export default function AuditLogsPage() {
          </div>
 
          <form onSubmit={handleSearch} className="md:col-span-2 space-y-1.5">
-           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">实体 ID (精确搜索)</label>
+           <label className="text-[10px] font-bold text-slate-400 tracking-tight px-1">实体 ID (精确搜索)</label>
            <div className="flex gap-2">
              <input 
                type="text"
@@ -133,14 +133,14 @@ export default function AuditLogsPage() {
                onChange={(e) => setEntityId(e.target.value)}
                className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-primary-navy transition-colors"
              />
-             <button type="submit" className="px-4 py-2 bg-primary-navy text-white rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all uppercase tracking-widest">搜索</button>
+             <button type="submit" className="px-4 py-2 bg-primary-navy text-white rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all tracking-tight">搜索</button>
            </div>
          </form>
 
          <div className="flex items-end justify-end">
             <button 
               onClick={() => { setUserId(''); setEntityType(''); setEntityId(''); }}
-              className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-primary-navy uppercase tracking-widest transition-colors"
+              className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-primary-navy tracking-tight transition-colors"
             >
               重置筛选
             </button>
@@ -153,7 +153,7 @@ export default function AuditLogsPage() {
             <div className="flex flex-col">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                     <tr>
                       <th className="px-6 py-4 text-left">时间 / 操作人</th>
                       <th className="px-6 py-4 text-center">类型</th>
@@ -170,7 +170,7 @@ export default function AuditLogsPage() {
                             <Clock size={14} className="text-slate-400" />
                             <span className="data-field">{log.created_at ? String(log.created_at).replace('T', ' ').slice(0, 19) : '—'}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 tracking-tight">
                             <User size={12} className="text-slate-300" />
                             {log.user_name || 'System'}
                           </div>
@@ -181,7 +181,7 @@ export default function AuditLogsPage() {
                           </Chip>
                         </td>
                         <td className="px-6 py-4 text-left">
-                          <div className="flex items-center gap-2 text-primary-navy dark:text-tertiary-sage font-bold uppercase tracking-tight mb-1">
+                          <div className="flex items-center gap-2 text-primary-navy dark:text-tertiary-sage font-bold tracking-tight mb-1">
                             <Box size={14} />
                             {log.entity_type}
                           </div>
@@ -236,7 +236,7 @@ export default function AuditLogsPage() {
             <div className="bg-slate-50 dark:bg-navy-950 px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-navy-800">
                <div className="flex items-center gap-3">
                  <FileJson className="text-primary-navy dark:text-tertiary-sage" size={20} />
-                 <h3 className="text-sm font-extrabold text-primary-navy dark:text-white uppercase tracking-widest">操作详情与变更快照</h3>
+                 <h3 className="text-sm font-extrabold text-primary-navy dark:text-white tracking-tight">操作详情与变更快照</h3>
                </div>
                <button onClick={() => setSelectedLog(null)} className="p-2 text-slate-400 hover:text-primary-navy transition-colors"><X size={20} /></button>
             </div>
@@ -253,7 +253,7 @@ export default function AuditLogsPage() {
                </div>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-navy-950 border-t border-slate-100 dark:border-navy-800 flex justify-end">
-               <button onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-8 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all uppercase tracking-widest">关闭</button>
+               <button onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-8 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all tracking-tight">关闭</button>
             </div>
           </div>
         </div>
@@ -265,8 +265,8 @@ export default function AuditLogsPage() {
 function DetailBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="p-3 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800">
-       <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</div>
-       <div className="text-sm font-extrabold text-primary-navy dark:text-white uppercase truncate">{value}</div>
+       <div className="text-xs font-bold text-slate-400 tracking-tight mb-1">{label}</div>
+       <div className="text-sm font-extrabold text-primary-navy dark:text-white truncate">{value}</div>
     </div>
   );
 }
@@ -281,8 +281,8 @@ function JsonSection({ title, content, onCopy, copied }: { title: string; conten
   return (
     <div className="space-y-2">
        <div className="flex items-center justify-between">
-          <label className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{title}</label>
-          <button onClick={onCopy} className="flex items-center gap-1.5 text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all uppercase tracking-widest">
+          <label className="text-xs font-extrabold text-slate-400 dark:text-slate-500 tracking-tight">{title}</label>
+          <button onClick={onCopy} className="flex items-center gap-1.5 text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:opacity-70 transition-all tracking-tight">
             {copied ? <><Check size={12} /> 已复制</> : <><Copy size={12} /> 复制代码</>}
           </button>
        </div>

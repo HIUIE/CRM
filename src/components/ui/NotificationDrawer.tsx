@@ -57,14 +57,14 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-navy-800">
           <div className="flex items-center gap-3">
              <Bell size={18} className="text-primary-navy dark:text-tertiary-sage" />
-             <h2 className="text-[15px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">消息中心</h2>
+             <h2 className="text-[15px] font-extrabold text-primary-navy dark:text-white tracking-tight">消息中心</h2>
           </div>
           <button onClick={onClose} className="p-2 -mr-2 text-slate-400 hover:text-primary-navy dark:hover:text-white"><X size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
            {loading ? (
-             <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase animate-pulse">正在同步消息...</div>
+             <div className="py-20 text-center text-xs font-bold text-slate-400 animate-pulse">正在同步消息...</div>
            ) : notifications.length > 0 ? (
              <div className="space-y-1">
                 {notifications.map((n) => (
@@ -81,7 +81,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                        {!n.is_read && <div className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">{n.message}</p>
-                    <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    <div className="flex justify-between items-center text-[10px] font-bold tracking-tight text-slate-400">
                        <span>{n.created_at.slice(0, 16).replace('T', ' ')}</span>
                        <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary-navy dark:text-tertiary-sage">查看详情 <ArrowRight size={12} /></span>
                     </div>
@@ -91,7 +91,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
            ) : (
              <div className="py-20 text-center">
                 <Bell size={48} className="mx-auto mb-4 text-slate-100 dark:text-navy-800" />
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">暂无新消息</div>
+                <div className="text-xs font-bold text-slate-400 tracking-tight">暂无新消息</div>
              </div>
            )}
         </div>
@@ -100,7 +100,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
           <div className="p-4 border-t border-slate-100 dark:border-navy-800">
             <button 
               onClick={markAllRead}
-              className="w-full py-2.5 rounded-lg bg-slate-50 dark:bg-navy-950 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors border border-slate-100 dark:border-navy-800"
+              className="w-full py-2.5 rounded-lg bg-slate-50 dark:bg-navy-950 text-slate-500 dark:text-slate-400 text-xs font-bold tracking-tight hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors border border-slate-100 dark:border-navy-800"
             >
               全部标记为已读
             </button>

@@ -4,10 +4,10 @@ export default function FilterPill({ children, active, onClick }: { children: Re
   return (
     <button
       onClick={onClick}
-      className={`rounded px-3 py-1 text-xs font-semibold uppercase tracking-wider transition-all ${
+      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
         active
-          ? 'bg-primary-navy dark:bg-tertiary-sage text-white'
-          : 'bg-background text-primary-navy border border-[#E2E8F0] dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700'
+          ? 'bg-primary-navy text-white shadow-sm dark:bg-tertiary-sage'
+          : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-primary-navy dark:border-navy-700 dark:bg-navy-900 dark:text-slate-400 dark:hover:border-navy-600 dark:hover:bg-navy-800 dark:hover:text-white'
       }`}
     >
       {children}

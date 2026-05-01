@@ -95,7 +95,7 @@ export default function TeamTab() {
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-4">姓名</th>
                 <th className="px-4 py-4">账号</th>
@@ -117,21 +117,21 @@ export default function TeamTab() {
                   </td>
                   <td className="px-4 py-4 text-slate-600 dark:text-slate-400 font-medium">{managedUser.username}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${managedUser.role === 'admin' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold tracking-tight ${managedUser.role === 'admin' ? 'border border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300' : 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-navy-700 dark:bg-navy-800 dark:text-slate-300'}`}>
                       {managedUser.role === 'admin' ? '管理员' : '业务员'}
                     </span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${managedUser.active === false ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-bold tracking-tight ${managedUser.active === false ? 'border-slate-200 bg-slate-50 text-slate-500 dark:border-navy-700 dark:bg-navy-800 dark:text-slate-400' : 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300'}`}>
                       {managedUser.active === false ? '已停用' : '启用中'}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => startEditUser(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">编辑</button>
-                      <button onClick={() => { setResettingUserId(managedUser.id); setResetPassword(''); setConfirmPassword(''); }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">重置</button>
+                      <button onClick={() => startEditUser(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-navy-700 dark:text-slate-300 dark:hover:bg-navy-800">编辑</button>
+                      <button onClick={() => { setResettingUserId(managedUser.id); setResetPassword(''); setConfirmPassword(''); }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-navy-700 dark:text-slate-300 dark:hover:bg-navy-800">重置</button>
                       {managedUser.username !== 'root' && (
-                        <button onClick={() => toggleUserStatus(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">
+                        <button onClick={() => toggleUserStatus(managedUser)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-navy-700 dark:text-slate-300 dark:hover:bg-navy-800">
                           {managedUser.active === false ? '启用' : '停用'}
                         </button>
                       )}
@@ -144,40 +144,40 @@ export default function TeamTab() {
         </div>
 
         <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6">
-          <div className="mb-6 flex items-center text-sm font-bold text-primary-navy dark:text-white uppercase tracking-widest">
+          <div className="mb-6 flex items-center text-sm font-bold text-primary-navy dark:text-white tracking-tight">
             <Shield className="mr-2 h-4 w-4 text-primary-navy dark:text-tertiary-sage" />
             {editingUser ? '编辑成员' : '创建成员'}
           </div>
 
           <div className="space-y-5">
             {!editingUser ? (
-              <Field label="用户名"><input value={userForm.username} onChange={(e) => setUserForm(c => ({ ...c, username: e.target.value }))} className="w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none" /></Field>
+              <Field label="用户名"><input value={userForm.username} onChange={(e) => setUserForm(c => ({ ...c, username: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
             ) : (
-              <Field label="用户名"><div className="rounded-lg border border-slate-200 bg-slate-200/50 px-4 py-3 text-sm font-bold">{editingUser.username}</div></Field>
+              <Field label="用户名"><div className="rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500 dark:border-navy-800 dark:bg-navy-950 dark:text-slate-400">{editingUser.username}</div></Field>
             )}
-            <Field label="成员真实姓名"><input value={userForm.name} onChange={(e) => setUserForm(c => ({ ...c, name: e.target.value }))} className="w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none" /></Field>
+            <Field label="成员真实姓名"><input value={userForm.name} onChange={(e) => setUserForm(c => ({ ...c, name: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
             <Field label="角色权限">
-              <select value={userForm.role} onChange={(e) => setUserForm(c => ({ ...c, role: e.target.value as UserRole }))} className="w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none bg-white">
+              <select value={userForm.role} onChange={(e) => setUserForm(c => ({ ...c, role: e.target.value as UserRole }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage">
                 <option value="staff">业务员 (普通权限)</option>
                 <option value="admin">管理员 (最高权限)</option>
               </select>
             </Field>
             {!editingUser && (
-              <Field label="初始访问密码"><input type="password" value={userForm.password} onChange={(e) => setUserForm(c => ({ ...c, password: e.target.value }))} className="w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none" /></Field>
+              <Field label="初始访问密码"><input type="password" value={userForm.password} onChange={(e) => setUserForm(c => ({ ...c, password: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
             )}
             <div className="flex gap-3 pt-2">
               <button onClick={saveUser} className="btn-primary shadow-md">{editingUser ? '确认修改' : '立即创建'}</button>
-              <button onClick={startCreateUser} className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100">重置</button>
+              <button onClick={startCreateUser} className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 transition-colors hover:bg-slate-100 dark:border-navy-700 dark:bg-navy-900 dark:text-slate-300 dark:hover:bg-navy-800">重置</button>
             </div>
           </div>
 
           {resettingUserId && (
             <div className="mt-8 border-t border-slate-200 pt-6 relative animate-in fade-in">
               <button onClick={() => { setResettingUserId(null); setResetPassword(''); setConfirmPassword(''); }} className="absolute top-6 right-0 text-slate-400 hover:text-primary-navy"><X size={16} /></button>
-              <div className="mb-4 text-xs font-bold text-primary-navy uppercase tracking-widest">强制重置密码</div>
+              <div className="mb-4 text-xs font-bold text-primary-navy tracking-tight">强制重置密码</div>
               <div className="space-y-3">
-                <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码" className="flex-1 w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none" />
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="当前管理员密码" className="flex-1 w-full rounded-lg border border-slate-200 p-3.5 text-sm outline-none" />
+                <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码" className="w-full flex-1 rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" />
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="当前管理员密码" className="w-full flex-1 rounded-lg border border-slate-200 bg-white p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" />
                 <button onClick={submitResetPassword} className="w-full rounded-lg bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-black">提交</button>
               </div>
             </div>

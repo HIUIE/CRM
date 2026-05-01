@@ -82,7 +82,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
       title="登记收支流水"
       footer={
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase">取消</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '正在同步...' : '保存流水记录'}
           </button>
@@ -105,7 +105,7 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
               placeholder="搜索并选择订单..."
             />
             {initialOrderDisplayId && (
-              <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">已锁定订单：{initialOrderDisplayId}</p>
+              <p className="mt-1 text-[10px] font-bold text-slate-400 tracking-tight px-1">已锁定订单：{initialOrderDisplayId}</p>
             )}
           </Field>
 

@@ -26,8 +26,8 @@ export default function EmptyStateBoard({
       <div className="h-12 w-12 rounded-full bg-white dark:bg-navy-900 flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-navy-800">
         {renderIcon()}
       </div>
-      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-1">{title}</h4>
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider max-w-[280px] text-center leading-relaxed">
+      <h4 className="mb-1 text-sm font-bold tracking-tight text-slate-900 dark:text-white">{title}</h4>
+      <p className="max-w-[320px] text-center text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
         {description}
       </p>
       {actionLabel && onAction && (

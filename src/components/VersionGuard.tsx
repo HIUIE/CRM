@@ -58,7 +58,7 @@ export default function VersionGuard() {
             <h3 className="text-sm font-extrabold text-blue-900 dark:text-blue-400 tracking-tight">
               {updateType === 'remote' ? '新版本可用' : '系统已升级'}
             </h3>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600/70 dark:text-blue-400/70 mt-0.5">
+            <p className="mt-0.5 text-[11px] font-bold tracking-tight text-blue-600/70 dark:text-blue-400/70">
               {updateType === 'remote'
                 ? '有新版本发布，请拉取最新代码并重新构建。'
                 : '服务已重启，请刷新以同步最新功能。'}

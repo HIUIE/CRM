@@ -136,18 +136,18 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
            <div className="flex gap-2">
               <button 
                 onClick={() => handleStatusChange(task?.status === 'done' ? 'in_progress' : 'done')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all shadow-sm ${task?.status === 'done' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-500 text-white shadow-emerald-500/20'}`}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold tracking-tight shadow-sm transition-all ${task?.status === 'done' ? 'bg-slate-100 text-slate-500 dark:bg-navy-800 dark:text-slate-300' : 'bg-emerald-600 text-white shadow-emerald-600/20 dark:bg-emerald-700'}`}
               >
                 {task?.status === 'done' ? <History size={14} /> : <CheckCircle2 size={14} />}
                 {task?.status === 'done' ? '重新开启任务' : '标记任务完成'}
               </button>
            </div>
-           <button onClick={onClose} className="px-6 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest">关闭</button>
+           <button onClick={onClose} className="px-6 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 tracking-tight">关闭</button>
         </div>
       }
     >
       {loading ? (
-        <div className="py-20 text-center animate-pulse text-slate-400 text-xs font-bold uppercase">正在读取进展...</div>
+        <div className="py-20 text-center animate-pulse text-slate-400 text-xs font-bold">正在读取进展...</div>
       ) : task ? (
         <div className="flex flex-col h-full space-y-8">
           {/* Metadata Section */}
@@ -156,14 +156,14 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
                <h1 className="text-[15px] font-extrabold text-primary-navy dark:text-white leading-tight mb-4">{task.title}</h1>
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">当前状态</label>
+                    <label className="text-[9px] font-bold text-slate-400 tracking-tight">当前状态</label>
                     <div className="flex items-center gap-2">
                        <div className={`h-2 w-2 rounded-full ${task.status === 'done' ? 'bg-emerald-500' : task.status === 'in_progress' ? 'bg-blue-500' : 'bg-slate-400'}`} />
-                       <span className="text-xs font-bold text-primary-navy dark:text-white uppercase">{task.status.replace('_', ' ')}</span>
+                       <span className="text-xs font-bold text-primary-navy dark:text-white">{task.status === 'done' ? '已完成' : task.status === 'in_progress' ? '进行中' : '待处理'}</span>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">优先级</label>
+                    <label className="text-[9px] font-bold text-slate-400 tracking-tight">优先级</label>
                     <Chip tone={task.priority === 'P0' ? 'error' : task.priority === 'P1' ? 'warning' : 'info'}>{task.priority}</Chip>
                   </div>
                </div>
@@ -193,7 +193,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
             </div>
 
             <div className="space-y-2">
-               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">核心任务指令</label>
+               <label className="text-[10px] font-bold text-slate-400 tracking-tight">核心任务指令</label>
                <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium bg-slate-50/50 dark:bg-navy-950/30 p-4 rounded-lg border border-slate-100 dark:border-navy-800 italic">
                   “{task.description || '暂无详细背景描述。'}”
                </p>
@@ -206,7 +206,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
           <section className="flex-1 min-h-0 flex flex-col space-y-6">
              <div className="flex items-center gap-2 shrink-0">
                 <MessageSquare size={16} className="text-primary-navy dark:text-tertiary-sage" />
-                <h3 className="text-[13px] font-extrabold text-primary-navy dark:text-white uppercase tracking-tight">协作进度汇报 ({task.comments.length})</h3>
+                <h3 className="text-[13px] font-extrabold text-primary-navy dark:text-white tracking-tight">协作进度汇报 ({task.comments.length})</h3>
              </div>
 
              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 pr-2">
@@ -289,7 +289,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
 function InfoItem({ icon, label, value, valueClass = '', onClick }: { icon: React.ReactNode; label: string; value: string; valueClass?: string; onClick?: () => void }) {
   return (
     <div className={`space-y-1.5 ${onClick ? 'cursor-pointer group' : ''}`} onClick={onClick}>
-       <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+       <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 tracking-tight">
           {icon}
           {label}
        </div>

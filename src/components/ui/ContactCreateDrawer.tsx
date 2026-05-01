@@ -65,7 +65,7 @@ export function ContactCreateDrawer({ isOpen, onClose, onSuccess, customerId }: 
       title="新增关键联系人"
       footer={
         <div className="flex justify-end gap-3 w-full">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase">取消</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:hover:bg-navy-800">取消</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary shadow-md active:scale-95">
             {saving ? '同步中...' : '确认添加'}
           </button>

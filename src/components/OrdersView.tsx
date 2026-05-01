@@ -64,6 +64,7 @@ export default function OrdersView() {
   const [toast, setToast] = useState('');
   const [orderToDelete, setOrderToDelete] = useState<OrderSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const q = searchParams.get('q') || '';
   const status = searchParams.get('status') || '';
@@ -154,9 +155,11 @@ export default function OrdersView() {
   };
 
   const requestCloseForm = () => {
-    if (!isFormDirty || window.confirm('有未保存的数据，确认放弃？')) {
+    if (!isFormDirty) {
       resetFormState();
+      return;
     }
+    setShowDiscardConfirm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,7 +241,7 @@ export default function OrdersView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">订单号 / 日期</th>
                     <th className="px-4 py-4 text-left">客户 / 国家</th>
@@ -258,7 +261,7 @@ export default function OrdersView() {
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                         <td className="px-4 py-4 text-left">
                            <div 
-                             className="font-bold text-primary-navy dark:text-tertiary-sage uppercase data-field"
+                             className="font-bold text-primary-navy dark:text-tertiary-sage data-field"
                              style={{ viewTransitionName: 'order-id' }}
                            >
                              {o.display_id || '—'}
@@ -266,8 +269,8 @@ export default function OrdersView() {
                            <div className="text-xs text-slate-500 dark:text-slate-500 mt-1.5 font-bold data-field">{formatDateOnly(o.created_at)}</div>
                         </td>
                         <td className="px-4 py-4 text-left">
-                           <div className="font-bold text-primary-navy dark:text-white uppercase tracking-tight truncate max-w-[150px]" title={o.customer_name}>{o.customer_name || '—'}</div>
-                           <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 uppercase font-extrabold">{o.customer_country || '—'}</div>
+                           <div className="font-bold text-primary-navy dark:text-white tracking-tight truncate max-w-[150px]" title={o.customer_name}>{o.customer_name || '—'}</div>
+                           <div className="mt-1 text-xs font-extrabold text-slate-400 dark:text-slate-500">{o.customer_country || '—'}</div>
                         </td>
                         <td className="px-4 py-4 text-left">
                            <div className="flex items-center gap-2 mb-1.5"><Chip tone={meta.tone}>{meta.label}</Chip></div>
@@ -276,7 +279,7 @@ export default function OrdersView() {
                         <td className="px-4 py-4 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
                         <td className="px-4 py-4 text-right">
                            <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
-                           <div className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase mt-1.5">{o.pending_finance_count > 0 ? `核销中: ${o.pending_finance_count} 笔` : '—'}</div>
+                           <div className="mt-1.5 text-xs font-bold text-slate-400 dark:text-slate-500">{o.pending_finance_count > 0 ? `核销中: ${o.pending_finance_count} 笔` : '—'}</div>
                         </td>
                         <td className="px-4 py-4 text-center" onClick={e=>e.stopPropagation()}>
                            <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
@@ -293,7 +296,7 @@ export default function OrdersView() {
                         </td>
                       </tr>
                     );
-                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">暂无订单记录。</td></tr>}
+                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight text-xs">暂无订单记录。</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -360,6 +363,18 @@ export default function OrdersView() {
           <button type="submit" className="hidden">Submit</button>
         </form>
       </Drawer>
+
+      <ConfirmDeleteModal
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={() => { setShowDiscardConfirm(false); resetFormState(); }}
+        title="放弃未保存修改"
+        warning="当前订单表单还有未保存内容，确认放弃这些修改并关闭抽屉吗？"
+        entityLabel="确认文本"
+        entityId="放弃修改"
+        isDeleting={false}
+        showCopy={false}
+      />
 
       <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}

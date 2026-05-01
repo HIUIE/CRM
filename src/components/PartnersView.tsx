@@ -9,11 +9,10 @@ import Chip from './ui/Chip';
 import Toast from './ui/Toast';
 import { Drawer } from './ui/Drawer';
 import { Pagination } from './ui/Pagination';
+import ConfirmDeleteModal from './ui/ConfirmDeleteModal';
 import { usePagination } from '../hooks/usePagination';
-import { TIME_RANGES, getRangeDates } from '../lib/date';
 import CountrySelect from './ui/CountrySelect';
 import CountryDisplay from './ui/CountryDisplay';
-import { getCountryDisplay } from '../lib/countries';
 import type { PartnerRecord, PartnerType } from '../types/crm';
 
 type PartnerForm = {
@@ -61,6 +60,8 @@ export default function PartnersView() {
   const [form, setForm] = useState<PartnerForm>(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState<PartnerForm>(EMPTY_FORM);
   const [toast, setToast] = useState('');
+  const [partnerToDelete, setPartnerToDelete] = useState<PartnerRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isFormDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
@@ -194,16 +195,20 @@ export default function PartnersView() {
     }
   };
 
-  const handleDelete = async (partner: PartnerRecord) => {
-    if (!window.confirm(`确定删除伙伴“${partner.name}”吗？`)) {
-      return;
-    }
-
+  const handleDelete = async () => {
+    if (!partnerToDelete) return;
+    setIsDeleting(true);
     try {
-      await apiFetch(`/api/partners/${partner.id}`, { method: 'DELETE' });
+      await apiFetch(`/api/partners/${partnerToDelete.id}`, { method: 'DELETE' });
+      setToast('伙伴档案已删除');
+      setTimeout(() => setToast(''), 3000);
+      setPartnerToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['partners'] });
     } catch (requestError) {
-      console.error(getErrorMessage(requestError, '删除伙伴失败'));
+      setToast(getErrorMessage(requestError, '删除伙伴失败'));
+      setTimeout(() => setToast(''), 3000);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -232,7 +237,7 @@ export default function PartnersView() {
              <button
                key={chip.key}
                onClick={() => updateParam('type', chip.key)}
-               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${typeFilter === chip.key ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-secondary-slate dark:text-slate-400 border border-slate-100 dark:border-navy-800 hover:bg-slate-100 dark:hover:bg-navy-800'}`}
+               className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${typeFilter === chip.key ? 'bg-primary-navy text-white shadow-sm dark:bg-tertiary-sage' : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-primary-navy dark:border-navy-700 dark:bg-navy-900 dark:text-slate-400 dark:hover:border-navy-600 dark:hover:bg-navy-800 dark:hover:text-white'}`}
              >
                {chip.label}
              </button>
@@ -249,7 +254,7 @@ export default function PartnersView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">伙伴名称</th>
                     <th className="px-4 py-4 text-left">伙伴类型</th>
@@ -272,7 +277,7 @@ export default function PartnersView() {
                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-navy-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-navy-700">
                                {partner.partner_type === 'factory' ? <Building2 size={14} /> : <MapPin size={14} />}
                              </div>
-                             <span className="font-bold text-primary-navy dark:text-white uppercase tracking-tight">{partner.name || '—'}</span>
+                             <span className="font-bold text-primary-navy dark:text-white tracking-tight">{partner.name || '—'}</span>
                           </div>
                         </td>
                         <td className="px-4 py-4 text-left">
@@ -294,11 +299,11 @@ export default function PartnersView() {
                         </td>
                         <td className="px-4 py-4 text-center">
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                            <button onClick={() => openEdit(partner)} className="rounded-lg border border-transparent p-2 text-secondary-slate dark:text-slate-400 transition-all hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 shadow-sm">
+                            <button onClick={(event) => { event.stopPropagation(); openEdit(partner); }} className="rounded-lg border border-transparent p-2 text-secondary-slate dark:text-slate-400 transition-all hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 shadow-sm">
                               <Edit className="h-4 w-4" />
                             </button>
                             {user?.role === 'admin' ? (
-                              <button onClick={() => void handleDelete(partner)} className="rounded-lg border border-transparent p-2 text-slate-300 dark:text-slate-600 transition-all hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 shadow-sm">
+                              <button onClick={(event) => { event.stopPropagation(); setPartnerToDelete(partner); }} className="rounded-lg border border-transparent p-2 text-slate-300 dark:text-slate-600 transition-all hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 shadow-sm">
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             ) : null}
@@ -403,6 +408,23 @@ export default function PartnersView() {
           </div>
         </div>
       </Drawer>
+
+      <ConfirmDeleteModal
+        isOpen={Boolean(partnerToDelete)}
+        onClose={() => setPartnerToDelete(null)}
+        onConfirm={() => void handleDelete()}
+        title="删除合作伙伴"
+        warning={
+          <>
+            确定要删除合作伙伴“{partnerToDelete?.name || ''}”吗？
+            <br /><br />
+            删除后该伙伴档案将无法在新的业务记录中选择，请先确认没有未完成的订单、物流或财务事项依赖此伙伴。
+          </>
+        }
+        entityLabel="伙伴名称"
+        entityId={partnerToDelete?.name || ''}
+        isDeleting={isDeleting}
+      />
 
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>

@@ -284,7 +284,7 @@ export default function CustomersView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">国家</th>
                     <th className="px-4 py-4 text-left">客户名称</th>
@@ -306,11 +306,11 @@ export default function CustomersView() {
                         <td className="px-4 py-4 text-left">
                           <CountryDisplay value={customer.country} className="text-xs" />
                         </td>
-                        <td className="px-4 py-4 text-left font-bold text-primary-navy dark:text-white group-hover:text-blue-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-tight truncate max-w-[200px]" title={customer.name}>{customer.name || '—'}</td>
+                        <td className="max-w-[200px] truncate px-4 py-4 text-left font-bold tracking-tight text-primary-navy transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-emerald-400" title={customer.name}>{customer.name || '—'}</td>
                         <td className="px-4 py-4 text-center">{customer.source_channel ? <Chip tone="neutral">{customer.source_channel}</Chip> : '—'}</td>
                         <td className="px-4 py-4 text-left text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px]" title={customer.contact}>{customer.contact || '—'}</td>
                         <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-300 font-bold data-field">{customer.order_count || '—'}</td>
-                        <td className="px-4 py-4 text-center text-slate-500 dark:text-slate-500 text-xs font-bold uppercase">{customer.created_by_name || '系统'}</td>
+                        <td className="px-4 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-500">{customer.created_by_name || '系统'}</td>
                         <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                             <button onClick={() => openEdit(customer)} className="rounded-lg border border-transparent p-2 text-secondary-slate dark:text-slate-400 transition-all hover:bg-white dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 shadow-sm">
