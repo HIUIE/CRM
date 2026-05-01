@@ -2,6 +2,8 @@
   "name": "smarttrade-ai-crm",
   "private": true,
   "version": "1.0.4",
+  "description": "SmartTrade AI CRM — 外贸订单与利润管理工作台",
+  "author": "SmartTrade",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -20,10 +22,9 @@
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:create": "node-pg-migrate create",
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
-    "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
-    "electron:dev": "npm run build && npm run electron:rebuild && DB_DRIVER=sqlite NODE_ENV=development electron . --dev",
-    "electron:build": "npm run build && npm run electron:rebuild && electron-builder --mac"
+    "postinstall": "electron-builder install-app-deps",
+    "electron:dev": "npm run build && DB_DRIVER=sqlite NODE_ENV=development electron . --dev",
+    "electron:build": "npm run build && electron-builder --mac"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -58,7 +59,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/adm-zip": "^0.5.8",
