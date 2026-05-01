@@ -132,8 +132,8 @@ export async function createApp() {
         if (filePath.includes('/assets/')) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         } else {
-          // HTML and other root files should validate
-          res.setHeader('Cache-Control', 'no-cache');
+          // HTML and other root files must never be cached — stale HTML points to dead assets after updates
+          res.setHeader('Cache-Control', 'no-store');
         }
       }
     }));
@@ -144,9 +144,12 @@ export async function createApp() {
         const brand = await getBrandSettings();
         html = injectBrandHtml(html, brand);
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
         res.send(html);
       } catch {
-        res.sendFile(path.join(distPath, 'index.html'));
+        res.sendFile(path.join(distPath, 'index.html'), {
+          headers: { 'Cache-Control': 'no-store' },
+        });
       }
     });
   }
