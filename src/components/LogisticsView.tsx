@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Truck } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -80,17 +80,38 @@ export default function LogisticsView() {
     setSearchParams(next);
   };
 
+  // Debounced search: local input state drives the field, URL param updates after 300ms
+  const [searchInput, setSearchInput] = useState(q);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setSearchInput(q);
+  }, [q]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      updateParam('q', searchInput);
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchInput]);
+
   const { data: records = [], isLoading: recordsLoading, error: recordsError } = useQuery<LogisticsSummary[]>({
     queryKey: ['logistics', searchParams.toString()],
     queryFn: () => apiFetch<LogisticsSummary[]>(`/api/logistics?${searchParams.toString()}`),
+    placeholderData: keepPreviousData,
   });
   const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery<OrderOption[]>({
     queryKey: ['orders'],
     queryFn: () => apiFetch<OrderOption[]>('/api/orders'),
+    staleTime: 5 * 60 * 1000,
   });
   const { data: partners = [] } = useQuery<Partner[]>({
     queryKey: ['partners'],
     queryFn: () => apiFetch<Partner[]>('/api/partners'),
+    staleTime: 5 * 60 * 1000,
   });
   const forwarderPartners = useMemo(() => partners.filter((partner) => partner.partner_type === 'forwarder'), [partners]);
   const loading = recordsLoading || ordersLoading;
@@ -189,8 +210,8 @@ export default function LogisticsView() {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
-              value={q}
-              onChange={e => updateParam('q', e.target.value)}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               placeholder="搜索单号、承运商、客户名称..."
               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
             />

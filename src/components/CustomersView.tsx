@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2 } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -96,6 +96,7 @@ export default function CustomersView() {
   const { data: customers = [], isLoading: loading, error: queryError } = useQuery<CustomerListItem[]>({
     queryKey: ['customers', searchParams.toString()],
     queryFn: () => apiFetch<CustomerListItem[]>(`/api/customers?${searchParams.toString()}`),
+    placeholderData: keepPreviousData,
   });
   const error = queryError ? getErrorMessage(queryError, '读取客户数据失败') : '';
 

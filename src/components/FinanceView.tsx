@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock, Paperclip } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -73,6 +73,7 @@ export default function FinanceView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinanceListRecord | null>(null);
   const [formData, setFormData] = useState<FinanceFormState>(EMPTY_FORM);
@@ -103,17 +104,38 @@ export default function FinanceView() {
     setSearchParams(next);
   };
 
+  // Debounced search: local input state drives the field, URL param updates after 300ms
+  const [searchInput, setSearchInput] = useState(query);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setSearchInput(query);
+  }, [query]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      updateParam('q', searchInput);
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchInput]);
+
   const { data: records = [], isLoading: recordsLoading, error: recordsError } = useQuery<FinanceListRecord[]>({
     queryKey: ['finance', searchParams.toString()],
     queryFn: () => apiFetch<FinanceListRecord[]>(`/api/finance?${searchParams.toString()}`),
+    placeholderData: keepPreviousData,
   });
   const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery<OrderOption[]>({
     queryKey: ['orders'],
     queryFn: () => apiFetch<OrderOption[]>('/api/orders'),
+    staleTime: 5 * 60 * 1000,
   });
   const { data: partners = [], isLoading: partnersLoading, error: partnersError } = useQuery<PartnerOption[]>({
     queryKey: ['partners'],
     queryFn: () => apiFetch<PartnerOption[]>('/api/partners'),
+    staleTime: 5 * 60 * 1000,
   });
   const loading = recordsLoading || ordersLoading || partnersLoading;
   const error = recordsError ? getErrorMessage(recordsError, '读取财务数据失败') : ordersError ? getErrorMessage(ordersError, '读取财务数据失败') : partnersError ? getErrorMessage(partnersError, '读取财务数据失败') : '';
@@ -162,6 +184,7 @@ export default function FinanceView() {
     setFormData(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
     setFormError('');
+    setFieldErrors({});
     setUploadProgress(0);
     setShowForm(true);
   };
@@ -169,6 +192,7 @@ export default function FinanceView() {
   const openEditForm = (record: FinanceListRecord) => {
     setEditingRecord(record);
     setFormError('');
+    setFieldErrors({});
     setUploadProgress(0);
     const newForm: FinanceFormState = {
       orderId: String(record.order_id),
@@ -193,6 +217,7 @@ export default function FinanceView() {
     setFormData(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
     setFormError('');
+    setFieldErrors({});
     setIsUploading(false);
     setUploadProgress(0);
     setShowForm(false);
@@ -218,19 +243,14 @@ export default function FinanceView() {
     if (saving || isUploading) return;
     setFormError('');
 
+    // Field-level validation
+    const errors: Record<string, string> = {};
     const amount = Number(formData.amount);
-    if (!formData.orderId) {
-      setFormError('请选择关联订单');
-      return;
-    }
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setFormError('金额必须大于 0');
-      return;
-    }
-    if (formData.type === 'payment' && !formData.partnerId && !formData.target.trim()) {
-      setFormError('付款时请选择合作伙伴，或填写临时付款对象');
-      return;
-    }
+    if (!formData.orderId) errors.orderId = '请选择关联订单';
+    if (!Number.isFinite(amount) || amount <= 0) errors.amount = '金额必须大于 0';
+    if (formData.type === 'payment' && !formData.partnerId && !formData.target.trim()) errors.partnerId = '请选择合作伙伴或填写临时付款对象';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setSaving(true);
     try {
@@ -302,8 +322,8 @@ export default function FinanceView() {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
-              value={query}
-              onChange={(event) => updateParam('q', event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder="搜索订单、客户、对象或分类..."
               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
             />
@@ -424,10 +444,13 @@ export default function FinanceView() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {formError ? <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{formError}</div> : null}
           <div className="space-y-6">
-            <Field label="关联订单 *">
+            <Field label="关联订单 *" error={fieldErrors.orderId}>
               <Combobox
                 value={formData.orderId}
-                onChange={val => setFormData({ ...formData, orderId: String(val), target: formData.type === 'receipt' ? '' : formData.target })}
+                onChange={val => {
+                  setFormData({ ...formData, orderId: String(val), target: formData.type === 'receipt' ? '' : formData.target });
+                  if (fieldErrors.orderId) setFieldErrors(prev => { const next = { ...prev }; delete next.orderId; return next; });
+                }}
                 onSearch={async (q) => {
                   const data = await apiFetch<OrderOption[]>(`/api/orders?q=${encodeURIComponent(q)}&customerId=${paramCustomerId}`);
                   return data.slice(0, 20).map(o => ({ value: o.id, label: o.display_id, subLabel: o.customer_name }));
@@ -443,7 +466,13 @@ export default function FinanceView() {
             </Field>
             <div className="flex gap-4">
                 <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
-                <div className="flex-1"><Field label="金额 *"><input required type="number" min="0.01" step="0.01" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} placeholder="请输入大于 0 的金额" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field" /></Field></div>
+                <div className="flex-1"><Field label="金额 *" error={fieldErrors.amount}><input required type="number" min="0.01" step="0.01" value={formData.amount} onChange={e => {
+                  setFormData({...formData, amount:e.target.value});
+                  if (fieldErrors.amount) setFieldErrors(prev => { const next = { ...prev }; delete next.amount; return next; });
+                }} onBlur={() => {
+                  const amt = Number(formData.amount);
+                  if (!Number.isFinite(amt) || amt <= 0) setFieldErrors(prev => ({ ...prev, amount: '金额必须大于 0' }));
+                }} placeholder="请输入大于 0 的金额" className={`w-full rounded-lg border ${fieldErrors.amount ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white font-bold data-field`} /></Field></div>
             </div>
             <Field label="款项用途">
               <select value={formData.recordCategory} onChange={e=>setFormData({...formData, recordCategory:e.target.value as FinanceCategory})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white">

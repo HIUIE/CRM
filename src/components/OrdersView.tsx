@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useRef, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, Hash } from 'lucide-react';
 import Field from './ui/Field';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -52,6 +52,7 @@ export default function OrdersView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderSummary | null>(null);
   const [formData, setFormData] = useState<OrderFormState>(EMPTY_FORM);
@@ -82,13 +83,33 @@ export default function OrdersView() {
     setSearchParams(next);
   };
 
+  // Debounced search: local input state drives the field, URL param updates after 300ms
+  const [searchInput, setSearchInput] = useState(q);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setSearchInput(q);
+  }, [q]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      updateParam('q', searchInput);
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchInput]);
+
   const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery<OrderSummary[]>({
     queryKey: ['orders', searchParams.toString()],
     queryFn: () => apiFetch<OrderSummary[]>(`/api/orders?${searchParams.toString()}`),
+    placeholderData: keepPreviousData,
   });
   const { data: customers = [], isLoading: customersLoading, error: customersError } = useQuery<CustomerListItem[]>({
     queryKey: ['customers'],
     queryFn: () => apiFetch<CustomerListItem[]>('/api/customers'),
+    staleTime: 5 * 60 * 1000,
   });
   const loading = ordersLoading || customersLoading;
   const error = ordersError ? getErrorMessage(ordersError, '读取数据失败') : customersError ? getErrorMessage(customersError, '读取数据失败') : '';
@@ -113,6 +134,7 @@ export default function OrdersView() {
   const openCreateForm = async () => {
     setEditingOrder(null);
     setFormError('');
+    setFieldErrors({});
     try {
       const { nextId } = await apiFetch<{ nextId: string }>('/api/orders/next-display-id');
       const paramCustomerId = searchParams.get('customerId');
@@ -133,6 +155,7 @@ export default function OrdersView() {
   const openEditForm = (order: OrderSummary) => {
     setEditingOrder(order);
     setFormError('');
+    setFieldErrors({});
     const newForm = {
       displayId: order.display_id,
       customerId: String(order.customer_id),
@@ -150,6 +173,7 @@ export default function OrdersView() {
     setFormData(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
     setFormError('');
+    setFieldErrors({});
     setShowForm(false);
   };
 
@@ -160,6 +184,14 @@ export default function OrdersView() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+
+    // Field-level validation
+    const errors: Record<string, string> = {};
+    if (!formData.customerId) errors.customerId = '请选择关联客户';
+    if (!formData.productSummary.trim()) errors.productSummary = '请输入产品摘要';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     const payload = { ...formData, customerId: Number(formData.customerId), totalAmount: Number(formData.totalAmount) };
     try {
       if (editingOrder) {
@@ -203,8 +235,8 @@ export default function OrdersView() {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
-              value={q}
-              onChange={e => updateParam('q', e.target.value)}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               placeholder="搜索订单号、产品、客户名称..."
               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
             />
@@ -336,10 +368,13 @@ export default function OrdersView() {
                   />
                 </div>
             </Field>
-            <Field label="关联客户 *">
+            <Field label="关联客户 *" error={fieldErrors.customerId}>
               <Combobox
                 value={formData.customerId}
-                onChange={val => setFormData({ ...formData, customerId: String(val) })}
+                onChange={val => {
+                  setFormData({ ...formData, customerId: String(val) });
+                  if (fieldErrors.customerId) setFieldErrors(prev => { const next = { ...prev }; delete next.customerId; return next; });
+                }}
                 onSearch={async (q) => {
                   const data = await apiFetch<CustomerListItem[]>(`/api/customers?q=${encodeURIComponent(q)}`);
                   return data.slice(0, 20).map(c => ({ value: c.id, label: c.name, subLabel: c.country }));
@@ -351,8 +386,13 @@ export default function OrdersView() {
             <Field label="订单总额 (USD) *">
               <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
             </Field>
-            <Field label="产品摘要 *">
-              <input required value={formData.productSummary} onChange={e=>setFormData({...formData, productSummary:e.target.value})} placeholder="例如：太阳能板 A-Type 500pcs..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+            <Field label="产品摘要 *" error={fieldErrors.productSummary}>
+              <input required value={formData.productSummary} onChange={e => {
+                setFormData({...formData, productSummary:e.target.value});
+                if (fieldErrors.productSummary) setFieldErrors(prev => { const next = { ...prev }; delete next.productSummary; return next; });
+              }} onBlur={() => {
+                if (!formData.productSummary.trim()) setFieldErrors(prev => ({ ...prev, productSummary: '请输入产品摘要' }));
+              }} placeholder="例如：太阳能板 A-Type 500pcs..." className={`w-full rounded-lg border ${fieldErrors.productSummary ? 'border-red-500 bg-red-50/30 dark:bg-red-900/10' : 'border-slate-200 dark:border-navy-800'} bg-white dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white`} />
             </Field>
           </div>
           <button type="submit" className="hidden">Submit</button>

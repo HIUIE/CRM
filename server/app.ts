@@ -83,7 +83,11 @@ export async function createApp() {
   app.use(express.json());
   app.use(cookieParser());
   app.use('/api', apiRouter);
-  app.use('/brand', express.static(BRAND_DIR));
+  app.use('/brand', express.static(BRAND_DIR, {
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    },
+  }));
 
   // Global error handler for uncaught async errors (Express 4 does not catch promise rejections).
   // express-async-errors patches route handlers so rejected promises land here.

@@ -77,6 +77,7 @@ export default function PartnersView() {
   const { data: partners = [], isLoading: loading, error: queryError } = useQuery<PartnerRecord[]>({
     queryKey: ['partners'],
     queryFn: () => apiFetch<PartnerRecord[]>('/api/partners'),
+    staleTime: 5 * 60 * 1000,
   });
   const error = queryError ? getErrorMessage(queryError, '读取伙伴数据失败') : '';
 
