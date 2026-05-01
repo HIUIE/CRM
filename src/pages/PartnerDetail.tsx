@@ -210,8 +210,8 @@ export default function PartnerDetailPage() {
           <div className="space-y-6 lg:sticky lg:top-24 lg:z-10">
             {/* Partner Card */}
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-sm dark:border-navy-800 dark:bg-navy-900">
-              <div className="border-b border-slate-100 bg-slate-50/70 px-6 py-8 text-center dark:border-navy-800 dark:bg-navy-950/50">
-                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-surface text-slate-700 shadow-sm dark:border-navy-700 dark:bg-navy-900 dark:text-slate-200">
+              <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-8 text-center dark:border-navy-800 dark:bg-navy-950/50">
+                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-surface dark:bg-navy-900 text-slate-700 shadow-sm dark:border-navy-700 dark:text-slate-200">
                   <Building2 size={32} />
                 </div>
                 <h2 className="text-lg font-black tracking-tight text-primary-navy dark:text-white">{partner.name}</h2>
@@ -261,7 +261,7 @@ export default function PartnerDetailPage() {
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 {overviewItems.map((item) => (
-                  <div key={item.label} className="text-center p-3 rounded-lg bg-slate-50 dark:bg-navy-950">
+                  <div key={item.label} className="text-center p-3 rounded-lg bg-slate-50/50 dark:bg-navy-950/50">
                     <div className={`text-2xl font-black ${item.color}`}>{item.value}</div>
                     <div className="text-[9px] font-bold text-slate-400 tracking-tight mt-1">{item.label}</div>
                   </div>
@@ -288,7 +288,7 @@ export default function PartnerDetailPage() {
           {/* Right: Main Content */}
           <div className="space-y-6 min-w-0">
             {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-slate-100 dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-800 shadow-inner w-fit">
+            <div className="flex gap-1 p-1 bg-slate-100/50 dark:bg-navy-900/50 rounded-lg border border-slate-200 dark:border-navy-800 shadow-inner w-fit">
               <TabButton active={activeTab === 'orders'} onClick={() => setActiveTab('orders')}>
                 <Package size={14} /> 关联订单 ({orders.length})
               </TabButton>
@@ -310,8 +310,8 @@ export default function PartnerDetailPage() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead>
-                        <tr className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                      <thead className="sticky top-0 z-10 bg-slate-50/80 dark:bg-navy-950/80 backdrop-blur text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <tr>
                           <th className="px-6 py-4 text-left">订单号</th>
                           <th className="px-6 py-4 text-left">关联类型</th>
                           <th className="px-6 py-4 text-left">状态</th>
@@ -371,8 +371,8 @@ export default function PartnerDetailPage() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead>
-                        <tr className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                      <thead className="sticky top-0 z-10 bg-slate-50/80 dark:bg-navy-950/80 backdrop-blur text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <tr>
                           <th className="px-6 py-4 text-left">类型</th>
                           <th className="px-6 py-4 text-right">金额</th>
                           <th className="px-6 py-4 text-left">货币</th>

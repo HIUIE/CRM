@@ -29,15 +29,15 @@ import { ensureOrderExists, ensurePartnerExists } from './entities.js';
 import { isOneOf, readAttachmentIds, readNumber, readOptionalDate, readString } from '../lib/values.js';
 
 export async function readPartnerPayload(body: Record<string, unknown>) {
-  const name = readString(body.name);
-  const partnerType = readString(body.partnerType);
-  const country = readString(body.country);
-  const contact = readString(body.contact);
-  const contactPerson = readString(body.contactPerson);
-  const address = readString(body.address);
+  const name = readString(body.name, 200);
+  const partnerType = readString(body.partnerType, 50);
+  const country = readString(body.country, 100);
+  const contact = readString(body.contact, 200);
+  const contactPerson = readString(body.contactPerson, 100);
+  const address = readString(body.address, 500);
   const rating = readNumber(body.rating);
-  const paymentTerms = readString(body.paymentTerms);
-  const remark = readString(body.remark);
+  const paymentTerms = readString(body.paymentTerms, 300);
+  const remark = readString(body.remark, 5000);
 
   if (!name) {
     return { error: '请填写伙伴名称' };
@@ -65,9 +65,9 @@ export async function readProductionPayload(body: Record<string, unknown>, order
   const partnerIdInput = readNumber(body.partnerId);
   const orderDate = readOptionalDate(body.orderDate);
   const estimatedDeliveryDate = readOptionalDate(body.estimatedDeliveryDate);
-  const productionStatus = readString(body.productionStatus);
-  const inspectionStatus = readString(body.inspectionStatus);
-  const remark = readString(body.remark);
+  const productionStatus = readString(body.productionStatus, 50);
+  const inspectionStatus = readString(body.inspectionStatus, 50);
+  const remark = readString(body.remark, 5000);
   const attachmentIds = readAttachmentIds(body.attachmentIds);
 
   if (!(await ensureOrderExists(orderId))) {
@@ -110,10 +110,10 @@ export async function readProductionPayload(body: Record<string, unknown>, order
 
 export async function readOrderPayload(body: Record<string, unknown>) {
   const customerId = readNumber(body.customerId);
-  const displayId = readString(body.displayId);
-  const status = readString(body.status);
-  const productSummary = readString(body.productSummary);
-  const details = readString(body.details);
+  const displayId = readString(body.displayId, 50);
+  const status = readString(body.status, 50);
+  const productSummary = readString(body.productSummary, 2000);
+  const details = readString(body.details, 10000);
   const totalAmount = readNumber(body.totalAmount);
   const deliveryDate = readOptionalDate(body.deliveryDate);
   const freightAmountInput = readNumber(body.freightAmount);
@@ -158,14 +158,14 @@ export async function readOrderPayload(body: Record<string, unknown>) {
 }
 
 export async function readOrderItemPayload(body: Record<string, unknown>, orderId: number) {
-  const productName = readString(body.productName);
-  const specification = readString(body.specification);
-  const hsCode = readString(body.hsCode);
-  const unit = readString(body.unit);
+  const productName = readString(body.productName, 500);
+  const specification = readString(body.specification, 500);
+  const hsCode = readString(body.hsCode, 50);
+  const unit = readString(body.unit, 30);
   const quantity = readNumber(body.quantity);
   const unitPrice = readNumber(body.unitPrice);
   const subtotalInput = readNumber(body.subtotal);
-  const imageUrl = readString(body.imageUrl);
+  const imageUrl = readString(body.imageUrl, 500);
   const subtotal = Number.isFinite(subtotalInput) ? subtotalInput : quantity * unitPrice;
 
   if (!(await ensureOrderExists(orderId))) {
@@ -202,14 +202,14 @@ export async function readOrderItemPayload(body: Record<string, unknown>, orderI
 export async function readFinancePayload(body: Record<string, unknown>) {
   const orderId = readNumber(body.orderId);
   const partnerIdInput = readNumber(body.partnerId);
-  const type = readString(body.type);
+  const type = readString(body.type, 50);
   const amount = readNumber(body.amount);
-  const currency = readString(body.currency).toUpperCase();
-  const target = readString(body.target);
-  const status = readString(body.status);
-  const remark = readString(body.remark);
-  const paymentCategoryInput = readString(body.paymentCategory);
-  const recordCategoryInput = readString(body.recordCategory);
+  const currency = readString(body.currency, 10).toUpperCase();
+  const target = readString(body.target, 300);
+  const status = readString(body.status, 50);
+  const remark = readString(body.remark, 5000);
+  const paymentCategoryInput = readString(body.paymentCategory, 50);
+  const recordCategoryInput = readString(body.recordCategory, 50);
   const attachmentIds = readAttachmentIds(body.attachmentIds);
 
   if (!Number.isInteger(orderId) || orderId <= 0) {
@@ -296,24 +296,24 @@ export async function readFinancePayload(body: Record<string, unknown>) {
 
 export async function readLogisticsPayload(body: Record<string, unknown>) {
   const orderId = readNumber(body.orderId);
-  const trackingNo = readString(body.trackingNo);
-  const carrier = readString(body.carrier);
-  const freightForwarder = readString(body.freightForwarder);
+  const trackingNo = readString(body.trackingNo, 100);
+  const carrier = readString(body.carrier, 200);
+  const freightForwarder = readString(body.freightForwarder, 200);
   const freightForwarderPartnerId = readNumber(body.freightForwarderPartnerId);
-  const packingDetails = readString(body.packingDetails);
-  const status = readString(body.status);
-  const shippingDate = readString(body.shippingDate);
-  const segmentTypeInput = readString(body.segmentType);
+  const packingDetails = readString(body.packingDetails, 3000);
+  const status = readString(body.status, 50);
+  const shippingDate = readString(body.shippingDate, 30);
+  const segmentTypeInput = readString(body.segmentType, 50);
   const packageCount = readNumber(body.packageCount);
   const volumeCbm = readNumber(body.volumeCbm);
   const grossWeightKg = readNumber(body.grossWeightKg);
-  const incoterm = readString(body.incoterm);
-  const transportMode = readString(body.transportMode);
-  const vesselVoyage = readString(body.vesselVoyage);
-  const billNo = readString(body.billNo);
+  const incoterm = readString(body.incoterm, 30);
+  const transportMode = readString(body.transportMode, 50);
+  const vesselVoyage = readString(body.vesselVoyage, 100);
+  const billNo = readString(body.billNo, 100);
   const etd = readOptionalDate(body.etd);
   const eta = readOptionalDate(body.eta);
-  const remark = readString(body.remark);
+  const remark = readString(body.remark, 5000);
   const attachmentIds = readAttachmentIds(body.attachmentIds);
 
   if (!Number.isInteger(orderId) || orderId <= 0) {
@@ -374,8 +374,8 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
       billNo,
       etd: etd || '',
       eta: eta || '',
-      recipientAddress: readString(body.recipientAddress),
-      packageSize: readString(body.packageSize),
+      recipientAddress: readString(body.recipientAddress, 500),
+      packageSize: readString(body.packageSize, 300),
       remark,
       attachmentIds,
     },
@@ -384,13 +384,13 @@ export async function readLogisticsPayload(body: Record<string, unknown>) {
 
 export async function readCustomsPayload(body: Record<string, unknown>) {
   const orderId = readNumber(body.orderId);
-  const status = readString(body.status);
-  const brokerName = readString(body.brokerName);
-  const declarationNo = readString(body.declarationNo);
+  const status = readString(body.status, 50);
+  const brokerName = readString(body.brokerName, 200);
+  const declarationNo = readString(body.declarationNo, 100);
   const declarationDate = readOptionalDate(body.declarationDate);
   const releaseDate = readOptionalDate(body.releaseDate);
-  const tradeMode = readString(body.tradeMode);
-  const remark = readString(body.remark);
+  const tradeMode = readString(body.tradeMode, 50);
+  const remark = readString(body.remark, 5000);
   const attachmentIds = readAttachmentIds(body.attachmentIds);
 
   if (!Number.isInteger(orderId) || orderId <= 0) {
@@ -422,7 +422,7 @@ export async function readCustomsPayload(body: Record<string, unknown>) {
 }
 
 export async function readProductionLogPayload(body: Record<string, unknown>) {
-  const content = readString(body.content);
+  const content = readString(body.content, 5000);
   const logDate = readOptionalDate(body.logDate);
   const attachmentIds = readAttachmentIds(body.attachmentIds);
 

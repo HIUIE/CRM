@@ -68,7 +68,7 @@ export function createTasksRouter() {
           CASE WHEN t.status = 'done' THEN 1 ELSE 0 END,
           t.due_date ASC,
           t.created_at DESC
-        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>), params)}
       `, params);
       res.json(tasks);
     } catch (error) {

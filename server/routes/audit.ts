@@ -35,7 +35,7 @@ export function createAuditRouter() {
 
       const { readPagination, buildLimitOffset } = await import('../lib/values.js');
       const pagination = readPagination(req.query as Record<string, unknown>);
-      sql += buildLimitOffset(pagination);
+      sql += buildLimitOffset(pagination, params);
 
       const logs = await dbAll(sql, params);
       res.json(logs);

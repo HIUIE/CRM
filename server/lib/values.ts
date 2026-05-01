@@ -1,5 +1,6 @@
-export function readString(value: unknown) {
-  return typeof value === 'string' ? value.trim() : '';
+export function readString(value: unknown, maxLength = 10000) {
+  const s = typeof value === 'string' ? value.trim() : '';
+  return s.length > maxLength ? s.slice(0, maxLength) : s;
 }
 
 export function readNumber(value: unknown) {
@@ -54,6 +55,10 @@ export function readPagination(query: Record<string, unknown>) {
   return { page, pageSize, offset: (page - 1) * pageSize };
 }
 
-export function buildLimitOffset(pagination: { pageSize: number; offset: number }) {
-  return ` LIMIT ${pagination.pageSize} OFFSET ${pagination.offset}`;
+export function buildLimitOffset(
+  pagination: { pageSize: number; offset: number },
+  params: unknown[],
+) {
+  params.push(pagination.pageSize, pagination.offset);
+  return ` LIMIT ? OFFSET ?`;
 }

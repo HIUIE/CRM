@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock, Paperclip } from 'lucide-react';
 import Field from './ui/Field';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, apiUpload, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Chip from './ui/Chip';
@@ -325,7 +325,7 @@ export default function FinanceView() {
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder="搜索订单、客户、对象或分类..."
-              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-950 py-2.5 pl-10 pr-4 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-all outline-none text-primary-navy dark:text-white"
             />
           </div>
         </div>
@@ -341,7 +341,7 @@ export default function FinanceView() {
            <StatCard title="CNY 收款" value={totals.receipt.CNY || 0} icon={<ArrowDownLeft className="text-emerald-500" size={16} />} currency="CNY" />
            <StatCard title="USD 付款" value={totals.payment.USD || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="USD" />
            <StatCard title="CNY 付款" value={totals.payment.CNY || 0} icon={<ArrowUpRight className="text-error" size={16} />} currency="CNY" />
-           <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors">
+           <div className="bg-slate-50/50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors">
               <div>
                 <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">待核销</div>
                 <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{totals.pending} 笔</div>
@@ -356,7 +356,7 @@ export default function FinanceView() {
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <thead className="sticky top-0 z-10 bg-slate-50/80 dark:bg-navy-950/80 backdrop-blur text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
                     <th className="px-4 py-4 text-left">日期 / 订单</th>
                     <th className="px-4 py-4 text-center">类型 / 分类</th>
@@ -369,14 +369,20 @@ export default function FinanceView() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                   {currentItems.length ? currentItems.map((r) => (
-                    <tr key={r.id} onClick={() => {
-                        if (r.order_display_id) {
-                          withTransition(() => navigate(`/orders/${r.order_display_id}?section=finance`));
-                        }
-                      }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
+                    <tr key={r.id} onClick={() => openEditForm(r)} className="group align-middle hover:bg-slate-50/50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                       <td className="px-4 py-4 text-left">
                          <div className="font-bold text-primary-navy dark:text-white data-field group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors">{formatDateOnly(r.created_at)}</div>
-                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors">{r.order_display_id || 'MISC'}</div>
+                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors data-field">
+                           {r.order_display_id ? (
+                             <Link 
+                               to={`/orders/${r.order_display_id}?section=finance`} 
+                               onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                               className="hover:underline"
+                             >
+                               {r.order_display_id}
+                             </Link>
+                           ) : 'MISC'}
+                         </div>
                          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{r.createdByName ? `创建人：${r.createdByName}` : '—'}</div>
                       </td>
                       <td className="px-4 py-4 text-center">
@@ -559,7 +565,7 @@ export default function FinanceView() {
 
 function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode; currency: string }) {
   return (
-    <div className="bg-slate-50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors shadow-inner">
+    <div className="bg-slate-50/50 dark:bg-navy-950/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800 flex items-center justify-between transition-colors shadow-inner">
       <div>
         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">{title}</div>
         <div className="text-lg font-bold text-primary-navy dark:text-white data-field leading-none">{value.toLocaleString()}</div>

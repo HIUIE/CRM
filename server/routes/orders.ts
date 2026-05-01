@@ -14,6 +14,7 @@ import {
 } from '../services/payloads.js';
 import { readString } from '../lib/values.js';
 import { readPagination, buildLimitOffset } from '../lib/values.js';
+import { ORDER_STATUSES } from '../domain.js';
 
 // 核心逻辑：生成下一个建议单号
 async function generateNextDisplayId() {
@@ -97,7 +98,7 @@ export function createOrdersRouter() {
     sql += ` ORDER BY datetime(o.created_at) DESC, o.id DESC`;
 
     const pagination = readPagination(req.query as Record<string, unknown>);
-    sql += buildLimitOffset(pagination);
+    sql += buildLimitOffset(pagination, params);
 
     try {
       const orders = await dbAll(sql, params);
@@ -148,8 +149,8 @@ export function createOrdersRouter() {
         }
 
         return await tx.run(
-          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-          [displayId, result.payload.customerId, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null]
+          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null]
         );
       });
 
@@ -390,8 +391,9 @@ export function createOrdersRouter() {
   });
 
   router.patch('/:id/quick-notes', async (req: AuthedRequest, res) => {
+    const content = readString(req.body?.content, 5000);
     try {
-      await dbRun(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [req.body.content, req.params.id]);
+      await dbRun(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [content, req.params.id]);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新失败');

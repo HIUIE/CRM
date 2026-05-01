@@ -291,7 +291,11 @@ function escapeCsvValue(value: unknown) {
     return '';
   }
 
-  const text = String(value);
+  let text = String(value);
+  // Prevent CSV formula injection: prefix = + - @ with tab so Excel renders as plain text
+  if (/^[=\-+@]/.test(text)) {
+    text = `\t${text}`;
+  }
   if (/[",\r\n]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;
   }

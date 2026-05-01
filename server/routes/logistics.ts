@@ -100,7 +100,7 @@ router.get('/', async (req, res) => {
           COALESCE(NULLIF(l.shipping_date, ''), date(l.created_at)::text) DESC,
           datetime(l.created_at) DESC,
           CASE WHEN l.segment_type = 'domestic' THEN 0 ELSE 1 END ASC
-        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>), params)}
       `, params);
       const attachments = await getAttachmentsByEntity('logistics', records.map((record) => Number(record.id)));
       res.json(

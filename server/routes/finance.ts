@@ -47,7 +47,7 @@ export function createFinanceRouter() {
         LEFT JOIN users u ON u.id = f.created_by
         ${whereSql}
         ORDER BY datetime(f.created_at) DESC, f.id DESC
-        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>), params)}
       `, params);
       const attachments = await getAttachmentsByEntity('finance', records.map((record) => Number(record.id)));
       res.json(

@@ -48,7 +48,7 @@ export function createCustomersRouter() {
         ${whereSql}
         GROUP BY c.id
         ORDER BY datetime(c.created_at) DESC, c.id DESC
-        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>), params)}
       `, params);
       res.json(customers);
     } catch (error) {

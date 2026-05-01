@@ -10,6 +10,7 @@ export function createPartnersRouter() {
   router.get('/', async (req, res) => {
     try {
       const { readPagination, buildLimitOffset } = await import('../lib/values.js');
+      const params: unknown[] = [];
       const partners = await dbAll(`
         SELECT
           p.*,
@@ -18,8 +19,8 @@ export function createPartnersRouter() {
         LEFT JOIN users u ON u.id = p.created_by
         WHERE p.deleted_at IS NULL
         ORDER BY datetime(p.created_at) DESC, p.id DESC
-        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>))}
-      `);
+        ${buildLimitOffset(readPagination(req.query as Record<string, unknown>), params)}
+      `, params);
       res.json(partners);
     } catch (error) {
       return handleRouteError(res, error, '读取伙伴数据失败');

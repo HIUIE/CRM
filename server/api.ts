@@ -66,6 +66,7 @@ router.use('/auth', createAuthRouter());
 
 // Public settings endpoint for login page (site name, logo, etc.)
 router.get('/settings/basic', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   try {
     const siteName = await getSettingValue('site_name', 'SmartTrade AI CRM');
     const siteSlogan = await getSettingValue('site_slogan', '');
