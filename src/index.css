@@ -326,42 +326,35 @@ h1, h2, h3, h4, .headline {
   }
 }
 
-/* --- View Transitions API 增强版 --- */
+/* --- View Transitions API --- */
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.5s; /* 延长时长以增加体感 */
+  animation-duration: 0.15s;
 }
 
-/* 进场动画：整体向上滑入并淡入 */
-@keyframes slide-up-fade {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 退场动画：整体变淡并轻微缩小 */
-@keyframes fade-out-zoom {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.98); }
-}
-
+/* Simple crossfade — no movement, no scale, to avoid layout jump */
 ::view-transition-old(root) {
-  animation: 0.2s ease-in both fade-out-zoom;
+  animation: 0.15s ease-out both vt-fade-out;
 }
 
 ::view-transition-new(root) {
-  animation: 0.5s cubic-bezier(0.16, 1, 0.3, 1) both slide-up-fade;
+  animation: 0.15s ease-out both vt-fade-in;
 }
 
-/* 订单号飞跃效果保持默认，但确保名称唯一 */
+@keyframes vt-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Named element transition for order-id (list → detail) */
 ::view-transition-group(order-id) {
-  animation-duration: 0.5s;
+  animation-duration: 0.3s;
   animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
