@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.4",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "tsx watch server.ts",
     "dev:serve": "node --import tsx server.ts",
@@ -18,7 +19,9 @@
     "release:check": "npm run lint && npm test && npm run build && npm run smoke:ui",
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
-    "migrate:create": "node-pg-migrate create"
+    "migrate:create": "node-pg-migrate create",
+    "electron:dev": "npm run build && DB_DRIVER=sqlite NODE_ENV=development electron . --dev",
+    "electron:build": "npm run build && electron-builder --mac"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -26,6 +29,7 @@
     "@tanstack/react-query": "^5.100.5",
     "adm-zip": "^0.5.17",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.9.0",
     "cookie-parser": "^1.4.7",
     "dayjs": "^1.11.20",
     "dotenv": "^17.2.3",
@@ -56,6 +60,7 @@
     "@testing-library/react": "^16.3.2",
     "@types/adm-zip": "^0.5.8",
     "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.10",
@@ -69,6 +74,8 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
+    "electron": "^41.4.0",
+    "electron-builder": "^26.8.1",
     "jsdom": "^29.1.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
@@ -81,5 +88,35 @@
   "overrides": {
     "fast-csv": "^4.3.6",
     "tmp": "^0.2.4"
+  },
+  "build": {
+    "appId": "com.smarttrade.crm",
+    "productName": "SmartTrade CRM",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "server/**/*",
+      "electron/**/*",
+      "migrations/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.business",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "icon": "public/icon.icns"
+    },
+    "dmg": {
+      "title": "SmartTrade CRM"
+    },
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ]
   }
 }
