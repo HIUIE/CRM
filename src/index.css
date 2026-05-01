@@ -330,24 +330,24 @@ h1, h2, h3, h4, .headline {
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.15s;
+  animation-duration: 0.2s;
 }
 
-/* Simple crossfade — no movement, no scale, to avoid layout jump */
+/* Old page stays fully opaque — new page fades in on top, no background flash */
 ::view-transition-old(root) {
-  animation: 0.15s ease-out both vt-fade-out;
+  animation: 0.2s linear both vt-old-exit;
 }
 
 ::view-transition-new(root) {
-  animation: 0.15s ease-out both vt-fade-in;
+  animation: 0.2s ease-out both vt-new-enter;
 }
 
-@keyframes vt-fade-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+@keyframes vt-old-exit {
+  0%   { opacity: 1; }
+  100% { opacity: 1; } /* stays visible until the very end */
 }
 
-@keyframes vt-fade-in {
+@keyframes vt-new-enter {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
