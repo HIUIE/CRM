@@ -207,7 +207,7 @@ export default function CustomerDetailPage() {
           {/* Left Column: Fixed Profile */}
           <div className="space-y-6 lg:sticky lg:top-0">
             <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-8 shadow-sm transition-colors overflow-hidden relative group">
-              <div className="absolute top-0 right-0 h-32 w-32 translate-x-16 -translate-y-16 rounded-full bg-slate-50 dark:bg-navy-800 pointer-events-none" />
+              <div className="absolute top-0 right-0 h-32 w-32 translate-x-16 -translate-y-16 rounded-full bg-slate-50 dark:bg-navy-950/50 pointer-events-none" />
               <div className="relative z-10">
                 <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-slate-50 dark:bg-navy-950 shadow-inner border border-slate-100 dark:border-navy-800">
                   <Building2 size={32} className="text-primary-navy dark:text-tertiary-sage" />
@@ -228,7 +228,7 @@ export default function CustomerDetailPage() {
                 </div>
 
                 <div className="space-y-5 border-t border-slate-50 dark:border-navy-800 pt-8">
-                  <div className="rounded-lg bg-slate-50 dark:bg-navy-950/50 p-5 border border-slate-100 dark:border-navy-800 shadow-inner">
+                  <div className="rounded-lg bg-slate-50 dark:bg-navy-950 p-5 border border-slate-100 dark:border-navy-800 shadow-inner">
                     <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">累计贡献额 (LTV)</div>
                     <div className="text-2xl font-extrabold text-primary-navy dark:text-white data-field mb-4">$ {totalPaid.toLocaleString()}</div>
                     
@@ -262,7 +262,7 @@ export default function CustomerDetailPage() {
 
             <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
               <h3 className="text-xs font-extrabold text-primary-navy dark:text-white tracking-tight mb-4">意向偏好</h3>
-              <div className="p-4 bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-100 dark:border-navy-800 group relative cursor-pointer" onClick={() => setEditingField('intent_products')}>
+              <div className="p-4 bg-slate-50 dark:bg-navy-950 p-5 rounded-lg border border-slate-100 dark:border-navy-800 group relative cursor-pointer" onClick={() => setEditingField('intent_products')}>
                 {editingField === 'intent_products' ? (
                    <textarea
                     autoFocus
@@ -307,7 +307,7 @@ export default function CustomerDetailPage() {
                       value={followupInput}
                       onChange={(e) => setFollowupInput(e.target.value)}
                       placeholder="记录今天的沟通摘要：聊了什么？重点需求？"
-                      className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-4 text-sm font-medium focus:bg-surface dark:focus:bg-navy-900 focus:ring-2 focus:ring-primary-navy/5 outline-none transition-all resize-none min-h-[100px] border border-slate-100 dark:border-navy-800"
+                      className="w-full bg-slate-50 dark:bg-navy-950 p-4 rounded-lg text-sm font-medium focus:bg-surface dark:focus:bg-navy-900 focus:ring-2 focus:ring-primary-navy/5 outline-none transition-all resize-none min-h-[100px] border border-slate-100 dark:border-navy-800"
                     />
                     <div className="mt-3 flex justify-end">
                        <button 
@@ -385,7 +385,7 @@ export default function CustomerDetailPage() {
                 <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm flex flex-col">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
-                        <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <thead className="bg-slate-50/80 dark:bg-navy-950/80 backdrop-blur text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                           <tr>
                             <th className="px-6 py-4">订单号 / 日期</th>
                             <th className="px-6 py-4">产品摘要</th>
@@ -423,7 +423,7 @@ export default function CustomerDetailPage() {
                 <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm flex flex-col">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
-                        <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                        <thead className="bg-slate-50/80 dark:bg-navy-950/80 backdrop-blur text-xs font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                           <tr>
                             <th className="px-6 py-4">日期 / 订单</th>
                             <th className="px-6 py-4 text-center">类型</th>
@@ -572,8 +572,8 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean; o
       onClick={onClick}
       className={`flex items-center gap-2 px-6 py-4 text-sm font-bold tracking-tight border-b-2 transition-all ${
         active 
-          ? 'border-primary-navy dark:border-tertiary-sage text-primary-navy dark:text-tertiary-sage bg-slate-50 dark:bg-navy-900/30' 
-          : 'border-transparent text-slate-500 hover:text-primary-navy dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800/30'
+          ? 'border-primary-navy dark:border-tertiary-sage text-primary-navy dark:text-tertiary-sage bg-slate-50/50 dark:bg-navy-900/30' 
+          : 'border-transparent text-slate-500 hover:text-primary-navy dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-navy-800/30'
       }`}
     >
       {icon} {label}

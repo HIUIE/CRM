@@ -140,8 +140,8 @@ export default function UpdateTab() {
                 {updating ? <Loader2 size={16} className="animate-spin mr-2" /> : <RefreshCw size={16} className="mr-2" />}
                 {updating ? '正在更新...' : '一键更新系统'}
               </button>
-              {updateStatus?.currentStep && <div className="mt-3 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 px-3 py-2 text-xs text-slate-600">当前状态：{updateStatus.currentStep}</div>}
-              {updateStatus?.error && <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">更新失败：{updateStatus.error}</div>}
+              {updateStatus?.currentStep && <div className="mt-3 rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-900 px-3 py-2 text-xs text-slate-600 dark:text-slate-400 font-bold">当前状态：{updateStatus.currentStep}</div>}
+              {updateStatus?.error && <div className="mt-3 rounded-lg border border-rose-200 dark:border-rose-900/30 bg-rose-50 dark:bg-rose-900/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400 font-bold">更新失败：{updateStatus.error}</div>}
               {updateLog.length > 0 && (
                 <div className="mt-3 p-3 rounded-lg bg-slate-100 dark:bg-navy-800 text-xs font-mono text-slate-600 space-y-1 max-h-24 overflow-y-auto">
                   {updateLog.map((log, i) => <div key={i}>{log}</div>)}

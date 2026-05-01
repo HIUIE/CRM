@@ -26,14 +26,14 @@ export function Pagination({
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="relative inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700 disabled:opacity-50"
+          className="relative inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700/50 disabled:opacity-50"
         >
           上一页
         </button>
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700 disabled:opacity-50"
+          className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700/50 disabled:opacity-50"
         >
           下一页
         </button>
@@ -48,7 +48,7 @@ export function Pagination({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="rounded-md border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 px-2 py-1 text-xs font-bold focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white cursor-pointer"
+              className="rounded-md border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950/50 px-2 py-1 text-xs font-bold focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white cursor-pointer"
             >
               <option value={20}>20</option>
               <option value={50}>50</option>
@@ -61,7 +61,7 @@ export function Pagination({
             <button
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-200 dark:ring-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
+              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-200 dark:ring-navy-700 hover:bg-slate-50/50 dark:hover:bg-navy-800/50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -73,7 +73,7 @@ export function Pagination({
             <button
               onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-200 dark:ring-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
+              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-200 dark:ring-navy-700 hover:bg-slate-50/50 dark:hover:bg-navy-800/50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
             >
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>

@@ -109,7 +109,7 @@ export default function CountrySelect({ value, onChange, error, placeholder = '�
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="搜索国家或拼音首字母..."
-                className="w-full pl-8 pr-3 py-2 text-[13px] bg-slate-50 dark:bg-navy-950 rounded-lg border border-slate-200 dark:border-navy-800 outline-none text-primary-navy dark:text-white placeholder:text-slate-400 focus:border-primary-navy/30 dark:focus:border-tertiary-sage/30"
+                className="w-full pl-8 pr-3 py-2 text-[13px] bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-200 dark:border-navy-800 outline-none text-primary-navy dark:text-white placeholder:text-slate-400 focus:border-primary-navy/30 dark:focus:border-tertiary-sage/30"
               />
             </div>
           </div>
@@ -127,9 +127,9 @@ export default function CountrySelect({ value, onChange, error, placeholder = '�
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] transition-colors
                     ${selectedCountry?.code === country.code
                       ? 'bg-primary-navy/5 dark:bg-tertiary-sage/10 text-primary-navy dark:text-tertiary-sage font-bold'
-                      : 'hover:bg-slate-50 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-300'
+                      : 'hover:bg-slate-50/50 dark:hover:bg-navy-800/50 text-slate-700 dark:text-slate-300'
                     }
-                    border-b border-slate-50 last:border-0 dark:border-navy-800/50`}
+                    border-b border-slate-100/50 last:border-0 dark:border-navy-800/50`}
                 >
                   <span className="text-lg w-7 shrink-0 text-center drop-shadow-sm">{country.flag}</span>
                   <div className="flex flex-col">

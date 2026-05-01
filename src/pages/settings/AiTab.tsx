@@ -72,7 +72,7 @@ export default function AiTab() {
 
   return (
     <div className="space-y-8 max-w-4xl">
-      {error && <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 font-bold">{error}</div>}
       
       <div className="mb-8 flex items-center justify-between gap-3">
         <div>
@@ -131,8 +131,8 @@ export default function AiTab() {
           {testingAi ? <Loader2 size={16} className="animate-spin" /> : <AlertCircle size={16} />}
           {testingAi ? '测试中...' : '测试连接'}
         </button>
-        {aiTestResult === 'success' && <span className="flex items-center gap-1 text-xs font-bold text-emerald-600"><CheckCircle2 size={14} /> 连接成功</span>}
-        {aiTestResult === 'fail' && <span className="flex items-center gap-1 text-xs font-bold text-red-600"><AlertCircle size={14} /> 连接失败</span>}
+        {aiTestResult === 'success' && <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400"><CheckCircle2 size={14} /> 连接成功</span>}
+        {aiTestResult === 'fail' && <span className="flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400"><AlertCircle size={14} /> 连接失败</span>}
       </div>
     </div>
   );

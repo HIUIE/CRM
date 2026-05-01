@@ -133,7 +133,7 @@ export function OrderHeaderSection({
   return (
     <header ref={headerRef} className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-slate-100 dark:border-navy-800 pb-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight leading-none">
               <Link to="/orders" className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单管理</Link>
@@ -177,7 +177,7 @@ export function OrderHeaderSection({
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="rounded-md bg-[#F8FAFC] dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-3">
+          <div className="rounded-md bg-slate-50/50 dark:bg-navy-950/40 border border-slate-100 dark:border-navy-800 p-3">
             <div className="flex flex-wrap items-center gap-2">
               {STAGE_STEPS.map((s, i) => (
                 <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-surface dark:bg-navy-800 shadow-sm ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-60 hover:opacity-100 hover:bg-surface dark:hover:bg-navy-900'}`}>
@@ -242,7 +242,7 @@ export function ItemsSection({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-[#F1F5F9] dark:bg-navy-950 border-t border-slate-200 dark:border-navy-800">
+            <tfoot className="bg-slate-50 dark:bg-navy-950/50 border-t border-slate-200 dark:border-navy-800">
               <tr className="text-secondary-slate dark:text-slate-400">
                 <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">商品小计 (Subtotal)</td>
                 <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {itemsTotal.toLocaleString()}</td>

@@ -13,7 +13,7 @@ export function useSiteBrand() {
   const query = useQuery<SiteBrand>({
     queryKey: ['site-brand'],
     queryFn: () => apiFetch<SiteBrand>('/api/settings/basic'),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Ensure immediate refetch after invalidation
     placeholderData: { siteName: 'SmartTrade AI CRM', siteSlogan: '', siteLogo: '/logo.png', siteFavicon: '' },
   });
 

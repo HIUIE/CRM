@@ -65,7 +65,7 @@ export default function BrandingTab() {
 
   return (
     <div className="space-y-8 max-w-4xl">
-      {error && <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 font-bold">{error}</div>}
       
       <div className="mb-6">
         <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">

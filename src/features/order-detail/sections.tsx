@@ -63,7 +63,7 @@ export function OrderHeaderSection({
   return (
     <header ref={headerRef} className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-[#F1F5F9] dark:border-navy-800 pb-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-slate-100 dark:border-navy-800 pb-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight leading-none">
               <Link to="/orders" className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单管理</Link>
@@ -99,7 +99,7 @@ export function OrderHeaderSection({
             )}
           </div>
         </div>
-        <div className="rounded-md bg-[#F8FAFC] dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-3">
+        <div className="rounded-md bg-slate-50/50 dark:bg-navy-950/40 border border-slate-100 dark:border-navy-800 p-3">
           <div className="flex flex-wrap items-center gap-2">
             {STAGE_STEPS.map((s, i) => (
               <button key={s.key} onClick={() => scrollToSection(s.target)} className={`flex-1 min-w-[130px] flex items-center gap-3 px-4 py-2 rounded transition-all ${s.key === order.status ? 'bg-surface dark:bg-navy-800 shadow-md ring-1 ring-slate-200 dark:ring-navy-700' : 'opacity-40 hover:opacity-100'}`}>
@@ -157,7 +157,7 @@ export function ItemsSection({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-[#F1F5F9] dark:bg-navy-950 border-t border-slate-200 dark:border-navy-800">
+            <tfoot className="bg-slate-50 dark:bg-navy-950/50 border-t border-slate-200 dark:border-navy-800">
               <tr className="text-secondary-slate dark:text-slate-400">
                 <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">商品小计 (Subtotal)</td>
                 <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {itemsTotal.toLocaleString()}</td>
@@ -453,7 +453,7 @@ export function ProfitSection({
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
-    <div className={`flex items-center justify-between gap-4 rounded-md px-3 py-2 ${bold ? 'bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800' : ''}`}>
+    <div className={`flex items-center justify-between gap-4 rounded-md px-3 py-2 ${bold ? 'bg-slate-50 dark:bg-navy-950/40 border border-slate-100 dark:border-navy-800' : ''}`}>
       <span className="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">{label}</span>
       <span className={`shrink-0 text-sm data-field ${bold ? 'font-black text-primary-navy dark:text-white' : 'font-bold text-slate-900 dark:text-slate-200'}`}>{value}</span>
     </div>
@@ -462,7 +462,7 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 
 function SummaryBox({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="rounded-lg bg-slate-50/70 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-5 text-center shadow-sm">
+    <div className="rounded-lg bg-slate-50/50 dark:bg-navy-950/40 border border-slate-100 dark:border-navy-800 p-5 text-center shadow-sm">
       <div className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight mb-2">{label}</div>
       <div className={`text-xl font-black data-field ${color}`}>{value}</div>
     </div>
@@ -678,7 +678,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
           </section>
 
           {/* Live Summary Card */}
-          <div className="rounded-lg bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 p-5 space-y-3 shadow-sm">
+          <div className="rounded-lg bg-slate-50/50 dark:bg-navy-950/40 border border-slate-200 dark:border-navy-800 p-5 space-y-3 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-200 dark:border-navy-800 pb-3">
               <div className="h-4 w-1 rounded-full bg-slate-900 dark:bg-tertiary-sage" />
               <div className="text-base font-bold text-slate-900 dark:text-white tracking-tight">实时计算结果</div>
@@ -845,7 +845,7 @@ export function PackingSection({
                 const totalGross = packingRecords.reduce((s, r) => s + asNumber(r.grossWeight), 0);
                 const totalNet = packingRecords.reduce((s, r) => s + asNumber(r.netWeight), 0);
                 return (
-                  <tr className="bg-background dark:bg-navy-950/50 font-extrabold border-t border-slate-200 dark:border-navy-800">
+                  <tr className="bg-slate-50/50 dark:bg-navy-950/50 font-extrabold border-t border-slate-200 dark:border-navy-800">
                     <td className="px-5 py-4 text-primary-navy dark:text-white text-xs tracking-tight">合计 Total</td>
                     <td className="px-5 py-4 text-primary-navy dark:text-white data-field">{totalBoxes} 箱</td>
                     <td className="px-5 py-4 text-primary-navy dark:text-white data-field text-xs">见明细</td>
@@ -941,17 +941,17 @@ export function LogisticsSection({
                 </div>
                 <div className="mb-5 flex flex-col gap-4">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900/80">
+                    <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-950/40">
                       <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight leading-none">货运代理</span>
                       <div className="truncate text-sm font-black text-primary-navy dark:text-white">{l.freightForwarderPartnerName || l.freightForwarder || '直接委托'}</div>
                       {l.freightForwarderPartnerId && <div className="mt-1 truncate text-[10px] font-bold text-slate-400">{[l.freightForwarderPartnerCountry, l.freightForwarderPartnerContact].filter(Boolean).join(' · ') || '合作伙伴档案'}</div>}
                     </div>
-                    <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900/80">
+                    <div className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/60 p-4 shadow-sm dark:border-navy-800 dark:bg-navy-950/40">
                       <span className="mb-1 block text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight leading-none">实际承运商</span>
                       <div className="truncate text-sm font-black text-primary-navy dark:text-white">{l.carrier || '待填写'}</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 bg-slate-50/70 px-4 py-3 dark:border-navy-800 dark:bg-navy-950/50">
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 bg-slate-50/70 px-4 py-3 dark:border-navy-800 dark:bg-navy-950/40">
                     <span className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">提单/运单号</span>
                     <span className="rounded-[4px] bg-slate-900 px-3 py-1 text-sm font-black text-white shadow-md data-field dark:bg-navy-800">{l.trackingNo || '待同步'}</span>
                   </div>
@@ -999,7 +999,7 @@ export function TasksSection({
       {tasks.length > 0 ? (
         <div className="space-y-2">
           {tasks.map(t => (
-            <div key={t.id} onClick={() => navigate(`/tasks?detail=${t.id}`)} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 hover:ring-1 hover:ring-primary-navy/10 dark:hover:ring-tertiary-sage/10 cursor-pointer transition-all group">
+            <div key={t.id} onClick={() => navigate(`/tasks?detail=${t.id}`)} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-navy-950/40 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 hover:ring-1 hover:ring-primary-navy/10 dark:hover:ring-tertiary-sage/10 cursor-pointer transition-all group">
               <div className="flex items-center gap-3">
                 <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${t.status === 'done' ? 'bg-emerald-50 text-emerald-500' : 'bg-surface border border-slate-200 dark:border-navy-700 text-slate-400'}`}>
                   {t.status === 'done' ? <Check size={12} /> : <Clock size={12} />}
@@ -1122,7 +1122,7 @@ export function QuickFollowUpSection({
         onChange={e => onFollowUpChange(e.target.value)}
         placeholder="记录最新跟进动态，例如：今天发了最新版 PI 给客户..."
         rows={4}
-        className="w-full bg-slate-50 dark:bg-navy-950 px-3 py-2.5 rounded-lg border border-slate-100 dark:border-navy-800 text-sm font-bold text-slate-700 dark:text-white outline-none focus:bg-surface dark:focus:bg-navy-900 transition-all resize-none"
+        className="w-full bg-slate-50/50 dark:bg-navy-950 px-3 py-2.5 rounded-lg border border-slate-100 dark:border-navy-800 text-sm font-bold text-slate-700 dark:text-white outline-none focus:bg-surface dark:focus:bg-navy-900 transition-all resize-none"
       />
       <button
         onClick={onSubmitFollowUp}

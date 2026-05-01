@@ -114,7 +114,7 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
       )}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {formError && <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600">{formError}</div>}
+        {formError && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-3 text-xs font-bold text-red-600 dark:text-red-400">{formError}</div>}
         
         <div className="space-y-6">
           <Field label="订单单号 *">

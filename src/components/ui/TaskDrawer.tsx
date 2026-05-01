@@ -98,7 +98,7 @@ export function TaskDrawer({ isOpen, onClose, onSuccess, entityType, entityId, e
       )}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg border border-red-100 text-xs font-bold">{error}</div>}
+        {error && <div className="p-3 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-900/30 text-xs font-bold">{error}</div>}
         
         <div className="space-y-6">
           <Field label="任务标题 *">

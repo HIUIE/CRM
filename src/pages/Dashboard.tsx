@@ -132,7 +132,7 @@ function OrderListDrawerContent({ filter, onClose }: { filter: { status?: string
       ) : (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800">
           <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+            <thead className="bg-slate-50/80 dark:bg-navy-950/80 backdrop-blur font-bold tracking-tight text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
               <tr>
                 <th className="px-4 py-3">订单号</th>
                 <th className="px-4 py-3">客户</th>
@@ -248,14 +248,14 @@ function CurrencyExchangeWidget() {
       <div className="flex items-center gap-2">
         <div className="flex-1">
           <label className="text-[10px] font-bold text-slate-400 tracking-tight">{mode === 'usd2cny' ? 'USD' : 'CNY'}</label>
-          <input type="number" value={inputVal} onChange={e => setInputVal(e.target.value)} className="w-full bg-slate-50 dark:bg-navy-950 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-indigo-300" />
+          <input type="number" value={inputVal} onChange={e => setInputVal(e.target.value)} className="w-full bg-slate-50 dark:bg-navy-950/50 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-indigo-300" />
         </div>
         <button onClick={toggleMode} className="mt-4 h-7 w-7 rounded-full bg-slate-100 dark:bg-navy-800 flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors shrink-0">
           <ArrowRightLeft size={12} className="text-slate-400" />
         </button>
         <div className="flex-1">
           <label className="text-[10px] font-bold text-slate-400 tracking-tight">{mode === 'usd2cny' ? 'CNY' : 'USD'}</label>
-          <div className="w-full bg-slate-50 dark:bg-navy-950 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white">
+          <div className="w-full bg-slate-50 dark:bg-navy-950/50 p-2 rounded border border-slate-200 dark:border-navy-800 text-sm font-bold text-primary-navy dark:text-white">
             {result.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
@@ -364,7 +364,7 @@ export default function DashboardView() {
 
           {/* Todos */}
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors">
-            <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">今日待处理 ({data.todos.length})</h2>
                 <p className="text-xs text-slate-400 dark:text-slate-500 font-bold tracking-tight mt-0.5">优先处理以下业务阻点</p>
@@ -397,7 +397,7 @@ export default function DashboardView() {
 
           {/* Activities */}
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors">
-            <div className="px-6 py-4 border-b border-slate-50 dark:border-navy-800 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">最近动态</h2>
                 <div className="hidden sm:flex gap-4 text-xs font-bold tracking-tight">
@@ -416,7 +416,7 @@ export default function DashboardView() {
             </div>
             <div className="p-4 space-y-0">
               {filteredActivities.length > 0 ? filteredActivities.map((activity, i) => (
-                <div key={i} onClick={() => navigate(`/orders/${String(activity.order_display_id).toLowerCase()}`)} className="flex items-center justify-between cursor-pointer group py-4 border-b border-slate-100 dark:border-navy-800 last:border-0 hover:bg-slate-50 dark:hover:bg-navy-950/50 px-4 -mx-4 rounded-lg transition-colors">
+                <div key={i} onClick={() => navigate(`/orders/${String(activity.order_display_id).toLowerCase()}`)} className="flex items-center justify-between cursor-pointer group py-4 border-b border-slate-100 dark:border-navy-800 last:border-0 hover:bg-slate-50/50 dark:hover:bg-navy-950/50 px-4 -mx-4 rounded-lg transition-colors">
                   <div className="flex items-start gap-4">
                     <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${activity.type === 'finance' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' : activity.type === 'logistics' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' : activity.type === 'customs' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-slate-100 dark:bg-navy-800 text-slate-500'}`}>
                       {activity.type === 'finance' ? <ArrowDownRight size={14} /> : activity.type === 'logistics' ? <Truck size={14} /> : activity.type === 'customs' ? <FileText size={14} /> : <ArrowUpRight size={14} />}
@@ -523,7 +523,7 @@ export default function DashboardView() {
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
             <div className="mb-8 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">订单状态分布</h2>
-              <select className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none">
+              <select className="bg-slate-50 dark:bg-navy-950/50 border border-slate-200 dark:border-navy-800 rounded px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none">
                 <option>本月</option>
                 <option>本周</option>
                 <option>今年</option>

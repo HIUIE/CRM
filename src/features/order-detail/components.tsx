@@ -135,7 +135,7 @@ DocumentBoard.displayName = 'DocumentBoard';
 
 export function RemarkBoard({ content, onEdit }: { content: string; onEdit: () => void }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-sm dark:border-navy-800 dark:bg-navy-900">
+    <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
       <div className="px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 flex items-center justify-between">
         <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">内部备注 / Internal Notes</h3>
         <button onClick={onEdit} className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-all">编辑</button>
@@ -183,7 +183,7 @@ export function FinanceDashboard({
              {currencies.map(c=><option key={c} value={c}>{c}</option>)}
            </select>
         </div>
-        <div className="space-y-4 rounded-lg bg-slate-50/70 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800 p-5">
+        <div className="space-y-4 rounded-lg bg-slate-50/50 dark:bg-navy-950/40 border border-slate-100 dark:border-navy-800 p-5">
            <div className="flex items-baseline gap-2">
               <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tighter data-field">{paid.toLocaleString()}</div>
               <div className="text-sm font-semibold text-slate-500">{activeCurrency}</div>
@@ -194,7 +194,7 @@ export function FinanceDashboard({
                    <span>订单总额 USD {totalAmount.toLocaleString()}</span>
                    <span className={`font-bold ${isOverpaid ? 'text-amber-600' : 'text-emerald-600'}`}>{isOverpaid ? `超额 ${rawPercentage}%` : `${rawPercentage}%`}</span>
                 </div>
-                <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
+                <div className="h-2 w-full bg-slate-100 dark:bg-navy-950 rounded-full overflow-hidden shadow-inner">
                    <div className={`h-full rounded-full transition-all duration-1000 ${isOverpaid ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${progressWidth}%` }} />
                 </div>
              </div>
@@ -312,7 +312,7 @@ export function ProductionDashboard({
             <span className="text-xs font-bold text-slate-500 tracking-tight">生产进度</span>
             <span className="text-sm font-bold text-emerald-600 data-field">{percentage}%</span>
           </div>
-          <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner">
+          <div className="h-2 w-full bg-slate-100 dark:bg-navy-950 rounded-full overflow-hidden shadow-inner">
             <div
               className="h-full rounded-full transition-all duration-1000"
               style={{
@@ -355,7 +355,7 @@ export function ProductionDashboard({
               {plan.photos.map(att => {
                 const isImage = att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.fileName || '');
                 return (
-                <button key={att.id} onClick={() => onPreview?.(att)} className="group relative w-20 h-20 rounded-lg border border-slate-200 dark:border-navy-700 overflow-hidden bg-slate-50 dark:bg-navy-950 hover:ring-2 hover:ring-primary-navy/20 dark:hover:ring-tertiary-sage/20 transition-all shrink-0">
+                <button key={att.id} onClick={() => onPreview?.(att)} className="group relative w-20 h-20 rounded-lg border border-slate-200 dark:border-navy-700 overflow-hidden bg-slate-50 dark:bg-navy-950/50 hover:ring-2 hover:ring-primary-navy/20 dark:hover:ring-tertiary-sage/20 transition-all shrink-0">
                   {isImage ? (
                     <img
                       src={att.url}
@@ -406,7 +406,7 @@ export function StatusFileRow({
   return (
     <div className="flex items-center justify-between group py-3 px-4 rounded-lg border border-transparent hover:bg-slate-50 dark:hover:bg-navy-800 hover:border-slate-200 dark:hover:border-navy-700 transition-all">
       <div className="flex items-center gap-4 min-w-0 flex-1">
-        <div className={`flex h-10 w-10 aspect-square shrink-0 items-center justify-center rounded border transition-all ${status === 'uploaded' ? 'bg-surface dark:bg-navy-900 text-emerald-600 border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50 dark:bg-navy-950 text-slate-300 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
+    <div className={`flex h-10 w-10 aspect-square shrink-0 items-center justify-center rounded border transition-all ${status === 'uploaded' ? 'bg-surface dark:bg-navy-900 text-emerald-600 border-emerald-100 dark:border-emerald-900/50 shadow-sm' : 'bg-slate-50/50 dark:bg-navy-950/40 text-slate-300 dark:text-navy-800 border-slate-200 dark:border-navy-800 opacity-50'}`}>
           {fileName ? getFileIcon(fileName, 18) : <FileCode size={18} />}
         </div>
         <div className="min-w-0">
@@ -469,7 +469,7 @@ export function AttachmentEditor({
               <span>文件上传进度</span>
               <span className="data-field">{uploadProgress}%</span>
            </div>
-           <div className="h-2 w-full bg-slate-100 dark:bg-navy-800 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-navy-700">
+           <div className="h-2 w-full bg-slate-100 dark:bg-navy-950 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-navy-700">
               <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
            </div>
         </div>
@@ -490,7 +490,7 @@ export function AttachmentEditor({
         ))}
         
         {newFiles.map((item, idx) => (
-          <div key={idx} className="p-4 bg-slate-50 dark:bg-navy-950/50 border border-dashed border-slate-300 dark:border-navy-800 rounded-lg space-y-3 group">
+          <div key={idx} className="p-4 bg-slate-50/50 dark:bg-navy-950/40 border border-dashed border-slate-300 dark:border-navy-800 rounded-lg space-y-3 group">
             <div className="flex items-center justify-between">
                <div className="flex items-center gap-3.5 min-w-0">
                  <div className="text-slate-400"><FileCode size={16} /></div>
@@ -533,7 +533,7 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
           </div>
           <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"><X size={22} /></button>
         </div>
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50 dark:bg-navy-950/50 p-4 sm:p-8">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50/50 dark:bg-navy-950/50 p-4 sm:p-8">
           {isPdf ? (
             <iframe src={attachment.url} className="h-full w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-lg" title={attachment.fileName} />
           ) : isImage ? (
@@ -565,13 +565,13 @@ export const LogisticsSnapshot = ({ title, record, fields, onEdit, onPreview }: 
        <button onClick={onEdit} className="p-2 bg-surface rounded-md border border-slate-200 text-slate-400 hover:text-slate-900 transition-all"><Edit3 size={16} /></button>
     </div>
     <div className="mb-6 flex items-center gap-3">
-      <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100 shadow-inner"><Truck size={20} /></div>
+      <div className="h-10 w-10 rounded-lg bg-slate-50/50 dark:bg-navy-950 flex items-center justify-center text-slate-900 dark:text-white border border-slate-100 dark:border-navy-800 shadow-inner"><Truck size={20} /></div>
       <div>
         <div className="text-sm font-bold text-slate-900 tracking-tight leading-none">{title}</div>
         <div className="text-xs font-bold text-slate-400 tracking-tight mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
       </div>
     </div>
-    <div className="grid gap-6 text-sm sm:grid-cols-2 bg-slate-50/50 p-6 rounded-lg border border-slate-100">
+    <div className="grid gap-6 text-sm sm:grid-cols-2 bg-slate-50/50 dark:bg-navy-950/40 p-6 rounded-lg border border-slate-100 dark:border-navy-800">
       {fields.map(([label, value]) => (
         <div key={label}>
           <GridItem label={label} value={value} />
@@ -586,7 +586,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
   return (
     <div className="mt-8 space-y-6">
       <div className="text-xs font-bold text-slate-400 tracking-tight flex items-center gap-3"><div className="h-px w-8 bg-slate-200" /> 生产进度时间轴 / Production Timeline</div>
-      <div className="relative space-y-6 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-100">
+      <div className="relative space-y-6 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-100 dark:before:bg-navy-800">
         {logs.map((log) => (
           <div key={log.id} className="relative pl-12 group">
             <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-surface border-4 border-slate-900 flex items-center justify-center shadow-sm z-10">
@@ -604,7 +604,7 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
               {log.attachments && log.attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-50">
                   {log.attachments.map(att => (
-                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-surface hover:border-slate-200 transition-all shadow-sm">
+                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/50 dark:bg-navy-950/40 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface hover:border-slate-200 transition-all shadow-sm">
                       <div className="text-slate-400 group-hover:text-slate-900">{getFileIcon(att.fileName, 12)}</div>
                       <span className="text-xs font-semibold text-slate-900 truncate max-w-[240px]">{att.fileName}</span>
                     </button>
@@ -624,7 +624,7 @@ export const ProductImagePlaceholder = ({ url, name }: { url?: string; name: str
     {url ? (
       <img src={url} alt={name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
     ) : (
-      <div className="flex h-full w-full items-center justify-center bg-slate-50">
+      <div className="flex h-full w-full items-center justify-center bg-slate-50/50 dark:bg-navy-950/50">
         <Package size={24} className="text-slate-300" />
       </div>
     )}
