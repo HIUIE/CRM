@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Truck } from 'lucide-react';
 import Field from './ui/Field';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, apiUpload, getErrorMessage } from '../lib/api';
 import Chip from './ui/Chip';
 import Toast from './ui/Toast';
@@ -13,7 +14,6 @@ import { Drawer } from './ui/Drawer';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates } from '../lib/date';
 import type { StandardTimeRange } from '../lib/date';
-import { withTransition } from '../lib/transition';
 import type { OrderOption } from '../types/crm';
 import { LogisticsForm } from '../features/order-detail/drawers';
 import { EMPTY_LOGISTICS_FORM } from '../features/order-detail/utils';
@@ -49,7 +49,7 @@ function getStatusLabel(status: LogisticsSummary['status']) {
 }
 
 export default function LogisticsView() {
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -259,7 +259,7 @@ export default function LogisticsView() {
                     <tr
                       key={r.id}
                       onClick={() => {
-                        withTransition(() => navigate(`/orders/${r.order_display_id}?section=logistics`));
+                        navigate(`/orders/${r.order_display_id}?section=logistics`);
                       }}
                       className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                     >

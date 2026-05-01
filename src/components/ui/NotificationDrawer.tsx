@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigateWithTransition } from '../../lib/transition';
 import { Bell, X, ArrowRight } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
 import Toast from './Toast';
-import { useNavigate } from 'react-router-dom';
 
 interface Notification {
   id: number;
@@ -17,7 +17,7 @@ export function NotificationDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
 
   const loadNotifications = async () => {
     setLoading(true);

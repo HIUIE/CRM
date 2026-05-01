@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, Hash } from 'lucide-react';
 import Field from './ui/Field';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Chip from './ui/Chip';
@@ -15,7 +16,6 @@ import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates } from '../lib/date';
 import type { StandardTimeRange } from '../lib/date';
-import { withTransition } from '../lib/transition';
 import type { CustomerListItem, OrderSummary } from '../types/crm';
 
 
@@ -48,7 +48,7 @@ function getOrderStatusMeta(status: string) {
 
 export default function OrdersView() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
@@ -202,7 +202,7 @@ export default function OrdersView() {
         const created = await apiFetch<{ display_id: string }>('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
         resetFormState();
         const navigateToDetail = () => navigate(`/orders/${created.display_id}`);
-        withTransition(navigateToDetail);
+        navigateToDetail();
       }
     } catch (err) {
       setFormError(getErrorMessage(err, '保存失败'));
@@ -284,7 +284,7 @@ export default function OrdersView() {
                     return (
                       <tr key={o.id} onClick={() => {
                         const target = `/orders/${String(o.display_id).toLowerCase()}`;
-                        withTransition(() => navigate(target));
+                        navigate(target);
                       }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
                         <td className="px-4 py-4 text-left">
                            <div 

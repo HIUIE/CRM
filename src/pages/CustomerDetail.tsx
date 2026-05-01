@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import {
   Building2, MapPin, Phone, Share2, Package, Wallet, Clock,
   ArrowLeft, ChevronRight, Edit, Mail, Globe, ArrowDownRight, Truck, FileText, ArrowUpRight, Plus, Users, LayoutDashboard, DollarSign, Star, MoreVertical, Pencil, Save, X, Send, History, Check, CheckCircle2, MessageSquare, Eye, EyeOff
@@ -86,7 +87,7 @@ const LEAD_SOURCE_OPTIONS = [
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [activeTab, setActiveTab] = useState<TabKey>('followups');
   const [toast, setToast] = useState('');
   const [followupInput, setFollowupInput] = useState('');

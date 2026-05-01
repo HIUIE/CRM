@@ -9,7 +9,8 @@ import { useAuth } from '../context/AuthContext';
 import Chip from '../components/ui/Chip';
 import Toast from '../components/ui/Toast';
 import { AnimatePresence, motion } from 'motion/react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 
 const TaskDrawer = lazy(() => import('../components/ui/TaskDrawer').then(m => ({ default: m.TaskDrawer })));
 const TaskDetailDrawer = lazy(() => import('../components/ui/TaskDetailDrawer').then(m => ({ default: m.TaskDetailDrawer })));
@@ -194,7 +195,7 @@ interface TaskCardProps {
 }
 
 const TaskCard = React.memo(({ task, onSelect }: TaskCardProps) => {
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'done';
   const priorityMeta = task.priority === 'P0'
     ? { label: 'P0', className: 'border-red-100 bg-red-50 text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300' }

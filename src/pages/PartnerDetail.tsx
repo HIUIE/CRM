@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import {
   Building2, MapPin, Phone, Package, Wallet, Clock,
   ArrowLeft, Star, Mail, Globe, Truck, DollarSign,
@@ -103,7 +104,7 @@ function getStatusMeta(status: string) {
 
 export default function PartnerDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>('orders');
   const [toast, setToast] = useState('');

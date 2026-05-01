@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import {
   MessageCircle,
   ShieldCheck,
@@ -26,7 +26,7 @@ const LINK_MAP: Record<string, string> = {
 };
 
 export default function HelpCenterPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const sections = [
     {
       title: '新手快速入门',

@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, ArrowUpRight, ArrowDownLeft, Clock, Paperclip } from 'lucide-react';
 import Field from './ui/Field';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, apiUpload, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Chip from './ui/Chip';
@@ -14,7 +15,6 @@ import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates, type StandardTimeRange } from '../lib/date';
-import { withTransition } from '../lib/transition';
 import { AttachmentEditor } from '../features/order-detail/components';
 import type { FinanceCategory, FinanceListRecord, OrderOption, PartnerOption, PartnerRecord, AttachmentMeta } from '../types/crm';
 
@@ -69,7 +69,7 @@ function getCounterparty(record: FinanceListRecord) {
 
 export default function FinanceView() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');

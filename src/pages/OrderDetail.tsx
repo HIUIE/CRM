@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/ui/Toast';
@@ -89,7 +90,7 @@ import {
 export default function OrderDetailPage() {
   const { user } = useAuth();
   const { orderNo } = useParams();
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [detailSearchParams, setDetailSearchParams] = useSearchParams();
 
   // 1. Refs

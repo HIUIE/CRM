@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigateWithTransition } from '../../lib/transition';
 import { Search, X, Package, ArrowRight, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../lib/api';
 import type { OrderSummary, CustomerListItem } from '../../types/crm';
 
@@ -14,7 +14,7 @@ export function CommandPalette() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

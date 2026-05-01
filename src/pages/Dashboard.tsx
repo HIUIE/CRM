@@ -5,7 +5,8 @@ import {
   FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight,
   Building2, ArrowRightLeft, AlertTriangle, TrendingDown, Loader2
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import Chip from '../components/ui/Chip';
 import { Drawer } from '../components/ui/Drawer';
@@ -107,7 +108,7 @@ function getOrderStatusMeta(status: string) {
 // ==================== Stat Card Drawer Content ====================
 
 function OrderListDrawerContent({ filter, onClose }: { filter: { status?: string; label: string }; onClose: () => void }) {
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -267,7 +268,7 @@ function CurrencyExchangeWidget() {
 // ==================== Main Dashboard ====================
 
 export default function DashboardView() {
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const { data, isLoading, error } = useQuery<DashboardData>({
     queryKey: ['dashboard'],
     queryFn: () => apiFetch<DashboardData>('/api/dashboard'),

@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, MapPin, Star, Building2 } from 'lucide-react';
 import Field from './ui/Field';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Chip from './ui/Chip';
@@ -50,7 +51,7 @@ function getPartnerTypeLabel(type: PartnerType) {
 
 export default function PartnersView() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');

@@ -3,7 +3,8 @@ import { apiFetch, getErrorMessage } from '../lib/api';
 import Chip from '../components/ui/Chip';
 import EmptyStateBoard from '../components/ui/EmptyStateBoard';
 import { Clock, User, Box, ArrowLeft, Printer, History, Eye, X, FileJson, Copy, Check } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
 
@@ -31,7 +32,7 @@ export default function AuditLogsPage() {
   const [entityType, setEntityType] = useState('');
   const [entityId, setEntityId] = useState('');
   
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
 
   const fetchLogs = async () => {
     setLoading(true);

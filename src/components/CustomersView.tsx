@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2 } from 'lucide-react';
 import Field from './ui/Field';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Chip from './ui/Chip';
@@ -14,7 +15,6 @@ import TimeRangeFilter from './ui/TimeRangeFilter';
 import { usePagination } from '../hooks/usePagination';
 import { getRangeDates } from '../lib/date';
 import type { StandardTimeRange } from '../lib/date';
-import { withTransition } from '../lib/transition';
 import CountrySelect from './ui/CountrySelect';
 import CountryDisplay from './ui/CountryDisplay';
 import { getCountryDisplay } from '../lib/countries';
@@ -39,7 +39,7 @@ const EMPTY_FORM: CustomerForm = {
 
 export default function CustomersView() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState('');
@@ -215,7 +215,7 @@ export default function CustomersView() {
         closeForm();
         setTimeout(() => {
           setToast('');
-          withTransition(() => navigate(`/customers/detail/${String(result.displayId || result.id).toLowerCase()}`));
+          navigate(`/customers/detail/${String(result.displayId || result.id).toLowerCase()}`);
         }, 1000);
       }
     } catch (requestError) {

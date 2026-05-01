@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
+import { useNavigateWithTransition } from '../../lib/transition';
 import {
   LayoutDashboard,
   FileText,
@@ -36,7 +37,7 @@ import { useSiteBrand } from '../../hooks/useSiteBrand';
 export default function MainLayout() {
   const { user, logout } = useAuth();
   useSocket(); // Initialize global socket connection
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const location = useLocation();
   
   const [isDark, setIsDark] = useState(() => {
@@ -276,7 +277,7 @@ function NavItem({
   currentPath: string;
   customClass?: string;
 }) {
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
   const isActive = currentPath === path || (path === '/dashboard' && currentPath === '/') || currentPath.startsWith(path + '/');
 
   return (

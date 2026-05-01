@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigateWithTransition } from '../../lib/transition';
 import { apiFetch, apiUpload, getErrorMessage } from '../../lib/api';
 import { Drawer } from './Drawer';
 import Chip from './Chip';
@@ -8,7 +9,6 @@ import {
   Clock, User, Package, Calendar, AlertCircle, MessageSquare,
   Send, CheckCircle2, ChevronRight, History, Trash2, Edit3, X, Paperclip, Upload
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { MentionTextarea } from './MentionTextarea';
 import type { AttachmentMeta } from '../../features/order-detail/types';
 
@@ -51,7 +51,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
   const [isUploading, setIsUploading] = useState(false);
   const [toast, setToast] = useState('');
   const [previewAttachment, setPreviewAttachment] = useState<AttachmentMeta | null>(null);
-  const navigate = useNavigate();
+  const navigate = useNavigateWithTransition();
 
   const loadTask = async () => {
     if (!taskId) return;
