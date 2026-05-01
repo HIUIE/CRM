@@ -1,83 +1,51 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
 const http = require('http');
 
-let mainWindow = null;
-let serverProcess = null;
+// ── Register tsx ESM loader so we can import() TypeScript files ──
+const { register } = require('node:module');
+const { pathToFileURL } = require('url');
+register('tsx/esm', pathToFileURL(__filename));
 
-const isDev = process.env.NODE_ENV !== 'production' || process.argv.includes('--dev');
+// ── Config ────────────────────────────────────────────────────────
+const isDev = !app.isPackaged;
 const PORT = process.env.PORT || 3000;
 const SERVER_URL = `http://localhost:${PORT}`;
 
-function startServer() {
+// Set env before importing server (server.ts reads these on startup)
+process.env.DB_DRIVER = 'sqlite';
+process.env.HOST = '127.0.0.1';
+process.env.PORT = String(PORT);
+process.env.NODE_ENV = isDev ? 'development' : 'production';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'electron-desktop-app-jwt-secret-min-32-chars!!';
+process.env.ALLOW_INSECURE_COOKIES = 'true';
+process.env.SQLITE_PATH = process.env.SQLITE_PATH || path.join(app.getPath('userData'), 'data', 'crm.db');
+process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(app.getPath('userData'), 'uploads');
+
+let mainWindow = null;
+
+// ── Wait for server to be ready ────────────────────────────────────
+function waitForServer(timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
-    const serverPath = path.join(__dirname, '..', 'server.ts');
-
-    serverProcess = spawn('npx', ['tsx', serverPath], {
-      cwd: path.join(__dirname, '..'),
-      env: {
-        ...process.env,
-        PORT: String(PORT),
-        DB_DRIVER: 'sqlite',
-        HOST: '127.0.0.1',
-        NODE_ENV: isDev ? 'development' : 'production',
-        SQLITE_PATH: path.join(app.getPath('userData'), 'data', 'crm.db'),
-        UPLOADS_DIR: path.join(app.getPath('userData'), 'uploads'),
-        JWT_SECRET: process.env.JWT_SECRET || 'electron-desktop-app-jwt-secret-min-32-chars!!',
-        ALLOW_INSECURE_COOKIES: 'true',
-      },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-
-    serverProcess.stdout.on('data', (data) => {
-      const text = data.toString();
-      process.stdout.write(text);
-
-      if (text.includes('Local:') || text.includes('listening')) {
-        resolve();
-      }
-    });
-
-    serverProcess.stderr.on('data', (data) => {
-      process.stderr.write(data.toString());
-    });
-
-    serverProcess.on('error', reject);
-    serverProcess.on('exit', (code) => {
-      if (code !== 0 && code !== null) {
-        reject(new Error(`Server exited with code ${code}`));
-      }
-    });
-
-    // Fallback: poll health endpoint
-    let attempts = 0;
-    const pollInterval = setInterval(() => {
-      attempts++;
+    const start = Date.now();
+    const poll = () => {
       http.get(`${SERVER_URL}/api/health`, (res) => {
-        if (res.statusCode === 200) {
-          clearInterval(pollInterval);
-          resolve();
-        }
-      }).on('error', () => {
-        // Server not ready yet
-      });
+        if (res.statusCode === 200) return resolve();
+        retry();
+      }).on('error', retry);
 
-      if (attempts > 60) {
-        clearInterval(pollInterval);
-        reject(new Error('Server failed to start within 30 seconds'));
+      function retry() {
+        if (Date.now() - start > timeoutMs) {
+          return reject(new Error('Server did not start within 30s'));
+        }
+        setTimeout(poll, 300);
       }
-    }, 500);
+    };
+    poll();
   });
 }
 
-function stopServer() {
-  if (serverProcess) {
-    serverProcess.kill('SIGTERM');
-    serverProcess = null;
-  }
-}
-
+// ── Window ─────────────────────────────────────────────────────────
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -105,29 +73,25 @@ function createWindow() {
   });
 }
 
+// ── App lifecycle ──────────────────────────────────────────────────
 app.whenReady().then(async () => {
   try {
-    console.log('[electron] Starting server...');
-    await startServer();
-    console.log('[electron] Server ready, creating window...');
+    // Dynamic import of server.ts — tsx/esm loader handles TypeScript
+    // server.ts auto-starts on import (calls startServer() at top level)
+    await import('../server.ts');
+
+    await waitForServer();
     createWindow();
   } catch (err) {
-    console.error('[electron] Failed to start:', err);
+    console.error('[electron] Startup failed:', err);
     app.quit();
   }
 });
 
 app.on('window-all-closed', () => {
-  stopServer();
   app.quit();
 });
 
-app.on('before-quit', () => {
-  stopServer();
-});
-
 app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
+  if (mainWindow === null) createWindow();
 });
