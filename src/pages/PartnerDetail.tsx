@@ -324,12 +324,12 @@ export default function PartnerDetailPage() {
                         {orders.map((o) => (
                           <tr
                             key={o.id}
-                            onClick={() => navigate(`/orders/${o.display_id.toLowerCase()}`)}
+                            onClick={() => navigate(`/orders/${o.display_id.toLowerCase()}${o.linkType === 'finance' ? '?section=finance' : o.linkType === 'production' ? '?section=production' : o.linkType === 'logistics' ? '?section=logistics' : ''}`)}
                             className="group hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                           >
                             <td className="px-6 py-4">
                               <span className="font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">
-                                <Link to={`/orders/${o.display_id.toLowerCase()}`} className="hover:underline">{o.display_id}</Link>
+                                <Link to={`/orders/${o.display_id.toLowerCase()}${o.linkType === 'finance' ? '?section=finance' : o.linkType === 'production' ? '?section=production' : o.linkType === 'logistics' ? '?section=logistics' : ''}`} className="hover:underline">{o.display_id}</Link>
                               </span>
                             </td>
                             <td className="px-6 py-4">
@@ -384,7 +384,7 @@ export default function PartnerDetailPage() {
                         {financeRecords.map((r) => (
                           <tr
                             key={r.id}
-                            onClick={() => { if (r.order_display_id) navigate(`/orders/${r.order_display_id.toLowerCase()}`); }}
+                            onClick={() => { if (r.order_display_id) navigate(`/orders/${r.order_display_id.toLowerCase()}?section=finance`); }}
                             className={`group transition-colors ${r.order_display_id ? 'hover:bg-slate-50 dark:hover:bg-navy-800 cursor-pointer' : 'hover:bg-slate-50 dark:hover:bg-navy-800'}`}
                           >
                             <td className="px-6 py-4">
@@ -400,7 +400,7 @@ export default function PartnerDetailPage() {
                             <td className="px-6 py-4">
                               {r.order_display_id ? (
                                 <span className="font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">
-                                  <Link to={`/orders/${r.order_display_id.toLowerCase()}`} className="group-hover:underline">{r.order_display_id}</Link>
+                                  <Link to={`/orders/${r.order_display_id.toLowerCase()}?section=finance`} className="group-hover:underline">{r.order_display_id}</Link>
                                 </span>
                               ) : <span className="text-slate-400">—</span>}
                             </td>
