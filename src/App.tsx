@@ -9,6 +9,7 @@ import { useAuth } from './context/AuthContext';
 import MainLayout from './components/layout/MainLayout';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import VersionGuard from './components/VersionGuard';
+import { Toaster } from 'sonner';
 
 // --- Lazy-loaded pages for code splitting ---
 const DashboardView = lazy(() => import('./pages/Dashboard'));
@@ -52,8 +53,9 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <Suspense fallback={<PageLoader />}>
-      <VersionGuard />
+      <Toaster position="top-center" richColors />
+      <Suspense fallback={<PageLoader />}>
+        <VersionGuard />
       <Routes>
         <Route path="/login" element={!user ? <LoginScreen /> : <Navigate to="/" />} />
         
