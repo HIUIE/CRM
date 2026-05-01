@@ -91,7 +91,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 router.use('/dashboard', createDashboardRouter());
-router.use('/settings', heavyLimiter, createSettingsRouter());
+router.use('/settings', createSettingsRouter());
 router.use('/audit', createAuditRouter());
 router.use('/users', createUsersRouter());
 router.use('/tasks', createTasksRouter());
