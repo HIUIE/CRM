@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { Globe, FileDigit, DollarSign, Bell, CheckCircle2 } from 'lucide-react';
 import Field from '../../components/ui/Field';
@@ -39,11 +40,13 @@ export default function GeneralTab() {
     });
   }, []);
 
+  const queryClient = useQueryClient();
   const saveSiteSettings = async () => {
     setError(''); setSavedSite(false);
     try {
       await apiFetch('/api/settings/basic', { method: 'POST', body: JSON.stringify({ siteName, siteSlogan, siteLogo, siteFavicon }) });
       setSavedSite(true);
+      await queryClient.invalidateQueries({ queryKey: ['site-brand'] });
       setTimeout(() => setSavedSite(false), 1800);
     } catch (e) { setError(getErrorMessage(e, '保存站点设置失败')); }
   };
