@@ -52,7 +52,7 @@ export default function MainLayout() {
   const [showFilters, setShowFilters] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { data: brand } = useSiteBrand();
-  const siteName = brand?.siteName || 'SmartTrade AI CRM';
+  const siteName = brand?.siteName || '';
   const siteLogo = brand?.siteLogo || '/logo.png';
   const isAdmin = user?.role === 'admin';
   useEffect(() => {

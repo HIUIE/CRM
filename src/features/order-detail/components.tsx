@@ -57,7 +57,7 @@ export { default as Chip } from '../../components/ui/Chip';
 
 export const GridItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="space-y-1">
-    <div className="text-xs font-medium text-slate-500 tracking-tight">{label}</div>
+    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">{label}</div>
     <div className="text-sm font-semibold text-slate-900 dark:text-white leading-tight">{value}</div>
   </div>
 );
@@ -137,8 +137,8 @@ export function RemarkBoard({ content, onEdit }: { content: string; onEdit: () =
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
       <div className="px-6 py-3 border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 flex items-center justify-between">
-        <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">内部备注 / Internal Notes</h3>
-        <button onClick={onEdit} className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-all">编辑</button>
+      <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">内部备注 / Internal Notes</h3>
+        <button onClick={onEdit} className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">编辑</button>
       </div>
       <div className="p-6 bg-slate-50/50 dark:bg-navy-950/30 min-h-[100px]">
         <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed tracking-tight">
@@ -178,7 +178,7 @@ export function FinanceDashboard({
     <div className="grid gap-8 xl:grid-cols-12 items-start">
       <div className="xl:col-span-4 space-y-6 xl:border-r xl:border-slate-100 xl:dark:border-navy-800 xl:pr-8">
         <div className="flex items-center justify-between">
-           <div className="text-xs font-medium text-slate-500 tracking-tight">回款汇总</div>
+           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-tight">回款汇总</div>
            <select value={activeCurrency} onChange={e=>setActiveCurrency(e.target.value)} className="text-xs font-bold text-slate-900 dark:text-white bg-surface dark:bg-navy-900 px-2 py-1 rounded border border-slate-200 dark:border-navy-800 outline-none">
              {currencies.map(c=><option key={c} value={c}>{c}</option>)}
            </select>
@@ -309,8 +309,8 @@ export function ProductionDashboard({
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 tracking-tight">生产进度</span>
-            <span className="text-sm font-bold text-emerald-600 data-field">{percentage}%</span>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">生产进度</span>
+            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 data-field">{percentage}%</span>
           </div>
           <div className="h-2 w-full bg-slate-100 dark:bg-navy-950 rounded-full overflow-hidden shadow-inner">
             <div
@@ -327,9 +327,9 @@ export function ProductionDashboard({
       {/* 右侧 col-span-8：白底 + 浅灰边框（镜像财务容器风格） */}
       <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-surface dark:bg-navy-900 p-6">
         <div className="grid grid-cols-4 gap-6">
-          <GridItem label="制造工厂" value={<span className="truncate block font-bold text-slate-900">{plan?.partnerName || '待指派'}</span>} />
-          <GridItem label="排产日期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
-          <GridItem label="预期交期" value={<span className="font-semibold text-slate-700">{plan ? formatDateOnly(plan.estimatedDeliveryDate) : '待定'}</span>} />
+          <GridItem label="制造工厂" value={<span className="truncate block font-bold text-slate-900 dark:text-white">{plan?.partnerName || '待指派'}</span>} />
+          <GridItem label="排产日期" value={<span className="font-semibold text-slate-700 dark:text-slate-300">{plan ? formatDateOnly(plan.orderDate) : '待处理'}</span>} />
+          <GridItem label="预期交期" value={<span className="font-semibold text-slate-700 dark:text-slate-300">{plan ? formatDateOnly(plan.estimatedDeliveryDate) : '待定'}</span>} />
           <GridItem label="质检结论" value={
             <div className="relative inline-block">
                <select
@@ -410,15 +410,15 @@ export function StatusFileRow({
           {fileName ? getFileIcon(fileName, 18) : <FileCode size={18} />}
         </div>
         <div className="min-w-0">
-           <button type="button" onClick={onPreview} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-slate-600 transition-all block truncate text-left w-full tracking-tight">{label}</button>
-           <span className="text-xs font-bold text-slate-400 tracking-tight mt-0.5 block">{status === 'uploaded' ? '已归档 · Official' : '待处理'}</span>
+           <button type="button" onClick={onPreview} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-slate-600 dark:hover:text-slate-300 transition-all block truncate text-left w-full tracking-tight">{label}</button>
+           <span className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mt-0.5 block">{status === 'uploaded' ? '已归档 · Official' : '待处理'}</span>
         </div>
       </div>
       <div className="flex items-center gap-2">
            {status === 'uploaded' ? (
              <>
-               <button type="button" onClick={onPreview} className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-surface border border-transparent hover:border-slate-200 transition-all"><CircleHelp size={16} /></button>
-               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2 rounded-md text-slate-400 hover:text-slate-900 hover:bg-surface border border-transparent hover:border-slate-200 transition-all"><Download size={16} /></a> : null}
+               <button type="button" onClick={onPreview} className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800 border border-transparent hover:border-slate-200 dark:hover:border-navy-700 transition-all"><CircleHelp size={16} /></button>
+               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800 border border-transparent hover:border-slate-200 dark:hover:border-navy-700 transition-all"><Download size={16} /></a> : null}
              </>
            ) : (
              <button type="button" onClick={onUpload} className="p-2 rounded-md bg-primary-navy text-white hover:bg-navy-950 transition-all shadow-sm"><Upload size={16} /></button>
@@ -567,8 +567,8 @@ export const LogisticsSnapshot = ({ title, record, fields, onEdit, onPreview }: 
     <div className="mb-6 flex items-center gap-3">
       <div className="h-10 w-10 rounded-lg bg-slate-50/50 dark:bg-navy-950 flex items-center justify-center text-slate-900 dark:text-white border border-slate-100 dark:border-navy-800 shadow-inner"><Truck size={20} /></div>
       <div>
-        <div className="text-sm font-bold text-slate-900 tracking-tight leading-none">{title}</div>
-        <div className="text-xs font-bold text-slate-400 tracking-tight mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
+        <div className="text-sm font-bold text-slate-900 dark:text-white tracking-tight leading-none">{title}</div>
+        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mt-1.5">{formatDateOnly(record.shippingDate)} DEPARTURE</div>
       </div>
     </div>
     <div className="grid gap-6 text-sm sm:grid-cols-2 bg-slate-50/50 dark:bg-navy-950/40 p-6 rounded-lg border border-slate-100 dark:border-navy-800">
@@ -589,24 +589,24 @@ export function HistoryTimeline({ logs, onPreview }: { logs?: ProductionLog[]; o
       <div className="relative space-y-6 before:absolute before:inset-0 before:ml-[13px] before:h-full before:w-[2px] before:bg-slate-100 dark:before:bg-navy-800">
         {logs.map((log) => (
           <div key={log.id} className="relative pl-12 group">
-            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-surface border-4 border-slate-900 flex items-center justify-center shadow-sm z-10">
-               <div className="h-1.5 w-1.5 rounded-full bg-surface" />
+            <div className="absolute left-0 mt-1.5 h-[26px] w-[26px] rounded-full bg-surface dark:bg-navy-900 border-4 border-slate-900 dark:border-tertiary-sage flex items-center justify-center shadow-sm z-10">
+               <div className="h-1.5 w-1.5 rounded-full bg-surface dark:bg-navy-900" />
             </div>
-            <div className="rounded-lg border border-slate-200 bg-surface p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 group-hover:border-l-slate-900">
+            <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm group-hover:shadow-md transition-all border-l-4 border-l-slate-100 dark:border-l-navy-800 group-hover:border-l-slate-900 dark:group-hover:border-l-tertiary-sage">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                   <span className="text-sm font-bold text-slate-900">{log.createdByName}</span>
-                   <span className="text-xs font-bold text-white bg-slate-900 px-2 py-0.5 rounded tracking-tight">{formatDateOnly(log.logDate || log.createdAt)}</span>
+                   <span className="text-sm font-bold text-slate-900 dark:text-white">{log.createdByName}</span>
+                   <span className="text-xs font-bold text-white bg-slate-900 dark:bg-navy-700 px-2 py-0.5 rounded tracking-tight">{formatDateOnly(log.logDate || log.createdAt)}</span>
                 </div>
-                <span className="text-xs font-medium text-slate-400">{formatDateTime(log.createdAt)}</span>
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500">{formatDateTime(log.createdAt)}</span>
               </div>
-              <p className="text-sm font-medium text-slate-600 leading-relaxed mb-4">{log.content}</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed mb-4">{log.content}</p>
               {log.attachments && log.attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-50">
                   {log.attachments.map(att => (
-                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/50 dark:bg-navy-950/40 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface hover:border-slate-200 transition-all shadow-sm">
-                      <div className="text-slate-400 group-hover:text-slate-900">{getFileIcon(att.fileName, 12)}</div>
-                      <span className="text-xs font-semibold text-slate-900 truncate max-w-[240px]">{att.fileName}</span>
+                    <button key={att.id} onClick={() => onPreview?.(att)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/50 dark:bg-navy-950/40 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 hover:border-slate-200 dark:hover:border-navy-700 transition-all shadow-sm">
+                      <div className="text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white">{getFileIcon(att.fileName, 12)}</div>
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-[240px]">{att.fileName}</span>
                     </button>
                   ))}
                 </div>

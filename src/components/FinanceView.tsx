@@ -369,21 +369,25 @@ export default function FinanceView() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                   {currentItems.length ? currentItems.map((r) => (
-                    <tr key={r.id} onClick={() => openEditForm(r)} className="group align-middle hover:bg-slate-50/50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
+                    <tr 
+                      key={r.id} 
+                      onClick={() => r.order_display_id ? navigate(`/orders/${String(r.order_display_id).toLowerCase()}?section=finance`) : openEditForm(r)} 
+                      className="group align-middle hover:bg-slate-50/50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
+                    >
                       <td className="px-4 py-4 text-left">
-                         <div className="font-bold text-primary-navy dark:text-white data-field group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors">{formatDateOnly(r.created_at)}</div>
-                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors data-field">
+                         <div className="font-bold text-primary-navy dark:text-white data-field group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors leading-none">{formatDateOnly(r.created_at)}</div>
+                         <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 group-hover:text-primary-navy dark:group-hover:text-tertiary-sage transition-colors data-field mt-1.5 h-4 flex items-center">
                            {r.order_display_id ? (
                              <Link 
-                               to={`/orders/${r.order_display_id}?section=finance`} 
+                               to={`/orders/${String(r.order_display_id).toLowerCase()}?section=finance`} 
                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
                                className="hover:underline"
                              >
                                {r.order_display_id}
                              </Link>
-                           ) : 'MISC'}
+                           ) : <span className="opacity-40">MISC (无关联单号)</span>}
                          </div>
-                         <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{r.createdByName ? `创建人：${r.createdByName}` : '—'}</div>
+                         <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">{r.createdByName ? `CREATED BY ${r.createdByName}` : '—'}</div>
                       </td>
                       <td className="px-4 py-4 text-center">
                          <div className="flex items-center justify-center gap-2 mb-1"><Chip tone={r.type === 'receipt' ? 'success' : 'error'}>{r.type === 'receipt' ? '收款' : '付款'}</Chip></div>

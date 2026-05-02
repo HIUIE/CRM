@@ -259,7 +259,7 @@ export default function LogisticsView() {
                     <tr
                       key={r.id}
                       onClick={() => {
-                        navigate(`/orders/${r.order_display_id}?section=logistics`);
+                        navigate(`/orders/${String(r.order_display_id).toLowerCase()}?section=logistics`);
                       }}
                       className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer"
                     >

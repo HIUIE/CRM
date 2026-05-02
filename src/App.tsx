@@ -43,7 +43,7 @@ function PageLoader() {
 // Redirect old customer detail URLs to new /customers/detail/:id
 function CustomerRedirect() {
   const { id } = useParams();
-  return <Navigate to={`/customers/detail/${id}`} replace />;
+  return <Navigate to={`/customers/detail/${String(id).toLowerCase()}`} replace />;
 }
 
 export default function App() {

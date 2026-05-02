@@ -11,14 +11,15 @@ import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 import { UPLOADS_DIR } from '../paths.js';
+import { isSystemBackupZip, restoreSystemBackupZip } from '../services/backup.js';
 
 type ImportRowData = Record<string, unknown>;
 type CsvRowData = Record<string, string>;
 
 const IMPORT_TEMP_DIR = path.join(UPLOADS_DIR, 'temp');
-const MAX_IMPORT_FILE_SIZE = 25 * 1024 * 1024;
-const MAX_ZIP_ENTRIES = 200;
-const MAX_ZIP_UNCOMPRESSED_SIZE = 50 * 1024 * 1024;
+const MAX_IMPORT_FILE_SIZE = 512 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 5000;
+const MAX_ZIP_UNCOMPRESSED_SIZE = 2 * 1024 * 1024 * 1024;
 const ALLOWED_IMPORT_EXTENSIONS = new Set(['.xlsx', '.csv', '.zip']);
 const ALLOWED_IMPORT_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -52,7 +53,7 @@ function handleImportUpload(req: Request, res: Response, next: NextFunction) {
       return;
     }
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      fail(res, 400, '导入文件不能超过 25MB', 'IMPORT_FILE_TOO_LARGE');
+      fail(res, 400, '导入文件不能超过 512MB', 'IMPORT_FILE_TOO_LARGE');
       return;
     }
     fail(res, 400, '仅支持 CSV、XLSX 或 ZIP 备份文件', 'UNSUPPORTED_IMPORT_FILE');
@@ -103,11 +104,13 @@ export function createImportRouter() {
       try {
         const zip = new AdmZip(req.file.path);
         const entries = validateZipEntries(zip).map(e => e.entryName);
-        const isBackup = entries.includes('customers.csv') || entries.includes('orders.csv');
+        const isRestorableBackup = isSystemBackupZip(zip);
+        const isBackup = isRestorableBackup || entries.includes('customers.csv') || entries.includes('orders.csv');
         
         return res.json({ 
           isZip: true, 
           isBackup, 
+          isRestorableBackup,
           entries, 
           filename: req.file.filename, 
           originalName: req.file.originalname 
@@ -248,6 +251,9 @@ export function createImportRouter() {
 async function importBackup(zipPath: string, userId?: number) {
   const zip = new AdmZip(zipPath);
   const entries = validateZipEntries(zip);
+  if (isSystemBackupZip(zip)) {
+    return restoreSystemBackupZip(zipPath);
+  }
   
   let successCount = 0;
   let errorCount = 0;

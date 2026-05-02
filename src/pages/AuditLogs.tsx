@@ -186,7 +186,16 @@ export default function AuditLogsPage() {
                             <Box size={14} />
                             {log.entity_type}
                           </div>
-                          <div className="text-xs font-bold text-slate-400 data-field">ID: {log.entity_id}</div>
+                          <div className="text-xs font-bold text-slate-400 data-field">
+                            ID: {['ORDER', 'CUSTOMER'].includes(log.entity_type) ? (
+                              <button 
+                                onClick={() => navigate(log.entity_type === 'ORDER' ? `/orders/${log.entity_id.toLowerCase()}` : `/customers/detail/${log.entity_id.toLowerCase()}`)}
+                                className="text-primary-navy dark:text-tertiary-sage hover:underline"
+                              >
+                                {log.entity_id}
+                              </button>
+                            ) : log.entity_id}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-left">
                           <div className="max-w-[300px] text-xs text-slate-500 font-medium truncate italic">

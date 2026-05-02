@@ -220,7 +220,7 @@ const TaskCard = React.memo(({ task, onSelect }: TaskCardProps) => {
       <div className="mb-4 flex flex-wrap gap-2">
          {task.entity_id && (
            <div
-             onClick={(e) => { e.stopPropagation(); navigate(task.entity_type === 'ORDER' ? `/orders/${encodeURIComponent(task.entity_id || '')}?section=tasks` : `/customers/detail/${task.entity_id?.toLowerCase()}`); }}
+             onClick={(e) => { e.stopPropagation(); navigate(task.entity_type === 'ORDER' ? `/orders/${String(task.entity_id).toLowerCase()}?section=tasks` : `/customers/detail/${String(task.entity_id).toLowerCase()}`); }}
              className="flex items-center gap-1 rounded border border-sky-100 bg-sky-50 px-2 py-0.5 text-[10px] font-extrabold text-sky-600 transition-colors hover:bg-sky-100 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300"
            >
               <Package size={10} />

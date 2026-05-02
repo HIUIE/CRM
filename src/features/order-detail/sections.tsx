@@ -1148,7 +1148,7 @@ export function AIAnalysisPanel({
     <section className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm space-y-3 transition-colors">
       <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-white tracking-tight mb-4"><div className="w-1 h-4 bg-emerald-500 rounded-full" /> AI 智能辅助诊断</div>
       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed mb-6">正在实时分析订单风险、回款率及交付合规性...</p>
-      <button onClick={onOpenAnalysis} disabled={analyzing} className="w-full flex items-center justify-center gap-3 rounded-lg bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-md group active:scale-95">
+      <button onClick={onOpenAnalysis} disabled={analyzing} className="w-full flex items-center justify-center gap-3 rounded-lg bg-slate-900 dark:bg-navy-800 py-3 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-navy-700 transition-all shadow-md group active:scale-95 border border-transparent dark:border-navy-700">
         <Sparkles size={16} className={`${analyzing ? 'animate-spin opacity-50' : 'group-hover:scale-110 transition-transform'}`} />
         <span>开始深度分析</span>
       </button>

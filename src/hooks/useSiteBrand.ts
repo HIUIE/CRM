@@ -14,7 +14,7 @@ export function useSiteBrand() {
     queryKey: ['site-brand'],
     queryFn: () => apiFetch<SiteBrand>('/api/settings/basic'),
     staleTime: 0, // Ensure immediate refetch after invalidation
-    placeholderData: { siteName: 'SmartTrade AI CRM', siteSlogan: '', siteLogo: '/logo.png', siteFavicon: '' },
+    placeholderData: { siteName: '', siteSlogan: '', siteLogo: '/logo.png', siteFavicon: '' },
   });
 
   useEffect(() => {
