@@ -57,7 +57,7 @@ export function createCustomersRouter() {
   });
 
   router.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
-    const customerIdOrDisplay = req.params.id;
+    const customerIdOrDisplay = req.params.id as string;
     
     try {
       // Try by display_id first, then by id (PG can't compare int = text)
