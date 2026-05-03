@@ -48,13 +48,36 @@ const __dirname = path.dirname(__filename);
 
 export async function initPgTables() {
   // Fail early if no database password is set in production-like environments
-  if (!process.env.DATABASE_URL && !process.env.PG_PASSWORD) {
+  if (process.env.DATABASE_URL === undefined && process.env.PG_PASSWORD === undefined) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('生产环境必须设置 PG_PASSWORD 或 DATABASE_URL');
     }
     console.warn('未设置 PG_PASSWORD，数据库连接无密码保护');
   }
 
+  const migrationsDir = path.join(__dirname, '..', 'migrations');
+
+  const ssl = process.env.PG_SSL === 'true'
+    ? { rejectUnauthorized: process.env.PG_SSL_ALLOW_SELF_SIGNED !== 'true' }
+    : undefined;
+
+  // 1. Run migrations first to ensure tables like 'users' exist
+  await runner({
+    databaseUrl: process.env.DATABASE_URL || {
+      host: process.env.PG_HOST || '127.0.0.1',
+      port: Number(process.env.PG_PORT) || 5432,
+      database: process.env.PG_DATABASE || 'smarttrade_crm',
+      user: process.env.PG_USER || 'postgres',
+      password: process.env.PG_PASSWORD || '',
+      ssl,
+    },
+    dir: migrationsDir,
+    direction: 'up',
+    migrationsTable: 'pgmigrations',
+    log: (msg: string) => console.log(`[db] ${msg}`)
+  });
+
+  // 2. Perform manual schema adjustments after tables are created
   const client = await pool.connect();
   try {
     // Basic connectivity check
@@ -72,27 +95,6 @@ export async function initPgTables() {
   } finally {
     client.release();
   }
-
-  const migrationsDir = path.join(__dirname, '..', 'migrations');
-
-  const ssl = process.env.PG_SSL === 'true'
-    ? { rejectUnauthorized: process.env.PG_SSL_ALLOW_SELF_SIGNED !== 'true' }
-    : undefined;
-
-  await runner({
-    databaseUrl: process.env.DATABASE_URL || {
-      host: process.env.PG_HOST || '127.0.0.1',
-      port: Number(process.env.PG_PORT) || 5432,
-      database: process.env.PG_DATABASE || 'smarttrade_crm',
-      user: process.env.PG_USER || 'postgres',
-      password: process.env.PG_PASSWORD || '',
-      ssl,
-    },
-    dir: migrationsDir,
-    direction: 'up',
-    migrationsTable: 'pgmigrations',
-    log: (msg: string) => console.log(`[db] ${msg}`)
-  });
 }
 
 export const pgDb = {

@@ -17,7 +17,9 @@ vi.mock('../Drawer', () => ({
   Drawer: ({ children, footer, isOpen }: any) => isOpen ? (
     <div data-testid="mock-drawer">
       {children}
-      <div data-testid="mock-drawer-footer">{footer}</div>
+      <div data-testid="mock-drawer-footer">
+        {typeof footer === 'function' ? footer({ requestClose: vi.fn(), isBusy: false }) : footer}
+      </div>
     </div>
   ) : null,
 }));
@@ -99,7 +101,7 @@ describe('OrderCreateDrawer Form Validation', () => {
     fireEvent.change(inputs[2], { target: { value: 'Some Product' } }); // product summary
 
     // Submit the form
-    const submitBtn = screen.getByText('确认并进入详情');
+    const submitBtn = await screen.findByText('确认并进入详情');
     fireEvent.click(submitBtn);
 
     // Verify saving state (button text changes)
@@ -135,7 +137,7 @@ describe('OrderCreateDrawer Form Validation', () => {
     fireEvent.change(inputs[2], { target: { value: 'Valid Product Summary' } });
 
     // Submit
-    const submitBtn = screen.getByText('确认并进入详情');
+    const submitBtn = await screen.findByText('确认并进入详情');
     fireEvent.click(submitBtn);
 
     // Wait for onSuccess to be called
