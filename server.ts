@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import { createApp } from './server/app.js';
 import { bootstrapInitialAdmin } from './server/bootstrap.js';
-import { initPgTables } from './server/db-pg.js';
 import { UPLOADS_DIR } from './server/paths.js';
 import { logger } from './server/lib/logger.js';
 import { startAutoBackupScheduler } from './server/services/backup.js';
+
+const DB_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase();
+const isPg = DB_DRIVER === 'pg';
 
 const WEAK_JWT_SECRETS = new Set([
   'super-secret-key-for-preview-only',
@@ -37,11 +39,29 @@ function requireProductionEnv() {
   }
 }
 
+let dbCloseHandler: (() => Promise<void>) | null = null;
+
+export function onClose(fn: () => Promise<void>) {
+  dbCloseHandler = fn;
+}
+
+export async function closeDatabase() {
+  if (dbCloseHandler) await dbCloseHandler();
+}
+
 async function startServer() {
   requireProductionEnv();
-  const dbHost = process.env.PG_HOST || '127.0.0.1';
-  const dbName = process.env.PG_DATABASE || 'smarttrade_crm';
-  await initPgTables();
+
+  // ── Database init ──────────────────────────────────────────────
+  if (isPg) {
+    const { initPgTables } = await import('./server/db-pg.js');
+    await initPgTables();
+  } else {
+    const { initSqliteDatabase, closeSqliteDatabase } = await import('./server/db-sqlite.js');
+    initSqliteDatabase();
+    onClose(async () => { closeSqliteDatabase(); });
+  }
+
   await bootstrapInitialAdmin();
   await startAutoBackupScheduler();
 
@@ -58,13 +78,19 @@ async function startServer() {
 
   const { createServer } = await import('http');
   const { initSocket } = await import('./server/lib/socket.js');
-  
+
   const httpServer = createServer(app);
   initSocket(httpServer);
 
   const server = httpServer.listen(PORT, HOST, () => {
     logger.info(`Mode: ${process.env.NODE_ENV === 'production' ? 'production' : 'development'}`);
-    logger.info(`Database: PostgreSQL ${dbHost}/${dbName}`);
+    if (isPg) {
+      const dbHost = process.env.PG_HOST || '127.0.0.1';
+      const dbName = process.env.PG_DATABASE || 'smarttrade_crm';
+      logger.info(`Database: PostgreSQL ${dbHost}/${dbName}`);
+    } else {
+      logger.info(`Database: SQLite (${process.env.SQLITE_PATH || 'data/crm.db'})`);
+    }
     logger.info(`Uploads: ${UPLOADS_DIR}`);
     logger.info(`Local: http://localhost:${PORT}`);
     if (HOST === '0.0.0.0') {

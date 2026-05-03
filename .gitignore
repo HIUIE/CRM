@@ -32,5 +32,6 @@ version.json
 skills/
 gemini.md
 PROJECT_REVIEW.md
-release/ 
+release/
 CLAUDE.md
+dist-electron/
