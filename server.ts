@@ -4,15 +4,28 @@ import { bootstrapInitialAdmin } from './server/bootstrap.js';
 import { initPgTables } from './server/db-pg.js';
 import { UPLOADS_DIR } from './server/paths.js';
 import { logger } from './server/lib/logger.js';
+import { startAutoBackupScheduler } from './server/services/backup.js';
 
 const WEAK_JWT_SECRETS = new Set([
   'super-secret-key-for-preview-only',
   'dev-jwt-secret-do-not-use-in-production',
   'replace-with-a-long-random-secret',
+  'local-development-jwt-secret-change-me-2026-04-30',
 ]);
+
+function checkWeakSecrets() {
+  const jwtSecret = (process.env.JWT_SECRET || '').trim();
+  if (jwtSecret && WEAK_JWT_SECRETS.has(jwtSecret)) {
+    throw new Error('JWT_SECRET 使用了已知弱密钥，请更换为强随机字符串 (openssl rand -base64 48)');
+  }
+  if (process.env.NODE_ENV !== 'production' && jwtSecret && jwtSecret.length < 32) {
+    logger.warn('JWT_SECRET 长度不足 32 位，生产环境将被拒绝启动');
+  }
+}
 
 function requireProductionEnv() {
   if (process.env.NODE_ENV !== 'production') {
+    checkWeakSecrets();
     return;
   }
   const jwtSecret = (process.env.JWT_SECRET || '').trim();
@@ -30,10 +43,18 @@ async function startServer() {
   const dbName = process.env.PG_DATABASE || 'smarttrade_crm';
   await initPgTables();
   await bootstrapInitialAdmin();
+  await startAutoBackupScheduler();
+
+  // Background audit-log pruning (once per day)
+  const { dbRun } = await import('./server/lib/db.js');
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  setInterval(() => {
+    dbRun(`DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '30 days'`).catch(() => {});
+  }, ONE_DAY_MS).unref();
 
   const app = await createApp();
   const PORT = Number(process.env.PORT) || 3000;
-  const HOST = process.env.HOST || '0.0.0.0';
+  const HOST = process.env.HOST || '127.0.0.1';
 
   const { createServer } = await import('http');
   const { initSocket } = await import('./server/lib/socket.js');

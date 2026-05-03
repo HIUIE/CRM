@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, ChevronRight, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Archive, ShieldCheck, DatabaseBackup } from 'lucide-react';
+import { Upload, X, ChevronRight, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Archive, ShieldCheck, DatabaseBackup, AlertTriangle, FileWarning } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
 
 interface Props {
@@ -38,7 +38,9 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
     filename: string;
     isZip?: boolean;
     isBackup?: boolean;
+    isRestorableBackup?: boolean;
     entries?: string[];
+    backupMeta?: { format?: string; version?: number; appVersion?: string; createdAt?: string; counts?: Record<string, number>; note?: string } | null;
   } | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
@@ -189,35 +191,78 @@ export default function ImportModal({ isOpen, onClose, onSuccess, entityType }: 
           )}
 
           {step === 'backup_confirm' && previewData && (
-            <div className="flex flex-col items-center py-4">
-              <div className="h-20 w-20 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-6">
-                <ShieldCheck className="text-emerald-500" size={48} />
-              </div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">识别到系统备份包</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 text-center max-w-md">
-                该压缩包包含标准的客户和订单数据。导入将执行 <span className="text-primary-navy dark:text-white font-extrabold">智能覆盖 (Upsert)</span>：
-                匹配的记录将更新，新记录将新增。
-              </p>
-              
-              <div className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-6 border border-slate-100 dark:border-navy-800 mb-8">
-                <h4 className="text-[10px] font-extrabold text-slate-400 tracking-tight mb-4 flex items-center gap-2">
-                  <DatabaseBackup size={14} /> 包含的数据表
-                </h4>
-                <div className="flex flex-wrap gap-3">
-                  {previewData.entries?.filter(e => e.endsWith('.csv')).map(e => (
-                    <div key={e} className="px-3 py-1.5 bg-surface dark:bg-navy-900 rounded border border-slate-200 dark:border-navy-800 text-[11px] font-bold text-primary-navy dark:text-white shadow-sm">
-                      {e}
+            <div className="flex flex-col py-2">
+              {previewData.isRestorableBackup ? (
+                <>
+                  <div className="flex items-start gap-3 mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30">
+                    <FileWarning size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-sm font-extrabold text-amber-800 dark:text-amber-300 mb-1">系统可还原备份</div>
+                      <div className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                        此备份包含全部 22 个数据表和附件文件。恢复将使用 <span className="font-extrabold">智能合并 (Upsert)</span> 策略：
+                        已存在的记录将被更新，新记录将新增。未在备份中出现的现有记录不会删除。
+                      </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {previewData.backupMeta && (
+                    <div className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-5 border border-slate-100 dark:border-navy-800 mb-6 space-y-3">
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                        <span className="text-slate-500">备份时间：<span className="font-bold text-slate-700 dark:text-slate-300">{previewData.backupMeta.createdAt ? new Date(previewData.backupMeta.createdAt).toLocaleString() : '未知'}</span></span>
+                        <span className="text-slate-500">备份版本：<span className="font-bold text-slate-700 dark:text-slate-300">v{previewData.backupMeta.version || 1}</span></span>
+                        <span className="text-slate-500">系统版本：<span className="font-bold text-slate-700 dark:text-slate-300">{previewData.backupMeta.appVersion || '未知'}</span></span>
+                      </div>
+                      {previewData.backupMeta.counts && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(previewData.backupMeta.counts).map(([table, count]) => (
+                            <span key={table} className="inline-flex items-center gap-1 rounded bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                              {table} <span className="text-slate-400">({count})</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="h-16 w-16 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-4 self-center">
+                    <DatabaseBackup className="text-amber-500" size={32} />
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2 text-center tracking-tight">识别到旧版 CSV 备份包</h3>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6 text-center max-w-md self-center">
+                    此备份仅包含 <span className="font-extrabold text-primary-navy dark:text-white">客户 (customers)</span> 和 <span className="font-extrabold text-primary-navy dark:text-white">订单 (orders)</span> 数据。
+                    匹配的记录将更新，新记录将新增。其他数据（财务、物流、附件等）不会被导入。
+                  </p>
+
+                  <div className="w-full bg-slate-50 dark:bg-navy-950 rounded-lg p-4 border border-slate-100 dark:border-navy-800 mb-6">
+                    <h4 className="text-[10px] font-extrabold text-slate-400 tracking-tight mb-3 flex items-center gap-2">
+                      <DatabaseBackup size={14} /> 包含的 CSV 文件
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {previewData.entries?.filter((e: string) => e.endsWith('.csv')).map((e: string) => (
+                        <div key={e} className="px-3 py-1.5 bg-surface dark:bg-navy-900 rounded border border-slate-200 dark:border-navy-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 shadow-sm">
+                          {e}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 px-4 py-3 mb-6 flex items-start gap-3">
+                <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                <div className="text-xs font-bold text-red-600 dark:text-red-400 leading-relaxed">
+                  导入将直接修改数据库。建议在操作前先通过"数据导出 → 系统可还原备份"做一次完整备份。
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-4 self-center">
                 <button onClick={reset} className="px-8 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors tracking-tight border border-slate-200 dark:border-navy-800 rounded-lg">取消</button>
-                <button 
+                <button
                   onClick={handleExecute}
                   disabled={isProcessing}
-                  className="btn-primary px-12 py-2 text-xs flex items-center gap-2"
+                  className="btn-primary px-10 py-2 text-xs flex items-center gap-2"
                 >
                   {isProcessing ? <><Loader2 className="animate-spin" size={14} /> 正在还原数据...</> : <><ShieldCheck size={16} /> 确认并开始还原</>}
                 </button>

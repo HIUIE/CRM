@@ -46,7 +46,6 @@ type DbExecutor = {
   all: <T = any[]>(sql: string, params?: any[]) => Promise<T>;
   get: <T = any>(sql: string, params?: any[]) => Promise<T | undefined>;
   run: (sql: string, params?: any[]) => Promise<{ changes: number; lastID: number }>;
-  exec: (sql: string) => Promise<void>;
 };
 
 function createExecutor(executor?: { query: (sql: string, params?: any[]) => Promise<{ rows: any[]; rowCount?: number }> }): DbExecutor {
@@ -67,9 +66,7 @@ function createExecutor(executor?: { query: (sql: string, params?: any[]) => Pro
       const lastID = (result.rows && result.rows[0] && result.rows[0].id) ? Number(result.rows[0].id) : 0;
       return { changes: result.rowCount || 0, lastID };
     },
-    async exec(sql: string) {
-      await (executor || pool).query(sql);
-    },
+    // exec intentionally not exposed — use run() with parameterized queries instead
   };
 }
 
@@ -86,10 +83,6 @@ export async function dbGet<T = any>(sql: string, params: any[] = []): Promise<T
 
 export async function dbRun(sql: string, params: any[] = []) {
   return defaultExecutor.run(sql, params);
-}
-
-export async function dbExec(sql: string) {
-  return defaultExecutor.exec(sql);
 }
 
 export async function dbBegin() {

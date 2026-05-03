@@ -13,6 +13,8 @@ const BACKUP_VERSION = 1;
 const DEFAULT_BACKUP_DIR = path.join(PROJECT_ROOT, 'data', 'backups');
 const MAX_AUTO_BACKUPS = 24;
 
+const TABLE_SET = new Set<string>();
+
 const TABLES = [
   'users',
   'customers',
@@ -37,6 +39,7 @@ const TABLES = [
   'audit_logs',
   'settings',
 ] as const;
+for (const t of TABLES) TABLE_SET.add(t);
 
 const ID_TABLES = TABLES.filter((table) => !['settings', 'order_profits'].includes(table));
 
@@ -91,14 +94,12 @@ function normalizeBackupDirectory(value: string) {
 
 function isAllowedBackupDirectory(dir: string) {
   const resolved = path.resolve(dir);
-  const root = path.resolve(PROJECT_ROOT);
-  const tmp = path.resolve('/private/tmp');
-  const relRoot = path.relative(root, resolved);
-  const relTmp = path.relative(tmp, resolved);
-  return (
-    relRoot === '' || (!relRoot.startsWith('..') && !path.isAbsolute(relRoot)) ||
-    relTmp === '' || (!relTmp.startsWith('..') && !path.isAbsolute(relTmp))
-  );
+  if (!resolved || resolved.includes('\0') || resolved === path.parse(resolved).root) return false;
+  // Constrain to project data directory or an explicitly configured backup path
+  if (process.env.BACKUPS_DIR) {
+    return resolved.startsWith(path.resolve(process.env.BACKUPS_DIR));
+  }
+  return resolved.startsWith(path.join(PROJECT_ROOT, 'data'));
 }
 
 export async function getBackupConfig(): Promise<BackupConfig> {
@@ -121,7 +122,7 @@ export async function setBackupConfig(config: Partial<BackupConfig>) {
   };
 
   if (!isAllowedBackupDirectory(next.directory)) {
-    throw new Error('备份目录必须位于项目目录或 /private/tmp 内，避免服务写入无权限或敏感路径');
+    throw new Error('备份目录无效，请选择一个具体文件夹');
   }
 
   await fs.mkdir(next.directory, { recursive: true });
@@ -131,6 +132,7 @@ export async function setBackupConfig(config: Partial<BackupConfig>) {
 }
 
 async function rowsForTable(table: string) {
+  if (!TABLE_SET.has(table)) throw new Error(`Invalid table: ${table}`);
   if (table === 'users') {
     return dbAll<Record<string, unknown>[]>(`
       SELECT id, username, role, name, active, created_at, updated_at
@@ -281,6 +283,7 @@ export function isSystemBackupZip(zip: AdmZip) {
 
 async function upsertRows(tx: TransactionExecutor, table: string, rows: Record<string, unknown>[]) {
   if (!rows.length) return 0;
+  if (!TABLE_SET.has(table)) throw new Error(`Invalid table: ${table}`);
   const tableColumns = new Set((await dbTableInfo(table)).map((column) => column.name));
   let count = 0;
 

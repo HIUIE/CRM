@@ -8,9 +8,6 @@ export function createAuditRouter() {
 
   router.get('/', requireAdmin, async (req: AuthedRequest, res) => {
     try {
-      // Auto-prune: keep only last 30 days of audit logs to prevent unbounded growth
-      await dbRun(`DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '30 days'`);
-
       const userId = req.query.userId;
       const entityType = req.query.entityType;
       const entityId = req.query.entityId;

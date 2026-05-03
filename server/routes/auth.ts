@@ -1,47 +1,43 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { dbGet } from '../lib/db.js';
-import { clearAuthCookie, clearCsrfCookie, getCookieOptions, requireAuth, setCsrfCookie, signAuthToken, type AuthedRequest } from '../lib/auth.js';
+import { dbGet, dbRun } from '../lib/db.js';
+import { clearAuthCookie, clearCsrfCookie, getCookieOptions, requireAuth, setCsrfCookie, signAuthToken, verifyAuthToken, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError, fail } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 
-// Simple in-memory rate limiter for login attempts
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
-function checkLoginRateLimit(ip: string): boolean {
+async function checkLoginRateLimit(ip: string): Promise<boolean> {
   const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || now > entry.resetAt) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  const row = await dbGet<{ count: number; reset_at: number }>(
+    `SELECT count, reset_at FROM login_attempts WHERE ip = ?`,
+    [ip],
+  );
+  if (!row || now > row.reset_at) {
+    await dbRun(
+      `INSERT INTO login_attempts (ip, count, reset_at) VALUES (?, 1, ?)
+       ON CONFLICT(ip) DO UPDATE SET count = 1, reset_at = EXCLUDED.reset_at`,
+      [ip, now + LOGIN_WINDOW_MS],
+    );
     return true;
   }
-  if (entry.count >= MAX_LOGIN_ATTEMPTS) return false;
-  entry.count++;
+  if (row.count >= MAX_LOGIN_ATTEMPTS) return false;
+  await dbRun(`UPDATE login_attempts SET count = count + 1 WHERE ip = ?`, [ip]);
   return true;
 }
-
-// Periodic cleanup of stale entries
-const loginRateLimitCleanup = setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of loginAttempts) {
-    if (now > entry.resetAt) loginAttempts.delete(ip);
-  }
-}, 60 * 1000);
-loginRateLimitCleanup.unref?.();
 
 export function createAuthRouter() {
   const router = Router();
 
   router.post('/login', async (req, res) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!checkLoginRateLimit(ip)) {
+    if (!(await checkLoginRateLimit(ip))) {
       return fail(res, 429, '登录尝试过于频繁，请 15 分钟后再试', 'RATE_LIMITED');
     }
 
     const username = readString(req.body?.username);
-    const password = readString(req.body?.password);
+    const password = readString(req.body?.password, 128);
 
     if (!username || !password) {
       return fail(res, 400, '请输入用户名和密码', 'INVALID_LOGIN');
@@ -55,6 +51,7 @@ export function createAuthRouter() {
         name: string;
         password: string;
         active: number | null;
+        token_version: number;
       }>(`SELECT * FROM users WHERE username = ?`, [username]);
 
       if (!user) {
@@ -69,7 +66,12 @@ export function createAuthRouter() {
         return fail(res, 401, '无效的用户名或密码', 'INVALID_CREDENTIALS');
       }
 
-      const token = signAuthToken({ id: user.id, role: user.role, username: user.username, name: user.name });
+      const token = signAuthToken(
+        { id: user.id, role: user.role, username: user.username, name: user.name },
+        user.token_version,
+      );
+      // Clear rate limit on successful login
+      await dbRun(`DELETE FROM login_attempts WHERE ip = ?`, [ip]);
       res.cookie('token', token, getCookieOptions());
       setCsrfCookie(res);
       res.json({
@@ -86,7 +88,17 @@ export function createAuthRouter() {
     }
   });
 
-  router.post('/logout', (_req, res) => {
+  router.post('/logout', async (req, res) => {
+    // Increment token_version to invalidate all existing tokens for this user
+    const token = req.cookies.token;
+    if (token) {
+      try {
+        const decoded = verifyAuthToken(token);
+        await dbRun(`UPDATE users SET token_version = token_version + 1 WHERE id = ?`, [decoded.id]);
+      } catch {
+        // Token invalid or expired — silently accept (best-effort revocation)
+      }
+    }
     clearAuthCookie(res);
     clearCsrfCookie(res);
     res.json({ success: true });

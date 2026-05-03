@@ -106,14 +106,27 @@ export function createImportRouter() {
         const entries = validateZipEntries(zip).map(e => e.entryName);
         const isRestorableBackup = isSystemBackupZip(zip);
         const isBackup = isRestorableBackup || entries.includes('customers.csv') || entries.includes('orders.csv');
-        
-        return res.json({ 
-          isZip: true, 
-          isBackup, 
+
+        let backupMeta: { format?: string; version?: number; appVersion?: string; createdAt?: string; counts?: Record<string, number>; note?: string } | null = null;
+        if (isRestorableBackup) {
+          try {
+            const metaEntry = zip.getEntry('metadata.json');
+            if (metaEntry) {
+              backupMeta = JSON.parse(metaEntry.getData().toString('utf8'));
+            }
+          } catch {
+            // metadata parse failure is non-fatal
+          }
+        }
+
+        return res.json({
+          isZip: true,
+          isBackup,
           isRestorableBackup,
-          entries, 
-          filename: req.file.filename, 
-          originalName: req.file.originalname 
+          entries,
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          backupMeta,
         });
       } catch (error) {
         try { await fs.unlink(req.file.path); } catch {}

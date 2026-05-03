@@ -25,11 +25,16 @@ export function useSocket() {
       });
 
       socket.on('new-notification', (data: { title: string; message: string; link?: string }) => {
+        const safeNavigate = (link: string) => {
+          if (link.startsWith('/') || link.startsWith(window.location.origin)) {
+            window.location.href = link;
+          }
+        };
         toast.info(data.title, {
           description: data.message,
           action: data.link ? {
             label: '查看',
-            onClick: () => window.location.href = data.link!
+            onClick: () => safeNavigate(data.link!)
           } : undefined
         });
       });

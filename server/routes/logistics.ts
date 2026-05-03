@@ -13,16 +13,21 @@ import { bindAttachmentsToEntity, getAttachmentsByEntity, deleteAttachmentRows }
 import { readLogisticsPayload } from '../services/payloads.js';
 import { readString, readPagination, buildLimitOffset } from '../lib/values.js';
 
-// MIME types that are blocked from upload (XSS / malware risk)
-const BLOCKED_MIME_TYPES = new Set([
-  'text/html',
-  'application/xhtml+xml',
-  'application/javascript',
-  'text/javascript',
-  'image/svg+xml',
-  'application/x-httpd-php',
-  'application/x-msdownload',
-  'application/x-executable',
+// Allowed MIME types for upload (whitelist approach)
+const ALLOWED_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/msword',
+  'text/csv',
+  'text/plain',
+  'application/zip',
+  'application/x-zip-compressed',
 ]);
 
 const upload = multer({
@@ -41,8 +46,8 @@ const upload = multer({
     },
   }),
   fileFilter: (_req, file, callback) => {
-    if (BLOCKED_MIME_TYPES.has(file.mimetype)) {
-      callback(new Error(`不允许上传此类型的文件: ${file.mimetype}`));
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      callback(new Error('不支持上传此类型的文件'));
       return;
     }
     callback(null, true);

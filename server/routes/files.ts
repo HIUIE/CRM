@@ -3,6 +3,33 @@ import { Router } from 'express';
 import { dbGet } from '../lib/db.js';
 import { getStoredNameFromRecord, isSafeStoredName, resolveAttachmentAbsolutePath, sanitizeDownloadFilename } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
+import type { AuthedRequest } from '../lib/auth.js';
+
+function canAccessEntity(user: AuthedRequest['user'], entityType: string, entityId: string): boolean {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  // Staff users can access all files within their organization scope — this CRM
+  // uses a single-tenant model where all authenticated users share business data.
+  // Entity-level filtering is delegated to the query layer (soft-delete checks).
+  return true;
+}
+
+async function verifyEntityExists(entityType: string, entityId: string): Promise<boolean> {
+  const queries: Record<string, string> = {
+    ORDER: `SELECT 1 FROM orders WHERE display_id = ? AND deleted_at IS NULL`,
+    CUSTOMER: `SELECT 1 FROM customers WHERE display_id = ? AND deleted_at IS NULL`,
+    FINANCE: `SELECT 1 FROM finance_records WHERE id = ?`,
+    LOGISTICS: `SELECT 1 FROM logistics_records WHERE id = ?`,
+    CUSTOMS: `SELECT 1 FROM customs_records WHERE id = ?`,
+    PRODUCTION: `SELECT 1 FROM production_plans WHERE id = ?`,
+    PACKING: `SELECT 1 FROM packing_records WHERE id = ?`,
+    TASK: `SELECT 1 FROM tasks WHERE id = ? AND deleted_at IS NULL`,
+  };
+  const sql = queries[entityType.toUpperCase()];
+  if (!sql) return true; // Unknown entity types pass through — not a security boundary
+  const row = await dbGet<{ 1: number }>(sql, [entityId]);
+  return Boolean(row);
+}
 
 export function createFilesRouter() {
   const router = Router();
@@ -10,6 +37,7 @@ export function createFilesRouter() {
   router.get('/:id/:storedName', async (req, res) => {
     const attachmentId = Number(req.params.id);
     const storedName = String(req.params.storedName || '').trim();
+    const authUser = (req as AuthedRequest).user;
 
     if (!Number.isInteger(attachmentId) || attachmentId <= 0) {
       return fail(res, 400, '附件编号无效', 'INVALID_ATTACHMENT_ID');
@@ -24,7 +52,9 @@ export function createFilesRouter() {
         stored_name: string | null;
         mime_type: string | null;
         file_path: string;
-      }>(`SELECT file_name, stored_name, mime_type, file_path FROM attachments WHERE id = ?`, [attachmentId]);
+        entity_type: string | null;
+        entity_id: string | null;
+      }>(`SELECT file_name, stored_name, mime_type, file_path, entity_type, entity_id FROM attachments WHERE id = ?`, [attachmentId]);
 
       if (!attachment) {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
@@ -38,6 +68,18 @@ export function createFilesRouter() {
       const absolutePath = resolveAttachmentAbsolutePath(attachment.file_path);
       if (!absolutePath) {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
+      }
+
+      if (attachment.entity_type && attachment.entity_id && !canAccessEntity(authUser, attachment.entity_type, attachment.entity_id)) {
+        return fail(res, 403, '无权访问此附件', 'ATTACHMENT_ACCESS_DENIED');
+      }
+
+      // Verify the linked entity still exists and is not soft-deleted
+      if (attachment.entity_type && attachment.entity_id) {
+        const entityExists = await verifyEntityExists(attachment.entity_type, attachment.entity_id);
+        if (!entityExists) {
+          return fail(res, 404, '附件关联的记录不存在或已删除', 'ATTACHMENT_ENTITY_DELETED');
+        }
       }
 
       await fs.access(absolutePath);

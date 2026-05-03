@@ -40,7 +40,7 @@ export function createUsersRouter() {
     if (!/^[a-zA-Z0-9._-]{3,32}$/.test(username)) {
       return fail(res, 400, '用户名仅支持 3-32 位字母、数字、点、下划线或中横线', 'INVALID_USERNAME');
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       return fail(res, 400, '密码至少需要 6 位', 'INVALID_PASSWORD');
     }
     if (!isOneOf(role, USER_ROLES)) {
@@ -133,7 +133,7 @@ export function createUsersRouter() {
     if (!Number.isInteger(userId) || userId <= 0) {
       return fail(res, 400, '用户编号无效', 'INVALID_USER_ID');
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       return fail(res, 400, '密码至少需要 6 位', 'INVALID_PASSWORD');
     }
     // Require admin to confirm their own password as CSRF/second-factor check
@@ -151,7 +151,11 @@ export function createUsersRouter() {
         return fail(res, 404, '用户不存在', 'USER_NOT_FOUND');
       }
       const hash = await bcrypt.hash(password, 10);
-      await dbRun(`UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hash, userId]);
+      // Increment token_version to invalidate all existing sessions for this user
+      await dbRun(
+        `UPDATE users SET password = ?, token_version = token_version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [hash, userId],
+      );
       await logAction({
         userId: req.user?.id || null,
         userName: req.user?.name || null,

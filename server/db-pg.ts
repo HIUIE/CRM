@@ -11,7 +11,9 @@ function buildPgConfig() {
     };
   }
 
-  const ssl = process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
+  const ssl = process.env.PG_SSL === 'true'
+    ? { rejectUnauthorized: process.env.PG_SSL_ALLOW_SELF_SIGNED !== 'true' }
+    : undefined;
 
   return {
     host: process.env.PG_HOST || '127.0.0.1',
@@ -32,6 +34,9 @@ const pgConfig = buildPgConfig();
  * Imported by server/lib/db.ts to avoid creating duplicate pools.
  */
 export const pgPool = new Pool(pgConfig);
+pgPool.on('error', (err) => {
+  console.error('[pg-pool] Unexpected error on idle client:', err.message);
+});
 
 import { runner } from 'node-pg-migrate';
 import path from 'path';
@@ -42,17 +47,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function initPgTables() {
+  // Fail early if no database password is set in production-like environments
+  if (!process.env.DATABASE_URL && !process.env.PG_PASSWORD) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('生产环境必须设置 PG_PASSWORD 或 DATABASE_URL');
+    }
+    console.warn('未设置 PG_PASSWORD，数据库连接无密码保护');
+  }
+
   const client = await pool.connect();
   try {
     // Basic connectivity check
     await client.query('SELECT 1');
+    // Ensure token_version column exists for JWT revocation support
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 1');
+    // Persistent login rate limiter table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS login_attempts (
+        ip TEXT PRIMARY KEY,
+        count INTEGER NOT NULL DEFAULT 1,
+        reset_at BIGINT NOT NULL
+      )
+    `);
   } finally {
     client.release();
   }
 
   const migrationsDir = path.join(__dirname, '..', 'migrations');
 
-  const ssl = process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
+  const ssl = process.env.PG_SSL === 'true'
+    ? { rejectUnauthorized: process.env.PG_SSL_ALLOW_SELF_SIGNED !== 'true' }
+    : undefined;
 
   await runner({
     databaseUrl: process.env.DATABASE_URL || {

@@ -6,7 +6,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { dbGet, dbRun } from '../lib/db.js';
 import { requireAdmin } from '../lib/auth.js';
-import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
+import { buildAttachmentUrl, resolveAttachmentAbsolutePath, validateFileMagicBytes } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
 
@@ -15,16 +15,21 @@ function sanitizePathSegment(value: unknown, fallback: string) {
   return normalized || fallback;
 }
 
-// MIME types that are blocked from upload (XSS / malware risk)
-const BLOCKED_MIME_TYPES = new Set([
-  'text/html',
-  'application/xhtml+xml',
-  'application/javascript',
-  'text/javascript',
-  'image/svg+xml',
-  'application/x-httpd-php',
-  'application/x-msdownload',
-  'application/x-executable',
+// Allowed MIME types for upload (whitelist approach)
+const ALLOWED_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/msword',
+  'text/csv',
+  'text/plain',
+  'application/zip',
+  'application/x-zip-compressed',
 ]);
 
 const upload = multer({
@@ -46,8 +51,8 @@ const upload = multer({
     },
   }),
   fileFilter: (_req, file, callback) => {
-    if (BLOCKED_MIME_TYPES.has(file.mimetype)) {
-      callback(new Error(`不允许上传此类型的文件: ${file.mimetype}`));
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      callback(new Error('不支持上传此类型的文件'));
       return;
     }
     callback(null, true);
@@ -79,6 +84,13 @@ export function createAttachmentsRouter() {
       for (const file of files) {
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
         const relativePath = path.posix.join(`customer_${customerId}`, `order_${orderId}`, file.filename);
+
+        // Validate file content matches claimed MIME type
+        const magicValid = await validateFileMagicBytes(file.path, file.mimetype);
+        if (!magicValid) {
+          await fs.unlink(file.path).catch(() => {});
+          return fail(res, 400, `文件类型不匹配: ${originalName}`, 'FILE_MAGIC_MISMATCH');
+        }
         const result = await dbRun(
           `
             INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, remark)

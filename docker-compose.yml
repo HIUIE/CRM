@@ -4,14 +4,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/smarttrade_crm
+      - DATABASE_URL=postgres://${PG_USER:-postgres}:${PG_PASSWORD}@db:5432/${PG_DATABASE:-smarttrade_crm}
       - PG_HOST=db
       - PG_PORT=5432
-      - PG_DATABASE=smarttrade_crm
-      - PG_USER=postgres
-      - PG_PASSWORD=postgres
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-do-not-use-in-production}
-      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-admin123}
+      - PG_DATABASE=${PG_DATABASE:-smarttrade_crm}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_PASSWORD=${PG_PASSWORD:?err}
+      - JWT_SECRET=${JWT_SECRET:?err}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:?err}
       - NODE_ENV=production
     volumes:
       - crm-uploads:/app/data/uploads
@@ -25,7 +25,7 @@ services:
     environment:
       - POSTGRES_DB=smarttrade_crm
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${PG_PASSWORD:?err}
     volumes:
       - crm-db-data:/var/lib/postgresql/data
     healthcheck:

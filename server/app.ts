@@ -67,17 +67,17 @@ export async function createApp() {
 
   const app = express();
   app.disable('x-powered-by');
+  const cspDirectives = {
+    ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+    "script-src": ["'self'"],
+    "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+    "img-src": ["'self'", "data:", "blob:"],
+    "connect-src": ["'self'"],
+  };
   app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
-      directives: {
-        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        "script-src": ["'self'"],
-        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-        "img-src": ["'self'", "data:", "blob:", "http:", "https:"],
-        "connect-src": ["'self'"],
-      },
-    } : false,
-    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: process.env.NODE_ENV === 'production'
+      ? { directives: cspDirectives }
+      : { directives: cspDirectives, reportOnly: true },
   }));
   app.use(blockSensitivePaths);
   app.use(express.json());
@@ -94,7 +94,10 @@ export async function createApp() {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     logger.error({ err }, '[Unhandled Route Error]');
     const status = err.status || 500;
-    res.status(status).json({ error: err.message || 'Internal Server Error' });
+    const clientMessage = process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : err.message || 'Internal Server Error';
+    res.status(status).json({ error: clientMessage });
   });
 
   if (process.env.NODE_ENV === 'test') {
@@ -137,7 +140,11 @@ export async function createApp() {
         }
       }
     }));
-    app.use(async (_req, res) => {
+    app.use(async (req, res) => {
+      if (req.path.startsWith('/api/')) {
+        res.status(404).json({ error: 'Endpoint not found' });
+        return;
+      }
       try {
         const htmlPath = path.join(distPath, 'index.html');
         let html = await fs.readFile(htmlPath, 'utf-8');

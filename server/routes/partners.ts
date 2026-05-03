@@ -162,8 +162,10 @@ export function createPartnersRouter() {
       const linkedOrderIds = [...new Set([...financeOrderIds, ...logisticsOrderIds])];
       let linkedOrders: any[] = [];
       if (linkedOrderIds.length) {
+        const placeholders = linkedOrderIds.map(() => '?').join(',');
         linkedOrders = await dbAll(
-          `SELECT id, display_id, status, total_amount, product_summary, created_at FROM orders WHERE id IN (${linkedOrderIds.join(',')})`
+          `SELECT id, display_id, status, total_amount, product_summary, created_at FROM orders WHERE id IN (${placeholders})`,
+          linkedOrderIds,
         );
       }
 

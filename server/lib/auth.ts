@@ -10,6 +10,7 @@ export type AuthUser = {
   role: UserRole;
   username: string;
   name: string;
+  tokenVersion?: number;
 };
 
 export type AuthedRequest = Request & {
@@ -32,7 +33,7 @@ export function getCsrfCookieOptions() {
   return {
     httpOnly: false, // Must be readable by JS (apiFetch reads it)
     secure: isCookieSecure(),
-    sameSite: 'strict' as const,
+    sameSite: getSameSite(),
     path: '/',
     maxAge: 24 * 60 * 60 * 1000,
   };
@@ -71,7 +72,7 @@ function isCookieSecure() {
   return process.env.COOKIE_SECURE === 'true';
 }
 
-function getSameSite() {
+function getSameSite(): 'none' | 'lax' {
   return isCookieSecure() ? 'none' : 'lax';
 }
 
@@ -95,8 +96,12 @@ export function clearAuthCookie(res: Response) {
   clearCsrfCookie(res);
 }
 
-export function signAuthToken(user: AuthUser) {
-  return jwt.sign(user, JWT_SECRET!, { expiresIn: '24h' });
+export function signAuthToken(user: AuthUser, tokenVersion?: number) {
+  return jwt.sign(
+    { ...user, tokenVersion: tokenVersion ?? 1 },
+    JWT_SECRET!,
+    { expiresIn: '24h' },
+  );
 }
 
 export function verifyAuthToken(token: string) {
@@ -111,14 +116,20 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
 
   try {
     const decoded = verifyAuthToken(token);
-    const currentUser = await dbGet<{ id: number; active: number | null }>(
-      `SELECT id, active FROM users WHERE id = ?`,
+    const currentUser = await dbGet<{ id: number; active: number | null; token_version: number }>(
+      `SELECT id, active, token_version FROM users WHERE id = ?`,
       [decoded.id],
     );
     if (!currentUser || currentUser.active === 0) {
       clearAuthCookie(res);
       clearCsrfCookie(res);
       return fail(res, 401, '账号已停用，请联系管理员', 'ACCOUNT_DISABLED');
+    }
+    // JWT revocation: if token version doesn't match, the token has been invalidated
+    if ((decoded.tokenVersion || 1) !== currentUser.token_version) {
+      clearAuthCookie(res);
+      clearCsrfCookie(res);
+      return fail(res, 401, '登录状态已失效，请重新登录', 'AUTH_EXPIRED');
     }
     req.user = decoded;
     // Ensure CSRF cookie exists on each authenticated request

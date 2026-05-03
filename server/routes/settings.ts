@@ -13,6 +13,14 @@ import { buildExcelWorkbook } from '../services/excel-export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
 import { resolveAiProvider, resolveAiProviderApiKey, runGeminiModel, runOpenAiCompatibleModel } from '../services/ai.js';
 import { invalidateBrandCache } from '../app.js';
+import {
+  buildSystemBackupZipBuffer,
+  getBackupConfig,
+  getBackupFileName,
+  getBackupStatus,
+  runManualBackup,
+  setBackupConfig,
+} from '../services/backup.js';
 
 const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
 const DEFAULT_SYSTEM_UPDATE_STATUS_PATH = path.join(PROJECT_ROOT, 'data', 'system-update-status.json');
@@ -216,6 +224,44 @@ function compactCommandOutput(stdout: string, stderr: string) {
     .map((line) => line.trim())
     .filter(Boolean);
   return lines.slice(-20);
+}
+
+function pickDirectoryWithSystemDialog() {
+  return new Promise<string>((resolve, reject) => {
+    const platform = process.platform;
+    let command = '';
+    let args: string[] = [];
+
+    if (platform === 'darwin') {
+      command = 'osascript';
+      args = ['-e', 'POSIX path of (choose folder with prompt "请选择 CRM 自动备份文件夹")'];
+    } else if (platform === 'win32') {
+      command = 'powershell';
+      args = [
+        '-NoProfile',
+        '-Command',
+        'Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = "请选择 CRM 自动备份文件夹"; if ($d.ShowDialog() -eq "OK") { $d.SelectedPath }',
+      ];
+    } else {
+      command = 'sh';
+      args = ['-c', 'command -v zenity >/dev/null 2>&1 && zenity --file-selection --directory --title="请选择 CRM 自动备份文件夹"'];
+    }
+
+    const child = spawn(command, args, { stdio: 'pipe' });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      const selected = stdout.trim();
+      if (code === 0 && selected) {
+        resolve(selected);
+        return;
+      }
+      reject(new Error(stderr.trim() || '未选择文件夹'));
+    });
+  });
 }
 
 async function runSystemUpdateJob() {
@@ -495,18 +541,79 @@ export function createSettingsRouter() {
     }
   });
 
+  router.get('/backup/config', requireAdmin, async (_req, res) => {
+    try {
+      res.json({ config: await getBackupConfig(), status: getBackupStatus() });
+    } catch (error) {
+      return handleRouteError(res, error, '读取备份设置失败');
+    }
+  });
+
+  router.post('/backup/pick-directory', requireAdmin, async (_req, res) => {
+    try {
+      const directory = await pickDirectoryWithSystemDialog();
+      res.json({ directory });
+    } catch (error) {
+      return handleRouteError(res, error, '选择文件夹失败');
+    }
+  });
+
+  router.post('/backup/config', requireAdmin, async (req, res) => {
+    try {
+      const config = await setBackupConfig({
+        enabled: Boolean(req.body?.enabled),
+        directory: readString(req.body?.directory),
+        intervalHours: Number(req.body?.intervalHours) as 1 | 2 | 24,
+      });
+      res.json({ config, status: getBackupStatus() });
+    } catch (error) {
+      return handleRouteError(res, error, '保存备份设置失败');
+    }
+  });
+
+  router.post('/backup/run', requireAdmin, async (req, res) => {
+    try {
+      const directory = readString(req.body?.directory);
+      const result = await runManualBackup(directory || undefined);
+      res.json({ success: true, ...result, status: getBackupStatus() });
+    } catch (error) {
+      return handleRouteError(res, error, '执行备份失败');
+    }
+  });
+
+  router.get('/backup/download', requireAdmin, async (_req, res) => {
+    try {
+      const zipBuffer = await buildSystemBackupZipBuffer();
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${getBackupFileName()}"`);
+      res.setHeader('Content-Length', String(zipBuffer.length));
+      res.end(zipBuffer);
+    } catch (error) {
+      return handleRouteError(res, error, '生成系统备份失败');
+    }
+  });
+
   router.get('/export', requireAdmin, async (req, res) => {
     const format = readString(req.query.format) || 'customer-archive';
-    if (!['customer-archive', 'zip-csv'].includes(format)) {
+    if (!['customer-archive', 'zip-csv', 'restorable-backup'].includes(format)) {
       return res.status(400).json({
         error: {
           code: 'INVALID_EXPORT_FORMAT',
-          message: '仅支持 customer-archive 或 zip-csv 导出格式',
+          message: '仅支持 customer-archive、zip-csv 或 restorable-backup 导出格式',
         },
       });
     }
 
     try {
+      if (format === 'restorable-backup') {
+        const zipBuffer = await buildSystemBackupZipBuffer();
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${getBackupFileName()}"`);
+        res.setHeader('Content-Length', String(zipBuffer.length));
+        res.end(zipBuffer);
+        return;
+      }
+
       const fileName = getExportFileName(format as 'customer-archive' | 'zip-csv');
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);

@@ -49,14 +49,11 @@ const heavyLimiter = rateLimit({
 
 const router = Router();
 
-const SERVER_START_TIME = Date.now();
-
 router.get('/health', (_req, res) => {
   res.json({
     ok: true,
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     timestamp: new Date().toISOString(),
-    startupTime: SERVER_START_TIME,
   });
 });
 
@@ -83,9 +80,9 @@ router.get('/settings/basic', async (_req, res) => {
   }
 });
 
+router.use(globalLimiter);
 router.use(requireAuth);
 router.use(csrfProtection);
-router.use(globalLimiter);
 
 if (process.env.NODE_ENV !== 'production') {
   router.use('/api-docs', requireAdmin, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
