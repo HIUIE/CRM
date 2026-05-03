@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { PROJECT_ROOT } from '../paths.js';
 
-const BLOCKED_SUFFIXES = ['.env', '.db', '.sqlite', '.sqlite3', '.pem', '.key'];
+const BLOCKED_SUFFIXES = ['.env', '.pem', '.key'];
 const BLOCKED_SEGMENTS = new Set(['.git']);
 
 function safeDecode(value: string) {

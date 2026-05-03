@@ -8,13 +8,11 @@ const PORT = process.env.PORT || 3000;
 const SERVER_URL = `http://localhost:${PORT}`;
 
 // Set env before importing server (server.ts reads these on startup)
-process.env.DB_DRIVER = 'sqlite';
 process.env.HOST = '127.0.0.1';
 process.env.PORT = String(PORT);
 process.env.NODE_ENV = isDev ? 'development' : 'production';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'electron-desktop-app-jwt-secret-min-32-chars!!';
 process.env.ALLOW_INSECURE_COOKIES = 'true';
-process.env.SQLITE_PATH = process.env.SQLITE_PATH || path.join(app.getPath('userData'), 'data', 'crm.db');
 process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(app.getPath('userData'), 'uploads');
 
 let mainWindow = null;

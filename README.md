@@ -145,7 +145,7 @@ npm start
 
 ```
 ~/Library/Application Support/SmartTrade CRM/
-├── data/crm.db       # SQLite 数据库（单文件，可直接备份）
+└── data/backups/     # 自动备份目录
 └── uploads/          # 上传的附件
 ```
 
@@ -231,7 +231,7 @@ cp .env.example .env
 
 # 4. 构建前端并启动
 npm run build
-DB_DRIVER=pg npm start
+npm start
 ```
 
 访问：`http://localhost:3000`
@@ -244,7 +244,7 @@ DB_DRIVER=pg npm start
 
 ```bash
 npm install -g pm2
-pm2 start "DB_DRIVER=pg npm start" --name smarttrade-crm
+pm2 start "npm start" --name smarttrade-crm
 pm2 save
 pm2 startup          # 设置开机自启
 ```
@@ -262,7 +262,7 @@ Type=simple
 User=www
 WorkingDirectory=/opt/crm
 Environment=NODE_ENV=production
-Environment=DB_DRIVER=pg
+# PostgreSQL is required
 ExecStart=/usr/bin/node --import tsx server.ts
 Restart=always
 
@@ -286,8 +286,7 @@ sudo systemctl enable --now smarttrade-crm
 
 | 模式 | 设置 | 数据库文件 | 适用场景 |
 |------|------|-----------|---------|
-| SQLite | 默认，无需设置 | `data/crm.db`（单文件） | DMG 桌面应用、个人单机 |
-| PostgreSQL | `DB_DRIVER=pg` | 外部 PG 数据库 | 服务器部署、团队协作 |
+| PostgreSQL | 默认 | 外部 PG 数据库 | 服务器部署、团队协作 |
 
 ---
 
@@ -351,8 +350,7 @@ GITHUB_TOKEN=ghp_你的token
 |------|------|
 | `npm run dev` | 开发模式（修改代码自动热重载） |
 | `npm run build` | 构建前端生产包 |
-| `npm start` | 启动服务（默认 SQLite，无需 PG） |
-| `DB_DRIVER=pg npm start` | 启动服务（PostgreSQL 模式） |
+| `npm start` | 启动服务（需 PostgreSQL） |
 | `npm test` | 后端测试 |
 | `npm run test:frontend` | 前端测试 |
 | `npm run lint` | TypeScript 类型检查 |
@@ -366,7 +364,7 @@ GITHUB_TOKEN=ghp_你的token
 
 - **前端**：React 19 + TypeScript + Tailwind CSS v4 + Vite
 - **后端**：Express 5
-- **数据库**：PostgreSQL 16 / SQLite (better-sqlite3)，通过 `DB_DRIVER` 切换
+- **数据库**：PostgreSQL 16
 - **桌面应用**：Electron（macOS DMG）
 - **页面过渡**：View Transitions API
 - **数据层**：TanStack React Query
@@ -390,7 +388,7 @@ npm run electron:build
 ## 数据备份
 
 ```bash
-# 浏览器 / 本机 SQLite 模式：直接复制数据目录
+# 通过系统内置的自动备份功能备份数据
 cp -r data/ ~/Desktop/CRM-备份/
 
 # DMG 桌面版：

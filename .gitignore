@@ -6,9 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
-*.sqlite
 *.db
-*.sqlite-journal
 uploads/
 backups/
 data/

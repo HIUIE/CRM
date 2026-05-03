@@ -296,7 +296,7 @@ export const up = (pgm) => {
     
     -- Hardcoded initial password 'root' for root user
     INSERT INTO users (username, password, role, name, active) 
-    VALUES ('root', '$2a$10$w8.223Yx9c1t79119nQ1jOPR/r2qY2kS.D71p5G.k8h/bZ3YI3eOq', 'admin', 'Super Admin', 1) 
+    VALUES ('root', '$2b$10$qIpk7/LLDdBTOahOxi/sAuKlhliP2PM0HvlgZp0wQZG6zTbrZ55Ny', 'admin', 'Super Admin', 1)
     ON CONFLICT (username) DO UPDATE SET active = 1;
   `);
 };
