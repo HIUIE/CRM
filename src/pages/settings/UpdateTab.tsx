@@ -17,7 +17,7 @@ export default function UpdateTab() {
 
   useEffect(() => {
     Promise.all([
-      apiFetch('/api/settings/system/version').catch(() => null),
+      apiFetch<any>('/api/settings/system/version').catch(() => null),
       apiFetch<any[]>('/api/settings/system/update/history').catch(() => []),
     ]).then(([version, history]) => {
       setLocalVersion(version);
@@ -28,7 +28,7 @@ export default function UpdateTab() {
       try {
         const s = await apiFetch<any>('/api/settings/system/update/status');
         setUpdateStatus(s);
-        setUpdating(s?.isUpdating || false);
+        setUpdating(s?.phase === 'running' || s?.phase === 'restarting');
       } catch (e) {}
     };
     checkStatus();
@@ -89,7 +89,9 @@ export default function UpdateTab() {
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-navy-800">
                 <span className="text-xs font-bold text-slate-500">构建时间</span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(localVersion.buildTime).toLocaleString('zh-CN')}</span>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {localVersion.buildTime ? new Date(localVersion.buildTime).toLocaleString('zh-CN') : '未知'}
+                </span>
               </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-xs font-bold text-slate-500">提交哈希</span>
@@ -118,7 +120,12 @@ export default function UpdateTab() {
                 <div className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 mb-3"><ExternalLink size={14} /> 新版本可用</div>
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-xs"><span className="font-bold text-slate-500">最新版本</span><span className="font-black text-primary-navy dark:text-white">{remoteVersion.version}</span></div>
-                  <div className="flex justify-between text-xs"><span className="font-bold text-slate-500">发布时间</span><span className="font-bold text-slate-700">{new Date(remoteVersion.buildTime).toLocaleString('zh-CN')}</span></div>
+                  <div className="flex justify-between text-xs">
+                    <span className="font-bold text-slate-500">发布时间</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      {remoteVersion.buildTime ? new Date(remoteVersion.buildTime).toLocaleString('zh-CN') : '未知'}
+                    </span>
+                  </div>
                 </div>
                 <div className="rounded-lg bg-blue-50 dark:bg-blue-900/10 p-4 border border-blue-100 dark:border-blue-900/30">
                   <p className="text-xs text-blue-700 dark:text-blue-400 font-medium leading-relaxed">请拉取最新代码并重新构建以更新系统：</p>
@@ -186,9 +193,17 @@ export default function UpdateTab() {
           <div className="space-y-3">
             {updateHistory.map((item, i) => (
               <div key={i} className="flex justify-between items-center text-xs border-b border-slate-100 dark:border-navy-800 pb-3 last:border-0 last:pb-0">
-                <div className="font-bold text-slate-700 dark:text-slate-300">{item.version}</div>
-                <div className="text-slate-500">{new Date(item.timestamp).toLocaleString('zh-CN')}</div>
-                <div>{item.success ? <span className="text-emerald-600 font-bold">成功</span> : <span className="text-red-600 font-bold">失败</span>}</div>
+                <div className="font-bold text-slate-700 dark:text-slate-300">{item.version || item.id}</div>
+                <div className="text-slate-500">
+                  {item.finishedAt ? new Date(item.finishedAt).toLocaleString('zh-CN') : '时间未知'}
+                </div>
+                <div>
+                  {item.phase === 'completed' ? (
+                    <span className="text-emerald-600 font-bold">成功</span>
+                  ) : (
+                    <span className="text-red-600 font-bold">失败</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>

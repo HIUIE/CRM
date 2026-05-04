@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { dbAll, dbGet, dbRun, SQL, withTransaction } from '../lib/db.js';
-import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { logAction } from '../lib/audit.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { notifyOrderCreated } from '../services/notifier.js';
@@ -102,7 +102,15 @@ export function createOrdersRouter() {
 
     try {
       const orders = await dbAll(sql, params);
-      res.json(orders);
+      
+      // RBAC: Redact sensitive profit fields for non-admins
+      const isAdmin = (req as AuthedRequest).user?.role === 'admin';
+      const sanitizedOrders = isAdmin ? orders : (orders as any[]).map(o => {
+        const { total_profit, profit_margin, ...rest } = o;
+        return rest;
+      });
+
+      res.json(sanitizedOrders);
     } catch (error) {
       return handleRouteError(res, error, '读取订单列表失败');
     }
@@ -118,13 +126,49 @@ export function createOrdersRouter() {
     }
   });
 
-  router.get('/:id', async (req, res) => {
-    const orderNo = req.params.id;
+  router.patch('/batch', requireAuth, async (req: AuthedRequest, res) => {
+    const ids = req.body?.ids;
+    const status = req.body?.status;
+    if (!Array.isArray(ids) || !ids.length || !status) {
+      return fail(res, 400, '无效的批量操作请求');
+    }
+
+    try {
+      await withTransaction(async (tx) => {
+        const placeholders = ids.map(() => '?').join(',');
+        await tx.run(`UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [status, ...ids]);
+        
+        for (const id of ids) {
+          await logAction({
+            userId: req.user!.id,
+            userName: req.user!.name,
+            action: 'UPDATE',
+            entityType: 'ORDER',
+            entityId: String(id),
+            newValue: `批量修改状态为 ${status}`,
+          });
+        }
+      });
+      res.json({ success: true, count: ids.length });
+    } catch (error) {
+      return handleRouteError(res, error, '批量更新失败');
+    }
+  });
+
+  router.get('/:id', async (req: AuthedRequest, res) => {
+    const orderNo = req.params.id as string;
     try {
       const detail = await buildOrderDetail(orderNo);
       if (!detail) {
         return fail(res, 404, '订单不存在', 'ORDER_NOT_FOUND');
       }
+
+      // RBAC: Redact sensitive profit fields in order detail for non-admins
+      if (req.user?.role !== 'admin') {
+        const { total_profit, profit_margin, ...rest } = detail.order as any;
+        detail.order = rest;
+      }
+
       res.json(detail);
     } catch (error) {
       return handleRouteError(res, error, '读取订单详情失败');

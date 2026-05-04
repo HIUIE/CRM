@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Edit, Search, Trash2, Hash } from 'lucide-react';
+import { Edit, Search, Trash2, Hash, CheckSquare, Square, CheckCircle } from 'lucide-react';
 import Field from './ui/Field';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigateWithTransition } from '../lib/transition';
@@ -58,6 +58,9 @@ export default function OrdersView() {
   const [formData, setFormData] = useState<OrderFormState>(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState<OrderFormState>(EMPTY_FORM);
 
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+
   const isFormDirty = JSON.stringify(formData) !== JSON.stringify(initialForm);
 
   // 删除确认状态
@@ -83,7 +86,7 @@ export default function OrdersView() {
     setSearchParams(next);
   };
 
-  // Debounced search: local input state drives the field, URL param updates after 300ms
+  // Debounced search
   const [searchInput, setSearchInput] = useState(q);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -123,6 +126,36 @@ export default function OrdersView() {
     setCurrentPage,
     setPageSize,
   } = usePagination(orders);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === currentItems.length && currentItems.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(currentItems.map(o => o.id));
+    }
+  };
+
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBatchUpdate = async (status: string) => {
+    if (!selectedIds.length) return;
+    setIsBatchUpdating(true);
+    try {
+      await apiFetch('/api/orders/batch', {
+        method: 'PATCH',
+        body: JSON.stringify({ ids: selectedIds, status }),
+      });
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setToast(`成功更新 ${selectedIds.length} 个订单状态`);
+    } catch (err) {
+      setToast(getErrorMessage(err, '批量操作失败'));
+    } finally {
+      setIsBatchUpdating(false);
+    }
+  };
 
   useEffect(() => {
     if (searchParams.get('create') === '1') {
@@ -185,7 +218,6 @@ export default function OrdersView() {
     e.preventDefault();
     setFormError('');
 
-    // Field-level validation
     const errors: Record<string, string> = {};
     if (!formData.customerId) errors.customerId = '请选择关联客户';
     if (!formData.productSummary.trim()) errors.productSummary = '请输入产品摘要';
@@ -201,8 +233,7 @@ export default function OrdersView() {
       } else {
         const created = await apiFetch<{ display_id: string }>('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
         resetFormState();
-        const navigateToDetail = () => navigate(`/orders/${created.display_id}`);
-        navigateToDetail();
+        navigate(`/orders/${created.display_id}`);
       }
     } catch (err) {
       setFormError(getErrorMessage(err, '保存失败'));
@@ -263,13 +294,36 @@ export default function OrdersView() {
         {error && <div className="mt-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{error}</div>}
       </section>
 
-      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors flex flex-col">
+      <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors flex flex-col relative">
+        {selectedIds.length > 0 && (
+          <div className="absolute top-[-54px] left-0 right-0 z-20 flex items-center justify-between px-6 py-2.5 bg-primary-navy dark:bg-navy-800 text-white rounded-lg shadow-xl animate-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-3">
+              <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-black">已选中 {selectedIds.length}</span>
+              <div className="h-4 w-px bg-white/20 mx-1" />
+              <span className="text-xs font-bold opacity-80">批量修改状态为:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button disabled={isBatchUpdating} onClick={() => handleBatchUpdate('production')} className="px-3 py-1.5 rounded-md hover:bg-white/10 text-xs font-black transition-colors">进行生产</button>
+              <button disabled={isBatchUpdating} onClick={() => handleBatchUpdate('customs')} className="px-3 py-1.5 rounded-md hover:bg-white/10 text-xs font-black transition-colors">开始报关</button>
+              <button disabled={isBatchUpdating} onClick={() => handleBatchUpdate('completed')} className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 px-4 py-1.5 rounded-md text-xs font-black transition-all shadow-sm">
+                <CheckCircle size={14} /> 标记结单
+              </button>
+              <button onClick={() => setSelectedIds([])} className="ml-2 text-white/50 hover:text-white"><Square size={16} /></button>
+            </div>
+          </div>
+        )}
+        
         {loading ? <div className="p-8 text-sm text-slate-400 dark:text-slate-500 animate-pulse font-bold text-center">读取订单列表中...</div> : (
           <div className="flex flex-col">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-slate-50/80 dark:bg-navy-950/80 backdrop-blur text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
                   <tr>
+                    <th className="px-4 py-4 text-center w-12">
+                      <button onClick={toggleSelectAll} className="p-1 hover:bg-slate-200 dark:hover:bg-navy-800 rounded transition-colors">
+                        {selectedIds.length === currentItems.length && currentItems.length > 0 ? <CheckSquare size={16} className="text-primary-navy dark:text-tertiary-sage" /> : <Square size={16} />}
+                      </button>
+                    </th>
                     <th className="px-4 py-4 text-left">订单号 / 日期</th>
                     <th className="px-4 py-4 text-left">客户 / 国家</th>
                     <th className="px-4 py-4 text-left">产品摘要</th>
@@ -281,11 +335,17 @@ export default function OrdersView() {
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                   {currentItems.length ? currentItems.map(o => {
                     const meta = getOrderStatusMeta(o.status);
+                    const isSelected = selectedIds.includes(o.id);
                     return (
                       <tr key={o.id} onClick={() => {
                         const target = `/orders/${String(o.display_id).toLowerCase()}`;
                         navigate(target);
-                      }} className="group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer">
+                      }} className={`group align-middle hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10 ring-1 ring-inset ring-blue-100 dark:ring-blue-900/30' : ''}`}>
+                        <td className="px-4 py-4 text-center" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => toggleSelectOne(o.id)} className="p-1 hover:bg-white dark:hover:bg-navy-700 rounded shadow-sm border border-transparent transition-all">
+                            {isSelected ? <CheckSquare size={16} className="text-primary-navy dark:text-tertiary-sage" /> : <Square size={16} className="text-slate-300" />}
+                          </button>
+                        </td>
                         <td className="px-4 py-4 text-left">
                            <div 
                              className="font-bold text-primary-navy dark:text-tertiary-sage data-field"
@@ -323,7 +383,7 @@ export default function OrdersView() {
                         </td>
                       </tr>
                     );
-                  }) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight text-xs">暂无订单记录。</td></tr>}
+                  }) : <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight text-xs">暂无订单记录。</td></tr>}
                 </tbody>
               </table>
             </div>

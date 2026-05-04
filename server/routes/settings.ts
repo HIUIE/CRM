@@ -478,6 +478,28 @@ export function createSettingsRouter() {
     }
   });
 
+  router.get('/finance', requireAuth, async (_req, res) => {
+    try {
+      const rates = await getSettingValue('exchange_rates', JSON.stringify({ USD: 1, CNY: 7.2, EUR: 0.92 }));
+      res.json({ rates: JSON.parse(rates) });
+    } catch (error) {
+      return handleRouteError(res, error, '读取汇率设置失败');
+    }
+  });
+
+  router.post('/finance', requireAdmin, async (req, res) => {
+    const rates = req.body?.rates;
+    if (!rates || typeof rates !== 'object') {
+      return fail(res, 400, '无效的汇率数据');
+    }
+    try {
+      await setSettingValue('exchange_rates', JSON.stringify(rates));
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '保存汇率设置失败');
+    }
+  });
+
   router.get('/check-update', requireAdmin, async (_req, res) => {
     try {
       const token = process.env.GITHUB_TOKEN || '';
@@ -494,6 +516,69 @@ export function createSettingsRouter() {
       }
     } catch (error) {
       return handleRouteError(res, error, '检查更新失败');
+    }
+  });
+
+  // Alias for UpdateTab
+  router.post('/system/check-update', requireAdmin, async (_req, res) => {
+    try {
+      const token = process.env.GITHUB_TOKEN || '';
+      const url = 'https://api.github.com/repos/HIUIE/CRM/commits?per_page=1';
+      const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const ghRes = await fetch(url, { headers });
+      if (!ghRes.ok) return res.json({ error: `GitHub API: ${ghRes.status}` });
+      const data = await ghRes.json();
+      if (Array.isArray(data) && data[0]?.sha) {
+        res.json({ version: data[0].sha.slice(0, 7), buildTime: data[0].commit?.author?.date || '', commit: data[0].sha.slice(0, 7) });
+      } else {
+        res.json({ error: '无法解析版本信息' });
+      }
+    } catch (error) {
+      return handleRouteError(res, error, '检查更新失败');
+    }
+  });
+
+  router.get('/version-info', requireAuth, async (_req, res) => {
+    try {
+      const pkgPath = path.join(PROJECT_ROOT, 'package.json');
+      const changelogPath = path.join(PROJECT_ROOT, 'CHANGELOG.md');
+      
+      const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+      const changelog = await fs.readFile(changelogPath, 'utf8').catch(() => '暂无更新记录');
+
+      const dependencies = {
+        'React': pkg.dependencies?.['react'] || 'Unknown',
+        'Express': pkg.dependencies?.['express'] || 'Unknown',
+        'Vite': pkg.devDependencies?.['vite'] || 'Unknown',
+        'TypeScript': pkg.devDependencies?.['typescript'] || 'Unknown',
+        'Tailwind': pkg.devDependencies?.['tailwindcss'] || 'Unknown',
+        'Lucide': pkg.dependencies?.['lucide-react'] || 'Unknown',
+      };
+
+      res.json({
+        version: pkg.version || '1.0.0',
+        dependencies,
+        changelog
+      });
+    } catch (error) {
+      return handleRouteError(res, error, '获取版本信息失败');
+    }
+  });
+
+  router.get('/system/version', requireAuth, async (_req, res) => {
+    try {
+      const pkgPath = path.join(PROJECT_ROOT, 'package.json');
+      const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+      
+      // Attempt to get build info if it exists, otherwise use defaults
+      res.json({
+        version: pkg.version || '1.0.0',
+        buildTime: new Date().toISOString(), // Fallback
+        commit: 'local'
+      });
+    } catch (error) {
+      return handleRouteError(res, error, '获取系统版本失败');
     }
   });
 

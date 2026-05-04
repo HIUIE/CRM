@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Database, RefreshCw, Layers } from 'lucide-react';
+import { Database, RefreshCw, Layers, Landmark } from 'lucide-react';
 import DataTab from './DataTab';
 import UpdateTab from './UpdateTab';
+import FinanceTab from './FinanceTab';
 
-type SubTab = 'data' | 'update';
+type SubTab = 'data' | 'update' | 'finance';
 
 export default function SystemTab({ setImportEntityType }: { setImportEntityType: (type: 'CUSTOMER' | 'ORDER') => void }) {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('data');
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('finance');
 
   return (
     <div className="space-y-8">
@@ -15,10 +16,16 @@ export default function SystemTab({ setImportEntityType }: { setImportEntityType
           <Layers className="mr-2 h-5 w-5 text-primary-navy dark:text-tertiary-sage" />
           系统与维护
         </h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">管理系统底层资产，包括数据的生命周期归档及系统版本迭代。</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">管理系统底层资产，包括数据生命周期、汇率策略及版本迭代。</p>
       </div>
 
       <div className="flex items-center gap-2 p-1 w-fit rounded-xl bg-slate-100 dark:bg-navy-950/80 border border-slate-200 dark:border-navy-800">
+        <button
+          onClick={() => setActiveSubTab('finance')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeSubTab === 'finance' ? 'bg-surface dark:bg-navy-800 text-primary-navy dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+        >
+          <Landmark size={14} /> 财务配置
+        </button>
         <button
           onClick={() => setActiveSubTab('data')}
           className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-black transition-all ${activeSubTab === 'data' ? 'bg-surface dark:bg-navy-800 text-primary-navy dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
@@ -34,7 +41,9 @@ export default function SystemTab({ setImportEntityType }: { setImportEntityType
       </div>
 
       <div className="pt-4">
-        {activeSubTab === 'data' ? (
+        {activeSubTab === 'finance' ? (
+          <FinanceTab />
+        ) : activeSubTab === 'data' ? (
           <DataTab setImportEntityType={setImportEntityType} />
         ) : (
           <UpdateTab />

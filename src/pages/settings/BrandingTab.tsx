@@ -64,7 +64,7 @@ export default function BrandingTab() {
   if (loading) return <div className="p-8 text-sm text-slate-500 animate-pulse">正在读取站点配置...</div>;
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8 w-full">
       {error && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 font-bold">{error}</div>}
       
       <div className="mb-6">
@@ -75,9 +75,9 @@ export default function BrandingTab() {
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">定制系统名称、Slogan 及视觉图标，塑造专业品牌形象。</p>
       </div>
 
-      <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">
-        <div className="space-y-6">
-          <div className="grid gap-6 sm:grid-cols-2">
+      <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors w-full">
+        <div className="space-y-6 w-full">
+          <div className="grid gap-8 lg:grid-cols-2">
             <Field label="站点名称" description="显示在侧边栏、浏览器标签页及通知中。">
               <input value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="如 SmartTrade AI CRM" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm focus:border-primary-navy outline-none text-primary-navy dark:text-white" />
             </Field>
@@ -86,10 +86,10 @@ export default function BrandingTab() {
             </Field>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 pt-2">
+          <div className="grid gap-8 lg:grid-cols-2 pt-2">
             <Field label="站点 Logo" description="建议 200x200px, 透明背景 PNG。">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 overflow-hidden relative group">
+                <div className="h-20 w-20 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 overflow-hidden relative group">
                   {siteLogo ? (
                     <>
                       <img src={siteLogo} alt="Logo" className="h-full w-full object-contain" />
@@ -107,10 +107,10 @@ export default function BrandingTab() {
 
             <Field label="Favicon 图标" description="浏览器标签页显示的小图标 (ICO/PNG)。">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 overflow-hidden relative group">
+                <div className="h-20 w-20 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 overflow-hidden relative group">
                   {siteFavicon ? (
                     <>
-                      <img src={siteFavicon} alt="Favicon" className="h-8 w-8 object-contain" />
+                      <img src={siteFavicon} alt="Favicon" className="h-10 w-10 object-contain" />
                       <button onClick={() => setSiteFavicon('')} className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all text-xs">清除</button>
                     </>
                   ) : (
@@ -124,8 +124,8 @@ export default function BrandingTab() {
             </Field>
           </div>
 
-          <div className="flex items-center gap-3 pt-6 border-t border-slate-200/60 dark:border-navy-800/60">
-            <button onClick={saveSiteSettings} className="btn-primary shadow-xl px-8 py-3">
+          <div className="flex items-center gap-3 pt-8 border-t border-slate-200/60 dark:border-navy-800/60">
+            <button onClick={saveSiteSettings} className="btn-primary shadow-xl px-10 py-3.5">
               {savedSite ? <><CheckCircle2 className="mr-2 h-4 w-4" />品牌设置已保存</> : '保存品牌设置'}
             </button>
           </div>

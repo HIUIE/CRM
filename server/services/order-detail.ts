@@ -186,6 +186,11 @@ export async function buildOrderDetail(idOrNo: number | string) {
     [orderId],
   );
 
+  // Exchange rate conversion for local currency profit reference
+  const rawRates = await dbGet<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['exchange_rates']);
+  const rates = rawRates ? JSON.parse(rawRates.value) : { USD: 1, CNY: 7.2, EUR: 0.92 };
+  const cnyRate = rates.CNY || 7.2;
+
   const domesticLogisticsRecord = logisticsRecords.find((item) => item.segment_type === 'domestic') || null;
   const internationalLogisticsRecord = logisticsRecords.find((item) => item.segment_type !== 'domestic') || null;
   const latestLogistics =
@@ -395,6 +400,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
       latestLogisticsStatus: latestLogistics?.status || null,
       latestShippingDate: latestLogistics?.shipping_date || null,
       paidAmount: receiptsByCurrency.USD || 0,
+      paidAmountCny: (receiptsByCurrency.USD || 0) * cnyRate,
       outstandingAmount,
       paymentStatus,
       settled,

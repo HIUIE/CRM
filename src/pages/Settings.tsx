@@ -1,5 +1,5 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { Layout, Briefcase, Users, BrainCircuit, ShieldCheck, Loader2 } from 'lucide-react';
+import { Layout, Briefcase, Users, BrainCircuit, ShieldCheck, Loader2, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ImportModal from '../components/ui/ImportModal';
 
@@ -9,8 +9,9 @@ const BusinessTab = lazy(() => import('./settings/BusinessTab'));
 const TeamTab = lazy(() => import('./settings/TeamTab'));
 const AiTab = lazy(() => import('./settings/AiTab'));
 const SystemTab = lazy(() => import('./settings/SystemTab'));
+const AboutTab = lazy(() => import('./settings/AboutTab'));
 
-export type SettingsTab = 'branding' | 'business' | 'team' | 'ai' | 'system';
+export type SettingsTab = 'branding' | 'business' | 'team' | 'ai' | 'system' | 'about';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -43,63 +44,48 @@ export default function Settings() {
       title: '系统工具',
       tabs: [
         { id: 'system', label: '数据与维护', icon: ShieldCheck, roles: ['admin'] },
+        { id: 'about', label: '关于与版本', icon: Info, roles: ['admin', 'user'] },
       ]
     }
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] animate-page-in">
-      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        {/* Sidebar */}
-        <aside className="space-y-8">
-          <div className="space-y-1">
-            <h1 className="text-xl font-black text-primary-navy dark:text-white tracking-tight px-4">系统设置</h1>
-            <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-tight px-4 uppercase">System Preferences</p>
-          </div>
+    <div className="mx-auto w-full max-w-[1440px] animate-page-in space-y-6">
+      {/* Modern Tab Navigation */}
+      <div className="border-b border-slate-200 dark:border-navy-800">
+        <nav className="flex flex-nowrap overflow-x-auto no-scrollbar gap-1 -mb-px">
+          {categories.flatMap(cat => cat.tabs).filter(t => t.roles.includes(user?.role || 'user')).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as SettingsTab)}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-black transition-all border-b-2 whitespace-nowrap ${
+                activeTab === tab.id 
+                  ? 'border-primary-navy dark:border-tertiary-sage text-primary-navy dark:text-white bg-slate-50/50 dark:bg-navy-950/30' 
+                  : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50/30 dark:hover:bg-navy-950/10'
+              }`}
+            >
+              <tab.icon size={16} className={activeTab === tab.id ? 'text-primary-navy dark:text-tertiary-sage' : 'text-slate-300 dark:text-slate-600'} />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-          <nav className="space-y-6">
-            {categories.map((cat, idx) => {
-              const visibleTabs = cat.tabs.filter(t => t.roles.includes(user?.role || 'user'));
-              if (visibleTabs.length === 0) return null;
-
-              return (
-                <div key={idx} className="space-y-2">
-                  <h3 className="px-4 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">{cat.title}</h3>
-                  <div className="space-y-1">
-                    {visibleTabs.map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as SettingsTab)}
-                        className={`flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                          activeTab === tab.id 
-                            ? 'bg-primary-navy dark:bg-tertiary-sage text-white shadow-md' 
-                            : 'text-secondary-slate dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-900/50'
-                        }`}
-                      >
-                        <tab.icon size={16} className={activeTab === tab.id ? 'text-white' : 'text-slate-400'} />
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </nav>
-        </aside>
-
-        {/* Content Area */}
-        <main className="min-w-0">
-          <div className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 sm:p-10 min-h-[600px]">
-            <Suspense fallback={<Fallback />}>
+      {/* Content Area - 100% Width */}
+      <main className="w-full">
+        <div className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900 sm:p-10 min-h-[600px]">
+          <Suspense fallback={<Fallback />}>
+            <div className="w-full">
               {activeTab === 'branding' && <BrandingTab />}
               {activeTab === 'business' && isAdmin && <BusinessTab />}
               {activeTab === 'team' && isAdmin && <TeamTab />}
               {activeTab === 'ai' && isAdmin && <AiTab />}
               {activeTab === 'system' && isAdmin && <SystemTab setImportEntityType={setImportEntityType} />}
-            </Suspense>
-          </div>
-        </main>
-      </div>
+              {activeTab === 'about' && <AboutTab />}
+            </div>
+          </Suspense>
+        </div>
+      </main>
 
       <ImportModal
         isOpen={importEntityType !== null}
