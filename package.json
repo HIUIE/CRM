@@ -10,6 +10,7 @@
     "dev": "tsx watch server.ts",
     "dev:serve": "node --import tsx server.ts",
     "start": "NODE_ENV=production node --import tsx server.ts",
+    "prebuild": "node -e \"try{require('vite')}catch(e){console.error('[prebuild] Vite 不可用，请执行 npm install 重新安装依赖');process.exit(1)}\"",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
@@ -21,7 +22,8 @@
     "release:check": "npm run lint && npm test && npm run build && npm run smoke:ui",
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
-    "migrate:create": "node-pg-migrate create"
+    "migrate:create": "node-pg-migrate create",
+    "postinstall": "node scripts/check-native-bindings.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.51.0",

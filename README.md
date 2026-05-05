@@ -79,29 +79,37 @@ GRANT ALL PRIVILEGES ON DATABASE bancycrm TO bancycrm;
 ### 4. 配置文件
 复制 `.env.example` 为 `.env`，并根据上方创建的数据库信息进行修改：
 ```ini
+# 安全：至少 32 位随机字符串，可用 openssl rand -base64 48 生成
 JWT_SECRET=your_32_char_random_secret
-DB_ENCRYPTION_KEY=your_32_char_encryption_key  # 必须配置，用于加密存储 API Key
+
+# 安全：用于加密 API Key 等敏感配置（必须配置）
+DB_ENCRYPTION_KEY=your_32_char_encryption_key
+
+# 初始管理员密码（启动时自动设置 root 账号）
+INITIAL_ADMIN_PASSWORD=your_strong_password_here
+
 PG_USER=your_pg_user
 PG_PASSWORD=your_pg_password
 ```
 
-### 4. 数据库初始化与运行
+### 5. 构建并启动
 ```bash
-# 执行数据库迁移（创建表、索引及默认数据）
-npm run migrate:up
-
-# 构建并启动（推荐稳定使用）
+# 构建前端并启动（推荐生产使用）
 npm run build
 npm start
 
-# 或者开发模式启动
+# 或者开发模式（Vite 热更新）
 npm run dev
 ```
 
-### 5. 初始登录信息
+> **注意**：数据库迁移（建表、索引）在应用启动时**自动**执行，无需手动运行迁移命令。
+
+### 6. 初始登录
 *   **访问地址**: `http://localhost:3000`
 *   **用户名**: `root`
-*   **默认密码**: `SmartTrade@2026` (登录后请务必在设置中修改)
+*   **密码**: 由 `.env` 中 `INITIAL_ADMIN_PASSWORD` 决定（登录后请在设置中修改）
+
+> **安全警告**：`INITIAL_ADMIN_PASSWORD` 是首次初始化 root 账号的唯一凭证。如果 `.env` 中未设置此值，开发环境将自动生成随机密码（打印在控制台），**生产环境将拒绝启动**。
 
 ---
 
@@ -113,6 +121,21 @@ npm run dev
 *   **State Management**: TanStack React Query v5
 *   **Encryption**: AES-256-GCM + bcrypt + HMAC
 *   **Deployment**: Support PM2 / Docker Compose / Electron DMG
+
+---
+
+## 跨平台构建注意
+
+Vite 8 使用 `rolldown` 作为打包器，它依赖当前平台的 native binding。
+如果您的开发机（如 macOS）与部署服务器（如 Linux）架构不同，**请在目标平台上重新执行 `npm install`**：
+
+```bash
+# 在部署服务器上（不要直接拷贝 node_modules 过来）
+rm -rf node_modules package-lock.json
+npm install
+```
+
+否则会看到类似 `Cannot find native binding` 的错误。
 
 ---
 
@@ -131,3 +154,4 @@ npm run dev
 1.  **严禁提交 `.env`**: 请确保真实密钥不进入版本控制系统。
 2.  **HTTPS 部署**: 在公网环境部署时，建议使用 Nginx 反向代理并配置 SSL 证书。
 3.  **数据归属权**: 系统默认启用负责人隔离制，管理员可在设置中调整成员角色。
+4.  **root 账号**: 初始化后请立即在设置页修改密码。生产环境强制要求通过 `INITIAL_ADMIN_PASSWORD` 设置初始密码。

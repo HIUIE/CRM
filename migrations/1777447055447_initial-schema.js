@@ -294,9 +294,10 @@ export const up = (pgm) => {
 
     INSERT INTO settings (key, value) VALUES ('site_name', 'SmartTrade AI CRM') ON CONFLICT (key) DO NOTHING;
     
-    -- Hardcoded initial password 'root' for root user
-    INSERT INTO users (username, password, role, name, active) 
-    VALUES ('root', '$2b$10$qIpk7/LLDdBTOahOxi/sAuKlhliP2PM0HvlgZp0wQZG6zTbrZ55Ny', 'admin', 'Super Admin', 1)
+    -- root 用户密码由 bootstrap.ts 启动时从 INITIAL_ADMIN_PASSWORD 读取并设置。
+    -- 密码设为 NULL 确保不会漏过安全检查，bootstrap.ts 会在首次启动时设置密码。
+    INSERT INTO users (username, password, role, name, active)
+    VALUES ('root', NULL, 'admin', 'Super Admin', 1)
     ON CONFLICT (username) DO UPDATE SET active = 1;
   `);
 };
