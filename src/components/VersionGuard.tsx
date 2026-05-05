@@ -18,6 +18,11 @@ async function fetchRemoteVersion(): Promise<string | null> {
 }
 
 export default function VersionGuard() {
+  // P11: Disable version guard entirely in development mode
+  if (import.meta.env.DEV) {
+    return null;
+  }
+
   const [hasUpdate, setHasUpdate] = useState(false);
   const [updateType, setUpdateType] = useState<'restart' | 'remote'>('restart');
   const initialStartupTime = useRef<number | null>(null);
