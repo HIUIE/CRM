@@ -73,7 +73,7 @@ async function startServer() {
   const dbName = process.env.PG_DATABASE || 'smarttrade_crm';
 
   // Helper to get local IP
-  const getLocalIp = () => {
+  const getLocalIp = async () => {
     const { networkInterfaces } = await import('os');
     const nets = networkInterfaces();
     for (const name of Object.keys(nets)) {
