@@ -47,12 +47,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function initPgTables() {
-  // Fail early if no database password is set in production-like environments
-  if (process.env.DATABASE_URL === undefined && process.env.PG_PASSWORD === undefined) {
+  // P11: Safety check moved here to ensure env is loaded via env.ts/dotenv
+  const hasAuth = process.env.DATABASE_URL || process.env.PG_PASSWORD;
+  if (!hasAuth) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('生产环境必须设置 PG_PASSWORD 或 DATABASE_URL');
     }
-    console.warn('未设置 PG_PASSWORD，数据库连接无密码保护');
+    console.warn('[db] 注意：未检测到 PG_PASSWORD，将尝试无密码连接数据库。');
   }
 
   const migrationsDir = path.join(__dirname, '..', 'migrations');
