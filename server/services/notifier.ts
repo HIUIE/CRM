@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { getSettingValue } from './settings.js';
 import { dbAll } from '../lib/db.js';
+import { emitToAll } from '../lib/socket.js';
 
 const WEBHOOK_SETTING_KEY = 'webhook_url';
 const WEBHOOK_SECRET_KEY = 'webhook_secret';
@@ -46,14 +47,31 @@ export async function sendWebhook(title: string, content: string) {
 export async function notifyOrderCreated(displayId: string, customerName: string) {
   const baseUrl = process.env.PROJECT_URL || '';
   const link = baseUrl ? `[查看订单](${baseUrl}/orders/${displayId.toLowerCase()})` : '';
+  
+  // 1. 外部推送
   await sendWebhook('📦 新订单创建', `**订单号**: ${displayId}\n**客户**: ${customerName}\n${link}`);
+
+  // 2. 站内多人实时广播 (WebSocket)
+  emitToAll('new-notification', {
+    title: '📦 新订单提醒',
+    message: `同事为您创建了来自 ${customerName} 的新订单 ${displayId}`,
+    link: `/orders/${displayId.toLowerCase()}`
+  });
 }
 
 export async function notifyPaymentReceived(orderNo: string, amount: number, currency: string) {
+  // 1. 外部推送
   await sendWebhook(
     '💰 收款到账',
     `**订单**: ${orderNo}\n**金额**: ${currency} ${amount}\n**状态**: 已完成`,
   );
+
+  // 2. 站内推送
+  emitToAll('new-notification', {
+    title: '💰 收款成功',
+    message: `订单 ${orderNo} 已收到款项 ${currency} ${amount}`,
+    link: `/orders/${orderNo.toLowerCase()}?section=finance`
+  });
 }
 
 export async function notifyTaskAssigned(title: string, assignee: string) {
