@@ -34,7 +34,7 @@ export default function VersionGuard() {
           if (initialStartupTime.current === null) initialStartupTime.current = health.startupTime;
           else if (initialStartupTime.current !== health.startupTime) { setUpdateType('restart'); setHasUpdate(true); return; }
         }
-        if (localCommit.current) {
+        if (localCommit.current && localCommit.current !== 'unknown') {
           const remote = await fetchRemoteVersion();
           if (remote && remote !== localCommit.current) { setUpdateType('remote'); setHasUpdate(true); }
         }
