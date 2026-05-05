@@ -72,13 +72,27 @@ async function startServer() {
   const dbHost = process.env.PG_HOST || '127.0.0.1';
   const dbName = process.env.PG_DATABASE || 'smarttrade_crm';
 
+  // Helper to get local IP
+  const getLocalIp = () => {
+    const { networkInterfaces } = await import('os');
+    const nets = networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]!) {
+        if (net.family === 'IPv4' && !net.internal) return net.address;
+      }
+    }
+    return '127.0.0.1';
+  };
+
+  const localIp = await getLocalIp();
+
   const server = httpServer.listen(PORT, HOST, () => {
     logger.info(`Mode: ${process.env.NODE_ENV === 'production' ? 'production' : 'development'}`);
     logger.info(`Database: PostgreSQL ${dbHost}/${dbName}`);
     logger.info(`Uploads: ${UPLOADS_DIR}`);
     logger.info(`Local: http://localhost:${PORT}`);
     if (HOST === '0.0.0.0') {
-      logger.info(`LAN: http://<this-machine-ip>:${PORT}`);
+      logger.info(`LAN: http://${localIp}:${PORT}`);
     } else {
       logger.info(`Host: http://${HOST}:${PORT}`);
     }
