@@ -146,7 +146,7 @@ async function rowsForTable(table: string) {
 export async function buildSystemBackupZipBuffer() {
   const createdAt = new Date().toISOString();
   const data: Record<string, Record<string, unknown>[]> = {};
-  const entries: Array<{ name: string; data: Buffer }> = [];
+  const zip = new AdmZip();
   const checksums: Record<string, string> = {};
 
   for (const table of TABLES) {
@@ -154,7 +154,7 @@ export async function buildSystemBackupZipBuffer() {
     data[table] = rows;
     const body = Buffer.from(JSON.stringify(rows, null, 2), 'utf8');
     const name = `data/${table}.json`;
-    entries.push({ name, data: body });
+    zip.addFile(name, body);
     checksums[name] = crypto.createHash('sha256').update(body).digest('hex');
   }
 
@@ -168,7 +168,7 @@ export async function buildSystemBackupZipBuffer() {
       const attachmentId = String(attachment.id || 'unknown');
       const storedName = safeZipPath(attachment.stored_name || path.basename(filePath), 'file');
       const name = `files/${attachmentId}/${storedName}`;
-      entries.push({ name, data: file });
+      zip.addFile(name, file);
       checksums[name] = crypto.createHash('sha256').update(file).digest('hex');
     } catch {
       // Missing physical files are reported in metadata but should not block database backup.
@@ -185,8 +185,9 @@ export async function buildSystemBackupZipBuffer() {
     checksums,
     note: 'This archive is intended for SmartTrade CRM restore. Store it securely because it may contain customer data and attachments.',
   };
-  entries.unshift({ name: 'metadata.json', data: Buffer.from(JSON.stringify(metadata, null, 2), 'utf8') });
-  return createZipBuffer(entries);
+  zip.addFile('metadata.json', Buffer.from(JSON.stringify(metadata, null, 2), 'utf8'));
+  
+  return zip.toBuffer();
 }
 
 export function getBackupFileName(date = new Date()) {

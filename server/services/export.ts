@@ -1,7 +1,9 @@
 import { Buffer } from 'node:buffer';
-import fs from 'node:fs/promises';
+import fs from 'fs/promises';
 import type { Response } from 'express';
+import AdmZip from 'adm-zip';
 import { dbAll, dbTableInfo } from '../lib/db.js';
+
 import { resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { ZipStreamWriter, createZipBuffer, type ZipSink } from '../lib/zip.js';
 import { buildOrderDetail } from './order-detail.js';
@@ -388,14 +390,15 @@ async function buildLegacyCsvBuffer(definition: LegacyExportDefinition) {
 }
 
 export async function buildLegacyExportZip() {
-  const entries = await Promise.all(
-    LEGACY_EXPORTS.map(async (definition) => ({
-      name: definition.fileName,
-      data: await buildLegacyCsvBuffer(definition),
-    })),
+  const zip = new AdmZip();
+  await Promise.all(
+    LEGACY_EXPORTS.map(async (definition) => {
+      const data = await buildLegacyCsvBuffer(definition);
+      zip.addFile(definition.fileName, data);
+    }),
   );
 
-  return createZipBuffer(entries);
+  return zip.toBuffer();
 }
 
 async function getCustomersForArchive() {

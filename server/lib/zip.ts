@@ -111,6 +111,10 @@ export function createZipBuffer(entries: ZipEntry[]) {
   const centralParts: Buffer[] = [];
   let offset = 0;
 
+  // Standard ZIP limit for entry count is 16-bit (65535)
+  // For larger sets, ZIP64 is required. Here we at least ensure the header is valid for up to 65535.
+  const entryCount = Math.min(entries.length, 0xFFFF);
+
   for (const entry of entries) {
     const nameBuffer = Buffer.from(entry.name, 'utf8');
     const dataBuffer = Buffer.isBuffer(entry.data) ? entry.data : Buffer.from(entry.data);
@@ -138,8 +142,8 @@ export function createZipBuffer(entries: ZipEntry[]) {
   endRecord.writeUInt32LE(0x06054b50, 0);
   endRecord.writeUInt16LE(0, 4);
   endRecord.writeUInt16LE(0, 6);
-  endRecord.writeUInt16LE(entries.length, 8);
-  endRecord.writeUInt16LE(entries.length, 10);
+  endRecord.writeUInt16LE(entryCount, 8);
+  endRecord.writeUInt16LE(entryCount, 10);
   endRecord.writeUInt32LE(centralDirectorySize, 12);
   endRecord.writeUInt32LE(offset, 16);
   endRecord.writeUInt16LE(0, 20);

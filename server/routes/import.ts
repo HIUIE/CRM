@@ -130,6 +130,10 @@ export function createImportRouter() {
         });
       } catch (error) {
         try { await fs.unlink(req.file.path); } catch {}
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('Number of disk entries')) {
+          return fail(res, 400, '解析备份包失败：该文件可能由旧版本系统生成且体积过大，请尝试在原系统升级后重新导出备份。', 'ZIP_HEADER_OVERFLOW');
+        }
         return handleRouteError(res, error, '解析压缩包失败');
       }
     }
