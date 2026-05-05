@@ -54,8 +54,30 @@ cd CRM
 npm install
 ```
 
-### 3. 配置文件
-复制 `.env.example` 为 `.env`，并修改以下关键项：
+### 3. 数据库初始化 (PostgreSQL)
+在启动应用前，您需要确保 PostgreSQL 数据库已创建且账号权限正确。
+
+#### **方案 A：使用默认账号 (快速开始)**
+如果您的本地 PostgreSQL 使用默认设置，请在 `.env` 中使用：
+*   `PG_USER=postgres`
+*   `PG_PASSWORD=您的安装密码`
+
+#### **方案 B：创建专用账号与数据库 (生产推荐)**
+请打开终端运行以下 SQL 命令（或使用 pgAdmin 可视化工具）：
+
+```sql
+-- 1. 创建专用业务账号
+CREATE ROLE bancycrm WITH LOGIN PASSWORD '您的自定义强密码';
+
+-- 2. 创建所属数据库
+CREATE DATABASE bancycrm OWNER bancycrm;
+
+-- 3. (可选) 如果连接报错，授予该账号对数据库的全部权限
+GRANT ALL PRIVILEGES ON DATABASE bancycrm TO bancycrm;
+```
+
+### 4. 配置文件
+复制 `.env.example` 为 `.env`，并根据上方创建的数据库信息进行修改：
 ```ini
 JWT_SECRET=your_32_char_random_secret
 DB_ENCRYPTION_KEY=your_32_char_encryption_key  # 必须配置，用于加密存储 API Key
