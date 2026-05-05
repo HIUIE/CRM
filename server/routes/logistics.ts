@@ -135,7 +135,7 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     }
   });
 
-  router.post('/', async (req: AuthedRequest, res) => {
+  router.post('/', requireAuth, async (req: AuthedRequest, res) => {
     const result = await readLogisticsPayload(req.body || {});
     if ('error' in result) {
       return fail(res, 400, result.error!, 'INVALID_LOGISTICS_PAYLOAD');
@@ -185,7 +185,7 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     }
   });
 
-  router.patch('/:id', async (req: AuthedRequest, res) => {
+  router.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
     const recordId = Number(req.params.id);
     if (!Number.isInteger(recordId) || recordId <= 0) {
       return fail(res, 400, '物流记录编号无效', 'INVALID_LOGISTICS_ID');
@@ -241,7 +241,7 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     }
   });
 
-  router.patch('/:id/status', async (req: AuthedRequest, res) => {
+  router.patch('/:id/status', requireAuth, async (req: AuthedRequest, res) => {
     const recordId = Number(req.params.id);
     const status = String(req.body?.status || '').trim();
 
@@ -289,7 +289,7 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     }
   });
 
-  router.post('/attachments', upload.array('files', 6), async (req, res) => {
+  router.post('/attachments', requireAuth, upload.array('files', 6), async (req, res) => {
     const files = (req.files as Express.Multer.File[]) || [];
     if (!files.length) {
       return fail(res, 400, '请至少上传一个附件', 'INVALID_ATTACHMENTS');

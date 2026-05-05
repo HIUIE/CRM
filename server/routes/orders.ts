@@ -209,7 +209,13 @@ export function createOrdersRouter() {
       });
 
       // Fire-and-forget webhook notification
-      notifyOrderCreated(displayId, String(result.payload.customerId));
+      try {
+        const { dbGet } = await import('../lib/db.js');
+        const customer = await dbGet<{ name: string }>('SELECT name FROM customers WHERE id = ?', [result.payload.customerId]);
+        notifyOrderCreated(displayId, customer?.name || String(result.payload.customerId));
+      } catch {
+        notifyOrderCreated(displayId, String(result.payload.customerId));
+      }
       res.status(201).json({ id: created.lastID, display_id: displayId });
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('ORDER_ID_CONFLICT:')) {

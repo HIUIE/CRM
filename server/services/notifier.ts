@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { getSettingValue } from './settings.js';
-import { dbAll } from '../lib/db.js';
+import { dbAll, dbRun } from '../lib/db.js';
 import { emitToAll } from '../lib/socket.js';
 
 const WEBHOOK_SETTING_KEY = 'webhook_url';
@@ -51,10 +51,21 @@ export async function notifyOrderCreated(displayId: string, customerName: string
   // 1. 外部推送
   await sendWebhook('📦 新订单创建', `**订单号**: ${displayId}\n**客户**: ${customerName}\n${link}`);
 
-  // 2. 站内多人实时广播 (WebSocket)
+  // 2. 存入数据库通知中心 (持久化给管理员)
+  try {
+    const admins = await dbAll<{ id: number }[]>(`SELECT id FROM users WHERE role = 'admin'`);
+    for (const admin of admins) {
+      await dbRun(
+        `INSERT INTO notifications (user_id, title, message, link, type) VALUES (?, ?, ?, ?, ?)`,
+        [admin.id, '📦 新订单创建', `来自 ${customerName} 的新订单 ${displayId} 已录入`, `/orders/${displayId.toLowerCase()}`, 'system']
+      );
+    }
+  } catch (e) { console.error('Failed to persist order notification', e); }
+
+  // 3. 站内实时广播 (WebSocket)
   emitToAll('new-notification', {
     title: '📦 新订单提醒',
-    message: `同事为您创建了来自 ${customerName} 的新订单 ${displayId}`,
+    message: `来自 ${customerName} 的新订单 ${displayId} 已录入`,
     link: `/orders/${displayId.toLowerCase()}`
   });
 }
@@ -66,7 +77,18 @@ export async function notifyPaymentReceived(orderNo: string, amount: number, cur
     `**订单**: ${orderNo}\n**金额**: ${currency} ${amount}\n**状态**: 已完成`,
   );
 
-  // 2. 站内推送
+  // 2. 存入数据库通知中心 (持久化给管理员)
+  try {
+    const admins = await dbAll<{ id: number }[]>(`SELECT id FROM users WHERE role = 'admin'`);
+    for (const admin of admins) {
+      await dbRun(
+        `INSERT INTO notifications (user_id, title, message, link, type) VALUES (?, ?, ?, ?, ?)`,
+        [admin.id, '💰 收款到账', `订单 ${orderNo} 已收到 ${currency} ${amount}`, `/orders/${orderNo.toLowerCase()}?section=finance`, 'finance']
+      );
+    }
+  } catch (e) { console.error('Failed to persist finance notification', e); }
+
+  // 3. 站内推送
   emitToAll('new-notification', {
     title: '💰 收款成功',
     message: `订单 ${orderNo} 已收到款项 ${currency} ${amount}`,

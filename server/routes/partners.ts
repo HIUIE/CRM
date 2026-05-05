@@ -30,7 +30,7 @@ export function createPartnersRouter() {
     }
   });
 
-  router.post('/', async (req: AuthedRequest, res) => {
+  router.post('/', requireAuth, async (req: AuthedRequest, res) => {
     const result = await readPartnerPayload(req.body || {});
     if ('error' in result) {
       return fail(res, 400, result.error!, 'INVALID_PARTNER_PAYLOAD');
@@ -63,7 +63,7 @@ export function createPartnersRouter() {
     }
   });
 
-  router.patch('/:id', async (req: AuthedRequest, res) => {
+  router.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
     const partnerId = Number(req.params.id);
     if (!Number.isInteger(partnerId) || partnerId <= 0) {
       return fail(res, 400, '伙伴编号无效', 'INVALID_PARTNER_ID');
@@ -104,7 +104,7 @@ export function createPartnersRouter() {
     }
   });
 
-  router.get('/:id', async (req: AuthedRequest, res) => {
+  router.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
     const partnerId = Number(req.params.id);
     if (!Number.isInteger(partnerId) || partnerId <= 0) {
       return fail(res, 400, '伙伴编号无效', 'INVALID_PARTNER_ID');
@@ -122,6 +122,9 @@ export function createPartnersRouter() {
         return fail(res, 404, '伙伴不存在', 'PARTNER_NOT_FOUND');
       }
 
+      // Data scope for staff users on related entity queries
+      const [relScopeSql, relScopeParams] = getDataScopeConstraint(req.user, 'o');
+
       // Orders linked via production_plans (factory)
       const productionOrders = await dbAll(`
         SELECT o.id, o.display_id, o.status, o.total_amount, o.product_summary, o.created_at,
@@ -129,18 +132,18 @@ export function createPartnersRouter() {
                pp.estimated_delivery_date
         FROM production_plans pp
         JOIN orders o ON o.id = pp.order_id
-        WHERE pp.partner_id = ?
+        WHERE pp.partner_id = ?${relScopeSql}
         ORDER BY datetime(pp.created_at) DESC
-      `, [partnerId]);
+      `, [partnerId, ...relScopeParams]);
 
       // Finance records linked to this partner
       const financeRecords = await dbAll(`
         SELECT fr.*, o.display_id AS order_display_id
         FROM finance_records fr
         LEFT JOIN orders o ON o.id = fr.order_id
-        WHERE fr.partner_id = ?
+        WHERE fr.partner_id = ?${relScopeSql}
         ORDER BY datetime(fr.created_at) DESC
-      `, [partnerId]);
+      `, [partnerId, ...relScopeParams]);
 
       // Orders linked via logistics_records (forwarder)
       let logisticsRecords: any[] = [];
@@ -149,9 +152,9 @@ export function createPartnersRouter() {
           SELECT lr.*, o.display_id AS order_display_id, o.status AS order_status
           FROM logistics_records lr
           LEFT JOIN orders o ON o.id = lr.order_id
-          WHERE lr.freight_forwarder_partner_id = ? AND lr.deleted_at IS NULL
+          WHERE lr.freight_forwarder_partner_id = ? AND lr.deleted_at IS NULL${relScopeSql}
           ORDER BY datetime(lr.created_at) DESC
-        `, [partnerId]);
+        `, [partnerId, ...relScopeParams]);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (!message.includes('freight_forwarder_partner_id')) {

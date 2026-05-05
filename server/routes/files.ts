@@ -5,13 +5,24 @@ import { getStoredNameFromRecord, isSafeStoredName, resolveAttachmentAbsolutePat
 import { fail, handleRouteError } from '../lib/http.js';
 import type { AuthedRequest } from '../lib/auth.js';
 
-function canAccessEntity(user: AuthedRequest['user'], entityType: string, entityId: string): boolean {
+async function canAccessEntity(user: AuthedRequest['user'], entityType: string, entityId: string): Promise<boolean> {
   if (!user) return false;
   if (user.role === 'admin') return true;
-  // Staff users can access all files within their organization scope — this CRM
-  // uses a single-tenant model where all authenticated users share business data.
-  // Entity-level filtering is delegated to the query layer (soft-delete checks).
-  return true;
+  // Staff users: verify they own or are assigned the linked entity
+  const scopeQueries: Record<string, string> = {
+    ORDER: `SELECT 1 FROM orders WHERE display_id = ? AND created_by = ? AND deleted_at IS NULL`,
+    CUSTOMER: `SELECT 1 FROM customers WHERE display_id = ? AND created_by = ? AND deleted_at IS NULL`,
+    FINANCE: `SELECT 1 FROM finance_records f LEFT JOIN orders o ON o.id = f.order_id WHERE f.id = ? AND (f.created_by = ? OR o.created_by = ?)`,
+    LOGISTICS: `SELECT 1 FROM logistics_records l LEFT JOIN orders o ON o.id = l.order_id WHERE l.id = ? AND (l.created_by = ? OR o.created_by = ?)`,
+    CUSTOMS: `SELECT 1 FROM customs_records c LEFT JOIN orders o ON o.id = c.order_id WHERE c.id = ? AND (c.created_by = ? OR o.created_by = ?)`,
+    PRODUCTION: `SELECT 1 FROM production_plans pp LEFT JOIN orders o ON o.id = pp.order_id WHERE pp.id = ? AND (pp.created_by = ? OR o.created_by = ?)`,
+    TASK: `SELECT 1 FROM tasks WHERE id = ? AND (created_by = ? OR assignee_id = ?)`,
+  };
+  const upperType = entityType.toUpperCase();
+  const sql = scopeQueries[upperType];
+  if (!sql) return false; // Unknown entity types — deny
+  const row = await dbGet<{ 1: number }>(sql, [entityId, user.id, user.id]);
+  return Boolean(row);
 }
 
 async function verifyEntityExists(entityType: string, entityId: string): Promise<boolean> {
@@ -70,7 +81,7 @@ export function createFilesRouter() {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
       }
 
-      if (attachment.entity_type && attachment.entity_id && !canAccessEntity(authUser, attachment.entity_type, attachment.entity_id)) {
+      if (attachment.entity_type && attachment.entity_id && !(await canAccessEntity(authUser, attachment.entity_type, attachment.entity_id))) {
         return fail(res, 403, '无权访问此附件', 'ATTACHMENT_ACCESS_DENIED');
       }
 

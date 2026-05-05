@@ -32,6 +32,9 @@ function requireProductionEnv() {
       logger.warn('未设置 JWT_SECRET，将使用临时弱密钥启动。注意：这不安全，仅限开发环境。');
       process.env.JWT_SECRET = 'temporary-dev-only-secret-key-12345';
     }
+    if (!process.env.DB_ENCRYPTION_KEY) {
+      logger.warn('未设置 DB_ENCRYPTION_KEY，加密将使用默认密钥。注意：敏感配置（AI API Key, Webhook Secret）将使用可预测的密钥存储，仅限开发环境。');
+    }
     return;
   }
 
@@ -39,9 +42,14 @@ function requireProductionEnv() {
   if (!jwtSecret || WEAK_JWT_SECRETS.has(jwtSecret) || jwtSecret.length < 16) {
     throw new Error(`生产环境安全性校验失败：JWT_SECRET 缺失或过短 (当前长度: ${jwtSecret.length})。请在 .env 中设置至少 16 位的随机字符串。`);
   }
-  
+
   if (process.env.COOKIE_SECURE !== 'true' && process.env.ALLOW_INSECURE_COOKIES !== 'true') {
     throw new Error('生产环境安全性校验失败：必须启用 COOKIE_SECURE=true 保护会话。');
+  }
+
+  const encryptionKey = (process.env.DB_ENCRYPTION_KEY || '').trim();
+  if (!encryptionKey) {
+    throw new Error('生产环境安全性校验失败：DB_ENCRYPTION_KEY 未设置。敏感配置（AI API Key, Webhook Secret）将以不安全的方式存储。请在 .env 中设置 32 位随机加密密钥。');
   }
 }
 

@@ -10,6 +10,7 @@ import { dbGet, dbRun, withTransaction, type TransactionExecutor } from '../lib/
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
+import { validateFileMagicBytes } from '../lib/files.js';
 import { UPLOADS_DIR } from '../paths.js';
 import { isSystemBackupZip, restoreSystemBackupZip } from '../services/backup.js';
 
@@ -47,9 +48,27 @@ const upload = multer({
 });
 
 function handleImportUpload(req: Request, res: Response, next: NextFunction) {
-  upload.single('file')(req, res, (error) => {
-    if (!error) {
+  upload.single('file')(req, res, async (error) => {
+    if (!error && req.file) {
+      // Validate magic bytes for known binary formats
+      const ext = path.extname(req.file.originalname || '').toLowerCase();
+      try {
+        const isValid = await validateFileMagicBytes(req.file.path, req.file.mimetype);
+        if (!isValid) {
+          try { await fs.unlink(req.file.path); } catch {}
+          fail(res, 400, '文件内容与扩展名不匹配，请检查文件是否损坏', 'INVALID_MAGIC_BYTES');
+          return;
+        }
+      } catch {
+        try { await fs.unlink(req.file.path); } catch {}
+        fail(res, 400, '文件校验失败', 'VALIDATION_ERROR');
+        return;
+      }
       next();
+      return;
+    }
+    if (!error && !req.file) {
+      fail(res, 400, '请选择要上传的文件');
       return;
     }
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {

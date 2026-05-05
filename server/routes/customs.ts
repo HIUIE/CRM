@@ -198,7 +198,7 @@ export function createCustomsRouter() {
     }
   });
 
-  router.post('/customs/:id/attachments', upload.array('files', 6), async (req, res) => {
+  router.post('/customs/:id/attachments', requireAuth, upload.array('files', 6), async (req, res) => {
     const customsId = Number(req.params.id);
     if (!Number.isInteger(customsId) || customsId <= 0) {
       return fail(res, 400, '报关记录编号无效', 'INVALID_CUSTOMS_ID');
