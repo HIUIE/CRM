@@ -1,13 +1,29 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Try both local and parent directory (for cases where it's run from within server/)
-dotenv.config({ path: path.join(__dirname, '.env') });
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
 
-if (!process.env.JWT_SECRET) {
-  // Try one more: current working directory
+// 递归查找 .env 文件的位置 (最多向上查找 3 层)
+function findAndLoadEnv() {
+  let currentDir = projectRoot;
+  for (let i = 0; i < 3; i++) {
+    const envPath = path.join(currentDir, '.env');
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+      // 在生产环境中不打印密钥，仅打印路径
+      console.log(`[env] 成功从绝对路径加载配置: ${envPath}`);
+      return true;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  return false;
+}
+
+if (!findAndLoadEnv()) {
+  // 最后回退到默认加载
   dotenv.config();
 }
