@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './server/env.js';
 import { createApp } from './server/app.js';
 import { bootstrapInitialAdmin } from './server/bootstrap.js';
 import { initPgTables } from './server/db-pg.js';

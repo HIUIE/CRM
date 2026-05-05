@@ -17,9 +17,12 @@ export type AuthedRequest = Request & {
   user?: AuthUser;
 };
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('FATAL: JWT_SECRET environment variable is required. Set a strong random string in production.');
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: JWT_SECRET environment variable is required. Set a strong random string in production.');
+  }
+  return secret;
 }
 
 // CSRF Protection: double-submit cookie pattern
@@ -99,13 +102,13 @@ export function clearAuthCookie(res: Response) {
 export function signAuthToken(user: AuthUser, tokenVersion?: number) {
   return jwt.sign(
     { ...user, tokenVersion: tokenVersion ?? 1 },
-    JWT_SECRET!,
+    getJwtSecret(),
     { expiresIn: '24h' },
   );
 }
 
 export function verifyAuthToken(token: string) {
-  return jwt.verify(token, JWT_SECRET!) as unknown as AuthUser;
+  return jwt.verify(token, getJwtSecret()) as unknown as AuthUser;
 }
 
 export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
