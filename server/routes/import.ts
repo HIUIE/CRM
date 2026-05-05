@@ -386,6 +386,15 @@ async function importCustomer(tx: TransactionExecutor, data: ImportRowData, user
   const country = String(data.country || '').trim();
   if (!name || !country) throw new Error('缺少必填项：名称或国家');
 
+  // P9: Similarity check during import
+  const { calculateSimilarity } = await import('../lib/values.js');
+  const existingCustomers = await tx.all<{ name: string }[]>(`SELECT name FROM customers WHERE deleted_at IS NULL`);
+  for (const existing of existingCustomers) {
+    if (calculateSimilarity(name, existing.name) > 0.9) {
+      throw new Error(`发现高度相似的已有客户: "${existing.name}"`);
+    }
+  }
+
   const displayId = `cust-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 8)}`;
   
   await tx.run(

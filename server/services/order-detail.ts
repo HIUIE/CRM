@@ -38,7 +38,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
   const items = await dbAll<Record<string, unknown>[]>(`
     SELECT *
     FROM order_items
-    WHERE order_id = ?
+    WHERE order_id = ? AND deleted_at IS NULL
     ORDER BY id ASC
   `, [orderId]);
 
@@ -120,7 +120,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
         u.name AS created_by_name
       FROM customs_records c
       LEFT JOIN users u ON u.id = c.created_by
-      WHERE c.order_id = ?
+      WHERE c.order_id = ? AND c.deleted_at IS NULL
       LIMIT 1
     `,
     [orderId],

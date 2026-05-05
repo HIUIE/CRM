@@ -1,6 +1,48 @@
+import crypto from 'crypto';
 import type { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { PROJECT_ROOT } from '../paths.js';
+
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12;
+const TAG_LENGTH = 16;
+const DEFAULT_KEY = 'smart-trade-erp-default-secret-key-32'; // 必须是 32 字节
+
+function getEncryptionKey() {
+  const key = process.env.DB_ENCRYPTION_KEY || DEFAULT_KEY;
+  return Buffer.from(key.padEnd(32, '0').slice(0, 32));
+}
+
+/**
+ * 加密字符串
+ */
+export function encrypt(text: string): string {
+  if (!text) return '';
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, getEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, encrypted]).toString('base64');
+}
+
+/**
+ * 解密字符串
+ */
+export function decrypt(cipherText: string): string {
+  if (!cipherText) return '';
+  try {
+    const data = Buffer.from(cipherText, 'base64');
+    const iv = data.subarray(0, IV_LENGTH);
+    const tag = data.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
+    const encrypted = data.subarray(IV_LENGTH + TAG_LENGTH);
+    const decipher = crypto.createDecipheriv(ALGORITHM, getEncryptionKey(), iv);
+    decipher.setAuthTag(tag);
+    return decipher.update(encrypted) + decipher.final('utf8');
+  } catch (error) {
+    // 如果解密失败，可能是旧的明文数据，原样返回（兼容性考虑）
+    return cipherText;
+  }
+}
 
 const BLOCKED_SUFFIXES = ['.env', '.pem', '.key'];
 const BLOCKED_SEGMENTS = new Set(['.git']);

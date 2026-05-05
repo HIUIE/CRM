@@ -1,5 +1,6 @@
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import type { UserRole } from '../domain.js';
+import { getDataScopeConstraint } from '../lib/auth.js';
 
 interface ToolResult {
   success: boolean;
@@ -32,8 +33,9 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
     params: 'customer_id (客户ID), content (跟进内容), channel (渠道,如电话/邮件/会面, 可选)',
     mutating: true,
     handler: async (p, context) => {
-      const customer = await dbGet<{ id: number; display_id: string; name: string }>('SELECT id, display_id, name FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)', [p.customer_id, p.customer_id]);
-      if (!customer) return { success: false, message: `未找到客户"${p.customer_id}"` };
+      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'c');
+      const customer = await dbGet<{ id: number; display_id: string; name: string }>(`SELECT id, display_id, name FROM customers c WHERE deleted_at IS NULL ${scopeSql} AND (id = ? OR display_id = ?)`, [...scopeParams, p.customer_id, p.customer_id]);
+      if (!customer) return { success: false, message: `未找到客户"${p.customer_id}"或无权访问` };
       await dbRun(
         `INSERT INTO customer_followups (customer_id, content, channel, created_by) VALUES (?, ?, ?, ?)`,
         [customer.id, p.content, p.channel || 'other', context.userId],
@@ -47,11 +49,12 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
     params: 'order_id (订单ID), content (进度内容)',
     mutating: true,
     handler: async (p, context) => {
+      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'o');
       const plan = await dbGet<{ id: number }>(
-        `SELECT pp.id FROM production_plans pp INNER JOIN orders o ON o.id = pp.order_id WHERE pp.order_id = ? AND o.deleted_at IS NULL`,
-        [Number(p.order_id)],
+        `SELECT pp.id FROM production_plans pp INNER JOIN orders o ON o.id = pp.order_id WHERE o.deleted_at IS NULL ${scopeSql} AND o.id = ?`,
+        [...scopeParams, Number(p.order_id)],
       );
-      if (!plan) return { success: false, message: `订单 ${p.order_id} 暂无生产安排，请先创建生产计划` };
+      if (!plan) return { success: false, message: `订单 ${p.order_id} 暂无生产安排或无权访问` };
       await dbRun(
         `INSERT INTO production_logs (plan_id, content, created_by) VALUES (?, ?, ?)`,
         [plan.id, p.content, context.userId],
@@ -63,13 +66,14 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
   get_order_status: {
     description: '查询指定订单的完整状态摘要',
     params: 'order_no (订单显示编号, 如 ORD-2026-...)',
-    handler: async (p) => {
+    handler: async (p, context) => {
+      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'o');
       const order = await dbGet(`
         SELECT o.*, c.name AS customer_name, c.country
         FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
-        WHERE o.display_id = ? AND o.deleted_at IS NULL
-      `, [p.order_no]);
-      if (!order) return { success: false, message: `未找到订单 ${p.order_no}` };
+        WHERE o.display_id = ? AND o.deleted_at IS NULL ${scopeSql}
+      `, [p.order_no, ...scopeParams]);
+      if (!order) return { success: false, message: `未找到订单 ${p.order_no} 或无权访问` };
       const finance = await dbAll('SELECT type, SUM(amount) AS total FROM finance_records WHERE order_id = ? AND deleted_at IS NULL GROUP BY type', [order.id]);
       const logistics = await dbAll('SELECT COUNT(*) AS count, status FROM logistics_records WHERE order_id = ? AND deleted_at IS NULL GROUP BY status', [order.id]);
       const production = await dbGet('SELECT production_status, inspection_status FROM production_plans WHERE order_id = ?', [order.id]);
@@ -84,8 +88,14 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
   list_tasks: {
     description: '查看当前所有待办任务',
     params: '无 (无需参数)',
-    handler: async () => {
-      const tasks = await dbAll('SELECT t.*, u.name AS assignee_name FROM tasks t LEFT JOIN users u ON u.id = t.assignee_id WHERE t.status != \'done\' ORDER BY datetime(t.created_at) DESC LIMIT 10');
+    handler: async (p, context) => {
+      let whereSql = 'WHERE t.status != \'done\'';
+      const params = [];
+      if (context.role !== 'admin') {
+        whereSql += ' AND (t.assignee_id = ? OR t.created_by = ?)';
+        params.push(context.userId, context.userId);
+      }
+      const tasks = await dbAll(`SELECT t.*, u.name AS assignee_name FROM tasks t LEFT JOIN users u ON u.id = t.assignee_id ${whereSql} ORDER BY datetime(t.created_at) DESC LIMIT 10`, params);
       if (!tasks.length) return { success: true, message: '当前没有待办任务。' };
       const lines = tasks.map((t: any) => `#${t.id} ${t.title}（负责人：${t.assignee_name}，优先级：${t.priority}，截止：${t.due_date}）`);
       return { success: true, message: `当前有 ${tasks.length} 个待办任务：\n${lines.join('\n')}` };
@@ -95,18 +105,19 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
   list_overdue_payments: {
     description: '查看所有逾期未收款项',
     params: '无 (无需参数)',
-    handler: async () => {
+    handler: async (p, context) => {
+      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'o');
       const items = await dbAll(`
         SELECT *
         FROM (
           SELECT o.display_id, c.name AS customer_name, o.total_amount, o.created_at,
             COALESCE((SELECT SUM(amount) FROM finance_records WHERE order_id = o.id AND type = 'receipt' AND status = 'completed' AND deleted_at IS NULL), 0) AS paid
           FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
-          WHERE o.status != 'completed' AND o.deleted_at IS NULL
+          WHERE o.status != 'completed' AND o.deleted_at IS NULL ${scopeSql}
         ) overdue_orders
         WHERE paid < total_amount
         ORDER BY created_at ASC
-      `);
+      `, scopeParams);
       if (!items.length) return { success: true, message: '没有逾期未收款。' };
       const lines = items.map((i: any) => `${i.display_id} ${i.customer_name} 应收 $${Number(i.total_amount).toLocaleString()} 已收 $${Number(i.paid).toLocaleString()}`);
       return { success: true, message: `以下 ${items.length} 笔订单尚未结清：\n${lines.join('\n')}` };
@@ -116,11 +127,12 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
   list_customers: {
     description: '查看客户列表',
     params: 'keyword (关键词搜索, 可选)',
-    handler: async (p) => {
+    handler: async (p, context) => {
+      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'c');
       const sql = p.keyword
-        ? `SELECT id, name, country FROM customers WHERE deleted_at IS NULL AND (name LIKE ? OR country LIKE ?) ORDER BY created_at DESC LIMIT 10`
-        : `SELECT id, name, country FROM customers WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 10`;
-      const params = p.keyword ? [`%${p.keyword}%`, `%${p.keyword}%`] : [];
+        ? `SELECT id, name, country FROM customers c WHERE deleted_at IS NULL ${scopeSql} AND (name LIKE ? OR country LIKE ?) ORDER BY created_at DESC LIMIT 10`
+        : `SELECT id, name, country FROM customers c WHERE deleted_at IS NULL ${scopeSql} ORDER BY created_at DESC LIMIT 10`;
+      const params = p.keyword ? [...scopeParams, `%${p.keyword}%`, `%${p.keyword}%`] : scopeParams;
       const customers = await dbAll(sql, params);
       if (!customers.length) return { success: true, message: '未找到匹配的客户。' };
       const lines = customers.map((c: any) => `#${c.id} ${c.name}（${c.country || '未知国家'}）`);

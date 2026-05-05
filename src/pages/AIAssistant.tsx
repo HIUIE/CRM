@@ -68,9 +68,12 @@ export default function AIAssistantPage() {
     setLoading(true);
 
     try {
+      // P12: Send history for context, but limit to last 10 messages
+      const history = messages.slice(-10);
+
       const response = await apiFetch<AiChatResponse>('/api/ai/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ message: input, history })
       });
       let msg = response.content;
       if (response.action) {

@@ -60,7 +60,7 @@ const upload = multer({
 
 export function createLogisticsRouter() {
   const router = Router();
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req: AuthedRequest, res) => {
   const q = readString(req.query.q);
   const status = readString(req.query.status);
   const startDate = readString(req.query.start_date);
@@ -68,6 +68,11 @@ router.get('/', async (req, res) => {
 
   let whereSql = 'WHERE l.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)';
   const params: (string | number | null | undefined)[] = [];
+
+  if (req.user?.role !== 'admin') {
+    whereSql += ' AND (l.created_by = ? OR o.created_by = ?)';
+    params.push(req.user?.id, req.user?.id);
+  }
 
   if (q) {
     whereSql += ` AND (o.display_id LIKE ? OR l.carrier LIKE ? OR l.tracking_no LIKE ? OR c.name LIKE ?)`;
@@ -118,6 +123,8 @@ router.get('/', async (req, res) => {
           transportMode: record.transport_mode,
           vesselVoyage: record.vessel_voyage,
           billNo: record.bill_no,
+          trackingHistory: record.tracking_history || [],
+          lastTrackedAt: record.last_tracked_at,
           createdByName: record.created_by_name || null,
           attachments: attachments.get(Number(record.id)) || [],
           attachmentCount: (attachments.get(Number(record.id)) || []).length,
@@ -257,6 +264,28 @@ router.get('/', async (req, res) => {
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新物流状态失败');
+    }
+  });
+
+  router.post('/:id/track', requireAuth, async (req: AuthedRequest, res) => {
+    const recordId = Number(req.params.id);
+    try {
+      const record = await dbGet<{ tracking_no: string; carrier: string }>(`SELECT tracking_no, carrier FROM logistics_records WHERE id = ?`, [recordId]);
+      if (!record || !record.tracking_no) return fail(res, 400, '暂无运单号，无法追踪');
+
+      // P14: Simulate track result (Mock 17track / Aftership integration)
+      const mockHistory = [
+        { time: new Date().toISOString(), status: '已起运', location: '起运港' },
+        { time: new Date(Date.now() - 86400000).toISOString(), status: '集货中', location: '前置仓' }
+      ];
+
+      await dbRun(
+        `UPDATE logistics_records SET tracking_history = ?, last_tracked_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [JSON.stringify(mockHistory), recordId]
+      );
+      res.json({ success: true, history: mockHistory });
+    } catch (error) {
+      return handleRouteError(res, error, '追踪轨迹失败');
     }
   });
 

@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { dbAll, dbGet, SQL } from '../lib/db.js';
 import { handleRouteError } from '../lib/http.js';
+import { getDataScopeConstraint, type AuthedRequest } from '../lib/auth.js';
 
 export function createDashboardRouter() {
   const router = Router();
 
-  router.get('/', async (_req, res) => {
+  router.get('/', async (req: AuthedRequest, res) => {
     try {
+      const [orderScopeSql, orderScopeParams] = getDataScopeConstraint(req.user, 'orders');
       const overview = await dbGet<{
         totalOrders: number;
         activeOrders: number;
@@ -15,9 +17,10 @@ export function createDashboardRouter() {
           COUNT(*) AS totalOrders,
           SUM(CASE WHEN status != 'completed' THEN 1 ELSE 0 END) AS activeOrders
         FROM orders
-        WHERE deleted_at IS NULL
-      `);
+        WHERE deleted_at IS NULL ${orderScopeSql}
+      `, orderScopeParams);
 
+      const [financeScopeSql, financeScopeParams] = getDataScopeConstraint(req.user, 'f');
       const financeStats = await dbGet<{
         receiptUsd: number;
         pendingReceiptUsd: number;
@@ -30,7 +33,8 @@ export function createDashboardRouter() {
         FROM finance_records f
         LEFT JOIN orders o ON o.id = f.order_id
         WHERE f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)
-      `);
+        ${req.user?.role !== 'admin' ? ' AND (f.created_by = ? OR o.created_by = ?)' : ''}
+      `, req.user?.role !== 'admin' ? [req.user?.id, req.user?.id] : []);
 
       const activeLogistics = await dbGet<{ count: number }>(
         `
@@ -38,7 +42,9 @@ export function createDashboardRouter() {
           FROM logistics_records l
           JOIN orders o ON o.id = l.order_id
           WHERE l.status != 'arrived' AND l.deleted_at IS NULL AND o.deleted_at IS NULL
+          ${req.user?.role !== 'admin' ? ' AND (l.created_by = ? OR o.created_by = ?)' : ''}
         `,
+        req.user?.role !== 'admin' ? [req.user?.id, req.user?.id] : []
       );
 
       const overduePayments = await dbAll<{
@@ -57,9 +63,10 @@ export function createDashboardRouter() {
         JOIN orders o ON f.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
         WHERE f.type = 'receipt' AND f.status = 'pending' AND f.deleted_at IS NULL AND o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND (f.created_by = ? OR o.created_by = ?)' : ''}
         ORDER BY f.created_at ASC
         LIMIT 3
-      `);
+      `, req.user?.role !== 'admin' ? [req.user?.id, req.user?.id] : []);
 
       const missingCustoms = await dbAll<{
         id: number;
@@ -70,10 +77,11 @@ export function createDashboardRouter() {
           o.id, o.display_id as order_display_id, c.name as customer_name
         FROM orders o
         LEFT JOIN customers c ON o.customer_id = c.id
-        LEFT JOIN customs_records cr ON cr.order_id = o.id
+        LEFT JOIN customs_records cr ON cr.order_id = o.id AND cr.deleted_at IS NULL
         WHERE o.status IN ('customs', 'shipping') AND cr.id IS NULL AND o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND o.created_by = ?' : ''}
         LIMIT 2
-      `);
+      `, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
       const missingLogistics = await dbAll<{
         id: number;
@@ -86,8 +94,9 @@ export function createDashboardRouter() {
         LEFT JOIN customers c ON o.customer_id = c.id
         LEFT JOIN logistics_records lr ON lr.order_id = o.id
         WHERE o.status IN ('shipping') AND lr.id IS NULL AND o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND o.created_by = ?' : ''}
         LIMIT 2
-      `);
+      `, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
       const todos = [
         ...overduePayments.map(p => ({
@@ -140,6 +149,7 @@ export function createDashboardRouter() {
           CASE WHEN f.type = 'receipt' THEN 'text-emerald-500' ELSE 'text-red-500' END as valueColor
         FROM finance_records f JOIN orders o ON f.order_id = o.id LEFT JOIN customers c ON o.customer_id = c.id
         WHERE f.status = 'completed' AND f.deleted_at IS NULL AND o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND (f.created_by = ? OR o.created_by = ?)' : ''}
         UNION ALL
         SELECT 'logistics' as type, l.id, o.display_id, c.name as customer_name,
           '物流更新' as title, '货物已发出 · ' || l.carrier as desc, l.created_at,
@@ -147,12 +157,14 @@ export function createDashboardRouter() {
           'text-slate-500' as valueColor
         FROM logistics_records l JOIN orders o ON l.order_id = o.id LEFT JOIN customers c ON o.customer_id = c.id
         WHERE l.deleted_at IS NULL AND o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND (l.created_by = ? OR o.created_by = ?)' : ''}
         UNION ALL
         SELECT 'customs' as type, cr.id, o.display_id, c.name as customer_name,
           '报关完成' as title, '报关单号 ' || cr.declaration_no as desc, cr.created_at,
           '' as value, '' as valueColor
         FROM customs_records cr JOIN orders o ON cr.order_id = o.id LEFT JOIN customers c ON o.customer_id = c.id
         WHERE o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND o.created_by = ?' : ''}
         UNION ALL
         SELECT 'order' as type, o.id, o.display_id, c.name as customer_name,
           '新建订单' as title, o.product_summary as desc, o.created_at,
@@ -160,9 +172,10 @@ export function createDashboardRouter() {
           'text-primary-navy dark:text-white' as valueColor
         FROM orders o LEFT JOIN customers c ON o.customer_id = c.id
         WHERE o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND o.created_by = ?' : ''}
         ORDER BY 7 DESC
         LIMIT 8
-      `);
+      `, req.user?.role !== 'admin' ? [req.user?.id, req.user?.id, req.user?.id, req.user?.id, req.user?.id, req.user?.id] : []);
 
       const activities = activitiesRows.map(a => ({
         ...a,
@@ -170,8 +183,10 @@ export function createDashboardRouter() {
       }));
 
       const statusRows = await dbAll<{ status: string, count: number }[]>(`
-        SELECT status, COUNT(*) as count FROM orders WHERE deleted_at IS NULL GROUP BY status
-      `);
+        SELECT status, COUNT(*) as count FROM orders WHERE deleted_at IS NULL 
+        ${req.user?.role !== 'admin' ? ' AND created_by = ?' : ''}
+        GROUP BY status
+      `, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
       const totalOrders = overview?.totalOrders || 0;
       
@@ -207,8 +222,9 @@ export function createDashboardRouter() {
           COALESCE(SUM(total_amount), 0) AS revenue
         FROM orders
         WHERE created_at >= ${SQL.monthsAgo(6)} AND deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND created_by = ?' : ''}
         GROUP BY month ORDER BY month ASC
-      `);
+      `, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
       // Monthly Profit Trends
       const profitTrends = await dbAll<{ month: string; revenue: number; cost: number; profit: number }[]>(`
@@ -223,8 +239,9 @@ export function createDashboardRouter() {
         FROM finance_records f
         LEFT JOIN orders o ON o.id = f.order_id
         WHERE f.created_at >= ${SQL.monthsAgo(6)} AND f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)
+        ${req.user?.role !== 'admin' ? ' AND (f.created_by = ? OR o.created_by = ?)' : ''}
         GROUP BY month ORDER BY month ASC
-      `);
+      `, req.user?.role !== 'admin' ? [req.user?.id, req.user?.id] : []);
 
       // Add profit to profitTrends
       const trendsWithProfit = profitTrends.map(t => ({
@@ -253,7 +270,7 @@ export function createDashboardRouter() {
       };
 
       // Total customer count
-      const customerCount = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL`);
+      const customerCount = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL ${req.user?.role !== 'admin' ? ' AND created_by = ?' : ''}`, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
       // Risk detection: low margin (< 8%) and freight inversion
       const profitRows = await dbAll<{ order_id: number; display_id: string; customer_name: string; data: any }[]>(`
@@ -262,9 +279,10 @@ export function createDashboardRouter() {
         JOIN orders o ON o.id = op.order_id
         JOIN customers c ON c.id = o.customer_id
         WHERE o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND o.created_by = ?' : ''}
         ORDER BY op.updated_at DESC
         LIMIT 20
-      `);
+      `, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
       const risks: { orderId: number; displayId: string; customerName: string; riskType: 'low_margin' | 'freight_inversion'; value: number; threshold: number }[] = [];
       for (const row of profitRows) {

@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
-import type { AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest, checkOrderAccess } from '../lib/auth.js';
 import { buildAttachmentUrl } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
@@ -75,13 +75,17 @@ function mapCustomsRecord(record: any, attachments: any[] = []) {
 export function createCustomsRouter() {
   const router = Router();
 
-  router.get('/orders/:id/customs', async (req, res) => {
+  router.get('/orders/:id/customs', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     if (!Number.isInteger(orderId) || orderId <= 0) {
       return fail(res, 400, '订单编号无效', 'INVALID_ORDER_ID');
     }
 
     try {
+      if (!(await checkOrderAccess(req, orderId))) {
+        return fail(res, 404, '订单不存在或无权访问');
+      }
+
       const record = await dbGet<Record<string, unknown>>(
         `
           SELECT
@@ -90,7 +94,7 @@ export function createCustomsRouter() {
           FROM customs_records c
           JOIN orders o ON o.id = c.order_id
           LEFT JOIN users u ON u.id = c.created_by
-          WHERE c.order_id = ? AND o.deleted_at IS NULL
+          WHERE c.order_id = ? AND c.deleted_at IS NULL AND o.deleted_at IS NULL
           LIMIT 1
         `,
         [orderId],
@@ -106,8 +110,12 @@ export function createCustomsRouter() {
     }
   });
 
-  router.post('/orders/:id/customs', async (req: AuthedRequest, res) => {
+  router.post('/orders/:id/customs', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!(await checkOrderAccess(req, orderId))) {
+      return fail(res, 404, '订单不存在或无权访问');
+    }
+
     const result = await readCustomsPayload({ ...(req.body || {}), orderId });
     if ('error' in result) {
       return fail(res, 400, result.error!, 'INVALID_CUSTOMS_PAYLOAD');
@@ -144,23 +152,27 @@ export function createCustomsRouter() {
     }
   });
 
-  router.patch('/customs/:id', async (req: AuthedRequest, res) => {
+  router.patch('/customs/:id', requireAuth, async (req: AuthedRequest, res) => {
     const customsId = Number(req.params.id);
     if (!Number.isInteger(customsId) || customsId <= 0) {
       return fail(res, 400, '报关记录编号无效', 'INVALID_CUSTOMS_ID');
     }
 
-    const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM customs_records WHERE id = ?`, [customsId]);
-    if (!existing) {
-      return fail(res, 404, '报关记录不存在', 'CUSTOMS_NOT_FOUND');
-    }
-
-    const result = await readCustomsPayload({ ...(req.body || {}), orderId: existing.order_id });
-    if ('error' in result) {
-      return fail(res, 400, result.error!, 'INVALID_CUSTOMS_PAYLOAD');
-    }
-
     try {
+      const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM customs_records WHERE id = ?`, [customsId]);
+      if (!existing) {
+        return fail(res, 404, '报关记录不存在', 'CUSTOMS_NOT_FOUND');
+      }
+
+      if (!(await checkOrderAccess(req, existing.order_id))) {
+        return fail(res, 404, '相关订单不存在或无权访问');
+      }
+
+      const result = await readCustomsPayload({ ...(req.body || {}), orderId: existing.order_id });
+      if ('error' in result) {
+        return fail(res, 400, result.error!, 'INVALID_CUSTOMS_PAYLOAD');
+      }
+
       await dbRun(
         `
           UPDATE customs_records

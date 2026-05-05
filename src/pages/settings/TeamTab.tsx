@@ -16,6 +16,17 @@ export type ManagedUser = {
 
 const EMPTY_USER_FORM = { username: '', name: '', password: '', role: 'staff' as UserRole };
 
+function getPasswordStrength(password: string) {
+  if (!password) return 0;
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
+  return score;
+}
+
 export default function TeamTab() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -192,7 +203,17 @@ export default function TeamTab() {
               {editingSelf && <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">当前登录管理员不能在此处降低自己的权限，避免误锁定账号。</p>}
             </Field>
             {!editingUser && (
-              <Field label="初始访问密码"><input type="password" value={userForm.password} onChange={(e) => setUserForm(c => ({ ...c, password: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-surface p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" /></Field>
+              <Field label="初始访问密码">
+                <input type="password" value={userForm.password} onChange={(e) => setUserForm(c => ({ ...c, password: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-surface p-3.5 text-sm text-primary-navy outline-none transition-colors focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:focus:border-tertiary-sage" />
+                {userForm.password && (
+                  <div className="mt-2 flex gap-1">
+                    {[1, 2, 3, 4, 5].map((level) => (
+                      <div key={level} className={`h-1 flex-1 rounded-full transition-colors ${getPasswordStrength(userForm.password) >= level ? (getPasswordStrength(userForm.password) <= 2 ? 'bg-red-400' : getPasswordStrength(userForm.password) <= 4 ? 'bg-yellow-400' : 'bg-emerald-400') : 'bg-slate-200 dark:bg-navy-800'}`} />
+                    ))}
+                  </div>
+                )}
+                <p className="mt-1 text-[10px] font-bold text-slate-400">需至少 8 位，包含大小写、数字及符号</p>
+              </Field>
             )}
             <div className="flex gap-3 pt-2">
               <button onClick={saveUser} className="btn-primary shadow-md">{editingUser ? '保存修改' : '立即创建'}</button>
@@ -241,8 +262,15 @@ export default function TeamTab() {
                 
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">新密码</label>
-                  <input type="password" value={resetPassword} onChange={(e) => { setResetPassword(e.target.value); setResetError(''); }} placeholder="请输入新密码（至少 6 位）" className={`w-full rounded-lg border ${resetError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-surface p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
-                  {resetError && <p className="mt-1.5 text-xs text-red-500">{resetError}</p>}
+                  <input type="password" value={resetPassword} onChange={(e) => { setResetPassword(e.target.value); setResetError(''); }} placeholder="请输入新密码（至少 8 位）" className={`w-full rounded-lg border ${resetError ? 'border-red-300 focus:border-red-500 dark:border-red-900/50' : 'border-slate-200 focus:border-primary-navy dark:border-navy-800 dark:focus:border-tertiary-sage'} bg-surface p-3 text-sm text-primary-navy outline-none transition-colors dark:bg-navy-950 dark:text-white`} />
+                  {resetPassword && (
+                    <div className="mt-2 flex gap-1">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <div key={level} className={`h-1 flex-1 rounded-full transition-colors ${getPasswordStrength(resetPassword) >= level ? (getPasswordStrength(resetPassword) <= 2 ? 'bg-red-400' : getPasswordStrength(resetPassword) <= 4 ? 'bg-yellow-400' : 'bg-emerald-400') : 'bg-slate-200 dark:bg-navy-800'}`} />
+                      ))}
+                    </div>
+                  )}
+                  {resetError ? <p className="mt-1.5 text-xs text-red-500">{resetError}</p> : <p className="mt-1 text-[10px] font-bold text-slate-400">需包含大小写字母、数字及符号</p>}
                 </div>
                 
                 <div>

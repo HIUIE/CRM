@@ -5,7 +5,7 @@ import { USER_ROLES } from '../domain.js';
 import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { logAction } from '../lib/audit.js';
-import { isOneOf, readString } from '../lib/values.js';
+import { isOneOf, readString, validatePasswordStrength } from '../lib/values.js';
 
 export function createUsersRouter() {
   const router = Router();
@@ -40,8 +40,9 @@ export function createUsersRouter() {
     if (!/^[a-zA-Z0-9._-]{3,32}$/.test(username)) {
       return fail(res, 400, '用户名仅支持 3-32 位字母、数字、点、下划线或中横线', 'INVALID_USERNAME');
     }
-    if (password.length < 8) {
-      return fail(res, 400, '密码至少需要 6 位', 'INVALID_PASSWORD');
+    const strength = validatePasswordStrength(password);
+    if (!strength.isValid) {
+      return fail(res, 400, strength.message, 'INVALID_PASSWORD');
     }
     if (!isOneOf(role, USER_ROLES)) {
       return fail(res, 400, '角色不正确', 'INVALID_ROLE');
@@ -133,8 +134,9 @@ export function createUsersRouter() {
     if (!Number.isInteger(userId) || userId <= 0) {
       return fail(res, 400, '用户编号无效', 'INVALID_USER_ID');
     }
-    if (password.length < 8) {
-      return fail(res, 400, '密码至少需要 6 位', 'INVALID_PASSWORD');
+    const strength = validatePasswordStrength(password);
+    if (!strength.isValid) {
+      return fail(res, 400, strength.message, 'INVALID_PASSWORD');
     }
     // Require admin to confirm their own password as CSRF/second-factor check
     if (!confirmPassword) {

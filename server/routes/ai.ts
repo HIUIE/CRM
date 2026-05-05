@@ -5,7 +5,7 @@ import { buildOrderDetail } from '../services/order-detail.js';
 import { getSettingValue } from '../services/settings.js';
 import { readString } from '../lib/values.js';
 import { fail, handleRouteError } from '../lib/http.js';
-import type { AuthedRequest } from '../lib/auth.js';
+import { requireAuth, type AuthedRequest } from '../lib/auth.js';
 
 async function resolveModel() {
   const selectedModel = (await getSettingValue('current_ai_model', 'deepseek-v4-flash')).trim();
@@ -74,8 +74,9 @@ export function createAiRouter() {
   const router = Router();
 
   // 1. 聊天对话路由 (由 AI 向导页面使用) — 支持工具调用
-  router.post('/chat', async (req: AuthedRequest, res) => {
+  router.post('/chat', requireAuth, async (req: AuthedRequest, res) => {
     const message = readString(req.body?.message);
+    const history = (req.body?.history || []) as { role: 'user' | 'assistant'; content: string }[];
     const pendingAction = readPendingAction(req.body?.pendingAction);
     const confirmAction = req.body?.confirmAction === true;
     if (!message && !pendingAction) return fail(res, 400, '请输入对话内容', 'INVALID_AI_INPUT');
@@ -95,11 +96,15 @@ export function createAiRouter() {
 
       const { selectedModel, provider, apiKey, baseUrl } = await resolveModel();
       const safeMessage = sanitizeOrderData(message);
+      
+      // P12: Backend context management - limit history to last 10 messages
+      const limitedHistory = history.slice(-10);
+      
       const prompt = `${AI_TOOLS_SYSTEM_PROMPT}\n\n用户消息：\n"""\n${safeMessage}\n"""\n\n如果你需要执行操作，请以 [ACTION: 工具名 参数名="参数值"] 的格式输出。例如创建任务：[ACTION: create_task title="测试任务" assignee_username="root" due_date="2026-05-01"]。如果需要查数据也同理。不执行操作时直接回复即可。`;
 
       const result = provider === 'gemini'
-        ? await runGeminiModel(selectedModel, apiKey, prompt, false)
-        : await runOpenAiCompatibleModel({ model: selectedModel, apiKey, baseUrl, prompt, jsonMode: false });
+        ? await runGeminiModel(selectedModel, apiKey, prompt, false, limitedHistory)
+        : await runOpenAiCompatibleModel({ model: selectedModel, apiKey, baseUrl, prompt, jsonMode: false, history: limitedHistory });
 
       const rawContent = typeof result === 'string' ? result : (result.content || result.summary || JSON.stringify(result));
 

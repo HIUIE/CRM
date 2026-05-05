@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Truck } from 'lucide-react';
+import { Search, Truck, RefreshCw, MapPin } from 'lucide-react';
 import Field from './ui/Field';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigateWithTransition } from '../lib/transition';
@@ -31,6 +31,8 @@ interface LogisticsSummary {
   segment_type: 'domestic' | 'international';
   recipient_address?: string;
   package_count?: number;
+  trackingHistory?: Array<{ time: string; status: string; location: string }>;
+  lastTrackedAt?: string;
 }
 
 const createEmptyLogisticsForm = (): LogisticsFormState => ({
@@ -60,6 +62,21 @@ export default function LogisticsView() {
   const [toast, setToast] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [trackingId, setTrackingId] = useState<number | null>(null);
+
+  const handleRefreshTrack = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    setTrackingId(id);
+    try {
+      await apiFetch(`/api/logistics/${id}/track`, { method: 'POST' });
+      setToast('追踪轨迹已同步');
+      queryClient.invalidateQueries({ queryKey: ['logistics'] });
+    } catch (err) {
+      setToast(getErrorMessage(err, '同步失败'));
+    } finally {
+      setTrackingId(null);
+    }
+  };
 
   const isFormDirty = orderId !== '' || JSON.stringify(logisticsForm) !== JSON.stringify(initialForm);
 
@@ -289,9 +306,25 @@ export default function LogisticsView() {
                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">{r.package_count || 0} 箱</div>
                       </td>
                       <td className="px-4 py-4 text-center">
-                         <div className="flex items-center justify-center gap-1.5 text-tertiary-sage dark:text-emerald-400 font-bold text-xs tracking-tight">
-                           <div className={`h-1.5 w-1.5 rounded-full ${r.status === 'arrived' ? 'bg-success' : r.status === 'shipped' ? 'bg-tertiary-sage dark:bg-emerald-400 animate-pulse' : 'bg-slate-300 dark:bg-navy-700'}`} />
-                           {getStatusLabel(r.status)}
+                         <div className="flex flex-col items-center gap-1.5">
+                           <div className="flex items-center justify-center gap-1.5 text-tertiary-sage dark:text-emerald-400 font-bold text-xs tracking-tight">
+                             <div className={`h-1.5 w-1.5 rounded-full ${r.status === 'arrived' ? 'bg-success' : r.status === 'shipped' ? 'bg-tertiary-sage dark:bg-emerald-400 animate-pulse' : 'bg-slate-300 dark:bg-navy-700'}`} />
+                             {getStatusLabel(r.status)}
+                           </div>
+                           {r.status === 'shipped' && r.tracking_no && (
+                             <button
+                               onClick={(e) => handleRefreshTrack(e, r.id)}
+                               className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors ${trackingId === r.id ? 'animate-pulse text-primary-navy' : 'text-slate-400'}`}
+                             >
+                               <RefreshCw size={10} className={trackingId === r.id ? 'animate-spin' : ''} />
+                               {trackingId === r.id ? '查询中' : '刷新轨迹'}
+                             </button>
+                           )}
+                           {r.trackingHistory && r.trackingHistory.length > 0 && (
+                             <div className="mt-1 flex items-center gap-1 text-[9px] font-black text-blue-500 uppercase bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded">
+                               <MapPin size={8} /> {r.trackingHistory[0].status}
+                             </div>
+                           )}
                          </div>
                       </td>
                     </tr>

@@ -38,3 +38,31 @@ export async function logAction(params: {
     logger.error({ err: error }, 'Failed to log audit trail');
   }
 }
+
+/**
+ * P3: 归档旧的审计日志
+ * 将超过指定天数（默认 365 天）的日志移动到归档表。
+ */
+export async function archiveAuditLogs(daysThreshold = 365) {
+  const { withTransaction } = await import('./db.js');
+  try {
+    const moved = await withTransaction(async (tx) => {
+      // Postgres-specific efficient move
+      const sql = `
+        WITH moved_rows AS (
+          DELETE FROM audit_logs
+          WHERE created_at < CURRENT_TIMESTAMP - interval '${daysThreshold} days'
+          RETURNING *
+        )
+        INSERT INTO audit_logs_archive (id, user_id, user_name, action, entity_type, entity_id, old_value, new_value, ip, user_agent, created_at)
+        SELECT id, user_id, user_name, action_type, entity_type, entity_id, old_value, new_value, ip, user_agent, created_at
+        FROM moved_rows;
+      `;
+      return await tx.run(sql);
+    });
+    return { success: true, count: moved?.changes || 0 };
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to archive audit logs');
+    throw error;
+  }
+}

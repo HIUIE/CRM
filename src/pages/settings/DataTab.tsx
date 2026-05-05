@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Download, Upload, PackageSearch, FileDigit, DatabaseBackup, CheckCircle2, Folder, Clock, ShieldCheck, PlayCircle, FolderOpen, AlertTriangle, RotateCcw, FileWarning } from 'lucide-react';
+import { Download, Upload, PackageSearch, FileDigit, DatabaseBackup, CheckCircle2, Folder, Clock, ShieldCheck, PlayCircle, FolderOpen, AlertTriangle, RotateCcw, FileWarning, History } from 'lucide-react';
 import { apiDownload, apiFetch, getErrorMessage } from '../../lib/api';
 
 const EXPORT_FORMATS = [
@@ -90,7 +90,25 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
   const [restorePreview, setRestorePreview] = useState<any>(null);
   const [restoreResult, setRestoreResult] = useState<any>(null);
   const [restoreError, setRestoreError] = useState('');
+  const [archiving, setArchiving] = useState(false);
+  const [archiveDays, setArchiveDays] = useState(365);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
+
+  const runArchive = async () => {
+    if (!confirm(`确定要将 ${archiveDays} 天前的审计日志移至归档表吗？此操作可提升主表性能。`)) return;
+    setError(''); setUserMessage(''); setArchiving(true);
+    try {
+      const res = await apiFetch<any>('/api/audit/archive', {
+        method: 'POST',
+        body: JSON.stringify({ days: archiveDays })
+      });
+      setUserMessage(`成功归档 ${res.count} 条日志记录`);
+    } catch (e) {
+      setError(getErrorMessage(e, '归档失败'));
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   useEffect(() => {
     apiFetch<{ config: BackupConfig; status: BackupStatus }>('/api/settings/backup/config')
@@ -306,6 +324,46 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
         </div>
       </div>
 
+      {/* 审计日志管理 (P3) */}
+      <div className="border-t border-slate-200 dark:border-navy-800 pt-10">
+        <div className="mb-6">
+          <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
+            <History className="mr-2 h-5 w-5 text-primary-navy dark:text-tertiary-sage" />
+            审计日志归档
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">定期归档历史操作记录，维持系统运行效率。归档后日志仍可在审计页面通过筛选查看。</p>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-surface p-6 dark:border-navy-800 dark:bg-navy-950">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex-1">
+               <label className="block mb-2 text-xs font-extrabold text-slate-500 dark:text-slate-400">保留天数（超过此天数的日志将被移动）</label>
+               <div className="flex items-center gap-3">
+                 <input 
+                   type="number" 
+                   value={archiveDays} 
+                   onChange={e => setArchiveDays(Number(e.target.value))}
+                   className="w-24 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-primary-navy outline-none focus:border-primary-navy dark:border-navy-800 dark:bg-navy-900 dark:text-white"
+                 />
+                 <span className="text-sm font-bold text-slate-400 tracking-tight">天 之前的记录</span>
+               </div>
+            </div>
+            <button 
+              onClick={runArchive}
+              disabled={archiving}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white text-xs font-black shadow-md hover:opacity-90 disabled:opacity-50 transition-all"
+            >
+              {archiving ? <RotateCcw size={14} className="animate-spin" /> : <History size={14} />}
+              {archiving ? '正在归档...' : '执行归档任务'}
+            </button>
+          </div>
+          <div className="mt-4 flex items-start gap-3 text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-navy-900/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800">
+             <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+             建议每季度执行一次归档。归档数据将被移动至 audit_logs_archive 专用表，不影响日常审计查询，但能显著降低主表（audit_logs）的索引压力。
+          </div>
+        </div>
+      </div>
+
       <div className="border-t border-slate-200 dark:border-navy-800 pt-10">
         <div className="mb-6">
           <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
@@ -349,6 +407,46 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
             <FolderOpen className="mr-2 inline h-4 w-4" />
             {exportingToFolder ? '正在导出...' : '选择文件夹导出'}
           </button>
+        </div>
+      </div>
+
+      {/* 审计日志管理 (P3) */}
+      <div className="border-t border-slate-200 dark:border-navy-800 pt-10">
+        <div className="mb-6">
+          <h2 className="flex items-center text-lg font-bold text-primary-navy dark:text-white">
+            <History className="mr-2 h-5 w-5 text-primary-navy dark:text-tertiary-sage" />
+            审计日志归档
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">定期归档历史操作记录，维持系统运行效率。归档后日志仍可在审计页面通过筛选查看。</p>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-surface p-6 dark:border-navy-800 dark:bg-navy-950">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex-1">
+               <label className="block mb-2 text-xs font-extrabold text-slate-500 dark:text-slate-400">保留天数（超过此天数的日志将被移动）</label>
+               <div className="flex items-center gap-3">
+                 <input 
+                   type="number" 
+                   value={archiveDays} 
+                   onChange={e => setArchiveDays(Number(e.target.value))}
+                   className="w-24 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-primary-navy outline-none focus:border-primary-navy dark:border-navy-800 dark:bg-navy-900 dark:text-white"
+                 />
+                 <span className="text-sm font-bold text-slate-400 tracking-tight">天 之前的记录</span>
+               </div>
+            </div>
+            <button 
+              onClick={runArchive}
+              disabled={archiving}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white text-xs font-black shadow-md hover:opacity-90 disabled:opacity-50 transition-all"
+            >
+              {archiving ? <RotateCcw size={14} className="animate-spin" /> : <History size={14} />}
+              {archiving ? '正在归档...' : '执行归档任务'}
+            </button>
+          </div>
+          <div className="mt-4 flex items-start gap-3 text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-navy-900/50 p-3 rounded-lg border border-slate-100 dark:border-navy-800">
+             <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+             建议每季度执行一次归档。归档数据将被移动至 audit_logs_archive 专用表，不影响日常审计查询，但能显著降低主表（audit_logs）的索引压力。
+          </div>
         </div>
       </div>
 

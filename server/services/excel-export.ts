@@ -50,7 +50,7 @@ export async function buildExcelWorkbook() {
   `);
   await addDataSheet(wb, '商品明细', `
     SELECT oi.*, o.display_id AS order_no FROM order_items oi
-    LEFT JOIN orders o ON o.id = oi.order_id WHERE o.deleted_at IS NULL ORDER BY oi.id ASC
+    LEFT JOIN orders o ON o.id = oi.order_id WHERE oi.deleted_at IS NULL AND o.deleted_at IS NULL ORDER BY oi.id ASC
   `);
   await addDataSheet(wb, '财务流水', `
     SELECT f.*, o.display_id AS order_no, c.name AS customer_name, p.name AS partner_name
@@ -65,7 +65,7 @@ export async function buildExcelWorkbook() {
   await addDataSheet(wb, '报关记录', `
     SELECT cr.*, o.display_id AS order_no, c.name AS customer_name
     FROM customs_records cr LEFT JOIN orders o ON o.id = cr.order_id
-    LEFT JOIN customers c ON c.id = o.customer_id WHERE o.deleted_at IS NULL ORDER BY cr.id ASC
+    LEFT JOIN customers c ON c.id = o.customer_id WHERE cr.deleted_at IS NULL AND o.deleted_at IS NULL ORDER BY cr.id ASC
   `);
   await addDataSheet(wb, '生产安排', `
     SELECT pp.*, o.display_id AS order_no, c.name AS customer_name, p.name AS partner_name

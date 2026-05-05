@@ -1,23 +1,26 @@
 import { Router } from 'express';
 import { dbAll, dbGet, dbRun, SQL } from '../lib/db.js';
-import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest, getDataScopeConstraint } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readPartnerPayload } from '../services/payloads.js';
 
 export function createPartnersRouter() {
   const router = Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     try {
       const { readPagination, buildLimitOffset } = await import('../lib/values.js');
       const params: unknown[] = [];
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'p');
+      params.push(...scopeParams);
+
       const partners = await dbAll(`
         SELECT
           p.*,
           u.name AS created_by_name
         FROM partners p
         LEFT JOIN users u ON u.id = p.created_by
-        WHERE p.deleted_at IS NULL
+        WHERE p.deleted_at IS NULL ${scopeSql}
         ORDER BY datetime(p.created_at) DESC, p.id DESC
         ${buildLimitOffset(readPagination(req.query as Record<string, unknown>), params)}
       `, params);
@@ -108,11 +111,12 @@ export function createPartnersRouter() {
     }
 
     try {
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'p');
       const partner = await dbGet(`
         SELECT p.*, u.name AS created_by_name
         FROM partners p LEFT JOIN users u ON u.id = p.created_by
-        WHERE p.id = ?
-      `, [partnerId]);
+        WHERE p.id = ? ${scopeSql}
+      `, [partnerId, ...scopeParams]);
 
       if (!partner) {
         return fail(res, 404, '伙伴不存在', 'PARTNER_NOT_FOUND');
@@ -193,8 +197,11 @@ export function createPartnersRouter() {
         }
       }
 
+      const partnerContacts = await dbAll(`SELECT * FROM partner_contacts WHERE partner_id = ? ORDER BY is_primary DESC, id ASC`, [partnerId]);
+
       res.json({
         partner,
+        contacts: partnerContacts,
         orders: [...allOrderMap.values()],
         financeRecords,
         logisticsRecords,
@@ -233,6 +240,59 @@ export function createPartnersRouter() {
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '删除伙伴失败');
+    }
+  });
+
+  // ==================== Partner Contacts (P8) ====================
+
+  router.post('/:id/contacts', requireAuth, async (req: AuthedRequest, res) => {
+    const partnerId = Number(req.params.id);
+    const { name, title, email, phone, isPrimary, remark } = req.body;
+    if (!name) return fail(res, 400, '联系人姓名不能为空');
+
+    try {
+      if (isPrimary) {
+        await dbRun(`UPDATE partner_contacts SET is_primary = false WHERE partner_id = ?`, [partnerId]);
+      }
+      const result = await dbRun(
+        `INSERT INTO partner_contacts (partner_id, name, title, email, phone, is_primary, remark) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+        [partnerId, name, title, email, phone, !!isPrimary, remark]
+      );
+      res.status(201).json({ id: result.lastID });
+    } catch (error) {
+      return handleRouteError(res, error, '创建联系人失败');
+    }
+  });
+
+  router.patch('/contacts/:contactId', requireAuth, async (req: AuthedRequest, res) => {
+    const contactId = Number(req.params.contactId);
+    const { name, title, email, phone, isPrimary, remark } = req.body;
+
+    try {
+      const existing = await dbGet<{ partner_id: number }>(`SELECT partner_id FROM partner_contacts WHERE id = ?`, [contactId]);
+      if (!existing) return fail(res, 404, '联系人不存在');
+
+      if (isPrimary) {
+        await dbRun(`UPDATE partner_contacts SET is_primary = false WHERE partner_id = ?`, [existing.partner_id]);
+      }
+
+      await dbRun(
+        `UPDATE partner_contacts SET name = COALESCE(?, name), title = ?, email = ?, phone = ?, is_primary = ?, remark = ? WHERE id = ?`,
+        [name, title, email, phone, !!isPrimary, remark, contactId]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '更新联系人失败');
+    }
+  });
+
+  router.delete('/contacts/:contactId', requireAuth, async (req: AuthedRequest, res) => {
+    const contactId = Number(req.params.contactId);
+    try {
+      await dbRun(`DELETE FROM partner_contacts WHERE id = ?`, [contactId]);
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '删除联系人失败');
     }
   });
 

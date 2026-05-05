@@ -41,7 +41,7 @@ const aiLimiter = rateLimit({
 
 const heavyLimiter = rateLimit({
   windowMs: 60_000,
-  max: 20, // 20 export/import requests per minute per IP
+  max: 2, // 2 export/import requests per minute per IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMITED', message: '导入导出请求过于频繁，请稍后再试' } },

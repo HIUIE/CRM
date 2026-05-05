@@ -114,7 +114,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       FROM order_items oi
       LEFT JOIN orders o ON o.id = oi.order_id
       LEFT JOIN customers c ON c.id = o.customer_id
-      WHERE o.deleted_at IS NULL
+      WHERE oi.deleted_at IS NULL AND o.deleted_at IS NULL
       ORDER BY oi.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name'],
@@ -176,7 +176,7 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN customers c ON c.id = o.customer_id
       LEFT JOIN users cu ON cu.id = cr.created_by
       LEFT JOIN users uu ON uu.id = cr.updated_by
-      WHERE o.deleted_at IS NULL
+      WHERE cr.deleted_at IS NULL AND o.deleted_at IS NULL
       ORDER BY cr.id ASC
     `,
     extraColumns: ['order_display_id', 'customer_name', 'created_by_name', 'updated_by_name'],

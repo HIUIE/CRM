@@ -5,7 +5,8 @@ import { useNavigateWithTransition } from '../lib/transition';
 import {
   Building2, MapPin, Phone, Package, Wallet, Clock,
   ArrowLeft, Star, Mail, Globe, Truck, DollarSign,
-  Factory, ShieldCheck, Hash, Calendar, BarChart3, Edit
+  Factory, ShieldCheck, Hash, Calendar, BarChart3, Edit,
+  Users, Plus, Trash2
 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import Chip from '../components/ui/Chip';
@@ -16,7 +17,6 @@ import Field from '../components/ui/Field';
 import CountrySelect from '../components/ui/CountrySelect';
 import { formatDateOnly } from '../features/order-detail/utils';
 import type { PartnerType } from '../types/crm';
-
 interface PartnerDetail {
   partner: {
     id: number;
@@ -32,6 +32,15 @@ interface PartnerDetail {
     created_at: string;
     created_by_name?: string;
   };
+  contacts: Array<{
+    id: number;
+    name: string;
+    title?: string;
+    email?: string;
+    phone?: string;
+    is_primary: boolean;
+    remark?: string;
+  }>;
   orders: Array<{
     id: number;
     display_id: string;
@@ -112,6 +121,11 @@ export default function PartnerDetailPage() {
   const [formError, setFormError] = useState('');
   const [savingPartner, setSavingPartner] = useState(false);
 
+  // Moving contact management state hooks to top to follow Rules of Hooks
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [editingContact, setEditingContact] = useState<any>(null);
+  const [contactForm, setContactForm] = useState({ name: '', title: '', email: '', phone: '', isPrimary: false, remark: '' });
+
   const { data, isLoading, error: queryError } = useQuery<PartnerDetail>({
     queryKey: ['partner-detail', id],
     queryFn: () => apiFetch<PartnerDetail>(`/api/partners/${encodeURIComponent(id!)}`),
@@ -126,8 +140,43 @@ export default function PartnerDetailPage() {
   if (loading) return <div className="flex h-screen w-full items-center justify-center p-8 text-sm text-slate-500 animate-pulse tracking-tight font-bold">正在加载伙伴数据...</div>;
   if (error || !data) return <div className="p-8 m-4 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold text-center">{error || '伙伴不存在'}</div>;
 
-  const { partner, orders, financeRecords, summary } = data;
+  const { partner, orders, financeRecords, summary, contacts } = data;
   const overviewItems = getOverviewItems(partner.partner_type, summary);
+
+  const openAddContact = () => {
+    setEditingContact(null);
+    setContactForm({ name: '', title: '', email: '', phone: '', isPrimary: contacts.length === 0, remark: '' });
+    setShowContactForm(true);
+  };
+
+  const openEditContact = (c: any) => {
+    setEditingContact(c);
+    setContactForm({ name: c.name, title: c.title || '', email: c.email || '', phone: c.phone || '', isPrimary: !!c.is_primary, remark: c.remark || '' });
+    setShowContactForm(true);
+  };
+
+  const handleSaveContact = async () => {
+    if (!contactForm.name.trim()) return setToast('联系人姓名不能为空');
+    try {
+      if (editingContact) {
+        await apiFetch(`/api/partners/contacts/${editingContact.id}`, { method: 'PATCH', body: JSON.stringify(contactForm) });
+      } else {
+        await apiFetch(`/api/partners/${partner.id}/contacts`, { method: 'POST', body: JSON.stringify(contactForm) });
+      }
+      setShowContactForm(false);
+      queryClient.invalidateQueries({ queryKey: ['partner-detail', id] });
+      setToast('联系人已更新');
+    } catch (e) { setToast(getErrorMessage(e, '保存失败')); }
+  };
+
+  const handleDeleteContact = async (contactId: number) => {
+    if (!confirm('确定要删除此联系人吗？')) return;
+    try {
+      await apiFetch(`/api/partners/contacts/${contactId}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: ['partner-detail', id] });
+      setToast('联系人已删除');
+    } catch (e) { setToast(getErrorMessage(e, '删除失败')); }
+  };
 
   const openEdit = () => {
     const nextForm = {
@@ -251,6 +300,43 @@ export default function PartnerDetailPage() {
                 <DetailRow icon={<Calendar size={14} />} label="建档时间" value={formatDateOnly(partner.created_at)} />
                 {partner.created_by_name && (
                   <DetailRow icon={<Building2 size={14} />} label="创建人" value={partner.created_by_name} />
+                )}
+              </div>
+            </div>
+
+            {/* Contacts Matrix (P8) */}
+            <div className="rounded-xl border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 flex justify-between items-center bg-slate-50/50 dark:bg-navy-950/50">
+                <h3 className="text-xs font-black text-primary-navy dark:text-white tracking-tight flex items-center gap-2">
+                  <Users size={14} /> 联系人矩阵
+                </h3>
+                <button onClick={openAddContact} className="text-primary-navy dark:text-tertiary-sage hover:opacity-80 transition-opacity">
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-navy-800">
+                {contacts.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-400 font-medium italic">暂无联系人记录</div>
+                ) : (
+                  contacts.map((c) => (
+                    <div key={c.id} className="p-4 hover:bg-slate-50 dark:hover:bg-navy-950/50 transition-colors group">
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-primary-navy dark:text-white">{c.name}</span>
+                          {c.is_primary && <Chip tone="success">主</Chip>}
+                        </div>
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openEditContact(c)} className="text-slate-400 hover:text-primary-navy dark:hover:text-white"><Edit size={12} /></button>
+                          <button onClick={() => handleDeleteContact(c.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                      {c.title && <div className="text-[10px] font-bold text-slate-400 mb-2 tracking-tight uppercase">{c.title}</div>}
+                      <div className="space-y-1">
+                        {c.phone && <div className="flex items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-400"><Phone size={10} /> {c.phone}</div>}
+                        {c.email && <div className="flex items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-400"><Mail size={10} /> {c.email}</div>}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -446,6 +532,30 @@ export default function PartnerDetailPage() {
             <div className="sm:col-span-2"><Field label="结算条件"><input value={form.paymentTerms} onChange={(event) => setForm({ ...form, paymentTerms: event.target.value })} placeholder="例如：月结30天..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" /></Field></div>
             <div className="sm:col-span-2"><Field label="备注说明"><textarea value={form.remark} onChange={(event) => setForm({ ...form, remark: event.target.value })} placeholder="备用联系人或特殊条款..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white min-h-[80px]" rows={3} /></Field></div>
           </div>
+        </div>
+      </Drawer>
+
+      <Drawer
+        isOpen={showContactForm}
+        onClose={() => setShowContactForm(false)}
+        title={editingContact ? '编辑联系人' : '添加联系人'}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowContactForm(false)} className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all">取消</button>
+            <button onClick={handleSaveContact} className="btn-primary shadow-md active:scale-95">保存联系人</button>
+          </div>
+        }
+      >
+        <div className="space-y-5">
+          <Field label="姓名 *"><input value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" /></Field>
+          <Field label="职位"><input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} placeholder="如：销售经理、技术主管..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" /></Field>
+          <Field label="电话 / 手机"><input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" /></Field>
+          <Field label="邮箱"><input value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white" /></Field>
+          <div className="flex items-center gap-2 py-2">
+            <input type="checkbox" id="isPrimary" checked={contactForm.isPrimary} onChange={(e) => setContactForm({ ...contactForm, isPrimary: e.target.checked })} className="h-4 w-4 rounded border-slate-300 text-primary-navy focus:ring-primary-navy" />
+            <label htmlFor="isPrimary" className="text-sm font-bold text-slate-700 dark:text-slate-300 cursor-pointer">设为主要联系人</label>
+          </div>
+          <Field label="备注"><textarea value={contactForm.remark} onChange={(e) => setContactForm({ ...contactForm, remark: e.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none text-primary-navy dark:text-white min-h-[80px]" rows={3} /></Field>
         </div>
       </Drawer>
 

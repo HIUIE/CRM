@@ -11,15 +11,17 @@ export default function BusinessTab() {
   const [savedDocument, setSavedDocument] = useState(false);
   
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
   const [savedWebhook, setSavedWebhook] = useState(false);
 
   useEffect(() => {
     Promise.all([
       apiFetch<{ orderNumberPrefix: string }>('/api/settings/document').catch(() => ({ orderNumberPrefix: 'ORD-' })),
-      apiFetch<{ webhookUrl: string }>('/api/settings/webhook').catch(() => ({ webhookUrl: '' })),
+      apiFetch<{ webhookUrl: string; webhookSecret: string }>('/api/settings/webhook').catch(() => ({ webhookUrl: '', webhookSecret: '' })),
     ]).then(([documentData, webhookData]) => {
       setOrderNumberPrefix(documentData.orderNumberPrefix || 'ORD-');
       setWebhookUrl(webhookData.webhookUrl || '');
+      setWebhookSecret(webhookData.webhookSecret || '');
     }).catch(e => {
       setError(getErrorMessage(e, '读取配置失败'));
     }).finally(() => {
@@ -39,7 +41,7 @@ export default function BusinessTab() {
   const saveWebhook = async () => {
     setError(''); setSavedWebhook(false);
     try {
-      await apiFetch('/api/settings/webhook', { method: 'POST', body: JSON.stringify({ webhookUrl }) });
+      await apiFetch('/api/settings/webhook', { method: 'POST', body: JSON.stringify({ webhookUrl, webhookSecret }) });
       setSavedWebhook(true);
       setTimeout(() => setSavedWebhook(false), 1800);
     } catch (e) { setError(getErrorMessage(e, '保存失败')); }
@@ -107,11 +109,15 @@ export default function BusinessTab() {
         </div>
 
         <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6">
-          <div className="flex flex-col gap-4">
+          <div className="space-y-6">
             <Field label="企业微信机器人 Webhook 地址" description="当订单状态变更或有新订单时，自动推送到指定群组。">
+              <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm outline-none focus:border-primary-navy text-primary-navy dark:text-white font-mono" />
+            </Field>
+
+            <Field label="Webhook 安全密钥 (Secret)" description="若配置，发送 Webhook 时将携带 HMAC-SHA256 签名头（X-SmartTrade-Signature），用于接收端校验来源。">
               <div className="flex gap-3">
-                <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm outline-none focus:border-primary-navy text-primary-navy dark:text-white font-mono" />
-                <button onClick={saveWebhook} className="btn-primary shadow-md px-8">{savedWebhook ? '已保存' : '保存配置'}</button>
+                <input value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} type="password" placeholder="输入自定义密钥..." className="flex-1 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 p-3.5 text-sm outline-none focus:border-primary-navy text-primary-navy dark:text-white" />
+                <button onClick={saveWebhook} className="btn-primary shadow-md px-10">{savedWebhook ? '已保存' : '保存配置'}</button>
               </div>
             </Field>
           </div>

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
-import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest, getDataScopeConstraint } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows, getAttachmentsByEntity } from '../services/attachments.js';
 import { readFinancePayload } from '../services/payloads.js';
@@ -10,13 +10,18 @@ import { logAction } from '../lib/audit.js';
 export function createFinanceRouter() {
   const router = Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     const q = readString(req.query.q);
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
 
     let whereSql = 'WHERE f.deleted_at IS NULL AND (o.id IS NULL OR o.deleted_at IS NULL)';
     const params: unknown[] = [];
+
+    if (req.user?.role !== 'admin') {
+      whereSql += ' AND (f.created_by = ? OR o.created_by = ?)';
+      params.push(req.user?.id, req.user?.id);
+    }
 
     if (q) {
       whereSql += ` AND (o.display_id LIKE ? OR c.name LIKE ? OR p.name LIKE ? OR f.target LIKE ? OR f.remark LIKE ?)`;
@@ -73,10 +78,15 @@ export function createFinanceRouter() {
     }
 
     try {
+      // P7: Capture exchange rate snapshot
+      const { getSettingValue } = await import('../services/settings.js');
+      const systemRate = parseFloat(await getSettingValue('exchange_rate_usd_cny', '7.2'));
+      const snapshot = result.payload.currency === 'USD' ? systemRate : 1.0;
+
       const created = await dbRun(
         `
-          INSERT INTO finance_records (order_id, type, amount, target, status, remark, currency, payment_category, record_category, partner_id, created_by, updated_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO finance_records (order_id, type, amount, target, status, remark, currency, payment_category, record_category, partner_id, created_by, updated_by, exchange_rate_snapshot)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING id
         `,
         [
@@ -92,6 +102,7 @@ export function createFinanceRouter() {
           result.payload.partnerId,
           req.user?.id || null,
           req.user?.id || null,
+          snapshot,
         ],
       );
       await bindAttachmentsToEntity('finance', created.lastID as number, result.payload.attachmentIds);
@@ -123,10 +134,17 @@ export function createFinanceRouter() {
     }
 
     try {
+      const existing = await dbGet<{ order_id: number; status: string }>(`SELECT order_id, status FROM finance_records WHERE id = ?`, [recordId]);
+      if (!existing) return fail(res, 404, '财务记录不存在');
+
+      const { getSettingValue } = await import('../services/settings.js');
+      const systemRate = parseFloat(await getSettingValue('exchange_rate_usd_cny', '7.2'));
+      const snapshot = result.payload.currency === 'USD' ? systemRate : 1.0;
+
       const updated = await dbRun(
         `
           UPDATE finance_records
-          SET order_id = ?, type = ?, amount = ?, target = ?, status = ?, remark = ?, currency = ?, payment_category = ?, record_category = ?, partner_id = ?, updated_by = ?
+          SET order_id = ?, type = ?, amount = ?, target = ?, status = ?, remark = ?, currency = ?, payment_category = ?, record_category = ?, partner_id = ?, updated_by = ?, exchange_rate_snapshot = ?
           WHERE id = ?
         `,
         [
@@ -141,12 +159,20 @@ export function createFinanceRouter() {
           result.payload.recordCategory,
           result.payload.partnerId,
           req.user?.id || null,
+          snapshot,
           recordId,
         ],
       );
       if (!updated.changes) {
         return fail(res, 404, '财务记录不存在', 'FINANCE_NOT_FOUND');
       }
+
+      // P6: Financial Reconciliation Automation
+      // Trigger order update if status changed to completed or if it was already completed and amount changed
+      if (result.payload.orderId && (result.payload.status === 'completed' || existing.status === 'completed')) {
+        await dbRun(`UPDATE orders SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [result.payload.orderId]);
+      }
+
       await bindAttachmentsToEntity('finance', recordId, result.payload.attachmentIds);
       res.json({ success: true });
     } catch (error) {

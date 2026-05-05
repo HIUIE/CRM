@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { dbAll, dbRun, SQL } from '../lib/db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError } from '../lib/http.js';
+import { archiveAuditLogs } from '../lib/audit.js';
 
 export function createAuditRouter() {
   const router = Router();
@@ -38,6 +39,16 @@ export function createAuditRouter() {
       res.json(logs);
     } catch (error) {
       return handleRouteError(res, error, '读取审计日志失败');
+    }
+  });
+
+  router.post('/archive', requireAdmin, async (req: AuthedRequest, res) => {
+    const days = Number(req.body?.days) || 365;
+    try {
+      const result = await archiveAuditLogs(days);
+      res.json(result);
+    } catch (error) {
+      return handleRouteError(res, error, '归档审计日志失败');
     }
   });
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { dbAll, dbGet, dbRun, SQL, withTransaction } from '../lib/db.js';
-import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest, getDataScopeConstraint, checkOrderAccess } from '../lib/auth.js';
 import { logAction } from '../lib/audit.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { notifyOrderCreated } from '../services/notifier.js';
@@ -37,9 +37,9 @@ async function generateNextDisplayId() {
 }
 
 async function syncOrderProductSummary(orderId: number) {
-  const items = await dbAll<{ subtotal: number }[]>(`SELECT subtotal FROM order_items WHERE order_id = ?`, [orderId]);
+  const items = await dbAll<{ subtotal: number }[]>(`SELECT subtotal FROM order_items WHERE order_id = ? AND deleted_at IS NULL`, [orderId]);
   const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
-  const productSummary = (await dbAll<{ product_name: string }[]>(`SELECT product_name FROM order_items WHERE order_id = ?`, [orderId]))
+  const productSummary = (await dbAll<{ product_name: string }[]>(`SELECT product_name FROM order_items WHERE order_id = ? AND deleted_at IS NULL`, [orderId]))
     .map(i => i.product_name)
     .join(', ');
   
@@ -49,7 +49,7 @@ async function syncOrderProductSummary(orderId: number) {
 export function createOrdersRouter() {
   const router = Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     const customerId = Number(req.query.customerId);
     const status = readString(req.query.status);
     const q = readString(req.query.q);
@@ -72,6 +72,10 @@ export function createOrdersRouter() {
       WHERE o.deleted_at IS NULL
     `;
     const params: (string | number | null | undefined)[] = [];
+
+    const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'o');
+    sql += scopeSql;
+    params.push(...scopeParams);
 
     if (customerId) {
       sql += ` AND o.customer_id = ?`;
@@ -155,17 +159,19 @@ export function createOrdersRouter() {
     }
   });
 
-  router.get('/:id', async (req: AuthedRequest, res) => {
+  router.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
     const orderNo = req.params.id as string;
     try {
-      const detail = await buildOrderDetail(orderNo);
-      if (!detail) {
+      if (!(await checkOrderAccess(req, orderNo))) {
         return fail(res, 404, '订单不存在', 'ORDER_NOT_FOUND');
       }
 
+      const detail = await buildOrderDetail(orderNo);
+      if (!detail) return fail(res, 404, '订单不存在', 'ORDER_NOT_FOUND');
+
       // RBAC: Redact sensitive profit fields in order detail for non-admins
       if (req.user?.role !== 'admin') {
-        const { total_profit, profit_margin, ...rest } = detail.order as any;
+        const { total_profit, profit_margin, ...rest } = (detail.order || {}) as any;
         detail.order = rest;
       }
 
@@ -180,6 +186,10 @@ export function createOrdersRouter() {
     if ('error' in result) return fail(res, 400, result.error!);
 
     try {
+      // P7: Get current system exchange rate for snapshot
+      const { getSettingValue } = await import('../services/settings.js');
+      const currentRate = parseFloat(await getSettingValue('exchange_rate_usd_cny', '7.2'));
+
       // 逻辑升级：优先使用前端传来的 displayId，如果没有（或为空）再自动生成
       let displayId = result.payload.displayId;
       const created = await withTransaction(async (tx) => {
@@ -193,8 +203,8 @@ export function createOrdersRouter() {
         }
 
         return await tx.run(
-          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null]
+          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by, exchange_rate_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null, currentRate]
         );
       });
 
@@ -214,12 +224,16 @@ export function createOrdersRouter() {
     }
   });
 
-  router.patch('/:id', async (req: AuthedRequest, res) => {
+  router.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     const result = await readOrderPayload(req.body || {});
     if ('error' in result) return fail(res, 400, result.error!);
 
     try {
+      if (!(await checkOrderAccess(req, orderId))) {
+        return fail(res, 404, '订单不存在');
+      }
+
       await withTransaction(async (tx) => {
         await tx.run(
           `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, updated_by = ? WHERE id = ?`,
@@ -228,7 +242,7 @@ export function createOrdersRouter() {
 
         const deletedIds = (req.body.deletedItemIds || []) as number[];
         if (deletedIds.length > 0) {
-          await tx.run(`DELETE FROM order_items WHERE id IN (${deletedIds.map(() => '?').join(',')})`, deletedIds);
+          await tx.run(`UPDATE order_items SET deleted_at = CURRENT_TIMESTAMP WHERE id IN (${deletedIds.map(() => '?').join(',')})`, deletedIds);
         }
 
         const items = (req.body.items || []) as Array<{
@@ -244,7 +258,7 @@ export function createOrdersRouter() {
         }>;
         for (const item of items) {
           if (item.id) {
-            await tx.run(`UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ? WHERE id = ?`,
+            await tx.run(`UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ?, deleted_at = NULL WHERE id = ?`,
               [item.productName, item.specification, item.hsCode, item.quantity, item.unit, item.unitPrice, item.subtotal, item.imageUrl, item.id]);
           } else {
             await tx.run(`INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
@@ -265,7 +279,7 @@ export function createOrdersRouter() {
       if (!order) return fail(res, 404, '订单不存在');
 
       await withTransaction(async (tx) => {
-        await tx.run(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
+        await tx.run(`UPDATE order_items SET deleted_at = CURRENT_TIMESTAMP WHERE order_id = ?`, [orderId]);
         await tx.run(`UPDATE orders SET deleted_at = ${SQL.now()} WHERE id = ?`, [orderId]);
       });
 
@@ -289,7 +303,7 @@ export function createOrdersRouter() {
     const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM order_items WHERE id = ?`, [itemId]);
     if (!existing) return fail(res, 404, '条目不存在');
     try {
-      await dbRun(`DELETE FROM order_items WHERE id = ?`, [itemId]);
+      await dbRun(`UPDATE order_items SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, [itemId]);
       await syncOrderProductSummary(existing.order_id);
       res.json({ success: true });
     } catch (error) {
@@ -297,14 +311,14 @@ export function createOrdersRouter() {
     }
   });
 
-  router.post('/batch-delete', requireAdmin, async (req: AuthedRequest, res) => {
+  router.post('/batch-delete', requireAuth, requireAdmin, async (req: AuthedRequest, res) => {
     const ids = (req.body.ids || []) as number[];
     if (!ids.length) return fail(res, 400, '请选择要删除的订单', 'INVALID_BATCH');
     if (ids.length > 100) return fail(res, 400, '单次最多删除 100 条订单', 'BATCH_TOO_LARGE');
     try {
       await withTransaction(async (tx) => {
         for (const id of ids) {
-          await tx.run(`DELETE FROM order_items WHERE order_id = ?`, [id]);
+          await tx.run(`UPDATE order_items SET deleted_at = CURRENT_TIMESTAMP WHERE order_id = ?`, [id]);
           await tx.run(`UPDATE orders SET deleted_at = ${SQL.now()} WHERE id = ?`, [id]);
         }
       });
@@ -314,9 +328,10 @@ export function createOrdersRouter() {
     }
   });
 
-  router.get('/:id/production', async (req, res) => {
+  router.get('/:id/production', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     try {
+      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       const record = await dbGet<any>(`SELECT pp.*, p.name AS partner_name FROM production_plans pp LEFT JOIN partners p ON p.id = pp.partner_id WHERE pp.order_id = ?`, [orderId]);
       if (!record) return res.json(null);
       const logs = await dbAll(`SELECT pl.*, u.name as created_by_name FROM production_logs pl LEFT JOIN users u ON u.id = pl.created_by WHERE pl.plan_id = ? ORDER BY pl.created_at DESC`, [record.id]);
@@ -339,10 +354,11 @@ export function createOrdersRouter() {
     }
   });
 
-  router.patch('/:id/packing', async (req: AuthedRequest, res) => {
+  router.patch('/:id/packing', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     const items = req.body.items || [];
     try {
+      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       await dbRun(`DELETE FROM packing_records WHERE order_id = ?`, [orderId]);
       for (const item of items) {
         await dbRun(`INSERT INTO packing_records (order_id, package_count, package_size, gross_weight, net_weight, attachment_id) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -356,12 +372,13 @@ export function createOrdersRouter() {
 
   // ==================== Profit/Margin Data ====================
 
-  router.get('/:id/profit', async (req, res) => {
+  router.get('/:id/profit', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     if (!Number.isInteger(orderId) || orderId <= 0) {
       return res.status(400).json({ error: '无效的订单编号' });
     }
     try {
+      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       const row = await dbGet<{ data: string }>(`SELECT data FROM order_profits WHERE order_id = ?`, [orderId]);
       
       // Fallback: migrate from old settings table if not in order_profits
@@ -434,10 +451,12 @@ export function createOrdersRouter() {
     }
   });
 
-  router.patch('/:id/quick-notes', async (req: AuthedRequest, res) => {
+  router.patch('/:id/quick-notes', requireAuth, async (req: AuthedRequest, res) => {
     const content = readString(req.body?.content, 5000);
+    const orderId = req.params.id as string;
     try {
-      await dbRun(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [content, req.params.id]);
+      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
+      await dbRun(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [content, orderId]);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新失败');
@@ -445,9 +464,10 @@ export function createOrdersRouter() {
   });
 
   // 跟进时间轴
-  router.get('/:id/follow-ups', async (req, res) => {
+  router.get('/:id/follow-ups', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     try {
+      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       const rows = await dbAll(
         `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC, of.id DESC`,
         [orderId],
@@ -458,13 +478,14 @@ export function createOrdersRouter() {
     }
   });
 
-  router.post('/:id/follow-ups', async (req: AuthedRequest, res) => {
+  router.post('/:id/follow-ups', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     const content = String(req.body.content || '').trim();
     if (!content) {
       return fail(res, 400, '内容不能为空');
     }
     try {
+      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       await dbRun(
         `INSERT INTO order_follow_ups (order_id, content, created_by) VALUES (?, ?, ?)`,
         [orderId, content, req.user?.id || null],
@@ -475,11 +496,12 @@ export function createOrdersRouter() {
     }
   });
 
-  router.post('/:id/production', async (req: AuthedRequest, res) => {
+  router.post('/:id/production', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
     const result = await readProductionPayload(req.body || {}, orderId);
     if ('error' in result) return fail(res, 400, result.error!);
     try {
+      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       const created = await dbRun(`INSERT INTO production_plans (order_id, partner_id, order_date, estimated_delivery_date, production_status, inspection_status, remark, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
         [orderId, result.payload.partnerId, result.payload.orderDate || null, result.payload.estimatedDeliveryDate || null, result.payload.productionStatus, result.payload.inspectionStatus, result.payload.remark, req.user?.id || null, req.user?.id || null]);
       if (Array.isArray(req.body?.attachmentIds)) {
@@ -491,7 +513,7 @@ export function createOrdersRouter() {
     }
   });
 
-  router.patch('/production/:id', async (req: AuthedRequest, res) => {
+  router.patch('/production/:id', requireAuth, async (req: AuthedRequest, res) => {
     const productionId = Number(req.params.id);
     try {
       const existing = await dbGet<{ order_id: number }>(
@@ -500,6 +522,10 @@ export function createOrdersRouter() {
       );
       if (!existing) {
         return fail(res, 404, '排产计划不存在');
+      }
+
+      if (!(await checkOrderAccess(req, existing.order_id))) {
+        return fail(res, 404, '订单不存在或无权访问');
       }
 
       const result = await readProductionPayload(req.body || {}, existing.order_id);

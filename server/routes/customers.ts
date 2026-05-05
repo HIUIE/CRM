@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { dbAll, dbGet, dbRun, SQL } from '../lib/db.js';
-import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest, getDataScopeConstraint } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
-import { readString, readPagination, buildLimitOffset } from '../lib/values.js';
+import { readString, readPagination, buildLimitOffset, calculateSimilarity } from '../lib/values.js';
 import { logAction } from '../lib/audit.js';
 
 function generateCustomerDisplayId() {
@@ -14,13 +14,17 @@ function generateCustomerDisplayId() {
 export function createCustomersRouter() {
   const router = Router();
 
-  router.get('/', requireAuth, async (req, res) => {
+  router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     const q = readString(req.query.q);
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
 
     let whereSql = 'WHERE c.deleted_at IS NULL';
     const params: (string | number | null | undefined)[] = [];
+
+    const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
+    whereSql += scopeSql;
+    params.push(...scopeParams);
 
     if (q) {
       whereSql += ` AND (c.name LIKE ? OR c.country LIKE ? OR c.contact LIKE ? OR c.display_id LIKE ?)`;
@@ -60,6 +64,7 @@ export function createCustomersRouter() {
     const customerIdOrDisplay = req.params.id as string;
     
     try {
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
       // Try by display_id first, then by id (PG can't compare int = text)
       const isNumeric = /^\d+$/.test(customerIdOrDisplay);
       const customer = await dbGet(`
@@ -67,11 +72,12 @@ export function createCustomersRouter() {
         FROM customers c
         LEFT JOIN users u ON u.id = c.created_by
         WHERE c.deleted_at IS NULL
+          ${scopeSql}
           AND (
             LOWER(c.display_id) = LOWER(?)
             ${isNumeric ? 'OR c.id = ?' : ''}
           )
-      `, isNumeric ? [customerIdOrDisplay, Number(customerIdOrDisplay)] : [customerIdOrDisplay]);
+      `, [...scopeParams, ...(isNumeric ? [customerIdOrDisplay, Number(customerIdOrDisplay)] : [customerIdOrDisplay])]);
 
       if (!customer) {
         return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
@@ -187,6 +193,14 @@ export function createCustomersRouter() {
     }
 
     try {
+      // P9: Check for similar existing customer names to prevent duplicates
+      const existingCustomers = await dbAll<{ name: string }[]>(`SELECT name FROM customers WHERE deleted_at IS NULL`);
+      for (const existing of existingCustomers) {
+        if (calculateSimilarity(name, existing.name) > 0.85) {
+          return fail(res, 409, `创建失败：发现名称极度相似的已有客户 "${existing.name}"，请核对是否重复录入。`, 'CUSTOMER_DUPLICATE_SUSPECTED');
+        }
+      }
+
       const displayId = generateCustomerDisplayId();
       const result = await dbRun(
         `
@@ -221,7 +235,8 @@ export function createCustomersRouter() {
     if (!content) return fail(res, 400, '请输入跟进内容');
 
     try {
-      const customer = await dbGet(`SELECT id FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)`, [customerId, customerId]);
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
+      const customer = await dbGet(`SELECT id FROM customers c WHERE c.deleted_at IS NULL ${scopeSql} AND (c.id = ? OR c.display_id = ?)`, [...scopeParams, customerId, customerId]);
       if (!customer) return fail(res, 404, '客户不存在');
 
       await dbRun(
@@ -248,7 +263,8 @@ export function createCustomersRouter() {
     }
 
     try {
-      const oldVal = await dbGet(`SELECT * FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)`, [customerId, customerId]);
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
+      const oldVal = await dbGet(`SELECT * FROM customers c WHERE c.deleted_at IS NULL ${scopeSql} AND (c.id = ? OR c.display_id = ?)`, [...scopeParams, customerId, customerId]);
       if (!oldVal) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
 
       await dbRun(

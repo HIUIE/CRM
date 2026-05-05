@@ -31,12 +31,14 @@ export async function runOpenAiCompatibleModel({
   apiKey,
   baseUrl,
   prompt,
-  jsonMode = true, // 默认开启，但允许关闭
+  history = [],
+  jsonMode = true,
 }: {
   model: string;
   apiKey: string;
   baseUrl: string;
   prompt: string;
+  history?: { role: 'user' | 'assistant' | 'system'; content: string }[];
   jsonMode?: boolean;
 }) {
   let normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
@@ -54,7 +56,10 @@ export async function runOpenAiCompatibleModel({
     const body: Record<string, unknown> = {
       model,
       temperature: 0.1,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        ...history.map(h => ({ role: h.role, content: h.content })),
+        { role: 'user', content: prompt }
+      ],
     };
 
     // 只有在 jsonMode 为 true 时才发送 response_format
@@ -155,11 +160,25 @@ export function sanitizeOrderData(data: unknown) {
   return sanitizeForAI(data);
 }
 
-export async function runGeminiModel(model: string, apiKey: string, prompt: string, jsonMode = true) {
+export async function runGeminiModel(
+  model: string, 
+  apiKey: string, 
+  prompt: string, 
+  jsonMode = true,
+  history: { role: 'user' | 'assistant' | 'system'; content: string }[] = []
+) {
   const ai = new GoogleGenAI({ apiKey });
+  const contents = [
+    ...history.filter(h => h.role !== 'system').map(h => ({
+      role: h.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: h.content }]
+    })),
+    { role: 'user', parts: [{ text: prompt }] }
+  ];
+
   const response = await ai.models.generateContent({
     model,
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    contents
   });
   const text = response.text || '';
   if (!jsonMode) {

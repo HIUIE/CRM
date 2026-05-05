@@ -1,7 +1,9 @@
+import crypto from 'crypto';
 import { getSettingValue } from './settings.js';
 import { dbAll } from '../lib/db.js';
 
 const WEBHOOK_SETTING_KEY = 'webhook_url';
+const WEBHOOK_SECRET_KEY = 'webhook_secret';
 
 export async function getWebhookUrl() {
   return getSettingValue(WEBHOOK_SETTING_KEY, '');
@@ -9,6 +11,7 @@ export async function getWebhookUrl() {
 
 export async function sendWebhook(title: string, content: string) {
   const url = await getWebhookUrl();
+  const secret = await getSettingValue(WEBHOOK_SECRET_KEY, '');
   if (!url) return;
 
   const payload = {
@@ -16,12 +19,23 @@ export async function sendWebhook(title: string, content: string) {
     markdown: {
       content: `### ${title}\n${content}\n---\n*SmartTrade AI CRM 自动通知*`,
     },
+    timestamp: Date.now(),
   };
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  
+  // P4: Add HMAC signature if secret is configured
+  if (secret) {
+    const bodyStr = JSON.stringify(payload);
+    const signature = crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+    headers['X-SmartTrade-Signature'] = signature;
+    headers['X-SmartTrade-Timestamp'] = String(payload.timestamp);
+  }
 
   try {
     await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
   } catch {

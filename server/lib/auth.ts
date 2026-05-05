@@ -144,7 +144,38 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   }
 }
 
-export function requireAdmin(req: AuthedRequest, res: Response, next: NextFunction) {
+export function getAdminRole() {
+  return 'admin';
+}
+
+/**
+ * 获取数据隔离的 SQL 约束条件
+ * @param user 当前登录用户
+ * @param tableAlias 表别名，默认为 t
+ * @param creatorField 归属人字段名，默认为 created_by
+ * @returns [sqlFragment, params]
+ */
+export function getDataScopeConstraint(user: any, tableAlias = 't', creatorField = 'created_by'): [string, any[]] {
+  if (!user) return [' AND 1=0', []]; // 未登录，无权访问
+  if (user.role === 'admin') return ['', []]; // 管理员可见全量
+
+  // 业务员只能看到自己创建的数据
+  return [` AND ${tableAlias}.${creatorField} = ?`, [user.id]];
+}
+
+/**
+ * 校验用户是否有权访问特定订单
+ */
+export async function checkOrderAccess(req: AuthedRequest, orderId: number | string) {
+  const { dbGet } = await import('./db.js');
+  const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'o');
+  const isNumeric = typeof orderId === 'number' || (typeof orderId === 'string' && /^\d+$/.test(orderId));
+  const sql = `SELECT id FROM orders o WHERE o.deleted_at IS NULL ${scopeSql} AND (${isNumeric ? 'o.id = ? OR ' : ''}LOWER(o.display_id) = LOWER(?))`;
+  const params = [...scopeParams, ...(isNumeric ? [Number(orderId), String(orderId)] : [String(orderId)])];
+  return await dbGet(sql, params);
+}
+
+export async function requireAdmin(req: AuthedRequest, res: Response, next: NextFunction) {
   if (!req.user) {
     return fail(res, 401, '请先登录后再操作', 'AUTH_REQUIRED');
   }
@@ -153,3 +184,4 @@ export function requireAdmin(req: AuthedRequest, res: Response, next: NextFuncti
   }
   next();
 }
+
