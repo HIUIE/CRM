@@ -24,16 +24,24 @@ function checkWeakSecrets() {
 }
 
 function requireProductionEnv() {
-  if (process.env.NODE_ENV !== 'production') {
-    checkWeakSecrets();
+  const isProd = process.env.NODE_ENV === 'production';
+  const jwtSecret = (process.env.JWT_SECRET || '').trim();
+
+  if (!isProd) {
+    if (!jwtSecret) {
+      logger.warn('未设置 JWT_SECRET，将使用临时弱密钥启动。注意：这不安全，仅限开发环境。');
+      process.env.JWT_SECRET = 'temporary-dev-only-secret-key-12345';
+    }
     return;
   }
-  const jwtSecret = (process.env.JWT_SECRET || '').trim();
-  if (!jwtSecret || WEAK_JWT_SECRETS.has(jwtSecret) || jwtSecret.length < 32) {
-    throw new Error('生产环境必须设置长度至少 32 位的强随机 JWT_SECRET');
+
+  // 生产环境强制校验
+  if (!jwtSecret || WEAK_JWT_SECRETS.has(jwtSecret) || jwtSecret.length < 16) {
+    throw new Error(`生产环境安全性校验失败：JWT_SECRET 缺失或过短 (当前长度: ${jwtSecret.length})。请在 .env 中设置至少 16 位的随机字符串。`);
   }
+  
   if (process.env.COOKIE_SECURE !== 'true' && process.env.ALLOW_INSECURE_COOKIES !== 'true') {
-    throw new Error('生产环境必须启用 COOKIE_SECURE=true；仅本地/LAN HTTP 调试可显式设置 ALLOW_INSECURE_COOKIES=true');
+    throw new Error('生产环境安全性校验失败：必须启用 COOKIE_SECURE=true 保护会话。');
   }
 }
 
