@@ -39,6 +39,7 @@ export const up = (pgm) => {
       created_by INTEGER REFERENCES users(id),
       updated_by INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       deleted_at TIMESTAMP
     );
 
@@ -73,6 +74,7 @@ export const up = (pgm) => {
       created_by INTEGER REFERENCES users(id),
       updated_by INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       deleted_at TIMESTAMP
     );
 
@@ -105,6 +107,7 @@ export const up = (pgm) => {
       created_by INTEGER REFERENCES users(id),
       updated_by INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       deleted_at TIMESTAMP
     );
 
@@ -134,6 +137,7 @@ export const up = (pgm) => {
       created_by INTEGER REFERENCES users(id),
       updated_by INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       deleted_at TIMESTAMP
     );
 
