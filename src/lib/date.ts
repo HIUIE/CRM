@@ -21,10 +21,10 @@ export function getRangeDates(range: StandardTimeRange) {
       start = end.startOf('day');
       break;
     case 'week':
-      start = end.subtract(7, 'day');
+      start = end.subtract(end.day() === 0 ? 6 : end.day() - 1, 'day').startOf('day');
       break;
     case 'month':
-      start = end.subtract(1, 'month');
+      start = end.startOf('month');
       break;
     case '3months':
       start = end.subtract(3, 'month');

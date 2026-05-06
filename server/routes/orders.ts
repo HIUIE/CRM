@@ -96,7 +96,7 @@ export function createOrdersRouter() {
       params.push(startDate);
     }
     if (endDate) {
-      sql += ` AND o.created_at <= ?`;
+      sql += ` AND o.created_at <= (? || ' 23:59:59')`;
       params.push(endDate);
     }
     sql += ` ORDER BY datetime(o.created_at) DESC, o.id DESC`;

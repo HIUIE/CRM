@@ -130,6 +130,10 @@ export default function CustomersView() {
     setPageSize,
   } = usePagination(filteredCustomers);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, countryFilter, timeRange, setCurrentPage]);
+
   // Read create flag from URL to open drawer
   useEffect(() => {
     if (searchParams.get('create') === '1') {

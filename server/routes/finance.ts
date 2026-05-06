@@ -33,7 +33,7 @@ export function createFinanceRouter() {
       params.push(startDate);
     }
     if (endDate) {
-      whereSql += ` AND f.created_at <= ?`;
+      whereSql += ` AND f.created_at <= (? || ' 23:59:59')`;
       params.push(endDate);
     }
 
