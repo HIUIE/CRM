@@ -9,7 +9,7 @@ import { logger } from '../lib/logger.js';
 import { dbGet, dbRun, withTransaction, type TransactionExecutor } from '../lib/db.js';
 import { requireAdmin, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
-import { readString } from '../lib/values.js';
+import { asNumber, readString } from '../lib/values.js';
 import { validateFileMagicBytes } from '../lib/files.js';
 import { UPLOADS_DIR } from '../paths.js';
 import { isSystemBackupZip, restoreSystemBackupZip } from '../services/backup.js';
@@ -393,13 +393,13 @@ async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: n
   if (existing) {
     await tx.run(
       `UPDATE orders SET customer_id = ?, status = ?, total_amount = ?, product_summary = ?, details = ?, updated_by = ? WHERE id = ?`,
-      [customer.id, data.status, data.total_amount || data.totalAmount, data.product_summary || data.productSummary, data.details, userId, existing.id]
+      [customer.id, data.status, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, existing.id]
     );
   } else {
     await tx.run(
       `INSERT INTO orders (display_id, customer_id, status, total_amount, product_summary, details, created_by, updated_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [displayId, customer.id, data.status, data.total_amount || data.totalAmount, data.product_summary || data.productSummary, data.details, userId, userId]
+      [displayId, customer.id, data.status, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, userId]
     );
   }
 }

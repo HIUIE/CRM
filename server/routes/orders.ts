@@ -12,8 +12,7 @@ import {
   readProductionLogPayload,
   readProductionPayload,
 } from '../services/payloads.js';
-import { readString } from '../lib/values.js';
-import { readPagination, buildLimitOffset } from '../lib/values.js';
+import { asNumber, readString, readPagination, buildLimitOffset } from '../lib/values.js';
 import { ORDER_STATUSES } from '../domain.js';
 
 // 核心逻辑：生成下一个建议单号
@@ -265,10 +264,30 @@ export function createOrdersRouter() {
         for (const item of items) {
           if (item.id) {
             await tx.run(`UPDATE order_items SET product_name = ?, specification = ?, hs_code = ?, quantity = ?, unit = ?, unit_price = ?, subtotal = ?, image_url = ?, deleted_at = NULL WHERE id = ?`,
-              [item.productName, item.specification, item.hsCode, item.quantity, item.unit, item.unitPrice, item.subtotal, item.imageUrl, item.id]);
+              [
+                readString(item.productName),
+                readString(item.specification),
+                readString(item.hsCode),
+                asNumber(item.quantity),
+                readString(item.unit),
+                asNumber(item.unitPrice),
+                asNumber(item.subtotal),
+                readString(item.imageUrl),
+                item.id
+              ]);
           } else {
             await tx.run(`INSERT INTO order_items (order_id, product_name, specification, hs_code, quantity, unit, unit_price, subtotal, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-              [orderId, item.productName, item.specification, item.hsCode, item.quantity, item.unit, item.unitPrice, item.subtotal, item.imageUrl]);
+              [
+                orderId,
+                readString(item.productName),
+                readString(item.specification),
+                readString(item.hsCode),
+                asNumber(item.quantity),
+                readString(item.unit),
+                asNumber(item.unitPrice),
+                asNumber(item.subtotal),
+                readString(item.imageUrl)
+              ]);
           }
         }
       });
@@ -368,7 +387,14 @@ export function createOrdersRouter() {
       await dbRun(`DELETE FROM packing_records WHERE order_id = ?`, [orderId]);
       for (const item of items) {
         await dbRun(`INSERT INTO packing_records (order_id, package_count, package_size, gross_weight, net_weight, attachment_id) VALUES (?, ?, ?, ?, ?, ?)`,
-          [orderId, Number(item.packageCount), item.packageSize, item.grossWeight, item.netWeight, item.attachmentId || null]);
+          [
+            orderId,
+            asNumber(item.packageCount),
+            readString(item.packageSize),
+            asNumber(item.grossWeight),
+            asNumber(item.netWeight),
+            item.attachmentId || null
+          ]);
       }
       res.json({ success: true });
     } catch (error) {

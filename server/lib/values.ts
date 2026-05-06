@@ -31,6 +31,12 @@ export function readNumber(value: unknown) {
   return Number.isFinite(nextValue) ? nextValue : NaN;
 }
 
+export function asNumber(value: unknown, fallback = 0): number {
+  if (value === '' || value === null || value === undefined) return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export function isOneOf<T extends readonly string[]>(value: string, options: T): value is T[number] {
   return options.includes(value as T[number]);
 }
