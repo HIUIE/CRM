@@ -252,7 +252,10 @@ export function createCustomersRouter() {
   });
 
   router.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
-    const customerId = req.params.id;
+    const customerId = Number(req.params.id);
+    if (!Number.isInteger(customerId) || customerId <= 0) {
+      return fail(res, 400, '无效的客户编号', 'INVALID_CUSTOMER_ID');
+    }
     const name = readString(req.body?.name);
     const country = readString(req.body?.country);
     const contact = readString(req.body?.contact);
@@ -265,7 +268,7 @@ export function createCustomersRouter() {
 
     try {
       const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
-      const oldVal = await dbGet(`SELECT * FROM customers c WHERE c.deleted_at IS NULL ${scopeSql} AND (c.id = ? OR c.display_id = ?)`, [...scopeParams, customerId, customerId]);
+      const oldVal = await dbGet(`SELECT * FROM customers c WHERE c.deleted_at IS NULL ${scopeSql} AND (c.id = ? OR c.display_id = ?)`, [...scopeParams, customerId, String(req.params.id)]);
       if (!oldVal) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
 
       await dbRun(
@@ -294,9 +297,12 @@ export function createCustomersRouter() {
   });
 
   router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
-    const customerId = req.params.id;
+    const customerId = Number(req.params.id);
+    if (!Number.isInteger(customerId) || customerId <= 0) {
+      return fail(res, 400, '无效的客户编号', 'INVALID_CUSTOMER_ID');
+    }
     try {
-      const customer = await dbGet(`SELECT id FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)`, [customerId, customerId]);
+      const customer = await dbGet(`SELECT id FROM customers WHERE deleted_at IS NULL AND (id = ? OR display_id = ?)`, [customerId, String(req.params.id)]);
       if (!customer) return fail(res, 404, '客户不存在');
 
       const linkedOrders = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM orders WHERE customer_id = ? AND deleted_at IS NULL`, [customer.id]);

@@ -172,7 +172,7 @@ export function getDataScopeConstraint(user: any, tableAlias = 't', creatorField
 export async function checkOrderAccess(req: AuthedRequest, orderId: number | string) {
   const { dbGet } = await import('./db.js');
   const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'o');
-  const isNumeric = typeof orderId === 'number' || (typeof orderId === 'string' && /^\d+$/.test(orderId));
+  const isNumeric = (typeof orderId === 'number' && Number.isFinite(orderId)) || (typeof orderId === 'string' && /^\d+$/.test(orderId));
   const sql = `SELECT id FROM orders o WHERE o.deleted_at IS NULL ${scopeSql} AND (${isNumeric ? 'o.id = ? OR ' : ''}LOWER(o.display_id) = LOWER(?))`;
   const params = [...scopeParams, ...(isNumeric ? [Number(orderId), String(orderId)] : [String(orderId)])];
   return await dbGet(sql, params);

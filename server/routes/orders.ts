@@ -231,6 +231,9 @@ export function createOrdersRouter() {
 
   router.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return fail(res, 400, '无效的编号');
+    }
     const result = await readOrderPayload(req.body || {});
     if ('error' in result) return fail(res, 400, result.error!);
 
@@ -299,6 +302,9 @@ export function createOrdersRouter() {
 
   router.delete('/:id', requireAdmin, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return fail(res, 400, '无效的编号');
+    }
     try {
       const order = await dbGet<{ display_id: string }>(`SELECT display_id FROM orders WHERE id = ?`, [orderId]);
       if (!order) return fail(res, 404, '订单不存在');
@@ -325,6 +331,9 @@ export function createOrdersRouter() {
 
   router.delete('/items/:id', requireAdmin, async (req, res) => {
     const itemId = Number(req.params.id);
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+      return fail(res, 400, '条目编号无效', 'INVALID_ITEM_ID');
+    }
     const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM order_items WHERE id = ?`, [itemId]);
     if (!existing) return fail(res, 404, '条目不存在');
     try {
@@ -355,6 +364,9 @@ export function createOrdersRouter() {
 
   router.get('/:id/production', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return fail(res, 400, '无效的编号');
+    }
     try {
       if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       const record = await dbGet<any>(`SELECT pp.*, p.name AS partner_name FROM production_plans pp LEFT JOIN partners p ON p.id = pp.partner_id WHERE pp.order_id = ?`, [orderId]);
@@ -368,6 +380,9 @@ export function createOrdersRouter() {
 
   router.post('/production/:id/logs', async (req: AuthedRequest, res) => {
     const planId = Number(req.params.id);
+    if (!Number.isInteger(planId) || planId <= 0) {
+      return fail(res, 400, '排产计划编号无效', 'INVALID_PLAN_ID');
+    }
     const result = await readProductionLogPayload(req.body || {});
     if ('error' in result) return fail(res, 400, result.error!);
     try {
@@ -381,6 +396,9 @@ export function createOrdersRouter() {
 
   router.patch('/:id/packing', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return fail(res, 400, '无效的编号');
+    }
     const items = req.body.items || [];
     try {
       if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
@@ -448,22 +466,25 @@ export function createOrdersRouter() {
 
   router.post('/:id/profit', requireAdmin, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: '无效的订单编号' });
+    }
     const data = {
       receipts: Array.isArray(req.body.receipts) ? req.body.receipts.map((r: any) => ({
-        amount: Number(r.amount) || 0,
+        amount: asNumber(r.amount),
         currency: r.currency === 'CNY' ? 'CNY' : 'USD',
-        bankFees: Number(r.bankFees) || 0,
-        platformFees: Number(r.platformFees) || 0,
-        exchangeRate: Number(r.exchangeRate) || (r.currency === 'CNY' ? 1 : 7.2),
+        bankFees: asNumber(r.bankFees),
+        platformFees: asNumber(r.platformFees),
+        exchangeRate: asNumber(r.exchangeRate, r.currency === 'CNY' ? 1 : 7.2),
       })) : [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
-      invoiceAmount: Number(req.body.invoiceAmount) || 0,
-      refundRate: Number(req.body.refundRate) || 13,
-      otherIncomeCny: Number(req.body.otherIncomeCny) || 0,
-      factoryCostCny: Number(req.body.factoryCostCny) || 0,
-      domesticFees: Number(req.body.domesticFees) || 0,
-      freightValue: Number(req.body.freightValue) || 0,
+      invoiceAmount: asNumber(req.body.invoiceAmount),
+      refundRate: asNumber(req.body.refundRate, 13),
+      otherIncomeCny: asNumber(req.body.otherIncomeCny),
+      factoryCostCny: asNumber(req.body.factoryCostCny),
+      domesticFees: asNumber(req.body.domesticFees),
+      freightValue: asNumber(req.body.freightValue),
       freightCurrency: req.body.freightCurrency === 'CNY' ? 'CNY' : 'USD',
-      customsMisc: Number(req.body.customsMisc) || 0,
+      customsMisc: asNumber(req.body.customsMisc),
       miscFees: Array.isArray(req.body.miscFees) ? req.body.miscFees : [],
     };
     try {
@@ -485,7 +506,10 @@ export function createOrdersRouter() {
 
   router.patch('/:id/quick-notes', requireAuth, async (req: AuthedRequest, res) => {
     const content = readString(req.body?.content, 5000);
-    const orderId = req.params.id as string;
+    const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: '无效的订单编号' });
+    }
     try {
       if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       await dbRun(`UPDATE orders SET quick_notes = ? WHERE id = ?`, [content, orderId]);
@@ -498,6 +522,9 @@ export function createOrdersRouter() {
   // 跟进时间轴
   router.get('/:id/follow-ups', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return fail(res, 400, '无效的编号');
+    }
     try {
       if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
       const rows = await dbAll(
@@ -512,6 +539,9 @@ export function createOrdersRouter() {
 
   router.post('/:id/follow-ups', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return fail(res, 400, '无效的编号');
+    }
     const content = String(req.body.content || '').trim();
     if (!content) {
       return fail(res, 400, '内容不能为空');
@@ -530,6 +560,9 @@ export function createOrdersRouter() {
 
   router.post('/:id/production', requireAuth, async (req: AuthedRequest, res) => {
     const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return fail(res, 400, '无效的编号');
+    }
     const result = await readProductionPayload(req.body || {}, orderId);
     if ('error' in result) return fail(res, 400, result.error!);
     try {
@@ -545,8 +578,11 @@ export function createOrdersRouter() {
     }
   });
 
-  router.patch('/production/:id', requireAuth, async (req: AuthedRequest, res) => {
+  router.patch('/:id/production', requireAuth, async (req: AuthedRequest, res) => {
     const productionId = Number(req.params.id);
+    if (!Number.isInteger(productionId) || productionId <= 0) {
+      return fail(res, 400, '无效的排产计划编号');
+    }
     try {
       const existing = await dbGet<{ order_id: number }>(
         `SELECT order_id FROM production_plans WHERE id = ?`,
