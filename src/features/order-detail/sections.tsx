@@ -11,7 +11,7 @@ import {
   WorkSection, DocumentBoard, EmptyStateBoard, FinanceDashboard, ProductionDashboard,
   Chip, GridItem, StatusFileRow, FileIcon, LightActionButton, FilterPill,
 } from './components';
-import { formatDateOnly, formatDateTime, asNumber, asText, STAGE_STEPS } from './utils';
+import { formatDateOnly, formatDateTime, asNumber, asText, formatIncoterm, formatTransportMode, STAGE_STEPS } from './utils';
 import type {
   AttachmentMeta, CustomerInfo, CustomsRecord, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
   PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType, ProfitData,
@@ -267,23 +267,25 @@ export function DocumentsVaultSection({
       {uncategorizedDocuments.length > 0 && (
         <div className="mt-4">
           <div className="mb-2 text-xs font-black text-slate-400 dark:text-slate-500 tracking-tight">其他单据</div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {uncategorizedDocuments.map(doc => (
-              <div key={doc.id} className="flex items-center h-14 px-4 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
-                <button onClick={() => onPreview(doc)} className="shrink-0 mr-3"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
-                <div className="min-w-0 flex-1">
-                  <button onClick={() => onPreview(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block w-full text-left hover:underline leading-tight" title={doc.fileName}>{doc.fileName}</button>
-                  {doc.createdAt && <span className="text-xs font-medium text-slate-400">{formatDateOnly(doc.createdAt)}</span>}
+          <div className="max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {uncategorizedDocuments.map(doc => (
+                <div key={doc.id} className="flex items-center h-14 px-4 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
+                  <button onClick={() => onPreview(doc)} className="shrink-0 mr-3"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
+                  <div className="min-w-0 flex-1">
+                    <button onClick={() => onPreview(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block w-full text-left hover:underline leading-tight" title={doc.fileName}>{doc.fileName}</button>
+                    {doc.createdAt && <span className="text-xs font-medium text-slate-400">{formatDateOnly(doc.createdAt)}</span>}
+                  </div>
+                  <div className="flex items-center gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                    <button onClick={() => onPreview(doc)} className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><FileText size={14} /></button>
+                    <a href={doc.url} download className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><Download size={14} /></a>
+                    {user?.role === 'admin' && (
+                      <button onClick={() => onDeleteAttachment(doc.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-error transition-all"><Trash size={14} /></button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                  <button onClick={() => onPreview(doc)} className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><FileText size={14} /></button>
-                  <a href={doc.url} download className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><Download size={14} /></a>
-                  {user?.role === 'admin' && (
-                    <button onClick={() => onDeleteAttachment(doc.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-error transition-all"><Trash size={14} /></button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -822,13 +824,16 @@ export function CustomsSection({
   onPreview: (att: AttachmentMeta | null) => void;
   user?: { name?: string; role?: string } | null;
 }) {
+  const taxRefundStatus = getTaxRefundStatus(customs?.status);
+
   return (
     <DocumentBoard ref={sectionRef} title="报关信息" action={customs ? <LightActionButton onClick={onEditCustoms} className="!py-1.5 !px-3 !text-xs"><ShieldCheck size={14} className="mr-1 opacity-70" /> 更新报关</LightActionButton> : null}>
       {customs ? (
         <div className="grid gap-8 lg:grid-cols-12 items-start">
           <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
             <GridItem label="报关单号" value={<span className="data-field font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
-            <GridItem label="贸易方式" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
+            <GridItem label="Customs Decl. Mode" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
+            <GridItem label="Tax Refund Status" value={<Chip tone={taxRefundStatus.tone}>{taxRefundStatus.label}</Chip>} />
             <GridItem label="报关日期" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
             <GridItem label="预计出口" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
           </div>
@@ -840,7 +845,7 @@ export function CustomsSection({
             <div className="space-y-1">
               {customs?.attachments?.length ? customs.attachments.map((att: AttachmentMeta) => (
                 <div key={att.id} className="flex items-center justify-between group">
-                  <div className="flex-1 min-w-0"><StatusFileRow label={att.fileName.split('.')[0]} status="uploaded" fileName={att.fileName} onPreview={() => onPreview(att)} /></div>
+                  <div className="flex-1 min-w-0"><StatusFileRow label={att.fileName.split('.')[0]} status="uploaded" fileName={att.fileName} downloadUrl={att.url} onPreview={() => onPreview(att)} /></div>
                   {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(att.id)} className="p-2 text-slate-300 dark:text-slate-600 hover:text-error opacity-0 group-hover:opacity-100 transition-all"><Trash size={16} /></button>}
                 </div>
               )) : (
@@ -932,7 +937,7 @@ function getLogisticsSegmentMeta(segment?: LogisticsRecord['segmentType']) {
 
   return {
     label: '国际运输',
-    eyebrow: 'INTERNATIONAL LEG',
+    eyebrow: "INT'L LEG",
     card: 'border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 hover:border-slate-300 dark:hover:border-navy-700',
     badge: 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300',
     icon: 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40',
@@ -964,6 +969,18 @@ function getCompactFileName(fileName: string) {
   const dotIndex = fileName.lastIndexOf('.');
   const ext = dotIndex > 0 ? fileName.slice(dotIndex) : '';
   return `${fileName.slice(0, 10)}...${ext}`;
+}
+
+function getTaxRefundStatus(status?: CustomsRecord['status']) {
+  switch (status) {
+    case 'released':
+      return { label: 'Completed', tone: 'success' as const };
+    case 'submitted':
+    case 'inspected':
+      return { label: 'Processing', tone: 'info' as const };
+    default:
+      return { label: 'Pending', tone: 'warning' as const };
+  }
 }
 
 export function LogisticsSection({
@@ -1024,8 +1041,12 @@ export function LogisticsSection({
                     <span className="rounded-[4px] bg-slate-900 px-3 py-1 text-sm font-black text-white shadow-md data-field dark:bg-navy-800">{l.trackingNo || '待同步'}</span>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <GridItem label="贸易术语" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.incoterm || '待确认'}</span>} />
-                    <GridItem label="运输方式" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.transportMode || (l.segmentType === 'international' ? '海/空运待定' : '内陆运输')}</span>} />
+                    {l.segmentType === 'international' && (
+                      <>
+                        <GridItem label="TRADE TERMS" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatIncoterm(l.incoterm)}</span>} />
+                        <GridItem label="TRANSPORT MODE" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatTransportMode(l.transportMode, 'Sea / Air / Courier 待确认')}</span>} />
+                      </>
+                    )}
                     <GridItem label="船名/航次" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.vesselVoyage || '待订舱'}</span>} />
                     <GridItem label="B/L No." value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.billNo || '待出单'}</span>} />
                     <GridItem label="ETD" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.etd, '待定')}</span>} />
@@ -1039,22 +1060,25 @@ export function LogisticsSection({
                 <div className="mt-5 flex flex-wrap gap-3">
                   {(l.attachments || []).map((att: AttachmentMeta) => (
                     <div key={att.id} className="group/attachment relative h-24 w-24 overflow-hidden rounded-lg border border-slate-200/80 bg-slate-100 shadow-sm ring-1 ring-black/[0.02] transition-all hover:-translate-y-0.5 hover:border-primary-navy/25 hover:shadow-md dark:border-navy-700 dark:bg-navy-950 dark:hover:border-tertiary-sage/40">
-                      <button
-                        type="button"
-                        onClick={() => onPreview(att)}
-                        className="block h-full w-full text-left"
-                        title={att.fileName}
-                      >
-                        <img
-                          src={getLogisticsAttachmentPreview(att)}
-                          alt={att.fileName || '物流单据'}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 bg-slate-950/60 px-2 py-1.5 text-[10px] font-bold leading-none text-white backdrop-blur-[2px]">
-                          <span className="block truncate">{getCompactFileName(att.fileName)}</span>
-                        </div>
-                      </button>
+                      <Tooltip text={att.fileName}>
+                        <span className="block h-24 w-24">
+                          <button
+                            type="button"
+                            onClick={() => onPreview(att)}
+                            className="block h-full w-full text-left"
+                          >
+                            <img
+                              src={getLogisticsAttachmentPreview(att)}
+                              alt={att.fileName || '物流单据'}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1.5 text-[10px] font-bold leading-none text-white backdrop-blur-[2px]">
+                              <span className="block truncate">{getCompactFileName(att.fileName)}</span>
+                            </div>
+                          </button>
+                        </span>
+                      </Tooltip>
                       {user?.role === 'admin' && (
                         <button
                           type="button"

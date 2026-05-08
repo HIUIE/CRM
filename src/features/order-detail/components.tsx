@@ -11,7 +11,7 @@ import {
   Wallet,
   FileText,
   Truck,
-  CircleHelp,
+  Eye,
   Upload,
   FileCode,
   X,
@@ -417,8 +417,8 @@ export function StatusFileRow({
       <div className="flex items-center gap-2">
            {status === 'uploaded' ? (
              <>
-               <button type="button" onClick={onPreview} className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800 border border-transparent hover:border-slate-200 dark:hover:border-navy-700 transition-all"><CircleHelp size={16} /></button>
-               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800 border border-transparent hover:border-slate-200 dark:hover:border-navy-700 transition-all"><Download size={16} /></a> : null}
+               <button type="button" onClick={onPreview} className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800 border border-transparent hover:border-slate-200 dark:hover:border-navy-700 transition-all" aria-label="Preview"><Eye size={16} /></button>
+               {fileName && downloadUrl ? <a href={downloadUrl} download className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-navy-800 border border-transparent hover:border-slate-200 dark:hover:border-navy-700 transition-all" aria-label="Download"><Download size={16} /></a> : null}
              </>
            ) : (
              <button type="button" onClick={onUpload} className="p-2 rounded-md bg-primary-navy text-white hover:bg-navy-950 transition-all shadow-sm"><Upload size={16} /></button>

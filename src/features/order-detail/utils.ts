@@ -126,6 +126,36 @@ export function formatDateOnly(val: unknown, fallback = '-'): string {
   return d.format('YYYY-MM-DD');
 }
 
+const TRANSPORT_MODE_LABELS: Record<string, string> = {
+  sea: 'Sea',
+  ocean: 'Sea',
+  海运: 'Sea',
+  air: 'Air',
+  空运: 'Air',
+  courier: 'Courier',
+  express: 'Courier',
+  快递: 'Courier',
+};
+
+export function formatTransportMode(val: unknown, fallback = '待确认'): string {
+  const raw = asText(val).trim();
+  if (!raw) return fallback;
+  const normalized = raw.toLowerCase();
+  return TRANSPORT_MODE_LABELS[normalized] || raw.replace(/\b\w/g, char => char.toUpperCase());
+}
+
+export function formatIncoterm(val: unknown, fallback = '待确认'): string {
+  const raw = asText(val).trim();
+  if (!raw) return fallback;
+  if (TRANSPORT_MODE_LABELS[raw.toLowerCase()]) return fallback;
+
+  const codeMatch = raw.match(/^(EXW|FCA|FAS|FOB|CFR|CIF|CPT|CIP|DAP|DPU|DDP)\b/i);
+  if (!codeMatch) return raw;
+
+  const code = codeMatch[1].toUpperCase();
+  return `${code}${raw.slice(codeMatch[1].length)}`;
+}
+
 export function getProductionStatusLabel(status: ProductionStatus): string {
   switch (status) {
     case 'not_started': return '待产';
