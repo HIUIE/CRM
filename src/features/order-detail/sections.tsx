@@ -898,6 +898,21 @@ function getLogisticsStatusMeta(status?: LogisticsRecord['status']) {
   }
 }
 
+const LOGISTICS_ATTACHMENT_PLACEHOLDER = 'https://placehold.co/240x180/e2e8f0/64748b?text=Image';
+
+function getLogisticsAttachmentPreview(att: AttachmentMeta) {
+  const isImage = att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|avif)$/i.test(att.fileName || '');
+  return isImage && att.url ? att.url : LOGISTICS_ATTACHMENT_PLACEHOLDER;
+}
+
+function getCompactFileName(fileName: string) {
+  if (!fileName) return '物流单据';
+  if (fileName.length <= 18) return fileName;
+  const dotIndex = fileName.lastIndexOf('.');
+  const ext = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+  return `${fileName.slice(0, 10)}...${ext}`;
+}
+
 export function LogisticsSection({
   sectionRef,
   logisticsRecords,
@@ -960,19 +975,46 @@ export function LogisticsSection({
                   <span>发货日期: <span className="data-field text-primary-navy dark:text-white">{formatDateOnly(l.shippingDate, '待定')}</span></span>
                   {l.recipientAddress && <div className="truncate font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400" title={l.recipientAddress}>收货地址: {l.recipientAddress}</div>}
                 </div>
-                {l.attachments && l.attachments.length > 0 && (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {l.attachments.map((att: AttachmentMeta) => (
-                      <div key={att.id} className="flex items-center gap-1.5 rounded border border-slate-100 bg-slate-50/60 px-2.5 py-1.5 text-primary-navy shadow-sm transition-all hover:bg-surface dark:border-navy-800 dark:bg-navy-900/80 dark:text-white dark:hover:bg-navy-800">
-                        <button onClick={() => onPreview(att)} className="flex items-center gap-1.5">
-                          <FileIcon fileName={att.fileName} size={12} />
-                          <span className="max-w-[100px] truncate text-xs font-bold">{att.fileName.split('.')[0]}</span>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {(l.attachments || []).map((att: AttachmentMeta) => (
+                    <div key={att.id} className="group/attachment relative h-24 w-24 overflow-hidden rounded-lg border border-slate-200/80 bg-slate-100 shadow-sm ring-1 ring-black/[0.02] transition-all hover:-translate-y-0.5 hover:border-primary-navy/25 hover:shadow-md dark:border-navy-700 dark:bg-navy-950 dark:hover:border-tertiary-sage/40">
+                      <button
+                        type="button"
+                        onClick={() => onPreview(att)}
+                        className="block h-full w-full text-left"
+                        title={att.fileName}
+                      >
+                        <img
+                          src={getLogisticsAttachmentPreview(att)}
+                          alt={att.fileName || '物流单据'}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-slate-950/60 px-2 py-1.5 text-[10px] font-bold leading-none text-white backdrop-blur-[2px]">
+                          <span className="block truncate">{getCompactFileName(att.fileName)}</span>
+                        </div>
+                      </button>
+                      {user?.role === 'admin' && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteAttachment(att.id)}
+                          className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/60 text-white shadow-sm backdrop-blur transition-all hover:bg-error"
+                          aria-label={`删除附件 ${att.fileName}`}
+                        >
+                          <X size={13} strokeWidth={2.5} />
                         </button>
-                        {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(att.id)} className="ml-1 text-slate-300 dark:text-slate-700 hover:text-error"><X size={12} /></button>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => onEditLogistics(l)}
+                    className="flex h-24 w-24 flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-transparent text-slate-400 transition-all hover:border-primary-navy/40 hover:bg-slate-50 hover:text-primary-navy dark:border-navy-700 dark:text-slate-500 dark:hover:border-tertiary-sage/50 dark:hover:bg-navy-950/60 dark:hover:text-tertiary-sage"
+                  >
+                    <Plus size={22} strokeWidth={1.8} />
+                    <span className="text-[11px] font-black tracking-tight">上传图片</span>
+                  </button>
+                </div>
               </div>
             );
           })}
