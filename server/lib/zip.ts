@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import { once } from 'node:events';
+import zlib from 'node:zlib';
 
 type ZipEntry = {
   name: string;
@@ -16,11 +17,16 @@ export type ZipSink = {
 type ZipDirectoryEntry = {
   name: string;
   checksum: number;
-  size: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  compressionMethod: number;
   offset: number;
   dosTime: number;
   dosDate: number;
 };
+
+const ZIP_STORE = 0;
+const ZIP_DEFLATE = 8;
 
 const CRC32_TABLE = new Uint32Array(256).map((_, index) => {
   let value = index;
@@ -50,17 +56,25 @@ function toDosDateTime(input: Date) {
   return { dosTime, dosDate };
 }
 
-function buildLocalHeader(nameBuffer: Buffer, checksum: number, size: number, dosTime: number, dosDate: number) {
+function buildLocalHeader(
+  nameBuffer: Buffer,
+  checksum: number,
+  compressedSize: number,
+  uncompressedSize: number,
+  compressionMethod: number,
+  dosTime: number,
+  dosDate: number,
+) {
   const localHeader = Buffer.alloc(30);
   localHeader.writeUInt32LE(0x04034b50, 0);
   localHeader.writeUInt16LE(20, 4);
   localHeader.writeUInt16LE(0x0800, 6);
-  localHeader.writeUInt16LE(0, 8);
+  localHeader.writeUInt16LE(compressionMethod, 8);
   localHeader.writeUInt16LE(dosTime, 10);
   localHeader.writeUInt16LE(dosDate, 12);
   localHeader.writeUInt32LE(checksum, 14);
-  localHeader.writeUInt32LE(size, 18);
-  localHeader.writeUInt32LE(size, 22);
+  localHeader.writeUInt32LE(compressedSize, 18);
+  localHeader.writeUInt32LE(uncompressedSize, 22);
   localHeader.writeUInt16LE(nameBuffer.length, 26);
   localHeader.writeUInt16LE(0, 28);
   return localHeader;
@@ -72,12 +86,12 @@ function buildCentralHeader(entry: ZipDirectoryEntry, nameBuffer: Buffer) {
   centralHeader.writeUInt16LE(20, 4);
   centralHeader.writeUInt16LE(20, 6);
   centralHeader.writeUInt16LE(0x0800, 8);
-  centralHeader.writeUInt16LE(0, 10);
+  centralHeader.writeUInt16LE(entry.compressionMethod, 10);
   centralHeader.writeUInt16LE(entry.dosTime, 12);
   centralHeader.writeUInt16LE(entry.dosDate, 14);
   centralHeader.writeUInt32LE(entry.checksum, 16);
-  centralHeader.writeUInt32LE(entry.size, 20);
-  centralHeader.writeUInt32LE(entry.size, 24);
+  centralHeader.writeUInt32LE(entry.compressedSize, 20);
+  centralHeader.writeUInt32LE(entry.uncompressedSize, 24);
   centralHeader.writeUInt16LE(nameBuffer.length, 28);
   centralHeader.writeUInt16LE(0, 30);
   centralHeader.writeUInt16LE(0, 32);
@@ -88,19 +102,21 @@ function buildCentralHeader(entry: ZipDirectoryEntry, nameBuffer: Buffer) {
   return centralHeader;
 }
 
-async function getFileChecksumAndSize(filePath: string) {
-  let crc = 0xffffffff;
-  let size = 0;
-
-  for await (const chunk of fs.createReadStream(filePath)) {
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    crc = updateCrc32(crc, buffer);
-    size += buffer.length;
+function maybeCompress(buffer: Buffer) {
+  const compressed = zlib.deflateRawSync(buffer, { level: 6 });
+  if (compressed.length < buffer.length) {
+    return {
+      data: compressed,
+      compressionMethod: ZIP_DEFLATE,
+      compressedSize: compressed.length,
+      uncompressedSize: buffer.length,
+    };
   }
-
   return {
-    checksum: (crc ^ 0xffffffff) >>> 0,
-    size,
+    data: buffer,
+    compressionMethod: ZIP_STORE,
+    compressedSize: buffer.length,
+    uncompressedSize: buffer.length,
   };
 }
 
@@ -118,13 +134,24 @@ export function createZipBuffer(entries: ZipEntry[]) {
   for (const entry of entries) {
     const nameBuffer = Buffer.from(entry.name, 'utf8');
     const dataBuffer = Buffer.isBuffer(entry.data) ? entry.data : Buffer.from(entry.data);
+    const packed = maybeCompress(dataBuffer);
     const checksum = crc32(dataBuffer);
-    const localHeader = buildLocalHeader(nameBuffer, checksum, dataBuffer.length, dosTime, dosDate);
+    const localHeader = buildLocalHeader(
+      nameBuffer,
+      checksum,
+      packed.compressedSize,
+      packed.uncompressedSize,
+      packed.compressionMethod,
+      dosTime,
+      dosDate,
+    );
     const centralHeader = buildCentralHeader(
       {
         name: entry.name,
         checksum,
-        size: dataBuffer.length,
+        compressedSize: packed.compressedSize,
+        uncompressedSize: packed.uncompressedSize,
+        compressionMethod: packed.compressionMethod,
         offset,
         dosTime,
         dosDate,
@@ -132,9 +159,9 @@ export function createZipBuffer(entries: ZipEntry[]) {
       nameBuffer,
     );
 
-    localParts.push(localHeader, nameBuffer, dataBuffer);
+    localParts.push(localHeader, nameBuffer, packed.data);
     centralParts.push(centralHeader, nameBuffer);
-    offset += localHeader.length + nameBuffer.length + dataBuffer.length;
+    offset += localHeader.length + nameBuffer.length + packed.compressedSize;
   }
 
   const centralDirectorySize = centralParts.reduce((sum, part) => sum + part.length, 0);
@@ -165,19 +192,33 @@ export class ZipStreamWriter {
     }
   }
 
-  private async addEntry(name: string, checksum: number, size: number, writeData: () => Promise<void>, modifiedAt = new Date()) {
+  private async addEntry(name: string, originalData: Buffer, modifiedAt = new Date()) {
     const { dosTime, dosDate } = toDosDateTime(modifiedAt);
     const nameBuffer = Buffer.from(name, 'utf8');
+    const checksum = crc32(originalData);
+    const packed = maybeCompress(originalData);
     const entryOffset = this.offset;
 
-    await this.writeChunk(buildLocalHeader(nameBuffer, checksum, size, dosTime, dosDate));
+    await this.writeChunk(
+      buildLocalHeader(
+        nameBuffer,
+        checksum,
+        packed.compressedSize,
+        packed.uncompressedSize,
+        packed.compressionMethod,
+        dosTime,
+        dosDate,
+      ),
+    );
     await this.writeChunk(nameBuffer);
-    await writeData();
+    await this.writeChunk(packed.data);
 
     this.entries.push({
       name,
       checksum,
-      size,
+      compressedSize: packed.compressedSize,
+      uncompressedSize: packed.uncompressedSize,
+      compressionMethod: packed.compressionMethod,
       offset: entryOffset,
       dosTime,
       dosDate,
@@ -186,15 +227,7 @@ export class ZipStreamWriter {
 
   async addBuffer(name: string, data: Buffer, modifiedAt = new Date()) {
     const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
-    await this.addEntry(
-      name,
-      crc32(buffer),
-      buffer.length,
-      async () => {
-        await this.writeChunk(buffer);
-      },
-      modifiedAt,
-    );
+    await this.addEntry(name, buffer, modifiedAt);
   }
 
   async addText(name: string, content: string, modifiedAt = new Date()) {
@@ -202,19 +235,8 @@ export class ZipStreamWriter {
   }
 
   async addFile(name: string, filePath: string, modifiedAt = new Date()) {
-    const { checksum, size } = await getFileChecksumAndSize(filePath);
-    await this.addEntry(
-      name,
-      checksum,
-      size,
-      async () => {
-        for await (const chunk of fs.createReadStream(filePath)) {
-          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-          await this.writeChunk(buffer);
-        }
-      },
-      modifiedAt,
-    );
+    const buffer = await fs.promises.readFile(filePath);
+    await this.addEntry(name, buffer, modifiedAt);
   }
 
   async finalize() {
