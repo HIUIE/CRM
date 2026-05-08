@@ -41,6 +41,7 @@ export const EMPTY_ORDER_FORM: OrderFormState = {
   freightAmount: '0',
   miscAmount: '0',
   details: '',
+  alibabaOrderNo: '',
   items: [],
 };
 
@@ -186,6 +187,7 @@ export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFor
     freightAmount: String(order.freightAmount || 0),
     miscAmount: String(order.miscAmount || 0),
     details: asText(order.details),
+    alibabaOrderNo: asText(order.alibaba_order_no || ''),
     items: items.map((it) => ({
       clientKey: Math.random().toString(36).slice(2),
       id: it.id,

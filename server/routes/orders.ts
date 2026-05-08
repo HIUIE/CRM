@@ -85,9 +85,9 @@ export function createOrdersRouter() {
       params.push(status);
     }
     if (q) {
-      sql += ` AND (o.display_id LIKE ? OR o.product_summary LIKE ? OR c.name LIKE ?)`;
+      sql += ` AND (o.display_id LIKE ? OR o.product_summary LIKE ? OR c.name LIKE ? OR o.alibaba_order_no LIKE ?)`;
       const p = `%${q}%`;
-      params.push(p, p, p);
+      params.push(p, p, p, p);
     }
 
     if (startDate) {
@@ -202,8 +202,8 @@ export function createOrdersRouter() {
         }
 
         return await tx.run(
-          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by, exchange_rate_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null, currentRate]
+          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by, exchange_rate_snapshot, alibaba_order_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null, currentRate, result.payload.alibabaOrderNo || null]
         );
       });
 
@@ -244,8 +244,8 @@ export function createOrdersRouter() {
 
       await withTransaction(async (tx) => {
         await tx.run(
-          `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, updated_by = ? WHERE id = ?`,
-          [result.payload.customerId, result.payload.status, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, orderId]
+          `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, updated_by = ?, alibaba_order_no = ? WHERE id = ?`,
+          [result.payload.customerId, result.payload.status, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, result.payload.alibabaOrderNo || null, orderId]
         );
 
         const deletedIds = (req.body.deletedItemIds || []) as number[];

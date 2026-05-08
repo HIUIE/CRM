@@ -69,6 +69,7 @@ export type OrderInfo = {
   miscAmount?: number;
   created_at: string;
   createdByName?: string | null;
+  alibaba_order_no?: string | null;
 };
 
 export type CustomerInfo = {
@@ -276,6 +277,7 @@ export type OrderFormState = {
   freightAmount: string;
   miscAmount: string;
   details: string;
+  alibabaOrderNo: string;
   items: EditableOrderItem[];
 };
 

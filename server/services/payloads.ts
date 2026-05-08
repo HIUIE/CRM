@@ -120,6 +120,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
   const miscAmountInput = readNumber(body.miscAmount);
   const freightAmount = Number.isFinite(freightAmountInput) ? freightAmountInput : 0;
   const miscAmount = Number.isFinite(miscAmountInput) ? miscAmountInput : 0;
+  const alibabaOrderNo = readString(body.alibabaOrderNo || body.alibaba_order_no, 100);
 
   if (!Number.isInteger(customerId) || customerId <= 0) {
     return { error: '请选择有效客户' };
@@ -153,6 +154,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
       deliveryDate,
       freightAmount,
       miscAmount,
+      alibabaOrderNo,
     },
   };
 }

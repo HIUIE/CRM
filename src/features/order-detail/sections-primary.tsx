@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronRight,
@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   CalendarDays,
+  Copy,
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { WorkSection, EmptyStateBoard, LightActionButton } from './components';
@@ -140,6 +141,13 @@ export function OrderHeaderSection({
   packingRecords: PackingRecord[];
   logisticsRecords: LogisticsRecord[];
 }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopyAlibabaNo = (no: string) => {
+    navigator.clipboard.writeText(no);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const orderTotal = asNumber(order.total_amount) || items.reduce((sum, item) => sum + asNumber(item.subtotal), 0);
   const paidUsd = financeRecords
     .filter((record) => record.type === 'receipt' && record.status === 'completed' && record.currency === 'USD')
@@ -162,10 +170,23 @@ export function OrderHeaderSection({
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between border-b border-slate-100 dark:border-navy-800 pb-6">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight leading-none">
+            <div className="flex items-center flex-wrap gap-2 mb-2 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight leading-none">
               <Link to="/orders" className="hover:text-primary-navy dark:hover:text-tertiary-sage transition-colors">订单管理</Link>
               <ChevronRight size={12} className="opacity-30" />
               <span className="text-primary-navy dark:text-tertiary-sage data-field" style={{ viewTransitionName: 'order-id' }}>{order.display_id}</span>
+              {order.alibaba_order_no && (
+                <span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100/50 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-900/30 ml-1.5 shadow-sm shrink-0 transition-all hover:bg-amber-100/50">
+                  <span>阿里订单: {order.alibaba_order_no}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyAlibabaNo(order.alibaba_order_no!)}
+                    className="p-0.5 rounded hover:bg-amber-200/50 dark:hover:bg-amber-900/40 text-amber-500 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-200 transition-colors"
+                    title="复制阿里订单号"
+                  >
+                    {copied ? <CheckCircle2 size={11} className="text-emerald-500" /> : <Copy size={11} />}
+                  </button>
+                </span>
+              )}
             </div>
             <h1 className="text-2xl font-bold text-primary-navy dark:text-white tracking-tight truncate mb-4 hover:text-blue-600 cursor-pointer transition-colors" onClick={() => navigate(`/customers/${customer.display_id}`)}>
               {asText(customer.name, '未命名客户')}

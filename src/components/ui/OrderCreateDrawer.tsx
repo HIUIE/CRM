@@ -20,6 +20,7 @@ type OrderFormState = {
   productSummary: string;
   details: string;
   totalAmount: string;
+  alibabaOrderNo?: string;
 };
 
 const EMPTY_FORM: OrderFormState = {
@@ -28,6 +29,7 @@ const EMPTY_FORM: OrderFormState = {
   productSummary: '',
   details: '',
   totalAmount: '0',
+  alibabaOrderNo: '',
 };
 
 export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerId, initialCustomerName }: OrderCreateDrawerProps) {
@@ -162,6 +164,15 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
               value={formData.productSummary} 
               onChange={e => setFormData({...formData, productSummary: e.target.value})} 
               placeholder="例如：太阳能板 A-Type 500pcs..." 
+              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none" 
+            />
+          </Field>
+
+          <Field label="阿里订单号">
+            <input 
+              value={formData.alibabaOrderNo || ''} 
+              onChange={e => setFormData({...formData, alibabaOrderNo: e.target.value})} 
+              placeholder="关联的阿里订单号 (可选)..." 
               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none" 
             />
           </Field>

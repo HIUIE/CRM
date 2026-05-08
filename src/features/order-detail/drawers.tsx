@@ -35,7 +35,7 @@ export function OrderEditForm({
 }) {
   return (
     <div className="space-y-12">
-      <section className="grid gap-10 sm:grid-cols-2">
+      <section className="grid gap-10 sm:grid-cols-3">
         <Field label="业务状态">
           <select value={orderForm.status} onChange={e => setOrderForm({ ...orderForm, status: e.target.value as OrderStatus })} className="w-full bg-slate-50 dark:bg-navy-950 p-3 text-[14px] font-bold text-primary-navy dark:text-white appearance-none focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm">
             <option value="draft">待受理</option>
@@ -47,6 +47,9 @@ export function OrderEditForm({
         </Field>
         <Field label="预期交期">
           <input type="date" value={orderForm.deliveryDate} onChange={e => setOrderForm({ ...orderForm, deliveryDate: e.target.value })} className="w-full bg-slate-50 dark:bg-navy-950 p-3 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" />
+        </Field>
+        <Field label="阿里订单号">
+          <input type="text" value={orderForm.alibabaOrderNo || ''} onChange={e => setOrderForm({ ...orderForm, alibabaOrderNo: e.target.value })} placeholder="关联的阿里订单号 (可选)..." className="w-full bg-slate-50 dark:bg-navy-950 p-3 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" />
         </Field>
       </section>
 

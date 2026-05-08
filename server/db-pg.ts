@@ -85,6 +85,8 @@ export async function initPgTables() {
     await client.query('SELECT 1');
     // Ensure token_version column exists for JWT revocation support
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 1');
+    // Ensure alibaba_order_no column exists for orders
+    await client.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS alibaba_order_no TEXT');
     // Persistent login rate limiter table
     await client.query(`
       CREATE TABLE IF NOT EXISTS login_attempts (
