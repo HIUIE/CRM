@@ -488,6 +488,7 @@ export default function OrderDetailPage() {
         productionPlan={productionPlan}
         hasAnyLogistics={hasAnyLogistics}
         packingRecords={packingRecords}
+        logisticsRecords={logisticsRecords}
       />
 
       {/* Physical 2-Column Main Layout */}
@@ -511,7 +512,7 @@ export default function OrderDetailPage() {
             <DocumentsVaultSection
               orderDocuments={orderDocuments}
               uploadingDoc={uploadingDoc}
-              onUploadDocument={(files) => handleUploadOrderDocument(files, { order, customer, setUploadingDoc, showToast, loadDetail: refreshDetail })}
+              onUploadDocument={(files, docType) => handleUploadOrderDocument(files, { order, customer, docType, setUploadingDoc, showToast, loadDetail: refreshDetail })}
               onPreview={setPreviewAttachment}
               onDeleteAttachment={requestDeleteAttachment}
               user={user}

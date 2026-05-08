@@ -388,12 +388,13 @@ export async function handleUploadOrderDocument(
   deps: {
     order: OrderInfo | null | undefined;
     customer: CustomerInfo | null | undefined;
+    docType?: string;
     setUploadingDoc: (v: boolean) => void;
     showToast: (msg: string) => void;
     loadDetail: (opts?: { showLoading?: boolean }) => Promise<void>;
   }
 ) {
-  const { order, customer, setUploadingDoc, showToast, loadDetail } = deps;
+  const { order, customer, docType, setUploadingDoc, showToast, loadDetail } = deps;
   if (!files?.length || !order) return;
   setUploadingDoc(true);
   try {
@@ -402,6 +403,7 @@ export async function handleUploadOrderDocument(
     fd.append('orderId', String(order.id));
     fd.append('entityType', 'order_document');
     fd.append('entityId', String(order.id));
+    if (docType) fd.append('docType', docType);
     Array.from(files).forEach(f => fd.append('files', f));
     await apiUploadSimple('/api/attachments', fd);
     showToast('凭证已上传');

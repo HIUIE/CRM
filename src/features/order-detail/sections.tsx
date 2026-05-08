@@ -190,6 +190,21 @@ export function ItemsSection({
 
 // ==================== Documents Vault Section ====================
 
+const DOCUMENT_SLOTS = [
+  { key: 'pi', docType: 'PI', label: 'PI', name: '形式发票', group: '业务单据', pattern: /\b(pi|proforma)\b|形式发票/i },
+  { key: 'contract', docType: 'CONTRACT', label: '合同', name: '采购/销售合同', group: '业务单据', pattern: /contract|合同|purchase/i },
+  { key: 'ci', docType: 'CI', label: 'CI', name: '商业发票', group: '结汇/清关', pattern: /\b(ci|commercial invoice)\b|商业发票/i },
+  { key: 'pl', docType: 'PL', label: 'PL', name: '装箱单', group: '结汇/清关', pattern: /\b(pl|packing list)\b|装箱单/i },
+  { key: 'bl', docType: 'BL', label: 'B/L', name: '提单', group: '结汇/清关', pattern: /\b(bl|b\/l|bill of lading)\b|提单/i },
+  { key: 'co', docType: 'CO', label: 'CO', name: '原产地证', group: '结汇/清关', pattern: /\b(co|certificate of origin)\b|原产地/i },
+  { key: 'insurance', docType: 'INSURANCE', label: '保险', name: '保险单', group: '结汇/清关', pattern: /insurance|policy|保险/i },
+];
+
+function getDocumentSlotMatch(slot: (typeof DOCUMENT_SLOTS)[number], documents: AttachmentMeta[]) {
+  const explicitMatch = documents.find((doc) => String(doc.remark || '').toUpperCase() === `DOCTYPE:${slot.docType}`);
+  return explicitMatch || documents.find((doc) => !String(doc.remark || '').toUpperCase().startsWith('DOCTYPE:') && slot.pattern.test(doc.fileName || ''));
+}
+
 export function DocumentsVaultSection({
   orderDocuments,
   uploadingDoc,
@@ -200,11 +215,19 @@ export function DocumentsVaultSection({
 }: {
   orderDocuments: AttachmentMeta[];
   uploadingDoc: boolean;
-  onUploadDocument: (files: FileList | null) => void;
+  onUploadDocument: (files: FileList | null, docType?: string) => void;
   onPreview: (att: AttachmentMeta | null) => void;
   onDeleteAttachment: (id: number) => Promise<void>;
   user?: { name?: string; role?: string } | null;
 }) {
+  const matchedDocumentIds = new Set<number>();
+  const slotMatches = DOCUMENT_SLOTS.map((slot) => {
+    const slotDocument = getDocumentSlotMatch(slot, orderDocuments);
+    if (slotDocument) matchedDocumentIds.add(slotDocument.id);
+    return { slot, slotDocument };
+  });
+  const uncategorizedDocuments = orderDocuments.filter((doc) => !matchedDocumentIds.has(doc.id));
+
   return (
     <DocumentBoard title="核心单据凭证库" id="documents-vault" action={
       <label className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all ${uploadingDoc ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-surface dark:bg-navy-800 text-slate-900 dark:text-white border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700 hover:border-slate-300 dark:hover:border-navy-600 shadow-sm cursor-pointer active:scale-95'}`}>
@@ -212,27 +235,57 @@ export function DocumentsVaultSection({
         {!uploadingDoc && <input type="file" multiple className="hidden" onChange={e => e.target.files && onUploadDocument(e.target.files)} />}
       </label>
     }>
-      {orderDocuments.length ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {orderDocuments.map(doc => (
-            <div key={doc.id} className="flex items-center h-14 px-4 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
-              <button onClick={() => onPreview(doc)} className="shrink-0 mr-3"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
-              <div className="min-w-0 flex-1">
-                <button onClick={() => onPreview(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block w-full text-left hover:underline leading-tight" title={doc.fileName}>{doc.fileName}</button>
-                {doc.createdAt && <span className="text-xs font-medium text-slate-400">{formatDateOnly(doc.createdAt)}</span>}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {slotMatches.map(({ slot, slotDocument }) => (
+          <div key={slot.key} className={`rounded-lg border p-4 transition-all ${slotDocument ? 'border-emerald-100 bg-emerald-50/50 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-900/10' : 'border-dashed border-slate-200 bg-slate-50/60 dark:border-navy-700 dark:bg-navy-950/40'}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-black ${slotDocument ? 'border-emerald-200 bg-white text-emerald-700 dark:border-emerald-900/50 dark:bg-navy-900 dark:text-emerald-300' : 'border-slate-200 bg-surface text-slate-400 dark:border-navy-700 dark:bg-navy-900 dark:text-slate-500'}`}>{slot.label}</span>
+                  <span className="truncate text-xs font-black text-primary-navy dark:text-white">{slot.name}</span>
+                </div>
+                <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{slot.group}</div>
               </div>
-              <div className="flex items-center gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                <button onClick={() => onPreview(doc)} className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><FileText size={14} /></button>
-                <a href={doc.url} download className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><Download size={14} /></a>
-                {user?.role === 'admin' && (
-                  <button onClick={() => onDeleteAttachment(doc.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-error transition-all"><Trash size={14} /></button>
-                )}
-              </div>
+              {slotDocument ? <CheckCircle2 size={16} className="mt-1 shrink-0 text-emerald-500" /> : <Upload size={15} className="mt-1 shrink-0 text-slate-300 dark:text-slate-600" />}
             </div>
-          ))}
+            {slotDocument ? (
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-emerald-100 bg-white/80 px-2.5 py-2 dark:border-emerald-900/30 dark:bg-navy-900/70">
+                <button onClick={() => onPreview(slotDocument)} className="shrink-0"><FileIcon fileName={slotDocument.fileName} url={slotDocument.url} size={18} /></button>
+                <button onClick={() => onPreview(slotDocument)} className="min-w-0 flex-1 truncate text-left text-xs font-bold text-primary-navy hover:underline dark:text-white" title={slotDocument.fileName}>{slotDocument.fileName}</button>
+                <a href={slotDocument.url} download className="shrink-0 text-slate-400 hover:text-primary-navy dark:hover:text-white"><Download size={13} /></a>
+                {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(slotDocument.id)} className="shrink-0 text-slate-300 hover:text-error dark:text-slate-600"><Trash size={13} /></button>}
+              </div>
+            ) : (
+              <label className="mt-4 flex h-9 w-full cursor-pointer items-center justify-center rounded-md border border-dashed border-slate-200 text-xs font-black text-slate-400 transition-all hover:border-primary-navy/30 hover:bg-surface hover:text-primary-navy dark:border-navy-700 dark:hover:border-tertiary-sage/40 dark:hover:bg-navy-900 dark:hover:text-tertiary-sage">
+                上传补齐
+                <input type="file" className="hidden" onChange={e => { onUploadDocument(e.target.files, slot.docType); e.currentTarget.value = ''; }} />
+              </label>
+            )}
+          </div>
+        ))}
+      </div>
+      {uncategorizedDocuments.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-2 text-xs font-black text-slate-400 dark:text-slate-500 tracking-tight">其他单据</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {uncategorizedDocuments.map(doc => (
+              <div key={doc.id} className="flex items-center h-14 px-4 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
+                <button onClick={() => onPreview(doc)} className="shrink-0 mr-3"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
+                <div className="min-w-0 flex-1">
+                  <button onClick={() => onPreview(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block w-full text-left hover:underline leading-tight" title={doc.fileName}>{doc.fileName}</button>
+                  {doc.createdAt && <span className="text-xs font-medium text-slate-400">{formatDateOnly(doc.createdAt)}</span>}
+                </div>
+                <div className="flex items-center gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                  <button onClick={() => onPreview(doc)} className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><FileText size={14} /></button>
+                  <a href={doc.url} download className="p-1.5 text-slate-400 hover:text-primary-navy dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"><Download size={14} /></a>
+                  {user?.role === 'admin' && (
+                    <button onClick={() => onDeleteAttachment(doc.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-error transition-all"><Trash size={14} /></button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      ) : (
-        <EmptyStateBoard title="暂无核心交易凭证" description="请上传双方盖章版 PO、我方 PI、银行水单或合同附件，方便业务核对、财务追踪与长期归档。" icon={FileText} actionLabel="+ 上传首份凭证" onAction={() => document.getElementById('doc-upload-input')?.click()} />
       )}
       <input id="doc-upload-input" type="file" multiple className="hidden" onChange={e => e.target.files && onUploadDocument(e.target.files)} />
     </DocumentBoard>
@@ -969,6 +1022,14 @@ export function LogisticsSection({
                   <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 bg-slate-50/70 px-4 py-3 dark:border-navy-800 dark:bg-navy-950/40">
                     <span className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">提单/运单号</span>
                     <span className="rounded-[4px] bg-slate-900 px-3 py-1 text-sm font-black text-white shadow-md data-field dark:bg-navy-800">{l.trackingNo || '待同步'}</span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <GridItem label="贸易术语" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.incoterm || '待确认'}</span>} />
+                    <GridItem label="运输方式" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.transportMode || (l.segmentType === 'international' ? '海/空运待定' : '内陆运输')}</span>} />
+                    <GridItem label="船名/航次" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.vesselVoyage || '待订舱'}</span>} />
+                    <GridItem label="B/L No." value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.billNo || '待出单'}</span>} />
+                    <GridItem label="ETD" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.etd, '待定')}</span>} />
+                    <GridItem label="ETA" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.eta, '待定')}</span>} />
                   </div>
                 </div>
                 <div className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-4 text-xs font-bold text-secondary-slate dark:border-navy-800 dark:text-slate-400 tracking-tight">

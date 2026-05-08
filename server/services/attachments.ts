@@ -11,7 +11,7 @@ export async function getAttachmentsByEntity(entityType: AttachmentEntityType, e
   const placeholders = entityIds.map(() => '?').join(', ');
   const rows = await dbAll<Record<string, unknown>[]>(
     `
-      SELECT id, entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, created_at
+      SELECT id, entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, remark, created_at
       FROM attachments
       WHERE entity_type = ? AND entity_id IN (${placeholders})
       ORDER BY datetime(created_at) DESC, id DESC
@@ -36,6 +36,7 @@ export async function getAttachmentsByEntity(entityType: AttachmentEntityType, e
       filePath: row.file_path,
       url: buildAttachmentUrl(Number(row.id), getStoredNameFromRecord(row.stored_name, row.file_path)),
       createdAt: row.created_at,
+      remark: row.remark,
     });
   }
 

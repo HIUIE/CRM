@@ -79,7 +79,9 @@ export function createAttachmentsRouter() {
       const uploaded = [];
       const entityType = req.body.entityType || null;
       const entityId = req.body.entityId || null;
-      const remark = req.body.remark || null;
+      const rawDocType = String(req.body.docType || '').trim().toUpperCase();
+      const docType = /^[A-Z0-9_-]{1,30}$/.test(rawDocType) ? rawDocType : '';
+      const remark = docType ? `docType:${docType}` : (req.body.remark || null);
 
       for (const file of files) {
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
