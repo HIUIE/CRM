@@ -542,7 +542,7 @@ export default function OrderDetailPage() {
               onEditProduction={openProductionDrawer}
               onUpdateInspection={(status) => handleUpdateInspectionStatus(status, { productionPlan, order, setSaving, showToast, loadDetail: refreshDetail })}
               onPreview={setPreviewAttachment}
-              onUploadPhotos={(files) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'production_photo', entityId: order?.id, label: '生产留痕图片', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
+              onUploadPhotos={(files) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'production_photo', entityId: order?.id, docType: 'PRODUCTION_QC', label: '生产留痕图片', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
               onDeleteAttachment={requestDeleteAttachment}
               onAddProduction={openProductionDrawer}
               user={user}

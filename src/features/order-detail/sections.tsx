@@ -899,14 +899,19 @@ export function ProductionSection({
   onAddProduction: () => void;
   user?: { name?: string; role?: string } | null;
 }) {
+  const planPhotos = productionPlan?.photos || [];
+  const qcPhotos = planPhotos.filter((att) => String(att.remark || '').toUpperCase() === 'DOCTYPE:PRODUCTION_QC');
+  const planAttachments = planPhotos.filter((att) => String(att.remark || '').toUpperCase() !== 'DOCTYPE:PRODUCTION_QC');
+  const dashboardPlan = productionPlan ? { ...productionPlan, photos: planAttachments } : null;
+
   return (
     <DocumentBoard ref={sectionRef} title="生产信息" action={productionPlan ? <LightActionButton onClick={onEditProduction} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 更新排产</LightActionButton> : null}>
       {productionPlan ? (
         <>
-          <ProductionDashboard plan={productionPlan} onEditLink={onEditProduction} onUpdateInspection={onUpdateInspection} onPreview={onPreview} />
+          <ProductionDashboard plan={dashboardPlan} onEditLink={onEditProduction} onUpdateInspection={onUpdateInspection} onPreview={onPreview} />
           <EvidenceThumbnailGrid
             title="大货与验货记录 (Production & QC Photos)"
-            attachments={productionPlan.photos || []}
+            attachments={qcPhotos}
             uploadLabel="+ 上传大货/QC图片"
             onUpload={onUploadPhotos}
             onPreview={onPreview}
