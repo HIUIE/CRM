@@ -423,12 +423,12 @@ export function createOrdersRouter() {
   // ==================== Profit/Margin Data ====================
 
   router.get('/:id/profit', requireAuth, async (req: AuthedRequest, res) => {
-    const orderId = Number(req.params.id);
-    if (!Number.isInteger(orderId) || orderId <= 0) {
-      return res.status(400).json({ error: '无效的订单编号' });
-    }
+    const orderParam = req.params.id as string;
     try {
-      if (!(await checkOrderAccess(req, orderId))) return fail(res, 404, '订单不存在');
+      const order = await checkOrderAccess(req, orderParam);
+      if (!order) return fail(res, 404, '订单不存在');
+      const orderId = order.id;
+
       const row = await dbGet<{ data: string }>(`SELECT data FROM order_profits WHERE order_id = ?`, [orderId]);
       
       // Fallback: migrate from old settings table if not in order_profits
@@ -465,29 +465,31 @@ export function createOrdersRouter() {
   });
 
   router.post('/:id/profit', requireAdmin, async (req: AuthedRequest, res) => {
-    const orderId = Number(req.params.id);
-    if (!Number.isInteger(orderId) || orderId <= 0) {
-      return res.status(400).json({ error: '无效的订单编号' });
-    }
-    const data = {
-      receipts: Array.isArray(req.body.receipts) ? req.body.receipts.map((r: any) => ({
-        amount: asNumber(r.amount),
-        currency: r.currency === 'CNY' ? 'CNY' : 'USD',
-        bankFees: asNumber(r.bankFees),
-        platformFees: asNumber(r.platformFees),
-        exchangeRate: asNumber(r.exchangeRate, r.currency === 'CNY' ? 1 : 7.2),
-      })) : [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
-      invoiceAmount: asNumber(req.body.invoiceAmount),
-      refundRate: asNumber(req.body.refundRate, 13),
-      otherIncomeCny: asNumber(req.body.otherIncomeCny),
-      factoryCostCny: asNumber(req.body.factoryCostCny),
-      domesticFees: asNumber(req.body.domesticFees),
-      freightValue: asNumber(req.body.freightValue),
-      freightCurrency: req.body.freightCurrency === 'CNY' ? 'CNY' : 'USD',
-      customsMisc: asNumber(req.body.customsMisc),
-      miscFees: Array.isArray(req.body.miscFees) ? req.body.miscFees : [],
-    };
+    const orderParam = req.params.id as string;
     try {
+      const order = await checkOrderAccess(req, orderParam);
+      if (!order) return fail(res, 404, '订单不存在');
+      const orderId = order.id;
+
+      const data = {
+        receipts: Array.isArray(req.body.receipts) ? req.body.receipts.map((r: any) => ({
+          amount: asNumber(r.amount),
+          currency: r.currency === 'CNY' ? 'CNY' : 'USD',
+          bankFees: asNumber(r.bankFees),
+          platformFees: asNumber(r.platformFees),
+          exchangeRate: asNumber(r.exchangeRate, r.currency === 'CNY' ? 1 : 7.2),
+        })) : [{ amount: 0, currency: 'USD', bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
+        invoiceAmount: asNumber(req.body.invoiceAmount),
+        refundRate: asNumber(req.body.refundRate, 13),
+        otherIncomeCny: asNumber(req.body.otherIncomeCny),
+        factoryCostCny: asNumber(req.body.factoryCostCny),
+        domesticFees: asNumber(req.body.domesticFees),
+        freightValue: asNumber(req.body.freightValue),
+        freightCurrency: req.body.freightCurrency === 'CNY' ? 'CNY' : 'USD',
+        customsMisc: asNumber(req.body.customsMisc),
+        miscFees: Array.isArray(req.body.miscFees) ? req.body.miscFees : [],
+      };
+
       await dbRun(
         `INSERT INTO order_profits (order_id, data, updated_at) 
          VALUES (?, ?, CURRENT_TIMESTAMP) 
