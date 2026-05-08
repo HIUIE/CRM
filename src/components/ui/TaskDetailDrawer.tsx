@@ -99,6 +99,8 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate }: TaskDetailDrawer
       if (newFiles.length > 0) {
         setIsUploading(true);
         const fd = new FormData();
+        fd.append('entityType', 'task');
+        fd.append('entityId', String(task.id));
         newFiles.forEach(f => fd.append('files', f));
         const atts = await apiUpload<AttachmentMeta[]>('/api/attachments', fd, setUploadProgress);
         attachmentIds = atts.map(a => a.id);

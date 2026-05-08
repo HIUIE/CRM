@@ -60,8 +60,9 @@ export async function bindAttachmentsToEntity(entityType: AttachmentEntityType, 
         UPDATE attachments
         SET entity_type = ?, entity_id = ?
         WHERE id IN (${bindPlaceholders})
+          AND (entity_type IS NULL OR (entity_type = ? AND entity_id = ?))
       `,
-      [entityType, entityId, ...attachmentIds],
+      [entityType, entityId, ...attachmentIds, entityType, entityId],
     );
   }
 }

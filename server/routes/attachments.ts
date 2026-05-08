@@ -5,7 +5,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { dbGet, dbRun } from '../lib/db.js';
-import { requireAdmin } from '../lib/auth.js';
+import { checkOrderAccess, requireAdmin, type AuthedRequest } from '../lib/auth.js';
+import { ATTACHMENT_ENTITY_TYPES, type AttachmentEntityType } from '../domain.js';
 import { buildAttachmentUrl, resolveAttachmentAbsolutePath, validateFileMagicBytes } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
@@ -63,10 +64,46 @@ const upload = multer({
   },
 });
 
+function normalizeEntityType(value: unknown): AttachmentEntityType | null {
+  const raw = String(value || '').trim().toLowerCase();
+  return (ATTACHMENT_ENTITY_TYPES as readonly string[]).includes(raw) ? raw as AttachmentEntityType : null;
+}
+
+async function canAttachToEntity(req: AuthedRequest, entityType: AttachmentEntityType | null, entityId: number | null) {
+  if (!entityType && !entityId) return true;
+  if (!entityType || !entityId) return false;
+  if (req.user?.role === 'admin') return true;
+
+  if (['order_document', 'production_photo', 'packing'].includes(entityType)) {
+    return Boolean(await checkOrderAccess(req, entityId));
+  }
+  if (entityType === 'task') {
+    const task = await dbGet<{ id: number }>(
+      `SELECT id FROM tasks WHERE id = ? AND (created_by = ? OR assignee_id = ?)`,
+      [entityId, req.user?.id, req.user?.id],
+    );
+    return Boolean(task);
+  }
+
+  const row = await dbGet<{ order_id: number }>(
+    entityType === 'customs'
+      ? `SELECT order_id FROM customs_records WHERE id = ?`
+      : entityType === 'finance'
+        ? `SELECT order_id FROM finance_records WHERE id = ? AND deleted_at IS NULL`
+        : entityType === 'logistics'
+          ? `SELECT order_id FROM logistics_records WHERE id = ? AND deleted_at IS NULL`
+          : entityType === 'production_log'
+            ? `SELECT pp.order_id FROM production_logs pl INNER JOIN production_plans pp ON pp.id = pl.plan_id WHERE pl.id = ?`
+            : `SELECT NULL AS order_id WHERE false`,
+    [entityId],
+  );
+  return row?.order_id ? Boolean(await checkOrderAccess(req, row.order_id)) : false;
+}
+
 export function createAttachmentsRouter() {
   const router = Router();
 
-  router.post('/', upload.array('files', 6), async (req, res) => {
+  router.post('/', upload.array('files', 6), async (req: AuthedRequest, res) => {
     const files = (req.files as Express.Multer.File[]) || [];
     const customerId = sanitizePathSegment(req.body.customerId, 'general');
     const orderId = sanitizePathSegment(req.body.orderId, 'misc');
@@ -77,8 +114,21 @@ export function createAttachmentsRouter() {
 
     try {
       const uploaded = [];
-      const entityType = req.body.entityType || null;
-      const entityId = req.body.entityId || null;
+      const entityType = normalizeEntityType(req.body.entityType);
+      const rawEntityType = String(req.body.entityType || '').trim();
+      const entityId = req.body.entityId ? Number(req.body.entityId) : null;
+      if (rawEntityType && !entityType) {
+        await Promise.all(files.map(file => fs.unlink(file.path).catch(() => undefined)));
+        return fail(res, 400, '附件类型无效', 'INVALID_ATTACHMENT_ENTITY_TYPE');
+      }
+      if ((entityType && (!Number.isInteger(entityId) || Number(entityId) <= 0)) || (!entityType && entityId)) {
+        await Promise.all(files.map(file => fs.unlink(file.path).catch(() => undefined)));
+        return fail(res, 400, '附件关联对象无效', 'INVALID_ATTACHMENT_ENTITY');
+      }
+      if (!(await canAttachToEntity(req, entityType, entityId))) {
+        await Promise.all(files.map(file => fs.unlink(file.path).catch(() => undefined)));
+        return fail(res, 403, '无权向该业务记录上传附件', 'ATTACHMENT_TARGET_FORBIDDEN');
+      }
       const rawDocType = String(req.body.docType || '').trim().toUpperCase();
       const docType = /^[A-Z0-9_-]{1,30}$/.test(rawDocType) ? rawDocType : '';
       const remark = docType ? `docType:${docType}` : (req.body.remark || null);

@@ -7,9 +7,18 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 const DEFAULT_KEY = 'smart-trade-erp-default-secret-key-32'; // 必须是 32 字节
+const PLACEHOLDER_KEYS = new Set([
+  '',
+  'replace-with-a-32-char-random-string',
+  DEFAULT_KEY,
+]);
 
 function getEncryptionKey() {
-  const key = process.env.DB_ENCRYPTION_KEY || DEFAULT_KEY;
+  const rawKey = process.env.DB_ENCRYPTION_KEY || '';
+  if (process.env.NODE_ENV === 'production' && PLACEHOLDER_KEYS.has(rawKey)) {
+    throw new Error('FATAL: DB_ENCRYPTION_KEY must be set to a unique random value in production.');
+  }
+  const key = rawKey || DEFAULT_KEY;
   return Buffer.from(key.padEnd(32, '0').slice(0, 32));
 }
 

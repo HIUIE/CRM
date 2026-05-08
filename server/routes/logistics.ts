@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
-import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
+import { checkOrderAccess, requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
@@ -142,6 +142,9 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     }
 
     try {
+      if (!(await checkOrderAccess(req, result.payload.orderId))) {
+        return fail(res, 404, '订单不存在或无权访问', 'ORDER_NOT_FOUND');
+      }
       const created = await dbRun(
         `
           INSERT INTO logistics_records (
@@ -197,6 +200,13 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     }
 
     try {
+      const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM logistics_records WHERE id = ? AND deleted_at IS NULL`, [recordId]);
+      if (!existing) {
+        return fail(res, 404, '物流记录不存在', 'LOGISTICS_NOT_FOUND');
+      }
+      if (!(await checkOrderAccess(req, existing.order_id)) || !(await checkOrderAccess(req, result.payload.orderId))) {
+        return fail(res, 404, '订单不存在或无权访问', 'ORDER_NOT_FOUND');
+      }
       const updated = await dbRun(
         `
           UPDATE logistics_records
@@ -253,6 +263,13 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     }
 
     try {
+      const existing = await dbGet<{ order_id: number }>(`SELECT order_id FROM logistics_records WHERE id = ? AND deleted_at IS NULL`, [recordId]);
+      if (!existing) {
+        return fail(res, 404, '物流记录不存在', 'LOGISTICS_NOT_FOUND');
+      }
+      if (!(await checkOrderAccess(req, existing.order_id))) {
+        return fail(res, 404, '物流记录不存在或无权访问', 'LOGISTICS_NOT_FOUND');
+      }
       const result = await dbRun(`UPDATE logistics_records SET status = ?, updated_by = ? WHERE id = ?`, [
         status,
         req.user?.id || null,
@@ -270,8 +287,11 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
   router.post('/:id/track', requireAuth, async (req: AuthedRequest, res) => {
     const recordId = Number(req.params.id);
     try {
-      const record = await dbGet<{ tracking_no: string; carrier: string }>(`SELECT tracking_no, carrier FROM logistics_records WHERE id = ?`, [recordId]);
+      const record = await dbGet<{ tracking_no: string; carrier: string; order_id: number }>(`SELECT tracking_no, carrier, order_id FROM logistics_records WHERE id = ? AND deleted_at IS NULL`, [recordId]);
       if (!record || !record.tracking_no) return fail(res, 400, '暂无运单号，无法追踪');
+      if (!(await checkOrderAccess(req, record.order_id))) {
+        return fail(res, 404, '物流记录不存在或无权访问', 'LOGISTICS_NOT_FOUND');
+      }
 
       // P14: Simulate track result (Mock 17track / Aftership integration)
       const mockHistory = [
