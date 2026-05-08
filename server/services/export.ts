@@ -46,6 +46,7 @@ type AttachmentExportRow = {
   fileSize: number | null;
   filePath: string;
   createdAt: string | null;
+  remark?: string | null;
   entityType?: string | null;
   entityId?: number | null;
 };
@@ -240,7 +241,10 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
       LEFT JOIN production_logs pl ON a.entity_type = 'production_log' AND a.entity_id = pl.id
       LEFT JOIN production_plans pp ON pl.plan_id = pp.id
       LEFT JOIN packing_records pr ON a.id = pr.attachment_id
-      LEFT JOIN orders o ON o.id = COALESCE(f.order_id, l.order_id, cr.order_id, pp.order_id, pr.order_id)
+      LEFT JOIN orders od ON a.entity_type = 'order_document' AND od.id = a.entity_id
+      LEFT JOIN orders ph ON a.entity_type = 'production_photo' AND ph.id = a.entity_id
+      LEFT JOIN orders pk ON a.entity_type = 'packing' AND pk.id = a.entity_id
+      LEFT JOIN orders o ON o.id = COALESCE(f.order_id, l.order_id, cr.order_id, pp.order_id, pr.order_id, od.id, ph.id, pk.id)
       LEFT JOIN customers c ON c.id = o.customer_id
       WHERE o.id IS NULL OR o.deleted_at IS NULL
       ORDER BY a.id ASC
@@ -285,8 +289,8 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
   },
 ];
 
-const ATTACHMENT_MANIFEST_HEADERS = ['attachmentId', 'sourceModule', 'sourceRecordId', 'originalFileName', 'exportedFileName', 'mimeType', 'fileSize', 'createdAt', 'missing'];
-const UNLINKED_HEADERS = ['attachmentId', 'entityType', 'entityId', 'originalFileName', 'storedName', 'mimeType', 'fileSize', 'createdAt', 'missing'];
+const ATTACHMENT_MANIFEST_HEADERS = ['attachmentId', 'sourceModule', 'sourceRecordId', 'originalFileName', 'exportedFileName', 'mimeType', 'fileSize', 'createdAt', 'remark', 'missing'];
+const UNLINKED_HEADERS = ['attachmentId', 'entityType', 'entityId', 'originalFileName', 'storedName', 'mimeType', 'fileSize', 'createdAt', 'remark', 'missing'];
 
 function escapeCsvValue(value: unknown) {
   if (value === null || value === undefined) {
@@ -436,7 +440,7 @@ async function getOrdersForCustomers(customerIds: number[]) {
 }
 
 async function getOrderAttachments(orderId: number) {
-  const [finance, logistics, customs, production, packing, orderDocuments, productionPhotos] = await Promise.all([
+  const [finance, logistics, customs, production, packing, orderDocuments, productionPhotos, packingPhotos] = await Promise.all([
     dbAll<Record<string, unknown>[]>(`
       SELECT
         a.id AS attachmentId,
@@ -447,7 +451,8 @@ async function getOrderAttachments(orderId: number) {
         a.mime_type AS mimeType,
         a.file_size AS fileSize,
         a.file_path AS filePath,
-        a.created_at AS createdAt
+        a.created_at AS createdAt,
+        a.remark AS remark
       FROM attachments a
       INNER JOIN finance_records f ON a.entity_type = 'finance' AND a.entity_id = f.id
       WHERE f.order_id = ? AND f.deleted_at IS NULL
@@ -463,7 +468,8 @@ async function getOrderAttachments(orderId: number) {
         a.mime_type AS mimeType,
         a.file_size AS fileSize,
         a.file_path AS filePath,
-        a.created_at AS createdAt
+        a.created_at AS createdAt,
+        a.remark AS remark
       FROM attachments a
       INNER JOIN logistics_records l ON a.entity_type = 'logistics' AND a.entity_id = l.id
       WHERE l.order_id = ? AND l.deleted_at IS NULL
@@ -479,7 +485,8 @@ async function getOrderAttachments(orderId: number) {
         a.mime_type AS mimeType,
         a.file_size AS fileSize,
         a.file_path AS filePath,
-        a.created_at AS createdAt
+        a.created_at AS createdAt,
+        a.remark AS remark
       FROM attachments a
       INNER JOIN customs_records c ON a.entity_type = 'customs' AND a.entity_id = c.id
       WHERE c.order_id = ?
@@ -495,7 +502,8 @@ async function getOrderAttachments(orderId: number) {
         a.mime_type AS mimeType,
         a.file_size AS fileSize,
         a.file_path AS filePath,
-        a.created_at AS createdAt
+        a.created_at AS createdAt,
+        a.remark AS remark
       FROM attachments a
       INNER JOIN production_logs pl ON a.entity_type = 'production_log' AND a.entity_id = pl.id
       INNER JOIN production_plans pp ON pp.id = pl.plan_id
@@ -512,7 +520,8 @@ async function getOrderAttachments(orderId: number) {
         a.mime_type AS mimeType,
         a.file_size AS fileSize,
         a.file_path AS filePath,
-        a.created_at AS createdAt
+        a.created_at AS createdAt,
+        a.remark AS remark
       FROM packing_records pr
       INNER JOIN attachments a ON a.id = pr.attachment_id
       WHERE pr.order_id = ?
@@ -528,7 +537,8 @@ async function getOrderAttachments(orderId: number) {
         a.mime_type AS mimeType,
         a.file_size AS fileSize,
         a.file_path AS filePath,
-        a.created_at AS createdAt
+        a.created_at AS createdAt,
+        a.remark AS remark
       FROM attachments a
       WHERE a.entity_type = 'order_document' AND a.entity_id = ?
       ORDER BY a.id ASC
@@ -543,14 +553,31 @@ async function getOrderAttachments(orderId: number) {
         a.mime_type AS mimeType,
         a.file_size AS fileSize,
         a.file_path AS filePath,
-        a.created_at AS createdAt
+        a.created_at AS createdAt,
+        a.remark AS remark
       FROM attachments a
       WHERE a.entity_type = 'production_photo' AND a.entity_id = ?
       ORDER BY a.id ASC
     `, [orderId]),
+    dbAll<Record<string, unknown>[]>(`
+      SELECT
+        a.id AS attachmentId,
+        'packing_photo' AS sourceModule,
+        a.entity_id AS sourceRecordId,
+        a.file_name AS originalFileName,
+        a.stored_name AS storedName,
+        a.mime_type AS mimeType,
+        a.file_size AS fileSize,
+        a.file_path AS filePath,
+        a.created_at AS createdAt,
+        a.remark AS remark
+      FROM attachments a
+      WHERE a.entity_type = 'packing' AND a.entity_id = ?
+      ORDER BY a.id ASC
+    `, [orderId]),
   ]);
 
-  return [...finance, ...logistics, ...customs, ...production, ...packing, ...orderDocuments, ...productionPhotos] as AttachmentExportRow[];
+  return [...finance, ...logistics, ...customs, ...production, ...packing, ...orderDocuments, ...productionPhotos, ...packingPhotos] as AttachmentExportRow[];
 }
 
 async function getUnlinkedAttachments() {
@@ -565,6 +592,7 @@ async function getUnlinkedAttachments() {
       a.file_size AS fileSize,
       a.file_path AS filePath,
       a.created_at AS createdAt,
+      a.remark AS remark,
       a.entity_type AS entityType,
       a.entity_id AS entityId
     FROM attachments a
@@ -574,7 +602,10 @@ async function getUnlinkedAttachments() {
     LEFT JOIN production_logs pl ON a.entity_type = 'production_log' AND a.entity_id = pl.id
     LEFT JOIN production_plans pp ON pp.id = pl.plan_id
     LEFT JOIN packing_records pr ON pr.attachment_id = a.id
-    WHERE COALESCE(f.order_id, l.order_id, c.order_id, pp.order_id, pr.order_id) IS NULL
+    LEFT JOIN orders od ON a.entity_type = 'order_document' AND od.id = a.entity_id
+    LEFT JOIN orders ph ON a.entity_type = 'production_photo' AND ph.id = a.entity_id
+    LEFT JOIN orders pk ON a.entity_type = 'packing' AND pk.id = a.entity_id
+    WHERE COALESCE(f.order_id, l.order_id, c.order_id, pp.order_id, pr.order_id, od.id, ph.id, pk.id) IS NULL
     ORDER BY a.id ASC
   `);
 }
@@ -996,6 +1027,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
           mimeType: attachment.mimeType || '',
           fileSize: attachment.fileSize || '',
           createdAt: attachment.createdAt || '',
+          remark: attachment.remark || '',
           missing: missing ? 'true' : 'false',
         });
 
@@ -1031,6 +1063,7 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
       mimeType: attachment.mimeType || '',
       fileSize: attachment.fileSize || '',
       createdAt: attachment.createdAt || '',
+      remark: attachment.remark || '',
       missing: missing ? 'true' : 'false',
     });
 
