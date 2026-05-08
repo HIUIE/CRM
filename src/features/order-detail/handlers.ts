@@ -415,6 +415,41 @@ export async function handleUploadOrderDocument(
   }
 };
 
+export async function handleUploadEvidenceFiles(
+  files: FileList | null,
+  deps: {
+    order: OrderInfo | null | undefined;
+    customer: CustomerInfo | null | undefined;
+    entityType: string;
+    entityId: number | string | null | undefined;
+    docType?: string;
+    label?: string;
+    setUploading: (v: boolean) => void;
+    showToast: (msg: string) => void;
+    loadDetail: (opts?: { showLoading?: boolean }) => Promise<void>;
+  }
+) {
+  const { order, customer, entityType, entityId, docType, label = '文件', setUploading, showToast, loadDetail } = deps;
+  if (!files?.length || !order || !entityId) return;
+  setUploading(true);
+  try {
+    const fd = new FormData();
+    fd.append('customerId', String(customer?.id));
+    fd.append('orderId', String(order.id));
+    fd.append('entityType', entityType);
+    fd.append('entityId', String(entityId));
+    if (docType) fd.append('docType', docType);
+    Array.from(files).forEach((file) => fd.append('files', file));
+    await apiUploadSimple('/api/attachments', fd);
+    showToast(`${label}已上传`);
+    await loadDetail({ showLoading: false });
+  } catch (err) {
+    showToast(getErrorMessage(err, '上传失败'));
+  } finally {
+    setUploading(false);
+  }
+}
+
 // ==================== Follow Up ====================
 
 export async function handleSubmitFollowUp(

@@ -16,6 +16,9 @@ async function canAccessEntity(user: AuthedRequest['user'], entityType: string, 
     LOGISTICS: `SELECT 1 FROM logistics_records l LEFT JOIN orders o ON o.id = l.order_id WHERE l.id = ? AND (l.created_by = ? OR o.created_by = ?)`,
     CUSTOMS: `SELECT 1 FROM customs_records c LEFT JOIN orders o ON o.id = c.order_id WHERE c.id = ? AND (c.created_by = ? OR o.created_by = ?)`,
     PRODUCTION: `SELECT 1 FROM production_plans pp LEFT JOIN orders o ON o.id = pp.order_id WHERE pp.id = ? AND (pp.created_by = ? OR o.created_by = ?)`,
+    PRODUCTION_PHOTO: `SELECT 1 FROM orders WHERE id = ? AND (created_by = ? OR created_by = ?) AND deleted_at IS NULL`,
+    ORDER_DOCUMENT: `SELECT 1 FROM orders WHERE id = ? AND (created_by = ? OR created_by = ?) AND deleted_at IS NULL`,
+    PACKING: `SELECT 1 FROM orders WHERE id = ? AND (created_by = ? OR created_by = ?) AND deleted_at IS NULL`,
     TASK: `SELECT 1 FROM tasks WHERE id = ? AND (created_by = ? OR assignee_id = ?)`,
   };
   const upperType = entityType.toUpperCase();
@@ -33,7 +36,9 @@ async function verifyEntityExists(entityType: string, entityId: string): Promise
     LOGISTICS: `SELECT 1 FROM logistics_records WHERE id = ?`,
     CUSTOMS: `SELECT 1 FROM customs_records WHERE id = ?`,
     PRODUCTION: `SELECT 1 FROM production_plans WHERE id = ?`,
-    PACKING: `SELECT 1 FROM packing_records WHERE id = ?`,
+    PRODUCTION_PHOTO: `SELECT 1 FROM orders WHERE id = ? AND deleted_at IS NULL`,
+    ORDER_DOCUMENT: `SELECT 1 FROM orders WHERE id = ? AND deleted_at IS NULL`,
+    PACKING: `SELECT 1 FROM orders WHERE id = ? AND deleted_at IS NULL`,
     TASK: `SELECT 1 FROM tasks WHERE id = ? AND deleted_at IS NULL`,
   };
   const sql = queries[entityType.toUpperCase()];

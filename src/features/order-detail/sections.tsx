@@ -9,11 +9,11 @@ import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 import { apiFetch } from '../../lib/api';
 import {
   WorkSection, DocumentBoard, EmptyStateBoard, FinanceDashboard, ProductionDashboard,
-  Chip, GridItem, StatusFileRow, FileIcon, LightActionButton, FilterPill,
+  Chip, GridItem, FileIcon, LightActionButton, FilterPill,
 } from './components';
 import { formatDateOnly, formatDateTime, asNumber, asText, formatIncoterm, formatTransportMode, STAGE_STEPS } from './utils';
 import type {
-  AttachmentMeta, CustomerInfo, CustomsRecord, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
+  AttachmentMeta, CustomerInfo, CustomsRecord, DocumentSlot, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
   PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType, ProfitData,
 } from './types';
 
@@ -190,7 +190,7 @@ export function ItemsSection({
 
 // ==================== Documents Vault Section ====================
 
-const DOCUMENT_SLOTS = [
+const DOCUMENT_SLOTS: DocumentSlot[] = [
   { key: 'pi', docType: 'PI', label: 'PI', name: '形式发票', group: '业务单据', pattern: /\b(pi|proforma)\b|形式发票/i },
   { key: 'contract', docType: 'CONTRACT', label: '合同', name: '采购/销售合同', group: '业务单据', pattern: /contract|合同|purchase/i },
   { key: 'ci', docType: 'CI', label: 'CI', name: '商业发票', group: '结汇/清关', pattern: /\b(ci|commercial invoice)\b|商业发票/i },
@@ -200,9 +200,98 @@ const DOCUMENT_SLOTS = [
   { key: 'insurance', docType: 'INSURANCE', label: '保险', name: '保险单', group: '结汇/清关', pattern: /insurance|policy|保险/i },
 ];
 
-function getDocumentSlotMatch(slot: (typeof DOCUMENT_SLOTS)[number], documents: AttachmentMeta[]) {
+const CUSTOMS_DOCUMENT_SLOTS: DocumentSlot[] = [
+  { key: 'customs-draft', docType: 'CUSTOMS_DRAFT', label: '草单', name: '报关草单', group: '报关资料', pattern: /customs draft|draft|草单/i },
+  { key: 'electronic-proxy', docType: 'ELECTRONIC_PROXY', label: '委托', name: '电子委托书', group: '报关资料', pattern: /proxy|委托/i },
+  { key: 'release-note', docType: 'RELEASE_NOTE', label: '放行', name: '放行条', group: '报关资料', pattern: /release|放行/i },
+  { key: 'customs-declaration', docType: 'CUSTOMS_DECLARATION', label: '报关单', name: '报关单', group: '报关资料', pattern: /customs declaration|报关单/i },
+  { key: 'tax-refund-copy', docType: 'TAX_REFUND_COPY', label: '退税', name: '退税联', group: '退税资料', pattern: /tax refund|退税/i },
+];
+
+function getDocumentSlotMatch(slot: DocumentSlot, documents: AttachmentMeta[]) {
   const explicitMatch = documents.find((doc) => String(doc.remark || '').toUpperCase() === `DOCTYPE:${slot.docType}`);
   return explicitMatch || documents.find((doc) => !String(doc.remark || '').toUpperCase().startsWith('DOCTYPE:') && slot.pattern.test(doc.fileName || ''));
+}
+
+function getSlotMatches(slots: DocumentSlot[], documents: AttachmentMeta[]) {
+  const matchedDocumentIds = new Set<number>();
+  const slotMatches = slots.map((slot) => {
+    const slotDocument = getDocumentSlotMatch(slot, documents);
+    if (slotDocument) matchedDocumentIds.add(slotDocument.id);
+    return { slot, slotDocument };
+  });
+  return { slotMatches, unmatchedDocuments: documents.filter((doc) => !matchedDocumentIds.has(doc.id)) };
+}
+
+function SlotDocumentGrid({
+  slots,
+  documents,
+  onUpload,
+  onPreview,
+  onDeleteAttachment,
+  user,
+  uploadLabel = '上传',
+}: {
+  slots: DocumentSlot[];
+  documents: AttachmentMeta[];
+  onUpload: (files: FileList | null, docType: string) => void;
+  onPreview: (att: AttachmentMeta | null) => void;
+  onDeleteAttachment: (id: number) => Promise<void>;
+  user?: { name?: string; role?: string } | null;
+  uploadLabel?: string;
+}) {
+  const { slotMatches, unmatchedDocuments } = getSlotMatches(slots, documents);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {slotMatches.map(({ slot, slotDocument }) => (
+          <div key={slot.key} className={`rounded-lg border p-4 transition-all ${slotDocument ? 'border-emerald-100 bg-emerald-50/50 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-900/10' : 'border-dashed border-slate-200 bg-slate-50/60 dark:border-navy-700 dark:bg-navy-950/40'}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-black ${slotDocument ? 'border-emerald-200 bg-white text-emerald-700 dark:border-emerald-900/50 dark:bg-navy-900 dark:text-emerald-300' : 'border-slate-200 bg-surface text-slate-400 dark:border-navy-700 dark:bg-navy-900 dark:text-slate-500'}`}>{slot.label}</span>
+                  <span className="truncate text-xs font-black text-primary-navy dark:text-white">{slot.name}</span>
+                </div>
+                <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{slot.group}</div>
+              </div>
+              {slotDocument ? <CheckCircle2 size={16} className="mt-1 shrink-0 text-emerald-500" /> : <Upload size={15} className="mt-1 shrink-0 text-slate-300 dark:text-slate-600" />}
+            </div>
+            {slotDocument ? (
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-emerald-100 bg-white/80 px-2.5 py-2 dark:border-emerald-900/30 dark:bg-navy-900/70">
+                <button onClick={() => onPreview(slotDocument)} className="shrink-0"><FileIcon fileName={slotDocument.fileName} url={slotDocument.url} size={18} /></button>
+                <button onClick={() => onPreview(slotDocument)} className="min-w-0 flex-1 truncate text-left text-xs font-bold text-primary-navy hover:underline dark:text-white" title={slotDocument.fileName}>{slotDocument.fileName}</button>
+                <a href={slotDocument.url} download className="shrink-0 text-slate-400 hover:text-primary-navy dark:hover:text-white"><Download size={13} /></a>
+                {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(slotDocument.id)} className="shrink-0 text-slate-300 hover:text-error dark:text-slate-600"><Trash size={13} /></button>}
+              </div>
+            ) : (
+              <label className="mt-4 flex h-9 w-full cursor-pointer items-center justify-center rounded-md border border-dashed border-slate-200 text-xs font-black text-slate-400 transition-all hover:border-primary-navy/30 hover:bg-surface hover:text-primary-navy dark:border-navy-700 dark:hover:border-tertiary-sage/40 dark:hover:bg-navy-900 dark:hover:text-tertiary-sage">
+                {uploadLabel}
+                <input type="file" className="hidden" onChange={e => { onUpload(e.target.files, slot.docType); e.currentTarget.value = ''; }} />
+              </label>
+            )}
+          </div>
+        ))}
+      </div>
+      {unmatchedDocuments.length > 0 && (
+        <div>
+          <div className="mb-2 text-xs font-black text-slate-400 dark:text-slate-500 tracking-tight">其他附件</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {unmatchedDocuments.map((doc) => (
+              <div key={doc.id} className="flex h-14 items-center rounded-lg border border-slate-200 bg-surface px-4 transition-all hover:border-primary-navy/20 hover:shadow-sm dark:border-navy-800 dark:bg-navy-900 dark:hover:border-tertiary-sage/20">
+                <button onClick={() => onPreview(doc)} className="mr-3 shrink-0"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
+                <div className="min-w-0 flex-1">
+                  <button onClick={() => onPreview(doc)} className="block w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-xs font-bold leading-tight text-slate-900 hover:underline dark:text-white" title={doc.fileName}>{doc.fileName}</button>
+                  {doc.createdAt && <span className="text-xs font-medium text-slate-400">{formatDateOnly(doc.createdAt)}</span>}
+                </div>
+                {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(doc.id)} className="ml-2 shrink-0 p-1.5 text-slate-300 hover:text-error dark:text-slate-600"><Trash size={14} /></button>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function DocumentsVaultSection({
@@ -795,19 +884,36 @@ export function ProductionSection({
   onEditProduction,
   onUpdateInspection,
   onPreview,
+  onUploadPhotos,
+  onDeleteAttachment,
   onAddProduction,
+  user,
 }: {
   sectionRef: React.RefObject<HTMLDivElement | null>;
   productionPlan: ProductionPlan | null;
   onEditProduction: () => void;
   onUpdateInspection: (status: InspectionStatus) => Promise<void>;
   onPreview: (att: AttachmentMeta | null) => void;
+  onUploadPhotos: (files: FileList | null) => void;
+  onDeleteAttachment: (id: number) => Promise<void>;
   onAddProduction: () => void;
+  user?: { name?: string; role?: string } | null;
 }) {
   return (
     <DocumentBoard ref={sectionRef} title="生产信息" action={productionPlan ? <LightActionButton onClick={onEditProduction} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 更新排产</LightActionButton> : null}>
       {productionPlan ? (
-        <ProductionDashboard plan={productionPlan} onEditLink={onEditProduction} onUpdateInspection={onUpdateInspection} onPreview={onPreview} />
+        <>
+          <ProductionDashboard plan={productionPlan} onEditLink={onEditProduction} onUpdateInspection={onUpdateInspection} onPreview={onPreview} />
+          <EvidenceThumbnailGrid
+            title="大货与验货记录 (Production & QC Photos)"
+            attachments={productionPlan.photos || []}
+            uploadLabel="+ 上传大货/QC图片"
+            onUpload={onUploadPhotos}
+            onPreview={onPreview}
+            onDeleteAttachment={onDeleteAttachment}
+            user={user}
+          />
+        </>
       ) : (
         <EmptyStateBoard title="暂无排产计划" description="目前该订单尚未关联任何制造工厂。请指派供应商并录入预计交期。" icon={Factory} actionLabel="+ 录入排产单" onAction={onAddProduction} />
       )}
@@ -821,6 +927,7 @@ export function CustomsSection({
   sectionRef,
   customs,
   onEditCustoms,
+  onUploadDocument,
   onDeleteAttachment,
   onPreview,
   user,
@@ -828,6 +935,7 @@ export function CustomsSection({
   sectionRef: React.RefObject<HTMLDivElement | null>;
   customs: CustomsRecord | null;
   onEditCustoms: () => void;
+  onUploadDocument: (files: FileList | null, docType: string) => void;
   onDeleteAttachment: (id: number) => Promise<void>;
   onPreview: (att: AttachmentMeta | null) => void;
   user?: { name?: string; role?: string } | null;
@@ -847,19 +955,18 @@ export function CustomsSection({
           </div>
           <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-3">
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">官方凭证电子仓库</div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">官方凭证电子存根</div>
               <button onClick={onEditCustoms} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">追加文件 +</button>
             </div>
-            <div className="space-y-1">
-              {customs?.attachments?.length ? customs.attachments.map((att: AttachmentMeta) => (
-                <div key={att.id} className="flex items-center justify-between group">
-                  <div className="flex-1 min-w-0"><StatusFileRow label={att.fileName.split('.')[0]} status="uploaded" fileName={att.fileName} downloadUrl={att.url} onPreview={() => onPreview(att)} /></div>
-                  {user?.role === 'admin' && <button onClick={() => onDeleteAttachment(att.id)} className="p-2 text-slate-300 dark:text-slate-600 hover:text-error opacity-0 group-hover:opacity-100 transition-all"><Trash size={16} /></button>}
-                </div>
-              )) : (
-                <div className="py-12 text-center bg-slate-50/50 dark:bg-navy-950/30 rounded border border-dashed border-slate-200 dark:border-navy-800 text-slate-400 text-xs font-bold tracking-tight">暂无报关凭证存档</div>
-              )}
-            </div>
+            <SlotDocumentGrid
+              slots={CUSTOMS_DOCUMENT_SLOTS}
+              documents={customs.attachments || []}
+              onUpload={onUploadDocument}
+              onPreview={onPreview}
+              onDeleteAttachment={onDeleteAttachment}
+              user={user}
+              uploadLabel="上传"
+            />
           </div>
         </div>
       ) : (
@@ -874,55 +981,74 @@ export function CustomsSection({
 export function PackingSection({
   sectionRef,
   packingRecords,
+  packingPhotos,
   onEditPacking,
+  onUploadPhotos,
+  onDeleteAttachment,
   onPreview,
+  user,
 }: {
   sectionRef: React.RefObject<HTMLDivElement | null>;
   packingRecords: PackingRecord[];
+  packingPhotos: AttachmentMeta[];
   onEditPacking: () => void;
+  onUploadPhotos: (files: FileList | null) => void;
+  onDeleteAttachment: (id: number) => Promise<void>;
   onPreview: (att: AttachmentMeta | null) => void;
+  user?: { name?: string; role?: string } | null;
 }) {
   return (
     <DocumentBoard ref={sectionRef} title="装箱明细" action={packingRecords.length ? <LightActionButton onClick={onEditPacking} className="!py-1.5 !px-3 !text-xs"><Box size={14} className="mr-1 opacity-70" /> 更新装箱</LightActionButton> : null}>
       {packingRecords.length ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-surface dark:bg-navy-900">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
-              <tr><th className="px-5 py-3">序号</th><th className="px-5 py-3">件数 (箱)</th><th className="px-5 py-3">尺寸 / 体积</th><th className="px-5 py-3">毛重 / 净重 (kg)</th><th className="px-5 py-3 text-right">实物图</th></tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-bold text-primary-navy dark:text-white data-field">
-              {packingRecords.map((r, i) => (
-                <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
-                  <td className="px-5 py-3 text-slate-400 dark:text-slate-500">{(i+1).toString().padStart(2, '0')}</td>
-                  <td className="px-5 py-3">{r.packageCount}</td>
-                  <td className="px-5 py-3">{r.packageSize}</td>
-                  <td className="px-5 py-3">{r.grossWeight} / {r.netWeight}</td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="inline-flex h-9 w-9 aspect-square shrink-0 rounded border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && onPreview({ id: -1, fileName: `序号 ${i+1} 装箱实拍.jpg`, url: r.imageUrl })}>
-                      {r.imageUrl ? <img src={r.imageUrl} alt="" className="h-full w-full object-cover" /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              {(() => {
-                const totalBoxes = packingRecords.reduce((s, r) => s + asNumber(r.packageCount), 0);
-                const totalGross = packingRecords.reduce((s, r) => s + asNumber(r.grossWeight), 0);
-                const totalNet = packingRecords.reduce((s, r) => s + asNumber(r.netWeight), 0);
-                return (
-                  <tr className="bg-slate-50/50 dark:bg-navy-950/50 font-extrabold border-t border-slate-200 dark:border-navy-800">
-                    <td className="px-5 py-4 text-primary-navy dark:text-white text-xs tracking-tight">合计 Total</td>
-                    <td className="px-5 py-4 text-primary-navy dark:text-white data-field">{totalBoxes} 箱</td>
-                    <td className="px-5 py-4 text-primary-navy dark:text-white data-field text-xs">见明细</td>
-                    <td className="px-5 py-4 text-primary-navy dark:text-white data-field">{totalGross.toFixed(1)} / {totalNet.toFixed(1)} kg</td>
-                    <td className="px-5 py-4" />
+        <>
+          <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm bg-surface dark:bg-navy-900">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-navy-950 text-xs font-bold tracking-tight text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-navy-800">
+                <tr><th className="px-5 py-3">序号</th><th className="px-5 py-3">件数 (箱)</th><th className="px-5 py-3">尺寸 / 体积</th><th className="px-5 py-3">毛重 / 净重 (kg)</th><th className="px-5 py-3 text-right">实物图</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-bold text-primary-navy dark:text-white data-field">
+                {packingRecords.map((r, i) => (
+                  <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">
+                    <td className="px-5 py-3 text-slate-400 dark:text-slate-500">{(i+1).toString().padStart(2, '0')}</td>
+                    <td className="px-5 py-3">{r.packageCount}</td>
+                    <td className="px-5 py-3">{r.packageSize}</td>
+                    <td className="px-5 py-3">{r.grossWeight} / {r.netWeight}</td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="inline-flex h-9 w-9 aspect-square shrink-0 rounded border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && onPreview({ id: -1, fileName: `序号 ${i+1} 装箱实拍.jpg`, url: r.imageUrl })}>
+                        {r.imageUrl ? <img src={r.imageUrl} alt="" className="h-full w-full object-cover" /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
+                      </div>
+                    </td>
                   </tr>
-                );
-              })()}
-            </tfoot>
-          </table>
-        </div>
+                ))}
+              </tbody>
+              <tfoot>
+                {(() => {
+                  const totalBoxes = packingRecords.reduce((s, r) => s + asNumber(r.packageCount), 0);
+                  const totalGross = packingRecords.reduce((s, r) => s + asNumber(r.grossWeight), 0);
+                  const totalNet = packingRecords.reduce((s, r) => s + asNumber(r.netWeight), 0);
+                  return (
+                    <tr className="bg-slate-50/50 dark:bg-navy-950/50 font-extrabold border-t border-slate-200 dark:border-navy-800">
+                      <td className="px-5 py-4 text-primary-navy dark:text-white text-xs tracking-tight">合计 Total</td>
+                      <td className="px-5 py-4 text-primary-navy dark:text-white data-field">{totalBoxes} 箱</td>
+                      <td className="px-5 py-4 text-primary-navy dark:text-white data-field text-xs">见明细</td>
+                      <td className="px-5 py-4 text-primary-navy dark:text-white data-field">{totalGross.toFixed(1)} / {totalNet.toFixed(1)} kg</td>
+                      <td className="px-5 py-4" />
+                    </tr>
+                  );
+                })()}
+              </tfoot>
+            </table>
+          </div>
+          <EvidenceThumbnailGrid
+            title="包装与装柜留档 (Packing & Loading Photos)"
+            attachments={packingPhotos}
+            uploadLabel="+ 上传外箱唛头 / 装柜图片"
+            onUpload={onUploadPhotos}
+            onPreview={onPreview}
+            onDeleteAttachment={onDeleteAttachment}
+            user={user}
+          />
+        </>
       ) : (
         <EmptyStateBoard title="暂无装箱数据" description="请录入箱数、尺寸、毛重、净重和实物图，便于报关、订舱和物流交接。" icon={Box} actionLabel="+ 初始化装箱单" onAction={onEditPacking} />
       )}
@@ -977,6 +1103,57 @@ function getCompactFileName(fileName: string) {
   const dotIndex = fileName.lastIndexOf('.');
   const ext = dotIndex > 0 ? fileName.slice(dotIndex) : '';
   return `${fileName.slice(0, 10)}...${ext}`;
+}
+
+function EvidenceThumbnailGrid({
+  title,
+  attachments,
+  uploadLabel,
+  onUpload,
+  onPreview,
+  onDeleteAttachment,
+  user,
+}: {
+  title: string;
+  attachments?: AttachmentMeta[];
+  uploadLabel: string;
+  onUpload: (files: FileList | null) => void;
+  onPreview: (att: AttachmentMeta | null) => void;
+  onDeleteAttachment: (id: number) => Promise<void>;
+  user?: { name?: string; role?: string } | null;
+}) {
+  const safeAttachments = attachments || [];
+  return (
+    <div className="mt-5 rounded-lg border border-slate-100 bg-slate-50/40 p-4 dark:border-navy-800 dark:bg-navy-950/30">
+      <div className="mb-3 text-xs font-black tracking-tight text-slate-500 dark:text-slate-400">{title}</div>
+      <div className="flex flex-wrap gap-3">
+        {safeAttachments.map((att) => (
+          <div key={att.id} className="group/attachment relative h-24 w-24 overflow-hidden rounded-lg border border-slate-200/80 bg-slate-100 shadow-sm ring-1 ring-black/[0.02] transition-all hover:-translate-y-0.5 hover:border-primary-navy/25 hover:shadow-md dark:border-navy-700 dark:bg-navy-950 dark:hover:border-tertiary-sage/40">
+            <Tooltip text={att.fileName}>
+              <span className="block h-24 w-24">
+                <button type="button" onClick={() => onPreview(att)} className="block h-full w-full text-left">
+                  <img src={getLogisticsAttachmentPreview(att)} alt={att.fileName || title} className="h-full w-full object-cover" loading="lazy" />
+                  <div className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1.5 text-[10px] font-bold leading-none text-white backdrop-blur-[2px]">
+                    <span className="block truncate">{getCompactFileName(att.fileName)}</span>
+                  </div>
+                </button>
+              </span>
+            </Tooltip>
+            {user?.role === 'admin' && (
+              <button type="button" onClick={() => onDeleteAttachment(att.id)} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/60 text-white shadow-sm backdrop-blur transition-all hover:bg-error" aria-label={`删除附件 ${att.fileName}`}>
+                <X size={13} strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
+        ))}
+        <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-transparent text-center text-slate-400 transition-all hover:border-primary-navy/40 hover:bg-slate-50 hover:text-primary-navy dark:border-navy-700 dark:text-slate-500 dark:hover:border-tertiary-sage/50 dark:hover:bg-navy-950/60 dark:hover:text-tertiary-sage">
+          <Plus size={22} strokeWidth={1.8} />
+          <span className="px-2 text-[11px] font-black leading-tight tracking-tight">{uploadLabel}</span>
+          <input type="file" multiple accept="image/*" className="hidden" onChange={e => { onUpload(e.target.files); e.currentTarget.value = ''; }} />
+        </label>
+      </div>
+    </div>
+  );
 }
 
 function getTaxRefundStatus(status?: CustomsRecord['status']) {

@@ -214,6 +214,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
   const customsAttachments = customs ? await getAttachmentsByEntity('customs', [Number(customs.id)]) : new Map<number, Record<string, unknown>[]>();
   const productionLogAttachments = productionPlan ? await getAttachmentsByEntity('production_log', productionLogs.map(l => Number(l.id))) : new Map<number, Record<string, unknown>[]>();
   const productionPhotos = await getAttachmentsByEntity('production_photo', [orderId]);
+  const packingPhotos = await getAttachmentsByEntity('packing', [orderId]);
   const orderDocuments = await getAttachmentsByEntity('order_document', [orderId]);
   const followUps = await dbAll<Record<string, unknown>[]>(
     `SELECT of.*, u.name AS created_by_name FROM order_follow_ups of LEFT JOIN users u ON u.id = of.created_by WHERE of.order_id = ? ORDER BY datetime(of.created_at) DESC, of.id DESC`,
@@ -339,6 +340,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
         ? buildAttachmentUrl(Number(record.attachment_id), getStoredNameFromRecord(record.stored_name, record.file_path))
         : null,
     })),
+    packingPhotos: packingPhotos.get(orderId) || [],
     domesticLogistics: domesticLogisticsRecord ? {
           ...domesticLogisticsRecord,
           segmentType: domesticLogisticsRecord.segment_type || 'domestic',

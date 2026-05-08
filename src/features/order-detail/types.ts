@@ -106,6 +106,15 @@ export type PackingRecord = {
   imageUrl?: string | null;
 };
 
+export type DocumentSlot = {
+  key: string;
+  docType: string;
+  label: string;
+  name: string;
+  group: string;
+  pattern: RegExp;
+};
+
 export type FinanceRecord = {
   id: number;
   type: FinanceType;
@@ -209,6 +218,7 @@ export type OrderDetailResponse = {
   domesticLogistics?: LogisticsRecord | null;
   internationalLogistics?: LogisticsRecord | null;
   packingRecords?: PackingRecord[] | null;
+  packingPhotos?: AttachmentMeta[];
   orderDocuments?: AttachmentMeta[];
   followUps?: Array<{
     id: number;

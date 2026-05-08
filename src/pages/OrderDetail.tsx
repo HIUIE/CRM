@@ -81,6 +81,7 @@ import {
   handleUploadPackingPhoto,
   handleDeleteAttachment,
   handleUploadOrderDocument,
+  handleUploadEvidenceFiles,
   handleSubmitFollowUp,
   handleDeleteOrder,
   handleExportPdf,
@@ -169,6 +170,7 @@ export default function OrderDetailPage() {
   const customs = detail?.customs || null;
   const logisticsRecords = detail?.logisticsRecords || [];
   const packingRecords = detail?.packingRecords || [];
+  const packingPhotos = detail?.packingPhotos || [];
   const orderDocuments = detail?.orderDocuments || [];
   const followUps = detail?.followUps || [];
   const tasks = detail?.tasks || [];
@@ -399,7 +401,9 @@ export default function OrderDetailPage() {
   const requestDeleteAttachment = async (id: number) => {
     const attachments = [
       ...orderDocuments,
+      ...(productionPlan?.photos || []),
       ...(customs?.attachments || []),
+      ...packingPhotos,
       ...logisticsRecords.flatMap(record => record.attachments || []),
     ];
     setAttachmentToDelete(attachments.find(att => att.id === id) || null);
@@ -538,13 +542,17 @@ export default function OrderDetailPage() {
               onEditProduction={openProductionDrawer}
               onUpdateInspection={(status) => handleUpdateInspectionStatus(status, { productionPlan, order, setSaving, showToast, loadDetail: refreshDetail })}
               onPreview={setPreviewAttachment}
+              onUploadPhotos={(files) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'production_photo', entityId: order?.id, label: '生产留痕图片', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
+              onDeleteAttachment={requestDeleteAttachment}
               onAddProduction={openProductionDrawer}
+              user={user}
             />
 
             <CustomsSection
               sectionRef={sectionRefs.customs}
               customs={customs}
               onEditCustoms={openCustomsDrawer}
+              onUploadDocument={(files, docType) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'customs', entityId: customs?.id, docType, label: '报关单据', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
               onDeleteAttachment={requestDeleteAttachment}
               onPreview={setPreviewAttachment}
               user={user}
@@ -553,8 +561,12 @@ export default function OrderDetailPage() {
             <PackingSection
               sectionRef={sectionRefs.packing}
               packingRecords={packingRecords}
+              packingPhotos={packingPhotos}
               onEditPacking={openPackingDrawer}
+              onUploadPhotos={(files) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'packing', entityId: order?.id, label: '装箱留痕图片', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
+              onDeleteAttachment={requestDeleteAttachment}
               onPreview={setPreviewAttachment}
+              user={user}
             />
 
             <LogisticsSection
