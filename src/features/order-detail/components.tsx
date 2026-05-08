@@ -206,7 +206,7 @@ export function FinanceDashboard({
         </div>
       </div>
 
-      <div className="xl:col-span-8 min-w-0 space-y-3">
+      <div className="xl:col-span-8 min-w-0 max-h-[350px] space-y-3 overflow-y-auto pr-1 custom-scrollbar">
         {records.length > 0 ? records.map(record => {
           const attachments = record.attachments || [];
           const counterparty = record.type === 'payment'

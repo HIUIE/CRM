@@ -204,10 +204,10 @@ export function OrderHeaderSection({
         </div>
 
         <div className="grid gap-3 md:grid-cols-4">
-          <TradeSignal label="TRADE TERMS" value={incoterm} helper={incotermRecord ? "Incoterms 来源于国际段" : '贸易术语待物流记录确认'} icon={<Truck size={13} />} onClick={() => scrollToSection('logistics')} />
-          <TradeSignal label="TRANSPORT MODE" value={transportMode} helper={primaryLogistics ? 'Sea / Air / Courier' : '运输方式待物流记录确认'} icon={<Truck size={13} />} onClick={() => scrollToSection('logistics')} />
-          <TradeSignal label="PAYMENT TERMS" value={customer.paymentTerms || '待维护'} helper={outstandingUsd > 0 ? '财务需关注尾款风险' : '当前回款风险较低'} icon={<Wallet size={13} />} onClick={() => scrollToSection('finance')} />
-          <TradeSignal label="ETD / ETA" value={`${formatDateOnly(etd, 'ETD 待定')} / ${formatDateOnly(eta, 'ETA 待定')}`} helper={primaryLogistics?.vesselVoyage || '上船/到港时间锚点'} icon={<CalendarDays size={13} />} onClick={() => scrollToSection('logistics')} />
+          <TradeSignal label="贸易术语" value={incoterm} helper={incotermRecord ? '来源于国际段物流记录' : '贸易术语待物流记录确认'} icon={<Truck size={13} />} onClick={() => scrollToSection('logistics')} />
+          <TradeSignal label="运输方式" value={transportMode} helper={primaryLogistics ? '已维护物流方式' : '运输方式待物流记录确认'} icon={<Truck size={13} />} onClick={() => scrollToSection('logistics')} />
+          <TradeSignal label="付款条件" value={customer.paymentTerms || '待维护'} helper={outstandingUsd > 0 ? '财务需关注尾款风险' : '当前回款风险较低'} icon={<Wallet size={13} />} onClick={() => scrollToSection('finance')} />
+          <TradeSignal label="预计离港 / 到港 (ETD/ETA)" value={`${formatDateOnly(etd, 'ETD 待定')} / ${formatDateOnly(eta, 'ETA 待定')}`} helper={primaryLogistics?.vesselVoyage || '上船/到港时间锚点'} icon={<CalendarDays size={13} />} onClick={() => scrollToSection('logistics')} />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">

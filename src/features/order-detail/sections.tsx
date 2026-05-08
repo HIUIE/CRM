@@ -273,7 +273,7 @@ export function DocumentsVaultSection({
                 <div key={doc.id} className="flex items-center h-14 px-4 bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg group hover:border-primary-navy/20 dark:hover:border-tertiary-sage/20 hover:shadow-sm transition-all">
                   <button onClick={() => onPreview(doc)} className="shrink-0 mr-3"><FileIcon fileName={doc.fileName} url={doc.url} size={20} /></button>
                   <div className="min-w-0 flex-1">
-                    <button onClick={() => onPreview(doc)} className="text-xs font-bold text-slate-900 dark:text-white truncate block w-full text-left hover:underline leading-tight" title={doc.fileName}>{doc.fileName}</button>
+                    <button onClick={() => onPreview(doc)} className="block w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-xs font-bold leading-tight text-slate-900 hover:underline dark:text-white" title={doc.fileName}>{doc.fileName}</button>
                     {doc.createdAt && <span className="text-xs font-medium text-slate-400">{formatDateOnly(doc.createdAt)}</span>}
                   </div>
                   <div className="flex items-center gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-all shrink-0">
@@ -350,6 +350,7 @@ export function ProfitSection({
   freightAmount,
   miscAmount,
   itemsTotal,
+  showToast,
 }: {
   user?: { name?: string; role?: string } | null;
   orderNo: string;
@@ -357,6 +358,7 @@ export function ProfitSection({
   freightAmount: number;
   miscAmount: number;
   itemsTotal: number;
+  showToast?: (msg: string) => void;
 }) {
   const isAdmin = user?.role === 'admin';
   const [revealed, setRevealed] = useState(false);
@@ -426,7 +428,7 @@ export function ProfitSection({
   const handleSave = async (data: ProfitData) => {
     await apiFetch(`/api/orders/${orderNo}/profit`, { method: 'POST', body: JSON.stringify(data) });
     setProfitData(data);
-    setShowDrawer(false);
+    showToast?.('保存成功');
   };
 
   return (
@@ -540,6 +542,7 @@ function InputRow({ label, value, onChange, suffix, step }: { label: string; val
 
 function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
   const [form, setForm] = useState(data);
+  const [savedBaseline, setSavedBaseline] = useState(data);
   const [saving, setSaving] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
@@ -589,7 +592,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
 
   const hasCnyReceipt = receipts.some(r => r.currency === 'CNY');
 
-  const isDirty = JSON.stringify(form) !== JSON.stringify(data);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(savedBaseline);
   const handleClose = () => {
     if (saving) return;
     if (isDirty) {
@@ -603,7 +606,12 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
     if (saving || !isDirty) return;
     try {
       setSaving(true);
-      await onSave(form);
+      const savedForm = JSON.parse(JSON.stringify(form)) as ProfitData;
+      await onSave(savedForm);
+      setForm(savedForm);
+      setSavedBaseline(savedForm);
+      setShowDiscardConfirm(false);
+      onClose();
     } finally {
       setSaving(false);
     }
@@ -832,8 +840,8 @@ export function CustomsSection({
         <div className="grid gap-8 lg:grid-cols-12 items-start">
           <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
             <GridItem label="报关单号" value={<span className="data-field font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
-            <GridItem label="Customs Decl. Mode" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
-            <GridItem label="Tax Refund Status" value={<Chip tone={taxRefundStatus.tone}>{taxRefundStatus.label}</Chip>} />
+            <GridItem label="报关方式" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
+            <GridItem label="退税状态" value={<Chip tone={taxRefundStatus.tone}>{taxRefundStatus.label}</Chip>} />
             <GridItem label="报关日期" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
             <GridItem label="预计出口" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
           </div>
@@ -1040,18 +1048,21 @@ export function LogisticsSection({
                     <span className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">提单/运单号</span>
                     <span className="rounded-[4px] bg-slate-900 px-3 py-1 text-sm font-black text-white shadow-md data-field dark:bg-navy-800">{l.trackingNo || '待同步'}</span>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {l.segmentType === 'international' && (
-                      <>
-                        <GridItem label="TRADE TERMS" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatIncoterm(l.incoterm)}</span>} />
-                        <GridItem label="TRANSPORT MODE" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatTransportMode(l.transportMode, 'Sea / Air / Courier 待确认')}</span>} />
-                      </>
-                    )}
-                    <GridItem label="船名/航次" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.vesselVoyage || '待订舱'}</span>} />
-                    <GridItem label="B/L No." value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.billNo || '待出单'}</span>} />
-                    <GridItem label="ETD" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.etd, '待定')}</span>} />
-                    <GridItem label="ETA" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.eta, '待定')}</span>} />
-                  </div>
+                  {l.segmentType === 'domestic' ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <GridItem label="车牌/司机" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatTransportMode(l.transportMode, l.remark || '待补充')}</span>} />
+                      <GridItem label="预计到仓" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.eta || l.shippingDate, '待定')}</span>} />
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <GridItem label="贸易术语" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatIncoterm(l.incoterm)}</span>} />
+                      <GridItem label="运输方式" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatTransportMode(l.transportMode, '待确认')}</span>} />
+                      <GridItem label="船名/航次" value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.vesselVoyage || '待订舱'}</span>} />
+                      <GridItem label="B/L No." value={<span className="data-field font-bold text-primary-navy dark:text-white">{l.billNo || '待出单'}</span>} />
+                      <GridItem label="ETD" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.etd, '待定')}</span>} />
+                      <GridItem label="ETA" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(l.eta, '待定')}</span>} />
+                    </div>
+                  )}
                 </div>
                 <div className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-4 text-xs font-bold text-secondary-slate dark:border-navy-800 dark:text-slate-400 tracking-tight">
                   <span>发货日期: <span className="data-field text-primary-navy dark:text-white">{formatDateOnly(l.shippingDate, '待定')}</span></span>

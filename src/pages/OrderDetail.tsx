@@ -582,6 +582,7 @@ export default function OrderDetailPage() {
               freightAmount={freightAmount}
               miscAmount={miscAmount}
               itemsTotal={itemsTotal}
+              showToast={showToast}
             />
             <FollowupsSection followUps={followUps} />
           </Suspense>
