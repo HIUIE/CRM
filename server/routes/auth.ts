@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { dbGet, dbRun } from '../lib/db.js';
-import { clearAuthCookie, clearCsrfCookie, getCookieOptions, requireAuth, setCsrfCookie, signAuthToken, verifyAuthToken, type AuthedRequest } from '../lib/auth.js';
+import { clearAuthCookie, clearCsrfCookie, csrfProtection, getCookieOptions, requireAuth, setCsrfCookie, signAuthToken, verifyAuthToken, type AuthedRequest } from '../lib/auth.js';
 import { handleRouteError, fail } from '../lib/http.js';
 import { readString } from '../lib/values.js';
 
@@ -88,7 +88,7 @@ export function createAuthRouter() {
     }
   });
 
-  router.post('/logout', async (req, res) => {
+  router.post('/logout', csrfProtection, async (req, res) => {
     // Increment token_version to invalidate all existing tokens for this user
     const token = req.cookies.token;
     if (token) {

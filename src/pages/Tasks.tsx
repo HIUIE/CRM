@@ -11,9 +11,10 @@ import Toast from '../components/ui/Toast';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigateWithTransition } from '../lib/transition';
+import { lazyRetry } from '../lib/lazyRetry';
 
-const TaskDrawer = lazy(() => import('../components/ui/TaskDrawer').then(m => ({ default: m.TaskDrawer })));
-const TaskDetailDrawer = lazy(() => import('../components/ui/TaskDetailDrawer').then(m => ({ default: m.TaskDetailDrawer })));
+const TaskDrawer = lazy(lazyRetry(() => import('../components/ui/TaskDrawer').then(m => ({ default: m.TaskDrawer }))));
+const TaskDetailDrawer = lazy(lazyRetry(() => import('../components/ui/TaskDetailDrawer').then(m => ({ default: m.TaskDetailDrawer }))));
 
 
 interface Task {

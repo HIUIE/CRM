@@ -78,7 +78,7 @@ describe('Settings Service Integration Tests', () => {
     const raw = await dbGet<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['ai_api_key']);
     assert.ok(raw, 'Raw row should exist');
     assert.notStrictEqual(raw.value, apiKey, 'Raw DB value should NOT be plaintext');
-    assert.ok(raw.value.includes('=='), 'Encrypted value should be base64 (contains ==)');
+    assert.match(raw.value, /^[A-Za-z0-9+/]+={0,2}$/, 'Encrypted value should be base64');
   });
 
   test('sensitive keys (webhook_secret) are encrypted at rest', async () => {

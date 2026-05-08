@@ -15,7 +15,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx --test tests/**/*.test.ts",
+    "test": "node --import tsx --test --test-concurrency=1 tests/**/*.test.ts",
     "test:frontend": "vitest run",
     "seed:demo": "node --import tsx scripts/seed-demo.ts",
     "smoke:ui": "node --import tsx scripts/smoke-ui.ts",

@@ -10,23 +10,24 @@ import MainLayout from './components/layout/MainLayout';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import VersionGuard from './components/VersionGuard';
 import { Toaster } from 'sonner';
+import { lazyRetry } from './lib/lazyRetry';
 
 // --- Lazy-loaded pages for code splitting ---
-const DashboardView = lazy(() => import('./pages/Dashboard'));
-const AIAssistantView = lazy(() => import('./pages/AIAssistant'));
-const OrderDetailPage = lazy(() => import('./pages/OrderDetail'));
-const SettingsView = lazy(() => import('./pages/Settings'));
-const HelpCenterPage = lazy(() => import('./pages/HelpCenter'));
-const LoginScreen = lazy(() => import('./pages/Login'));
-const OrdersView = lazy(() => import('./components/OrdersView'));
-const FinanceView = lazy(() => import('./components/FinanceView'));
-const LogisticsView = lazy(() => import('./components/LogisticsView'));
-const CustomersView = lazy(() => import('./components/CustomersView'));
-const CustomerDetailPage = lazy(() => import('./pages/CustomerDetail'));
-const AuditLogsPage = lazy(() => import('./pages/AuditLogs'));
-const PartnersView = lazy(() => import('./components/PartnersView'));
-const PartnerDetailPage = lazy(() => import('./pages/PartnerDetail'));
-const TasksView = lazy(() => import('./pages/Tasks'));
+const DashboardView = lazy(lazyRetry(() => import('./pages/Dashboard')));
+const AIAssistantView = lazy(lazyRetry(() => import('./pages/AIAssistant')));
+const OrderDetailPage = lazy(lazyRetry(() => import('./pages/OrderDetail')));
+const SettingsView = lazy(lazyRetry(() => import('./pages/Settings')));
+const HelpCenterPage = lazy(lazyRetry(() => import('./pages/HelpCenter')));
+const LoginScreen = lazy(lazyRetry(() => import('./pages/Login')));
+const OrdersView = lazy(lazyRetry(() => import('./components/OrdersView')));
+const FinanceView = lazy(lazyRetry(() => import('./components/FinanceView')));
+const LogisticsView = lazy(lazyRetry(() => import('./components/LogisticsView')));
+const CustomersView = lazy(lazyRetry(() => import('./components/CustomersView')));
+const CustomerDetailPage = lazy(lazyRetry(() => import('./pages/CustomerDetail')));
+const AuditLogsPage = lazy(lazyRetry(() => import('./pages/AuditLogs')));
+const PartnersView = lazy(lazyRetry(() => import('./components/PartnersView')));
+const PartnerDetailPage = lazy(lazyRetry(() => import('./pages/PartnerDetail')));
+const TasksView = lazy(lazyRetry(() => import('./pages/Tasks')));
 
 // --- Loading Placeholder ---
 function PageLoader() {

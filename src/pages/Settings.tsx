@@ -1,15 +1,16 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { Layout, Briefcase, Users, BrainCircuit, ShieldCheck, Loader2, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ImportModal from '../components/ui/ImportModal';
+import { lazyRetry } from '../lib/lazyRetry';
 
 // 懒加载拆分出的 Settings 子组件
-const BrandingTab = lazy(() => import('./settings/BrandingTab'));
-const BusinessTab = lazy(() => import('./settings/BusinessTab'));
-const TeamTab = lazy(() => import('./settings/TeamTab'));
-const AiTab = lazy(() => import('./settings/AiTab'));
-const SystemTab = lazy(() => import('./settings/SystemTab'));
-const AboutTab = lazy(() => import('./settings/AboutTab'));
+const BrandingTab = lazy(lazyRetry(() => import('./settings/BrandingTab')));
+const BusinessTab = lazy(lazyRetry(() => import('./settings/BusinessTab')));
+const TeamTab = lazy(lazyRetry(() => import('./settings/TeamTab')));
+const AiTab = lazy(lazyRetry(() => import('./settings/AiTab')));
+const SystemTab = lazy(lazyRetry(() => import('./settings/SystemTab')));
+const AboutTab = lazy(lazyRetry(() => import('./settings/AboutTab')));
 
 export type SettingsTab = 'branding' | 'business' | 'team' | 'ai' | 'system' | 'about';
 
@@ -19,9 +20,11 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('branding');
   const [importEntityType, setImportEntityType] = useState<'CUSTOMER' | 'ORDER' | null>(null);
 
-  if (!isAdmin && activeTab !== 'branding') {
-    setActiveTab('branding');
-  }
+  useEffect(() => {
+    if (!isAdmin && activeTab !== 'branding') {
+      setActiveTab('branding');
+    }
+  }, [activeTab, isAdmin]);
 
   const Fallback = () => <div className="p-12 flex justify-center text-slate-400"><Loader2 className="animate-spin text-primary-navy dark:text-tertiary-sage" /></div>;
 
@@ -96,4 +99,3 @@ export default function Settings() {
     </div>
   );
 }
-

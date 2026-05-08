@@ -9,6 +9,17 @@ interface State {
   error: Error | null;
 }
 
+const ERROR_RELOAD_KEY = 'smarttrade:error-boundary-reload-once';
+
+function isRecoverableAssetError(error: Error) {
+  return (
+    /ChunkLoadError/i.test(error.message) ||
+    /Loading chunk/i.test(error.message) ||
+    /Failed to fetch dynamically imported module/i.test(error.message) ||
+    /Importing a module script failed/i.test(error.message)
+  );
+}
+
 export default class ErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
@@ -16,6 +27,10 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary]', error, info.componentStack);
+    if (isRecoverableAssetError(error) && window.sessionStorage.getItem(ERROR_RELOAD_KEY) !== '1') {
+      window.sessionStorage.setItem(ERROR_RELOAD_KEY, '1');
+      window.location.reload();
+    }
   }
 
   // Explicit field declarations for useDefineForClassFields: false compatibility

@@ -164,8 +164,8 @@ describe('Auth Route Integration Tests', () => {
     const loginResp = await doLogin('testuser', 'TestPass123');
     const setCookie = loginResp.headers.get('set-cookie') || '';
     const tokenMatch = setCookie.match(/token=([^;]+)/);
-    const authCookie = `token=${tokenMatch![1]}`;
     const csrfValue = setCookie.match(/csrf_token=([^;]+)/)?.[1] || '';
+    const authCookie = `token=${tokenMatch![1]}; csrf_token=${csrfValue}`;
 
     // Logout
     const logoutResp = await fetch(`${baseUrl}/api/auth/logout`, {
@@ -206,17 +206,16 @@ describe('Auth Route Integration Tests', () => {
   test('Rate limiting on login endpoint', async () => {
     // Rapid login attempts should eventually be rate limited
     // (We count from the beginning; need enough attempts to hit the limit)
-    const promises = [];
+    const results: Response[] = [];
     for (let i = 0; i < 10; i++) {
-      promises.push(
-        fetch(`${baseUrl}/api/auth/login`, {
+      results.push(
+        await fetch(`${baseUrl}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: 'testuser', password: 'WrongPassword' }),
-        })
+        }),
       );
     }
-    const results = await Promise.all(promises);
     const rateLimited = results.some(r => r.status === 429);
     assert.ok(rateLimited, 'Some requests should be rate limited (429)');
   });

@@ -6,32 +6,33 @@ import { useNavigateWithTransition } from '../lib/transition';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/ui/Toast';
+import { lazyRetry } from '../lib/lazyRetry';
 
 // Lazy loaded components
-const PreviewModal = lazy(() => import('../features/order-detail/components').then(m => ({ default: m.PreviewModal })));
-const TaskDrawer = lazy(() => import('../components/ui/TaskDrawer').then(m => ({ default: m.TaskDrawer })));
-const ConfirmDeleteModal = lazy(() => import('../components/ui/ConfirmDeleteModal'));
+const PreviewModal = lazy(lazyRetry(() => import('../features/order-detail/components').then(m => ({ default: m.PreviewModal }))));
+const TaskDrawer = lazy(lazyRetry(() => import('../components/ui/TaskDrawer').then(m => ({ default: m.TaskDrawer }))));
+const ConfirmDeleteModal = lazy(lazyRetry(() => import('../components/ui/ConfirmDeleteModal')));
 
-const OrderEditForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.OrderEditForm })));
-const FinanceForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.FinanceForm })));
-const ProductionForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.ProductionForm })));
-const ProductionLogForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.ProductionLogForm })));
-const CustomsForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.CustomsForm })));
-const LogisticsForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.LogisticsForm })));
-const PackingForm = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.PackingForm })));
-const AIAnalysisContent = lazy(() => import('../features/order-detail/drawers').then(m => ({ default: m.AIAnalysisContent })));
-const DocumentsVaultSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.DocumentsVaultSection })));
-const FinanceSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.FinanceSection })));
-const ProfitSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.ProfitSection })));
-const ProductionSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.ProductionSection })));
-const CustomsSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.CustomsSection })));
-const PackingSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.PackingSection })));
-const LogisticsSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.LogisticsSection })));
-const TasksSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.TasksSection })));
-const FollowupsSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.FollowupsSection })));
-const NavRailSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.NavRailSection })));
-const QuickFollowUpSection = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.QuickFollowUpSection })));
-const AIAnalysisPanel = lazy(() => import('../features/order-detail/sections').then(m => ({ default: m.AIAnalysisPanel })));
+const OrderEditForm = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.OrderEditForm }))));
+const FinanceForm = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.FinanceForm }))));
+const ProductionForm = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.ProductionForm }))));
+const ProductionLogForm = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.ProductionLogForm }))));
+const CustomsForm = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.CustomsForm }))));
+const LogisticsForm = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.LogisticsForm }))));
+const PackingForm = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.PackingForm }))));
+const AIAnalysisContent = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.AIAnalysisContent }))));
+const DocumentsVaultSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.DocumentsVaultSection }))));
+const FinanceSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.FinanceSection }))));
+const ProfitSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.ProfitSection }))));
+const ProductionSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.ProductionSection }))));
+const CustomsSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.CustomsSection }))));
+const PackingSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.PackingSection }))));
+const LogisticsSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.LogisticsSection }))));
+const TasksSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.TasksSection }))));
+const FollowupsSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.FollowupsSection }))));
+const NavRailSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.NavRailSection }))));
+const QuickFollowUpSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.QuickFollowUpSection }))));
+const AIAnalysisPanel = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.AIAnalysisPanel }))));
 
 import type {
   AIAnalysisResult,
