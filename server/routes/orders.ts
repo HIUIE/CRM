@@ -578,7 +578,7 @@ export function createOrdersRouter() {
     }
   });
 
-  router.patch('/:id/production', requireAuth, async (req: AuthedRequest, res) => {
+  router.patch('/production/:id', requireAuth, async (req: AuthedRequest, res) => {
     const productionId = Number(req.params.id);
     if (!Number.isInteger(productionId) || productionId <= 0) {
       return fail(res, 400, '无效的排产计划编号');
