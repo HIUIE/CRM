@@ -67,6 +67,12 @@ export async function buildExcelWorkbook() {
     FROM customs_records cr LEFT JOIN orders o ON o.id = cr.order_id
     LEFT JOIN customers c ON c.id = o.customer_id WHERE cr.deleted_at IS NULL AND o.deleted_at IS NULL ORDER BY cr.id ASC
   `);
+  await addDataSheet(wb, '进项发票', `
+    SELECT ii.*, o.display_id AS order_no, c.name AS customer_name
+    FROM input_invoices ii LEFT JOIN orders o ON o.id = ii.order_id
+    LEFT JOIN customers c ON c.id = o.customer_id
+    WHERE ii.deleted_at IS NULL AND o.deleted_at IS NULL ORDER BY ii.id ASC
+  `);
   await addDataSheet(wb, '生产安排', `
     SELECT pp.*, o.display_id AS order_no, c.name AS customer_name, p.name AS partner_name
     FROM production_plans pp LEFT JOIN orders o ON o.id = pp.order_id

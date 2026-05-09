@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronRight, MapPin, Mail, Edit3, DollarSign, Factory, ShieldCheck, Truck, Printer, Trash,
-  FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles, Eye, EyeOff,
+  FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
@@ -14,7 +14,7 @@ import {
 import { formatDateOnly, formatDateTime, asNumber, asText, formatIncoterm, formatTransportMode, getTaxModeMeta, normalizeTaxMode, STAGE_STEPS } from './utils';
 import type {
   AttachmentMeta, CustomerInfo, CustomsRecord, DocumentSlot, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
-  PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType, ProfitData, TaxMode,
+  PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType, ProfitData, TaxMode, InputInvoiceRecord, InputInvoiceStatus, InputInvoiceType,
 } from './types';
 
 // ==================== Header Section ====================
@@ -439,6 +439,287 @@ export function FinanceSection({
 
 // ==================== Profit Section ====================
 
+const INPUT_INVOICE_TYPE_OPTIONS: Array<{ value: InputInvoiceType; label: string; helper: string }> = [
+  { value: 'vat_special', label: '增值税专用发票', helper: 'VAT Special Invoice' },
+  { value: 'vat_general', label: '增值税普通发票', helper: 'General VAT Invoice' },
+];
+
+const INPUT_INVOICE_STATUS_OPTIONS: Array<{ value: InputInvoiceStatus; label: string }> = [
+  { value: 'pending', label: '待催收' },
+  { value: 'received', label: '已收票' },
+  { value: 'verified', label: '已核验' },
+  { value: 'insufficient', label: '金额不足' },
+  { value: 'general_only', label: '仅有普票' },
+  { value: 'waived', label: '工厂无法开票' },
+];
+
+function getInputInvoiceStatusMeta(status: InputInvoiceStatus) {
+  switch (status) {
+    case 'received': return { label: '已收票', tone: 'info' as const };
+    case 'verified': return { label: '已核验', tone: 'success' as const };
+    case 'insufficient': return { label: '金额不足', tone: 'warning' as const };
+    case 'general_only': return { label: '仅有普票', tone: 'warning' as const };
+    case 'waived': return { label: '已放弃', tone: 'error' as const };
+    default: return { label: '待催收', tone: 'warning' as const };
+  }
+}
+
+function getInvoiceWarning(taxMode: TaxMode, logisticsRecords: LogisticsRecord[], inputInvoices: InputInvoiceRecord[]) {
+  const hasQualifiedSpecialInvoice = inputInvoices.some((invoice) =>
+    invoice.invoiceType === 'vat_special' && (invoice.invoiceStatus === 'received' || invoice.invoiceStatus === 'verified')
+  );
+  if (hasQualifiedSpecialInvoice || taxMode === 'B') return null;
+  const today = new Date();
+  const international = logisticsRecords.find((record) => record.segmentType === 'international') || logisticsRecords[0];
+  if (taxMode === 'A') {
+    const etd = international?.etd || international?.shippingDate;
+    if (!etd) return { tone: 'warning' as const, text: '待维护 ETD 后，系统将按 ETD + 30 天追踪进项专票。' };
+    const due = new Date(etd);
+    due.setDate(due.getDate() + 30);
+    if (today > due) return { tone: 'error' as const, text: `该订单已超过 ETD + 30 天，工厂进项专票仍未收齐，可能影响出口退税到账。` };
+    return { tone: 'warning' as const, text: `预警锚点：${formatDateOnly(due.toISOString().slice(0, 10))}，届时未收齐专票将触发催收预警。` };
+  }
+  const shipDate = international?.shippingDate || international?.etd || new Date().toISOString().slice(0, 10);
+  const closingWarningDate = new Date(shipDate);
+  closingWarningDate.setDate(25);
+  if (today > closingWarningDate) return { tone: 'error' as const, text: '本月需申报内销增值税，工厂进项专票仍未收齐，可能导致无法抵扣。' };
+  return { tone: 'warning' as const, text: `内销申报预警锚点：发货当月 25 号 (${formatDateOnly(closingWarningDate.toISOString().slice(0, 10))})。` };
+}
+
+type InputInvoiceFormState = {
+  supplierName: string;
+  invoiceNo: string;
+  invoiceType: InputInvoiceType;
+  invoiceStatus: InputInvoiceStatus;
+  invoiceAmountCny: string;
+  verifiedAmountCny: string;
+  invoiceDate: string;
+  waivedReason: string;
+  remark: string;
+};
+
+const EMPTY_INPUT_INVOICE_FORM: InputInvoiceFormState = {
+  supplierName: '',
+  invoiceNo: '',
+  invoiceType: 'vat_special',
+  invoiceStatus: 'pending',
+  invoiceAmountCny: '0',
+  verifiedAmountCny: '0',
+  invoiceDate: '',
+  waivedReason: '',
+  remark: '',
+};
+
+export function InputInvoiceSection({
+  sectionRef,
+  orderId,
+  taxMode,
+  inputInvoices,
+  logisticsRecords,
+  user,
+  onRefresh,
+  showToast,
+}: {
+  sectionRef: React.RefObject<HTMLDivElement | null>;
+  orderId: number;
+  taxMode: TaxMode;
+  inputInvoices: InputInvoiceRecord[];
+  logisticsRecords: LogisticsRecord[];
+  user?: { name?: string; role?: string } | null;
+  onRefresh: () => Promise<void>;
+  showToast: (msg: string) => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<InputInvoiceRecord | null>(null);
+  const [form, setForm] = useState<InputInvoiceFormState>(EMPTY_INPUT_INVOICE_FORM);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  if (taxMode === 'B') return null;
+
+  const warning = getInvoiceWarning(taxMode, logisticsRecords, inputInvoices);
+  const totalInvoice = inputInvoices.reduce((sum, invoice) => sum + asNumber(invoice.invoiceAmountCny), 0);
+  const totalVerified = inputInvoices.reduce((sum, invoice) => sum + asNumber(invoice.verifiedAmountCny), 0);
+  const risk = hasBlockingInputInvoiceRisk(inputInvoices);
+
+  const openForm = (invoice: InputInvoiceRecord | null = null) => {
+    setEditing(invoice);
+    setError('');
+    setForm(invoice ? {
+      supplierName: invoice.supplierName || '',
+      invoiceNo: invoice.invoiceNo || '',
+      invoiceType: invoice.invoiceType || 'vat_special',
+      invoiceStatus: invoice.invoiceStatus || 'pending',
+      invoiceAmountCny: String(invoice.invoiceAmountCny || 0),
+      verifiedAmountCny: String(invoice.verifiedAmountCny || 0),
+      invoiceDate: invoice.invoiceDate || '',
+      waivedReason: invoice.waivedReason || '',
+      remark: invoice.remark || '',
+    } : EMPTY_INPUT_INVOICE_FORM);
+    setShowForm(true);
+  };
+
+  const saveInvoice = async () => {
+    if (!form.invoiceType || !form.invoiceStatus) {
+      setError('请选择发票类型和发票状态');
+      return;
+    }
+    if (form.invoiceStatus === 'waived' && !form.waivedReason.trim()) {
+      setError('标记工厂无法开票时必须填写原因');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const payload = {
+        supplierName: form.supplierName,
+        invoiceNo: form.invoiceNo,
+        invoiceType: form.invoiceType,
+        invoiceStatus: form.invoiceStatus,
+        invoiceAmountCny: Number(form.invoiceAmountCny) || 0,
+        verifiedAmountCny: Number(form.verifiedAmountCny) || 0,
+        invoiceDate: form.invoiceDate,
+        waivedReason: form.waivedReason,
+        remark: form.remark,
+      };
+      if (editing) {
+        await apiFetch(`/api/orders/input-invoices/${editing.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      } else {
+        await apiFetch(`/api/orders/${orderId}/input-invoices`, { method: 'POST', body: JSON.stringify(payload) });
+      }
+      showToast('进项发票已保存');
+      setShowForm(false);
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteInvoice = async (invoiceId: number) => {
+    if (!window.confirm('确定删除这条进项发票记录吗？')) return;
+    await apiFetch(`/api/orders/input-invoices/${invoiceId}`, { method: 'DELETE' });
+    showToast('进项发票已删除');
+    await onRefresh();
+  };
+
+  return (
+    <DocumentBoard ref={sectionRef} title="工厂进项发票追踪" action={<LightActionButton onClick={() => openForm()} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 录入发票</LightActionButton>}>
+      <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          <SummaryBox label="发票总额" value={`CNY ${totalInvoice.toLocaleString()}`} color="text-primary-navy dark:text-white" />
+          <SummaryBox label="已核验金额" value={`CNY ${totalVerified.toLocaleString()}`} color="text-emerald-600" />
+          <SummaryBox label="税务口径" value={taxMode === 'A' ? '出口退税专票' : '内销抵扣专票'} color={risk ? 'text-red-600' : 'text-primary-navy dark:text-white'} />
+        </div>
+        {warning && (
+          <div className={`flex items-start gap-3 rounded-lg border p-4 text-xs font-bold ${warning.tone === 'error' ? 'border-red-100 bg-red-50 text-red-600 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400' : 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300'}`}>
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <div>{warning.text}</div>
+          </div>
+        )}
+        {inputInvoices.length ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {inputInvoices.map((invoice) => {
+              const meta = getInputInvoiceStatusMeta(invoice.invoiceStatus);
+              return (
+                <div key={invoice.id} className={`rounded-lg border p-4 transition-all ${invoice.invoiceStatus === 'waived' || invoice.invoiceType === 'vat_general' ? 'border-red-100 bg-red-50/60 dark:border-red-900/30 dark:bg-red-900/10' : 'border-slate-200 bg-surface dark:border-navy-800 dark:bg-navy-900'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-black text-primary-navy dark:text-white">{invoice.supplierName || '未填写供应商'}</div>
+                      <div className="mt-1 text-xs font-bold text-slate-400">发票号：{invoice.invoiceNo || '待补充'}</div>
+                    </div>
+                    <Chip tone={meta.tone}>{meta.label}</Chip>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <GridItem label="发票类型" value={<span className="text-xs font-bold text-primary-navy dark:text-white">{invoice.invoiceType === 'vat_special' ? '专票' : '普票'}</span>} />
+                    <GridItem label="发票金额" value={<span className="data-field font-bold text-primary-navy dark:text-white">¥{Number(invoice.invoiceAmountCny || 0).toLocaleString()}</span>} />
+                    <GridItem label="已核验" value={<span className="data-field font-bold text-emerald-600">¥{Number(invoice.verifiedAmountCny || 0).toLocaleString()}</span>} />
+                  </div>
+                  {invoice.invoiceStatus === 'waived' && <div className="mt-3 rounded-md bg-white/70 px-3 py-2 text-xs font-bold text-red-600 dark:bg-navy-950/50 dark:text-red-400">放弃原因：{invoice.waivedReason || '未填写'}</div>}
+                  <div className="mt-4 flex items-center justify-end gap-2">
+                    <button onClick={() => openForm(invoice)} className="text-xs font-bold text-primary-navy hover:underline dark:text-tertiary-sage">编辑</button>
+                    {user?.role === 'admin' && <button onClick={() => deleteInvoice(invoice.id)} className="text-xs font-bold text-red-500 hover:underline">删除</button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyStateBoard title="暂无进项发票记录" description={taxMode === 'A' ? '标准出口退税订单需要追踪工厂进项专票，超过 ETD + 30 天仍未收齐将触发预警。' : '视同内销订单需要追踪可抵扣专票，避免当月申报时无法抵扣销项税。'} icon={FileText} actionLabel="+ 录入第一张发票" onAction={() => openForm()} />
+        )}
+      </div>
+      {showForm && (
+        <div className="fixed inset-0 z-[430] flex items-center justify-center bg-primary-navy/50 p-4 backdrop-blur-sm dark:bg-black/60">
+          <div className="w-full max-w-[620px] overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-2xl dark:border-navy-800 dark:bg-navy-900">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-navy-800">
+              <div>
+                <h3 className="text-lg font-black text-primary-navy dark:text-white">{editing ? '编辑进项发票' : '录入进项发票'}</h3>
+                <p className="mt-1 text-xs font-bold text-slate-400">用于退税/抵扣判断和利润风险重算。</p>
+              </div>
+              <button onClick={() => setShowForm(false)} className="rounded-lg border border-slate-200 p-2 text-slate-400 hover:text-red-500 dark:border-navy-800"><X size={18} /></button>
+            </div>
+            <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
+              {error && <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400">{error}</div>}
+              <div>
+                <div className="mb-2 text-xs font-black text-slate-500 dark:text-slate-400">发票类型 *</div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {INPUT_INVOICE_TYPE_OPTIONS.map(option => (
+                    <button key={option.value} type="button" onClick={() => setForm({ ...form, invoiceType: option.value, invoiceStatus: option.value === 'vat_general' && form.invoiceStatus === 'pending' ? 'general_only' : form.invoiceStatus })} className={`rounded-lg border p-4 text-left transition-all ${form.invoiceType === option.value ? 'border-primary-navy bg-primary-navy text-white dark:border-tertiary-sage dark:bg-tertiary-sage' : 'border-slate-200 bg-slate-50 text-primary-navy hover:border-primary-navy/30 dark:border-navy-800 dark:bg-navy-950 dark:text-white'}`}>
+                      <div className="text-sm font-black">{option.label}</div>
+                      <div className={`mt-1 text-xs font-bold ${form.invoiceType === option.value ? 'text-white/70' : 'text-slate-400'}`}>{option.helper}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {form.invoiceType === 'vat_general' && (
+                <div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
+                  注意：普通发票无法用于出口退税及内销进项抵扣，请确认工厂是否无法开具专票！
+                </div>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <InputRow label="发票金额" value={Number(form.invoiceAmountCny) || 0} onChange={v => setForm({ ...form, invoiceAmountCny: v })} suffix="CNY" />
+                <InputRow label="已核验金额" value={Number(form.verifiedAmountCny) || 0} onChange={v => setForm({ ...form, verifiedAmountCny: v })} suffix="CNY" />
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">供应商</span>
+                  <input value={form.supplierName} onChange={e => setForm({ ...form, supplierName: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-surface px-3 py-2.5 text-sm font-semibold outline-none focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white" />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">发票号码</span>
+                  <input value={form.invoiceNo} onChange={e => setForm({ ...form, invoiceNo: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-surface px-3 py-2.5 text-sm font-semibold outline-none focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white" />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">发票日期</span>
+                  <input type="date" value={form.invoiceDate} onChange={e => setForm({ ...form, invoiceDate: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-surface px-3 py-2.5 text-sm font-semibold outline-none focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white" />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">发票状态 *</span>
+                  <select value={form.invoiceStatus} onChange={e => setForm({ ...form, invoiceStatus: e.target.value as InputInvoiceStatus })} className="w-full rounded-lg border border-slate-200 bg-surface px-3 py-2.5 text-sm font-semibold outline-none focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white">
+                    {INPUT_INVOICE_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value} disabled={option.value === 'waived' && user?.role !== 'admin'}>{option.label}</option>)}
+                  </select>
+                </label>
+              </div>
+              {form.invoiceStatus === 'waived' && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-red-600 dark:text-red-400">放弃原因 *</span>
+                  <textarea rows={3} value={form.waivedReason} onChange={e => setForm({ ...form, waivedReason: e.target.value })} className="w-full rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 text-sm font-semibold outline-none focus:border-red-400 dark:border-red-900/30 dark:bg-red-900/10 dark:text-white" />
+                </label>
+              )}
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">备注</span>
+                <textarea rows={3} value={form.remark} onChange={e => setForm({ ...form, remark: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-surface px-3 py-2.5 text-sm font-semibold outline-none focus:border-primary-navy dark:border-navy-800 dark:bg-navy-950 dark:text-white" />
+              </label>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4 dark:border-navy-800">
+              <button onClick={() => setShowForm(false)} disabled={saving} className="rounded-lg border border-slate-200 px-5 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:border-navy-800 dark:hover:bg-navy-800">取消</button>
+              <button onClick={saveInvoice} disabled={saving} className="btn-primary min-w-[104px]">{saving ? '保存中...' : '保存'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </DocumentBoard>
+  );
+}
+
 export function ProfitSection({
   user,
   orderNo,
@@ -447,6 +728,7 @@ export function ProfitSection({
   miscAmount,
   itemsTotal,
   taxMode,
+  inputInvoices = [],
   showToast,
 }: {
   user?: { name?: string; role?: string } | null;
@@ -456,6 +738,7 @@ export function ProfitSection({
   miscAmount: number;
   itemsTotal: number;
   taxMode?: TaxMode | null;
+  inputInvoices?: InputInvoiceRecord[];
   showToast?: (msg: string) => void;
 }) {
   const isAdmin = user?.role === 'admin';
@@ -463,6 +746,7 @@ export function ProfitSection({
   const taxModeMeta = getTaxModeMeta(normalizedTaxMode);
   const includesRefund = normalizedTaxMode === 'A';
   const includesDomesticVat = normalizedTaxMode === 'C';
+  const invoiceRiskBlocksTaxBenefit = hasBlockingInputInvoiceRisk(inputInvoices);
   const [revealed, setRevealed] = useState(false);
   const [profitData, setProfitData] = useState<ProfitData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -512,11 +796,16 @@ export function ProfitSection({
     }
   }
 
-  const estimatedRefundCny = includesRefund && pd.invoiceAmount > 0 ? (pd.invoiceAmount / 1.13 * (pd.refundRate / 100)) : 0;
+  const estimatedRefundCny = includesRefund && !invoiceRiskBlocksTaxBenefit && pd.invoiceAmount > 0 ? (pd.invoiceAmount / 1.13 * (pd.refundRate / 100)) : 0;
   const totalRevenueCny = totalCnyFromReceipts + estimatedRefundCny + (pd.otherIncomeCny || 0);
   const miscTotal = (pd.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
   const freightCny = pd.freightCurrency === 'USD' ? (pd.freightValue * (pd.receipts[0]?.exchangeRate || 7.2)) : pd.freightValue;
-  const domesticVatCny = includesDomesticVat ? Math.max(((totalCnyFromReceipts + (pd.otherIncomeCny || 0)) - pd.factoryCostCny) / 1.13 * 0.13, 0) : 0;
+  const salesCnyForVat = totalCnyFromReceipts + (pd.otherIncomeCny || 0);
+  const domesticVatCny = includesDomesticVat
+    ? invoiceRiskBlocksTaxBenefit
+      ? Math.max(salesCnyForVat / 1.13 * 0.13, 0)
+      : Math.max((salesCnyForVat - pd.factoryCostCny) / 1.13 * 0.13, 0)
+    : 0;
   const totalCostCny = pd.factoryCostCny + pd.domesticFees + freightCny + pd.customsMisc + miscTotal + domesticVatCny;
   const netProfitCny = totalRevenueCny - totalCostCny;
   const margin = totalRevenueCny > 0 ? (netProfitCny / totalRevenueCny) * 100 : 0;
@@ -548,6 +837,9 @@ export function ProfitSection({
           <div className="lg:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500 dark:border-navy-800 dark:bg-navy-950/40 dark:text-slate-400">
             当前业务模式：<span className="text-primary-navy dark:text-white">{taxModeMeta.label}</span>
             <span className="ml-2">{includesRefund ? '利润公式包含预估退税。' : includesDomesticVat ? '利润公式自动计入应缴增值税。' : '利润公式已移除退税项，按销售本币减成本合计核算。'}</span>
+            {invoiceRiskBlocksTaxBenefit && (
+              <span className="ml-2 text-red-600 dark:text-red-400">进项发票存在不可抵扣/不可退税风险，利润已按高风险口径重算。</span>
+            )}
           </div>
           {/* Left: Revenue */}
           <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-5 shadow-sm">
@@ -564,7 +856,7 @@ export function ProfitSection({
                   {r.currency === 'USD' && <Row label="结汇汇率" value={revealed ? String(r.exchangeRate) : '***'} />}
                 </div>
               ))}
-              {includesRefund && <Row label={`预估退税额 (退税率 ${pd.refundRate}%)`} value={fmtCny(estimatedRefundCny)} />}
+              {includesRefund && <Row label={invoiceRiskBlocksTaxBenefit ? '预估退税额已失效' : `预估退税额 (退税率 ${pd.refundRate}%)`} value={invoiceRiskBlocksTaxBenefit ? (revealed ? '已失效：未取得可退税专票' : '***') : fmtCny(estimatedRefundCny)} />}
               <Row label="其他收入" value={fmtCny(pd.otherIncomeCny || 0)} />
               <Row label="实际折合本币 (总)" value={fmtCny(totalRevenueCny)} bold />
             </div>
@@ -596,10 +888,11 @@ export function ProfitSection({
         </div>
 
         {/* Risk Alerts */}
-        {revealed && (freightWarn || marginAlert) && (
+        {revealed && (freightWarn || marginAlert || invoiceRiskBlocksTaxBenefit) && (
           <div className="mt-4 space-y-1.5 rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-4">
             {freightWarn && <div className="text-xs font-bold text-red-600 dark:text-red-400">风险提示：国际运费已超过货品成本，请核实物流方案。</div>}
             {marginAlert && <div className="text-xs font-bold text-red-600 dark:text-red-400">风险提示：该单利润率过低 ({(margin).toFixed(2)}%)，已触及风控红线 (8%)。</div>}
+            {invoiceRiskBlocksTaxBenefit && <div className="text-xs font-bold text-red-600 dark:text-red-400">{normalizedTaxMode === 'A' ? '工厂进项专票已标记为无法取得或仅有普票，本单预估退税收益已从利润中剔除。' : '工厂进项专票已标记为无法取得或仅有普票，本单内销增值税无法抵扣，系统已按全额销项税成本重算。'}</div>}
           </div>
         )}
       </DocumentBoard>
@@ -609,6 +902,7 @@ export function ProfitSection({
         <ProfitDrawer
           data={pd}
           taxMode={normalizedTaxMode}
+          inputInvoices={inputInvoices}
           onSave={handleSave}
           onClose={() => setShowDrawer(false)}
         />
@@ -635,6 +929,14 @@ function SummaryBox({ label, value, color }: { label: string; value: string; col
   );
 }
 
+function hasBlockingInputInvoiceRisk(inputInvoices: InputInvoiceRecord[] = []) {
+  return inputInvoices.some((invoice) =>
+    invoice.invoiceStatus === 'waived' ||
+    invoice.invoiceStatus === 'general_only' ||
+    invoice.invoiceType === 'vat_general'
+  );
+}
+
 // Stable InputRow defined OUTSIDE ProfitDrawer to prevent re-mount / focus loss
 function InputRow({ label, value, onChange, suffix, step }: { label: string; value: number; onChange: (v: string) => void; suffix: string; step?: string }) {
   return (
@@ -649,7 +951,7 @@ function InputRow({ label, value, onChange, suffix, step }: { label: string; val
   );
 }
 
-function ProfitDrawer({ data, taxMode, onSave, onClose }: { data: ProfitData; taxMode: TaxMode; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
+function ProfitDrawer({ data, taxMode, inputInvoices, onSave, onClose }: { data: ProfitData; taxMode: TaxMode; inputInvoices: InputInvoiceRecord[]; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
   const [form, setForm] = useState(data);
   const [savedBaseline, setSavedBaseline] = useState(data);
   const [saving, setSaving] = useState(false);
@@ -657,6 +959,7 @@ function ProfitDrawer({ data, taxMode, onSave, onClose }: { data: ProfitData; ta
   const includesRefund = taxMode === 'A';
   const includesDomesticVat = taxMode === 'C';
   const taxModeMeta = getTaxModeMeta(taxMode);
+  const invoiceRiskBlocksTaxBenefit = hasBlockingInputInvoiceRisk(inputInvoices);
 
   const updN = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: Number(v) || 0 });
   const updS = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: v });
@@ -694,11 +997,16 @@ function ProfitDrawer({ data, taxMode, onSave, onClose }: { data: ProfitData; ta
       calcTotalCnyFromReceipts += r.amount - r.bankFees - r.platformFees;
     }
   }
-  const calcRefund = includesRefund && form.invoiceAmount > 0 ? (form.invoiceAmount / 1.13 * (form.refundRate / 100)) : 0;
+  const calcRefund = includesRefund && !invoiceRiskBlocksTaxBenefit && form.invoiceAmount > 0 ? (form.invoiceAmount / 1.13 * (form.refundRate / 100)) : 0;
   const calcRevenueCny = calcTotalCnyFromReceipts + calcRefund + (form.otherIncomeCny || 0);
   const calcMiscTotal = (form.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
   const calcFreightCny = form.freightCurrency === 'USD' ? (form.freightValue * (receipts[0]?.exchangeRate || 7.2)) : form.freightValue;
-  const calcDomesticVat = includesDomesticVat ? Math.max((calcTotalCnyFromReceipts + (form.otherIncomeCny || 0) - form.factoryCostCny) / 1.13 * 0.13, 0) : 0;
+  const calcSalesCnyForVat = calcTotalCnyFromReceipts + (form.otherIncomeCny || 0);
+  const calcDomesticVat = includesDomesticVat
+    ? invoiceRiskBlocksTaxBenefit
+      ? Math.max(calcSalesCnyForVat / 1.13 * 0.13, 0)
+      : Math.max((calcSalesCnyForVat - form.factoryCostCny) / 1.13 * 0.13, 0)
+    : 0;
   const calcTotalCost = form.factoryCostCny + form.domesticFees + calcFreightCny + form.customsMisc + calcMiscTotal + calcDomesticVat;
   const calcProfit = calcRevenueCny - calcTotalCost;
   const calcMargin = calcRevenueCny > 0 ? (calcProfit / calcRevenueCny) * 100 : 0;
@@ -802,11 +1110,11 @@ function ProfitDrawer({ data, taxMode, onSave, onClose }: { data: ProfitData; ta
                       <InputRow label="退税率 %" value={form.refundRate} onChange={v => updN('refundRate', v)} suffix="%" />
                     </div>
                   </div>
-                  {form.invoiceAmount > 0 && (
-                    <div className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                      预估退税额：¥{(form.invoiceAmount / 1.13 * (form.refundRate / 100)).toFixed(2)}
-                    </div>
-                  )}
+                  {invoiceRiskBlocksTaxBenefit ? (
+                    <div className="rounded-md border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400">已失效：未取得可退税专票。</div>
+                  ) : form.invoiceAmount > 0 ? (
+                    <div className="text-xs font-bold text-blue-600 dark:text-blue-400">预估退税额：¥{(form.invoiceAmount / 1.13 * (form.refundRate / 100)).toFixed(2)}</div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500 dark:border-navy-800 dark:bg-navy-950/40 dark:text-slate-400">
@@ -847,7 +1155,7 @@ function ProfitDrawer({ data, taxMode, onSave, onClose }: { data: ProfitData; ta
               <InputRow label="报关与杂费 (包含偏远/产地证等)" value={form.customsMisc} onChange={v => updN('customsMisc', v)} suffix="CNY" />
               {includesDomesticVat && (
                 <div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
-                  应缴增值税预估：¥{calcDomesticVat.toFixed(2)}
+                  {invoiceRiskBlocksTaxBenefit ? '无法抵扣销项税成本' : '应缴增值税预估'}：¥{calcDomesticVat.toFixed(2)}
                 </div>
               )}
 
@@ -1455,10 +1763,13 @@ export function NavRailSection({
 }) {
   const normalizedTaxMode = normalizeTaxMode(taxMode);
   const customsLabel = normalizedTaxMode === 'B' ? '出口凭证' : normalizedTaxMode === 'C' ? '纳税申报' : '报关资料';
+  const settlementItems = normalizedTaxMode === 'B'
+    ? [{ section: 'finance', label: '财务信息' }, { section: 'profit', label: '利润核算' }]
+    : [{ section: 'finance', label: '财务信息' }, { section: 'invoices', label: '进项发票' }, { section: 'profit', label: '利润核算' }];
   const navGroups = [
     { group: '订单', items: [{ section: 'items', label: '商品明细' }, { section: 'documents', label: '核心单据' }] },
     { group: '履约', items: [{ section: 'production', label: '生产排产' }, { section: 'packing', label: '装箱明细' }, { section: 'logistics', label: '运输轨迹' }, { section: 'customs', label: customsLabel }] },
-    { group: '结算', items: [{ section: 'finance', label: '财务信息' }, { section: 'profit', label: '利润核算' }] },
+    { group: '结算', items: settlementItems },
     { group: '协同', items: [{ section: 'todos', label: '协同任务' }, { section: 'followups', label: '跟进时间轴' }] },
   ];
 

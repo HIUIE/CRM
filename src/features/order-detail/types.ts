@@ -1,6 +1,8 @@
-export type SectionKey = 'basic' | 'todos' | 'items' | 'production' | 'finance' | 'customs' | 'logistics';
+export type SectionKey = 'basic' | 'todos' | 'items' | 'production' | 'finance' | 'invoices' | 'customs' | 'logistics';
 export type OrderStatus = 'draft' | 'production' | 'customs' | 'shipping' | 'completed';
 export type TaxMode = 'A' | 'B' | 'C';
+export type InputInvoiceType = 'vat_special' | 'vat_general';
+export type InputInvoiceStatus = 'pending' | 'received' | 'verified' | 'insufficient' | 'general_only' | 'waived';
 export type FinanceType = 'receipt' | 'payment';
 export type FinanceStatus = 'pending' | 'completed';
 export type FinanceCategory = 'deposit' | 'balance' | 'goods' | 'freight' | 'customs' | 'other';
@@ -211,6 +213,25 @@ export type CustomsRecord = {
   createdByName?: string | null;
 };
 
+export type InputInvoiceRecord = {
+  id: number;
+  orderId: number;
+  supplierName: string;
+  invoiceNo: string;
+  invoiceType: InputInvoiceType;
+  invoiceStatus: InputInvoiceStatus;
+  invoiceAmountCny: number;
+  verifiedAmountCny: number;
+  invoiceDate?: string | null;
+  remark?: string | null;
+  waivedBy?: number | null;
+  waivedByName?: string | null;
+  waivedAt?: string | null;
+  waivedReason?: string | null;
+  createdAt?: string | null;
+  createdByName?: string | null;
+};
+
 export type OrderDetailResponse = {
   order?: OrderInfo | null;
   customer?: CustomerInfo | null;
@@ -218,6 +239,7 @@ export type OrderDetailResponse = {
   financeRecords?: FinanceRecord[] | null;
   productionPlan?: ProductionPlan | null;
   customs?: CustomsRecord | null;
+  inputInvoices?: InputInvoiceRecord[] | null;
   logisticsRecords?: LogisticsRecord[] | null;
   domesticLogistics?: LogisticsRecord | null;
   internationalLogistics?: LogisticsRecord | null;

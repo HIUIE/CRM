@@ -133,3 +133,100 @@ export async function scanAndNotifyOverduePayments() {
     console.error('[notifier] Failed to scan overdue payments:', error);
   }
 }
+
+export async function scanAndNotifyInputInvoiceRisks() {
+  try {
+    const rows = await dbAll<{
+      id: number;
+      display_id: string;
+      tax_mode: 'A' | 'C';
+      customer_name: string;
+      etd: string | null;
+      shipping_date: string | null;
+      has_qualified_invoice: number;
+    }[]>(`
+      SELECT
+        o.id,
+        o.display_id,
+        COALESCE(NULLIF(o.tax_mode, ''), 'A') AS tax_mode,
+        c.name AS customer_name,
+        (
+          SELECT COALESCE(NULLIF(l.etd, ''), NULLIF(l.shipping_date, ''))
+          FROM logistics_records l
+          WHERE l.order_id = o.id AND l.deleted_at IS NULL
+          ORDER BY CASE WHEN l.segment_type = 'international' THEN 0 ELSE 1 END, l.id DESC
+          LIMIT 1
+        ) AS etd,
+        (
+          SELECT NULLIF(l.shipping_date, '')
+          FROM logistics_records l
+          WHERE l.order_id = o.id AND l.deleted_at IS NULL
+          ORDER BY l.id DESC
+          LIMIT 1
+        ) AS shipping_date,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM input_invoices ii
+          WHERE ii.order_id = o.id
+            AND ii.deleted_at IS NULL
+            AND ii.invoice_type = 'vat_special'
+            AND ii.invoice_status IN ('received', 'verified')
+        ) THEN 1 ELSE 0 END AS has_qualified_invoice
+      FROM orders o
+      LEFT JOIN customers c ON c.id = o.customer_id
+      WHERE o.deleted_at IS NULL
+        AND COALESCE(NULLIF(o.tax_mode, ''), 'A') IN ('A', 'C')
+    `);
+
+    const admins = await dbAll<{ id: number }[]>(`SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC`);
+    const assigneeId = admins[0]?.id;
+    if (!assigneeId) return;
+    const today = new Date();
+
+    for (const order of rows) {
+      if (Number(order.has_qualified_invoice) === 1) continue;
+      let dueDate = '';
+      let title = '';
+      let description = '';
+
+      if (order.tax_mode === 'A') {
+        if (!order.etd) continue;
+        const due = new Date(order.etd);
+        if (Number.isNaN(due.getTime())) continue;
+        due.setDate(due.getDate() + 30);
+        if (today <= due) continue;
+        dueDate = due.toISOString().slice(0, 10);
+        title = `进项专票逾期催收：${order.display_id}`;
+        description = `该订单已超过 ETD + 30 天，工厂进项专票仍未收齐，可能影响出口退税到账。客户：${order.customer_name || '未命名客户'}`;
+      } else {
+        const anchor = order.shipping_date || order.etd;
+        if (!anchor) continue;
+        const due = new Date(anchor);
+        if (Number.isNaN(due.getTime())) continue;
+        due.setDate(25);
+        if (today <= due) continue;
+        dueDate = due.toISOString().slice(0, 10);
+        title = `内销抵扣专票催收：${order.display_id}`;
+        description = `本月需申报内销增值税，请尽快催收进项专票进行抵扣。客户：${order.customer_name || '未命名客户'}`;
+      }
+
+      const existing = await dbAll<{ id: number }[]>(
+        `SELECT id FROM tasks WHERE entity_type = 'ORDER' AND entity_id = ? AND title = ? AND status != 'done' LIMIT 1`,
+        [order.display_id, title],
+      );
+      if (existing.length) continue;
+
+      await dbRun(
+        `INSERT INTO tasks (title, assignee_id, due_date, priority, entity_type, entity_id, description, created_by)
+         VALUES (?, ?, ?, 'P1', 'ORDER', ?, ?, ?)`,
+        [title, assigneeId, dueDate, order.display_id, description, assigneeId],
+      );
+      await dbRun(
+        `INSERT INTO notifications (user_id, title, message, link, type) VALUES (?, ?, ?, ?, ?)`,
+        [assigneeId, '进项发票预警', description, `/orders/${order.display_id.toLowerCase()}?section=invoices`, 'system'],
+      );
+      await sendWebhook('⚠️ 进项发票预警', `**订单号**: ${order.display_id}\n**客户**: ${order.customer_name || '-'}\n**预警原因**: ${description}`);
+    }
+  } catch (error) {
+    console.error('[notifier] Failed to scan input invoice risks:', error);
+  }
+}

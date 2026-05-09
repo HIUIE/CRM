@@ -168,6 +168,27 @@ export const up = (pgm) => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS input_invoices (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      supplier_name TEXT,
+      invoice_no TEXT,
+      invoice_type TEXT NOT NULL DEFAULT 'vat_special',
+      invoice_status TEXT NOT NULL DEFAULT 'pending',
+      invoice_amount_cny NUMERIC DEFAULT 0,
+      verified_amount_cny NUMERIC DEFAULT 0,
+      invoice_date TEXT,
+      remark TEXT,
+      waived_by INTEGER REFERENCES users(id),
+      waived_at TIMESTAMP,
+      waived_reason TEXT,
+      created_by INTEGER REFERENCES users(id),
+      updated_by INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS production_plans (
       id SERIAL PRIMARY KEY,
       order_id INTEGER UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,

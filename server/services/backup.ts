@@ -25,6 +25,7 @@ const TABLES = [
   'logistics_records',
   'customs_records',
   'order_profits',
+  'input_invoices',
   'production_plans',
   'production_logs',
   'attachments',

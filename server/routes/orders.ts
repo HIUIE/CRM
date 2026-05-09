@@ -12,7 +12,7 @@ import {
   readProductionLogPayload,
   readProductionPayload,
 } from '../services/payloads.js';
-import { asNumber, readString, readPagination, buildLimitOffset } from '../lib/values.js';
+import { asNumber, readString, readPagination, buildLimitOffset, readOptionalDate } from '../lib/values.js';
 import { ORDER_STATUSES } from '../domain.js';
 
 // 核心逻辑：生成下一个建议单号
@@ -43,6 +43,34 @@ async function syncOrderProductSummary(orderId: number) {
     .join(', ');
   
   await dbRun(`UPDATE orders SET total_amount = ?, product_summary = ? WHERE id = ?`, [totalAmount, productSummary, orderId]);
+}
+
+const INPUT_INVOICE_TYPES = ['vat_special', 'vat_general'] as const;
+const INPUT_INVOICE_STATUSES = ['pending', 'received', 'verified', 'insufficient', 'general_only', 'waived'] as const;
+
+function readInputInvoicePayload(body: any, role?: string) {
+  const invoiceType = readString(body?.invoiceType || body?.invoice_type || 'vat_special', 30);
+  const invoiceStatus = readString(body?.invoiceStatus || body?.invoice_status || 'pending', 30);
+  const invoiceDate = readOptionalDate(body?.invoiceDate || body?.invoice_date);
+  const waivedReason = readString(body?.waivedReason || body?.waived_reason, 500);
+  if (!INPUT_INVOICE_TYPES.includes(invoiceType as any)) return { error: '发票类型不正确' };
+  if (!INPUT_INVOICE_STATUSES.includes(invoiceStatus as any)) return { error: '发票状态不正确' };
+  if (invoiceDate === '__invalid__') return { error: '发票日期格式不正确' };
+  if (invoiceStatus === 'waived' && role !== 'admin') return { error: '只有管理员可以标记工厂无法开票' };
+  if (invoiceStatus === 'waived' && !waivedReason) return { error: '标记无法开票时必须填写原因' };
+  return {
+    payload: {
+      supplierName: readString(body?.supplierName || body?.supplier_name, 200),
+      invoiceNo: readString(body?.invoiceNo || body?.invoice_no, 100),
+      invoiceType,
+      invoiceStatus,
+      invoiceAmountCny: asNumber(body?.invoiceAmountCny ?? body?.invoice_amount_cny),
+      verifiedAmountCny: asNumber(body?.verifiedAmountCny ?? body?.verified_amount_cny),
+      invoiceDate: invoiceDate || null,
+      remark: readString(body?.remark, 1000),
+      waivedReason,
+    },
+  };
 }
 
 export function createOrdersRouter() {
@@ -516,6 +544,136 @@ export function createOrdersRouter() {
       res.json({ success: true, ...data });
     } catch (error) {
       return handleRouteError(res, error, '保存利润数据失败');
+    }
+  });
+
+  // ==================== Input Invoice Tracking ====================
+
+  router.post('/:id/input-invoices', requireAuth, async (req: AuthedRequest, res) => {
+    const orderParam = req.params.id as string;
+    try {
+      const order = await checkOrderAccess(req, orderParam);
+      if (!order) return fail(res, 404, '订单不存在');
+      const payloadResult = readInputInvoicePayload(req.body, req.user?.role);
+      if ('error' in payloadResult) return fail(res, 400, payloadResult.error, 'INVALID_INPUT_INVOICE');
+      const payload = payloadResult.payload;
+      const waivedBy = payload.invoiceStatus === 'waived' ? req.user?.id || null : null;
+      const waivedAtSql = payload.invoiceStatus === 'waived' ? 'CURRENT_TIMESTAMP' : 'NULL';
+
+      const result = await dbRun(
+        `INSERT INTO input_invoices (
+          order_id, supplier_name, invoice_no, invoice_type, invoice_status,
+          invoice_amount_cny, verified_amount_cny, invoice_date, remark,
+          waived_by, waived_at, waived_reason, created_by, updated_by
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${waivedAtSql}, ?, ?, ?)`,
+        [
+          order.id,
+          payload.supplierName,
+          payload.invoiceNo,
+          payload.invoiceType,
+          payload.invoiceStatus,
+          payload.invoiceAmountCny,
+          payload.verifiedAmountCny,
+          payload.invoiceDate,
+          payload.remark,
+          waivedBy,
+          payload.invoiceStatus === 'waived' ? payload.waivedReason : null,
+          req.user?.id || null,
+          req.user?.id || null,
+        ],
+      );
+
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'CREATE',
+        entityType: 'ORDER',
+        entityId: order.id,
+        newValue: { inputInvoiceId: result.lastID, ...payload },
+      });
+      res.status(201).json({ id: result.lastID, success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '保存进项发票失败');
+    }
+  });
+
+  router.patch('/input-invoices/:invoiceId', requireAuth, async (req: AuthedRequest, res) => {
+    const invoiceId = Number(req.params.invoiceId);
+    if (!Number.isInteger(invoiceId) || invoiceId <= 0) return fail(res, 400, '发票记录无效');
+    try {
+      const invoice = await dbGet<{ id: number; order_id: number }>(
+        `SELECT id, order_id FROM input_invoices WHERE id = ? AND deleted_at IS NULL`,
+        [invoiceId],
+      );
+      if (!invoice) return fail(res, 404, '发票记录不存在');
+      const order = await checkOrderAccess(req, invoice.order_id);
+      if (!order) return fail(res, 404, '订单不存在');
+      const payloadResult = readInputInvoicePayload(req.body, req.user?.role);
+      if ('error' in payloadResult) return fail(res, 400, payloadResult.error, 'INVALID_INPUT_INVOICE');
+      const payload = payloadResult.payload;
+      const waivedBy = payload.invoiceStatus === 'waived' ? req.user?.id || null : null;
+      const waivedAtSql = payload.invoiceStatus === 'waived' ? 'COALESCE(waived_at, CURRENT_TIMESTAMP)' : 'NULL';
+
+      await dbRun(
+        `UPDATE input_invoices
+         SET supplier_name = ?, invoice_no = ?, invoice_type = ?, invoice_status = ?,
+             invoice_amount_cny = ?, verified_amount_cny = ?, invoice_date = ?, remark = ?,
+             waived_by = ?, waived_at = ${waivedAtSql}, waived_reason = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          payload.supplierName,
+          payload.invoiceNo,
+          payload.invoiceType,
+          payload.invoiceStatus,
+          payload.invoiceAmountCny,
+          payload.verifiedAmountCny,
+          payload.invoiceDate,
+          payload.remark,
+          waivedBy,
+          payload.invoiceStatus === 'waived' ? payload.waivedReason : null,
+          req.user?.id || null,
+          invoiceId,
+        ],
+      );
+
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'UPDATE',
+        entityType: 'ORDER',
+        entityId: invoice.order_id,
+        newValue: { inputInvoiceId: invoiceId, ...payload },
+      });
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '更新进项发票失败');
+    }
+  });
+
+  router.delete('/input-invoices/:invoiceId', requireAdmin, async (req: AuthedRequest, res) => {
+    const invoiceId = Number(req.params.invoiceId);
+    if (!Number.isInteger(invoiceId) || invoiceId <= 0) return fail(res, 400, '发票记录无效');
+    try {
+      const invoice = await dbGet<{ id: number; order_id: number }>(
+        `SELECT id, order_id FROM input_invoices WHERE id = ? AND deleted_at IS NULL`,
+        [invoiceId],
+      );
+      if (!invoice) return fail(res, 404, '发票记录不存在');
+      const order = await checkOrderAccess(req, invoice.order_id);
+      if (!order) return fail(res, 404, '订单不存在');
+      await dbRun(`UPDATE input_invoices SET deleted_at = CURRENT_TIMESTAMP, updated_by = ? WHERE id = ?`, [req.user?.id || null, invoiceId]);
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'DELETE',
+        entityType: 'ORDER',
+        entityId: invoice.order_id,
+        oldValue: { inputInvoiceId: invoiceId },
+      });
+      res.json({ success: true });
+    } catch (error) {
+      return handleRouteError(res, error, '删除进项发票失败');
     }
   });
 

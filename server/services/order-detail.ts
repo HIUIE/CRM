@@ -126,6 +126,21 @@ export async function buildOrderDetail(idOrNo: number | string) {
     [orderId],
   );
 
+  const inputInvoices = await dbAll<Record<string, unknown>[]>(
+    `
+      SELECT
+        ii.*,
+        cu.name AS created_by_name,
+        wu.name AS waived_by_name
+      FROM input_invoices ii
+      LEFT JOIN users cu ON cu.id = ii.created_by
+      LEFT JOIN users wu ON wu.id = ii.waived_by
+      WHERE ii.order_id = ? AND ii.deleted_at IS NULL
+      ORDER BY datetime(ii.created_at) DESC, ii.id DESC
+    `,
+    [orderId],
+  );
+
   const productionPlan = await dbGet<Record<string, unknown>>(
     `
       SELECT
@@ -329,6 +344,24 @@ export async function buildOrderDetail(idOrNo: number | string) {
           attachmentCount: (customsAttachments.get(Number(customs.id)) || []).length,
         }
       : null,
+    inputInvoices: inputInvoices.map((invoice) => ({
+      id: invoice.id,
+      orderId: invoice.order_id,
+      supplierName: invoice.supplier_name || '',
+      invoiceNo: invoice.invoice_no || '',
+      invoiceType: invoice.invoice_type || 'vat_special',
+      invoiceStatus: invoice.invoice_status || 'pending',
+      invoiceAmountCny: Number(invoice.invoice_amount_cny) || 0,
+      verifiedAmountCny: Number(invoice.verified_amount_cny) || 0,
+      invoiceDate: invoice.invoice_date || '',
+      remark: invoice.remark || '',
+      waivedBy: invoice.waived_by || null,
+      waivedByName: invoice.waived_by_name || null,
+      waivedAt: invoice.waived_at || null,
+      waivedReason: invoice.waived_reason || '',
+      createdAt: invoice.created_at,
+      createdByName: invoice.created_by_name || null,
+    })),
     packingRecords: packingRecords.map((record) => ({
       id: record.id,
       packageCount: String(record.package_count || ''),

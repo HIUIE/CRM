@@ -23,6 +23,7 @@ const PackingForm = lazy(lazyRetry(() => import('../features/order-detail/drawer
 const AIAnalysisContent = lazy(lazyRetry(() => import('../features/order-detail/drawers').then(m => ({ default: m.AIAnalysisContent }))));
 const DocumentsVaultSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.DocumentsVaultSection }))));
 const FinanceSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.FinanceSection }))));
+const InputInvoiceSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.InputInvoiceSection }))));
 const ProfitSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.ProfitSection }))));
 const ProductionSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.ProductionSection }))));
 const CustomsSection = lazy(lazyRetry(() => import('../features/order-detail/sections').then(m => ({ default: m.CustomsSection }))));
@@ -102,6 +103,7 @@ export default function OrderDetailPage() {
     todos: useRef(null),
     items: useRef(null),
     finance: useRef(null),
+    invoices: useRef(null),
     production: useRef(null),
     customs: useRef(null),
     packing: useRef(null),
@@ -135,6 +137,7 @@ export default function OrderDetailPage() {
     items: false,
     production: false,
     finance: false,
+    invoices: false,
     customs: false,
     logistics: false,
   });
@@ -174,6 +177,7 @@ export default function OrderDetailPage() {
   const packingRecords = detail?.packingRecords || [];
   const packingPhotos = detail?.packingPhotos || [];
   const orderDocuments = detail?.orderDocuments || [];
+  const inputInvoices = detail?.inputInvoices || [];
   const followUps = detail?.followUps || [];
   const tasks = detail?.tasks || [];
   const domesticLogistics = detail?.domesticLogistics || null;
@@ -221,13 +225,18 @@ export default function OrderDetailPage() {
     finance: summary.settled ? { label: '已结清', tone: 'success' as const } : { label: '未结清', tone: 'warning' as const },
     production: productionPlan?.productionStatus === 'ready' ? { label: '完成', tone: 'success' as const } : { label: productionPlan ? '进行中' : '未排产', tone: productionPlan ? 'neutral' as const : 'warning' as const },
     logistics: hasAnyLogistics ? { label: '已发运', tone: 'success' as const } : { label: '未发运', tone: 'warning' as const },
+    invoices: taxMode === 'B'
+      ? undefined
+      : inputInvoices.some(inv => inv.invoiceType === 'vat_special' && (inv.invoiceStatus === 'received' || inv.invoiceStatus === 'verified'))
+        ? { label: '已收票', tone: 'success' as const }
+        : { label: '待专票', tone: 'warning' as const },
     customs: customs
       ? { label: taxMode === 'B' ? '已留存' : customs.status === 'released' ? '已放行' : '处理中', tone: customs.status === 'released' || taxMode === 'B' ? 'success' as const : 'neutral' as const }
       : { label: taxMode === 'B' ? '待凭证' : taxMode === 'C' ? '待申报' : '缺失', tone: 'warning' as const },
     packing: packingRecords.length ? { label: '已录入', tone: 'success' as const } : { label: '待录入', tone: 'warning' as const },
     documents: orderDocuments.length ? { label: `${orderDocuments.length} 份`, tone: 'neutral' as const } : { label: '待上传', tone: 'warning' as const },
     todos: tasks.some(t => t.status !== 'done') ? { label: `${tasks.filter(t => t.status !== 'done').length} 待办`, tone: 'warning' as const } : { label: '完成', tone: 'success' as const },
-  }), [summary.settled, productionPlan, hasAnyLogistics, customs, taxMode, packingRecords.length, orderDocuments.length, tasks]);
+  }), [summary.settled, productionPlan, hasAnyLogistics, inputInvoices, customs, taxMode, packingRecords.length, orderDocuments.length, tasks]);
 
   const stageIndex = STAGE_STEPS.findIndex((s) => s.key === order?.status);
 
@@ -541,6 +550,19 @@ export default function OrderDetailPage() {
               onFilterChange={setFinanceFilter}
             />
 
+            {order && (
+              <InputInvoiceSection
+                sectionRef={sectionRefs.invoices}
+                orderId={order.id}
+                taxMode={taxMode}
+                inputInvoices={inputInvoices}
+                logisticsRecords={logisticsRecords}
+                user={user}
+                onRefresh={refreshDetail}
+                showToast={showToast}
+              />
+            )}
+
             <ProductionSection
               sectionRef={sectionRefs.production}
               productionPlan={productionPlan}
@@ -601,6 +623,7 @@ export default function OrderDetailPage() {
               miscAmount={miscAmount}
               itemsTotal={itemsTotal}
               taxMode={taxMode}
+              inputInvoices={inputInvoices}
               showToast={showToast}
             />
             <FollowupsSection followUps={followUps} />

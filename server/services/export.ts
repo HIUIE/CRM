@@ -185,6 +185,28 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
     extraColumns: ['order_display_id', 'customer_name', 'created_by_name', 'updated_by_name'],
   },
   {
+    table: 'input_invoices',
+    fileName: 'input_invoices.csv',
+    query: `
+      SELECT
+        ii.*,
+        o.display_id AS order_display_id,
+        c.name AS customer_name,
+        cu.name AS created_by_name,
+        uu.name AS updated_by_name,
+        wu.name AS waived_by_name
+      FROM input_invoices ii
+      LEFT JOIN orders o ON o.id = ii.order_id
+      LEFT JOIN customers c ON c.id = o.customer_id
+      LEFT JOIN users cu ON cu.id = ii.created_by
+      LEFT JOIN users uu ON uu.id = ii.updated_by
+      LEFT JOIN users wu ON wu.id = ii.waived_by
+      WHERE ii.deleted_at IS NULL AND o.deleted_at IS NULL
+      ORDER BY ii.id ASC
+    `,
+    extraColumns: ['order_display_id', 'customer_name', 'created_by_name', 'updated_by_name', 'waived_by_name'],
+  },
+  {
     table: 'production_plans',
     fileName: 'production_plans.csv',
     query: `
@@ -616,7 +638,7 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
   const ph = orderIds.map(() => '?').join(', ');
 
   // Phase 1: Fetch all batch data that depends on order IDs
-  const [orderRows, itemRows, financeRows, logisticsRows, packingRows, customsRows, planRows, summaryRows, pendingCountRows] =
+  const [orderRows, itemRows, financeRows, logisticsRows, packingRows, customsRows, inputInvoiceRows, planRows, summaryRows, pendingCountRows] =
     await Promise.all([
       dbAll<Record<string, unknown>[]>(
         `SELECT o.*, c.name AS customer_name, c.display_id AS customer_display_id, c.country AS customer_country, c.contact AS customer_contact, c.logistics_preference AS customer_logistics_preference, c.payment_terms AS customer_payment_terms, cu.name AS created_by_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN users cu ON cu.id = o.created_by WHERE o.id IN (${ph}) AND o.deleted_at IS NULL`,
@@ -640,6 +662,10 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
       ),
       dbAll<Record<string, unknown>[]>(
         `SELECT c.*, u.name AS created_by_name FROM customs_records c LEFT JOIN users u ON u.id = c.created_by WHERE c.order_id IN (${ph})`,
+        orderIds,
+      ),
+      dbAll<Record<string, unknown>[]>(
+        `SELECT ii.*, cu.name AS created_by_name, wu.name AS waived_by_name FROM input_invoices ii LEFT JOIN users cu ON cu.id = ii.created_by LEFT JOIN users wu ON wu.id = ii.waived_by WHERE ii.order_id IN (${ph}) AND ii.deleted_at IS NULL ORDER BY ii.order_id ASC, ii.id DESC`,
         orderIds,
       ),
       dbAll<Record<string, unknown>[]>(
@@ -701,6 +727,13 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
   const customsByOrder = new Map<number, Record<string, unknown>>();
   for (const row of customsRows) {
     customsByOrder.set(Number(row.order_id), row);
+  }
+
+  const inputInvoicesByOrder = new Map<number, Record<string, unknown>[]>();
+  for (const row of inputInvoiceRows) {
+    const oid = Number(row.order_id);
+    if (!inputInvoicesByOrder.has(oid)) inputInvoicesByOrder.set(oid, []);
+    inputInvoicesByOrder.get(oid)!.push(row);
   }
 
   const planByOrder = new Map<number, Record<string, unknown>>();
@@ -776,6 +809,7 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
     const orderLogisticsRecords = logisticsByOrder.get(orderId) || [];
     const orderPackingRecords = packingByOrder.get(orderId) || [];
     const customsRow = customsByOrder.get(orderId) || null;
+    const orderInputInvoices = inputInvoicesByOrder.get(orderId) || [];
     const planRow = planByOrder.get(orderId) || null;
     const orderSummaryData = summaryByOrder.get(orderId) || [];
     const pendingCount = pendingCountByOrder.get(orderId) || 0;
@@ -925,6 +959,24 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
             attachmentCount: customsAttachmentCount,
           }
         : null,
+      inputInvoices: orderInputInvoices.map((invoice) => ({
+        id: invoice.id,
+        orderId: invoice.order_id,
+        supplierName: invoice.supplier_name || '',
+        invoiceNo: invoice.invoice_no || '',
+        invoiceType: invoice.invoice_type || 'vat_special',
+        invoiceStatus: invoice.invoice_status || 'pending',
+        invoiceAmountCny: Number(invoice.invoice_amount_cny) || 0,
+        verifiedAmountCny: Number(invoice.verified_amount_cny) || 0,
+        invoiceDate: invoice.invoice_date || '',
+        remark: invoice.remark || '',
+        waivedBy: invoice.waived_by || null,
+        waivedByName: invoice.waived_by_name || null,
+        waivedAt: invoice.waived_at || null,
+        waivedReason: invoice.waived_reason || '',
+        createdAt: invoice.created_at,
+        createdByName: invoice.created_by_name || null,
+      })),
       productionPlan: planRow
         ? {
             ...planRow,
