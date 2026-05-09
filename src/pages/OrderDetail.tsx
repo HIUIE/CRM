@@ -549,16 +549,6 @@ export default function OrderDetailPage() {
               user={user}
             />
 
-            <CustomsSection
-              sectionRef={sectionRefs.customs}
-              customs={customs}
-              onEditCustoms={openCustomsDrawer}
-              onUploadDocument={(files, docType) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'customs', entityId: customs?.id, docType, label: '报关单据', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
-              onDeleteAttachment={requestDeleteAttachment}
-              onPreview={setPreviewAttachment}
-              user={user}
-            />
-
             <PackingSection
               sectionRef={sectionRefs.packing}
               packingRecords={packingRecords}
@@ -576,6 +566,16 @@ export default function OrderDetailPage() {
               hasAnyLogistics={hasAnyLogistics}
               onAddLogistics={() => openLogisticsDrawer()}
               onEditLogistics={openLogisticsDrawer}
+              onDeleteAttachment={requestDeleteAttachment}
+              onPreview={setPreviewAttachment}
+              user={user}
+            />
+
+            <CustomsSection
+              sectionRef={sectionRefs.customs}
+              customs={customs}
+              onEditCustoms={openCustomsDrawer}
+              onUploadDocument={(files, docType) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'customs', entityId: customs?.id, docType, label: '报关单据', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
               onDeleteAttachment={requestDeleteAttachment}
               onPreview={setPreviewAttachment}
               user={user}
