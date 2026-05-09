@@ -37,8 +37,8 @@ export function createCustomersRouter() {
     }
     if (endDate) {
       // P11: Ensure end_date covers the full day (23:59:59)
-      whereSql += ` AND c.created_at <= (? || ' 23:59:59')`;
-      params.push(endDate);
+      whereSql += ` AND c.created_at <= ?`;
+      params.push(`${endDate} 23:59:59`);
     }
 
     try {
