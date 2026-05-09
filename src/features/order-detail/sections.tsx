@@ -1380,7 +1380,7 @@ export function FollowupsSection({
               <span className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">{fu.createdByName || '未知用户'}</span>
               <span className="text-xs font-bold text-slate-400 tracking-tight">{formatDateTime(fu.createdAt)}</span>
             </div>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{fu.content}</p>
+            <p className="whitespace-pre-wrap text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{fu.content}</p>
           </div>
         )) : (
           <div className="py-12 text-center text-xs font-bold text-slate-400 tracking-tight">暂无跟进记录</div>
