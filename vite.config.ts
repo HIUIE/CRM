@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+      dedupe: ['react', 'react-dom'],
     },
     server: {
       host: '127.0.0.1',
@@ -41,11 +42,22 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+            const normalizedId = id.replace(/\\/g, '/');
+            if (normalizedId.includes('node_modules')) {
+              if (
+                normalizedId.includes('/node_modules/react/') ||
+                normalizedId.includes('/node_modules/react-dom/') ||
+                normalizedId.includes('/node_modules/scheduler/')
+              ) {
                 return 'vendor-react';
               }
-              if (id.includes('lucide-react')) {
+              if (normalizedId.includes('/node_modules/react-router') || normalizedId.includes('/node_modules/react-router-dom')) {
+                return 'vendor-router';
+              }
+              if (normalizedId.includes('/node_modules/@tanstack/react-query')) {
+                return 'vendor-query';
+              }
+              if (normalizedId.includes('lucide-react')) {
                 return 'vendor-icons';
               }
             }

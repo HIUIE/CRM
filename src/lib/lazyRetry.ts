@@ -9,7 +9,9 @@ function isLazyLoadError(error: unknown) {
     /Loading chunk/i.test(message) ||
     /Failed to fetch dynamically imported module/i.test(message) ||
     /Importing a module script failed/i.test(message) ||
-    /dynamically imported module/i.test(message)
+    /dynamically imported module/i.test(message) ||
+    /Cannot read properties of null \(reading 'use[A-Z][A-Za-z]*'\)/i.test(message) ||
+    /Cannot read properties of null \(reading 'useContext'\)/i.test(message)
   );
 }
 

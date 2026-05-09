@@ -11,13 +11,31 @@ interface State {
 
 const ERROR_RELOAD_KEY = 'smarttrade:error-boundary-reload-once';
 
-function isRecoverableAssetError(error: Error) {
+function getErrorMessage(error: Error) {
+  return error.message || String(error);
+}
+
+function isRecoverableRuntimeMismatch(error: Error) {
+  const message = getErrorMessage(error);
   return (
-    /ChunkLoadError/i.test(error.message) ||
-    /Loading chunk/i.test(error.message) ||
-    /Failed to fetch dynamically imported module/i.test(error.message) ||
-    /Importing a module script failed/i.test(error.message)
+    /Cannot read properties of null \(reading 'use[A-Z][A-Za-z]*'\)/i.test(message) ||
+    /Cannot read properties of null \(reading 'useContext'\)/i.test(message)
   );
+}
+
+function isRecoverableAssetError(error: Error) {
+  const message = getErrorMessage(error);
+  return (
+    /ChunkLoadError/i.test(message) ||
+    /Loading chunk/i.test(message) ||
+    /Failed to fetch dynamically imported module/i.test(message) ||
+    /Importing a module script failed/i.test(message)
+  );
+}
+
+function getReloadKey(error: Error) {
+  const normalizedMessage = getErrorMessage(error).replace(/\s+/g, ' ').slice(0, 120);
+  return `${ERROR_RELOAD_KEY}:${window.location.pathname}:${normalizedMessage}`;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -27,9 +45,12 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary]', error, info.componentStack);
-    if (isRecoverableAssetError(error) && window.sessionStorage.getItem(ERROR_RELOAD_KEY) !== '1') {
-      window.sessionStorage.setItem(ERROR_RELOAD_KEY, '1');
-      window.location.reload();
+    if ((isRecoverableAssetError(error) || isRecoverableRuntimeMismatch(error))) {
+      const reloadKey = getReloadKey(error);
+      if (window.sessionStorage.getItem(reloadKey) !== '1') {
+        window.sessionStorage.setItem(reloadKey, '1');
+        window.location.reload();
+      }
     }
   }
 
