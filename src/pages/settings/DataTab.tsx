@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Download, Upload, PackageSearch, FileDigit, DatabaseBackup, CheckCircle2, Folder, Clock, ShieldCheck, PlayCircle, FolderOpen, AlertTriangle, RotateCcw, FileWarning, History } from 'lucide-react';
+import { Download, Upload, PackageSearch, FileDigit, DatabaseBackup, CheckCircle2, Folder, Clock, ShieldCheck, PlayCircle, FolderOpen, AlertTriangle, RotateCcw, FileWarning, History, Lock, Unlock, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { apiDownload, apiFetch, getErrorMessage } from '../../lib/api';
+import { encryptBackup, decryptBackup, isEncryptedBackup } from '../../lib/backup-crypto';
+
 
 const EXPORT_FORMATS = [
   {
@@ -94,6 +96,21 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
   const [archiveDays, setArchiveDays] = useState(365);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
+  // E2EE States
+  const [showEncryptDialog, setShowEncryptDialog] = useState(false);
+  const [showDecryptDialog, setShowDecryptDialog] = useState(false);
+  const [encryptPassword, setEncryptPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [decryptPassword, setDecryptPassword] = useState('');
+  const [pendingEncryptedBuffer, setPendingEncryptedBuffer] = useState<ArrayBuffer | null>(null);
+  const [pendingFileName, setPendingFileName] = useState('');
+  const [isExportingToFolderActive, setIsExportingToFolderActive] = useState(false);
+  const [encryptDialogError, setEncryptDialogError] = useState('');
+  const [decryptDialogError, setDecryptDialogError] = useState('');
+  const [showEncryptPasswordPlain, setShowEncryptPasswordPlain] = useState(false);
+  const [showDecryptPasswordPlain, setShowDecryptPasswordPlain] = useState(false);
+
+
   const runArchive = async () => {
     if (!confirm(`确定要将 ${archiveDays} 天前的审计日志移至归档表吗？此操作可提升主表性能。`)) return;
     setError(''); setUserMessage(''); setArchiving(true);
@@ -129,8 +146,28 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
     return labels[exportFormat] || '数据';
   };
 
+  const downloadBlob = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const exportData = async () => {
-    setError(''); setUserMessage(''); setExporting(true);
+    setError(''); setUserMessage('');
+    if (exportFormat === 'restorable-backup') {
+      setIsExportingToFolderActive(false);
+      setEncryptPassword('');
+      setConfirmPassword('');
+      setEncryptDialogError('');
+      setShowEncryptDialog(true);
+      return;
+    }
+    setExporting(true);
     try {
       await apiDownload(getExportUrl());
       setUserMessage(`${getExportLabel()}导出已开始下载`);
@@ -156,13 +193,22 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
     const disposition = response.headers.get('content-disposition') || '';
     const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
     const simpleMatch = disposition.match(/filename="([^"]+)"/i);
-    const fallbackName = `SmartTrade_CRM_${new Date().toISOString().slice(0, 10)}.${exportFormat === 'xlsx' ? 'xlsx' : 'zip'}`;
+    const fallbackName = `SmartTrade_Backup_${new Date().toISOString().slice(0, 10)}.zip`;
     const fileName = utf8Match ? decodeURIComponent(utf8Match[1]) : simpleMatch?.[1] || fallbackName;
     return { blob: await response.blob(), fileName };
   };
 
   const exportDataToFolder = async () => {
-    setError(''); setUserMessage(''); setExportingToFolder(true);
+    setError(''); setUserMessage('');
+    if (exportFormat === 'restorable-backup') {
+      setIsExportingToFolderActive(true);
+      setEncryptPassword('');
+      setConfirmPassword('');
+      setEncryptDialogError('');
+      setShowEncryptDialog(true);
+      return;
+    }
+    setExportingToFolder(true);
     try {
       const picker = (window as DirectoryPickerWindow).showDirectoryPicker;
       if (!picker) {
@@ -183,6 +229,65 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
       setExportingToFolder(false);
     }
   };
+
+  const handleEncryptConfirm = async () => {
+    setEncryptDialogError('');
+    if (!encryptPassword) {
+      setEncryptDialogError('请输入密码');
+      return;
+    }
+    if (encryptPassword.length < 8) {
+      setEncryptDialogError('密码长度不能小于 8 位');
+      return;
+    }
+    if (encryptPassword !== confirmPassword) {
+      setEncryptDialogError('两次输入的密码不一致');
+      return;
+    }
+
+    if (isExportingToFolderActive) {
+      setExportingToFolder(true);
+    } else {
+      setExporting(true);
+    }
+    setShowEncryptDialog(false);
+
+    try {
+      const { blob, fileName } = await fetchExportBlob();
+      const arrayBuffer = await blob.arrayBuffer();
+
+      const encryptedBuffer = await encryptBackup(arrayBuffer, encryptPassword);
+      const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
+      const encryptedFileName = `${fileName}.enc`;
+
+      if (isExportingToFolderActive) {
+        const picker = (window as DirectoryPickerWindow).showDirectoryPicker;
+        if (!picker) {
+          downloadBlob(encryptedBlob, encryptedFileName);
+          setUserMessage('当前浏览器不支持直接选择导出文件夹，已加密并下载到默认下载目录');
+        } else {
+          const directory = await picker();
+          const fileHandle = await directory.getFileHandle(encryptedFileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(encryptedBlob);
+          await writable.close();
+          setUserMessage(`【端到端加密】备份已成功加密并保存到文件夹：${encryptedFileName}`);
+        }
+      } else {
+        downloadBlob(encryptedBlob, encryptedFileName);
+        setUserMessage(`【端到端加密】加密灾备包已成功生成并开始下载：${encryptedFileName}`);
+      }
+    } catch (e) {
+      setError(getErrorMessage(e, '加密备份导出失败'));
+    } finally {
+      setExporting(false);
+      setExportingToFolder(false);
+      setIsExportingToFolderActive(false);
+      setEncryptPassword('');
+      setConfirmPassword('');
+    }
+  };
+
 
   const saveBackupConfig = async () => {
     setError(''); setUserMessage(''); setBackupSaving(true);
@@ -231,14 +336,12 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
     }
   };
 
-  const handleRestoreFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+  const proceedWithRestorePreview = async (fileToUpload: File | Blob, originalName?: string) => {
     setRestoreError('');
     setRestoreStep('previewing');
 
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append('file', fileToUpload, originalName || 'decrypted_backup.zip');
 
     try {
       const data = await apiFetch<any>('/api/import/preview', { method: 'POST', body: formData });
@@ -254,6 +357,70 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
       setRestoreStep('idle');
     }
   };
+
+  const handleRestoreFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    setRestoreError('');
+    setRestoreStep('previewing');
+
+    try {
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const isEncrypted = isEncryptedBackup(arrayBuffer);
+
+      if (isEncrypted) {
+        setPendingEncryptedBuffer(arrayBuffer);
+        setPendingFileName(selectedFile.name);
+        setDecryptPassword('');
+        setDecryptDialogError('');
+        setRestoreStep('idle'); // Hide "previewing..." text
+        setShowDecryptDialog(true); // Open password modal
+        return;
+      }
+
+      // Backward compatible: standard unencrypted ZIP file
+      await proceedWithRestorePreview(selectedFile, selectedFile.name);
+    } catch (err) {
+      setRestoreError(getErrorMessage(err, '读取备份文件失败'));
+      setRestoreStep('idle');
+    }
+  };
+
+  const handleDecryptConfirm = async () => {
+    setDecryptDialogError('');
+    if (!decryptPassword) {
+      setDecryptDialogError('请输入解密密码');
+      return;
+    }
+    if (!pendingEncryptedBuffer) {
+      setDecryptDialogError('未加载有效的加密数据包');
+      return;
+    }
+
+    setRestoreStep('previewing');
+    setShowDecryptDialog(false);
+
+    try {
+      const decryptedBuffer = await decryptBackup(pendingEncryptedBuffer, decryptPassword);
+      const decryptedBlob = new Blob([decryptedBuffer], { type: 'application/zip' });
+
+      // Clean up .enc from filename if it ends with .enc
+      let originalName = pendingFileName;
+      if (originalName.toLowerCase().endsWith('.enc')) {
+        originalName = originalName.slice(0, -4);
+      } else {
+        originalName = originalName.replace(/\.zip/i, '') + '.zip';
+      }
+
+      await proceedWithRestorePreview(decryptedBlob, originalName);
+    } catch (err: any) {
+      setRestoreStep('idle');
+      // If decryption failed, re-open the dialog and show password error
+      setDecryptDialogError('解密失败：密码错误或备份文件已损坏');
+      setShowDecryptDialog(true);
+    }
+  };
+
 
   const handleRestoreExecute = async () => {
     if (!restorePreview) return;
@@ -533,7 +700,7 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">从系统可还原备份 ZIP 文件恢复全部业务数据。</p>
         </div>
 
-        <input type="file" ref={restoreFileInputRef} className="hidden" accept=".zip" onChange={handleRestoreFileSelect} />
+        <input type="file" ref={restoreFileInputRef} className="hidden" accept=".zip,.enc,.zip.enc" onChange={handleRestoreFileSelect} />
 
         {restoreError && (
           <div className="mb-4 rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 font-bold flex items-start gap-3">
@@ -552,7 +719,7 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
             </div>
             <div>
               <div className="text-sm font-bold text-primary-navy dark:text-white mb-1">选择备份文件并恢复</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">选择通过"系统可还原备份"导出的 ZIP 文件进行数据恢复。恢复前请确认当前数据将被覆盖。</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">选择通过"系统可还原备份"导出的 ZIP 或加密的 ZIP.ENC 安全文件进行数据恢复。恢复前请确认当前数据将被覆盖。</div>
             </div>
           </button>
         )}
@@ -691,10 +858,184 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
           <ShieldCheck size={16} className="text-slate-400 shrink-0 mt-0.5" />
           <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             <span className="font-bold text-slate-600 dark:text-slate-300">数据安全提醒：</span>
-            备份文件包含完整的客户资料、订单、财务和附件数据。请将备份文件存储在安全位置，避免泄露。系统备份使用未加密的 ZIP 格式，传输或存储在外部设备时请注意数据安全。
+            备份文件包含完整的客户资料、订单、财务和附件数据。请将备份文件存储在安全位置，避免泄露。系统备份现在支持**端到端本地加密（E2EE）**机制，推荐在下载或存储在外部设备时使用密码进行高强度加密。
           </div>
         </div>
       </div>
+
+      {/* 1. 导出备份加密弹窗 (Encrypt Dialog) */}
+      {showEncryptDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded-xl shadow-2xl overflow-hidden transform transition-all scale-100 p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-navy-900 pb-4">
+              <div className="p-2 rounded-lg bg-slate-100 dark:bg-navy-900 text-primary-navy dark:text-white shrink-0">
+                <Lock size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-primary-navy dark:text-white">设置备份加密密码</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">端到端本地加密保护</p>
+              </div>
+            </div>
+
+            {encryptDialogError && (
+              <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 font-bold flex items-center gap-2">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span>{encryptDialogError}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <KeyRound size={12} />
+                  设置解密密码
+                </label>
+                <div className="relative">
+                  <input
+                    type={showEncryptPasswordPlain ? "text" : "password"}
+                    value={encryptPassword}
+                    onChange={(e) => setEncryptPassword(e.target.value)}
+                    placeholder="输入至少 8 位强密码"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:border-navy-800 dark:bg-navy-900 px-3 py-2.5 text-xs font-bold text-primary-navy dark:text-white pr-10 outline-none focus:border-primary-navy"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEncryptPasswordPlain(!showEncryptPasswordPlain)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showEncryptPasswordPlain ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <KeyRound size={12} />
+                  确认解密密码
+                </label>
+                <input
+                  type={showEncryptPasswordPlain ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="再次输入刚才的密码"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:border-navy-800 dark:bg-navy-900 px-3 py-2.5 text-xs font-bold text-primary-navy dark:text-white outline-none focus:border-primary-navy"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 p-3.5 flex items-start gap-2.5">
+              <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+              <div className="text-[10px] font-bold text-amber-800 dark:text-amber-400 leading-relaxed">
+                请务必牢记密码！此加密完全在您的浏览器本地进行，服务器**不存储**任何明文密码或哈希密钥。一旦遗忘，任何人（包括系统管理员或服务商）都**无法解密和恢复**此备份文件。
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEncryptDialog(false);
+                  setEncryptPassword('');
+                  setConfirmPassword('');
+                  setEncryptDialogError('');
+                  setExporting(false);
+                  setExportingToFolder(false);
+                }}
+                className="rounded-lg border border-slate-200 bg-surface px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:text-slate-300"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleEncryptConfirm}
+                className="rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white px-5 py-2 text-xs font-bold shadow-md hover:opacity-90 transition-all"
+              >
+                开始加密导出
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. 导入备份解密弹窗 (Decrypt Dialog) */}
+      {showDecryptDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded-xl shadow-2xl overflow-hidden transform transition-all scale-100 p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-navy-900 pb-4">
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+                <Unlock size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-primary-navy dark:text-white">输入备份解密密码</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">这是一个端到端加密的安全备份文件</p>
+              </div>
+            </div>
+
+            {decryptDialogError && (
+              <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 font-bold flex items-center gap-2">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span>{decryptDialogError}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <KeyRound size={12} />
+                  备份解密密码
+                </label>
+                <div className="relative">
+                  <input
+                    type={showDecryptPasswordPlain ? "text" : "password"}
+                    value={decryptPassword}
+                    onChange={(e) => setDecryptPassword(e.target.value)}
+                    placeholder="请输入导出该备份时设置的加密密码"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:border-navy-800 dark:bg-navy-900 px-3 py-2.5 text-xs font-bold text-primary-navy dark:text-white pr-10 outline-none focus:border-primary-navy"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDecryptPasswordPlain(!showDecryptPasswordPlain)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showDecryptPasswordPlain ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-slate-50 dark:bg-navy-900 p-3 flex items-start gap-2.5 text-slate-400 dark:text-slate-500">
+              <ShieldCheck size={16} className="shrink-0 mt-0.5" />
+              <div className="text-[10px] font-bold leading-relaxed">
+                解密过程完全由浏览器在您本地设备（内存）中安全进行，密码不经过网络传输，确保数据绝对隐私。
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDecryptDialog(false);
+                  setDecryptPassword('');
+                  setDecryptDialogError('');
+                  setPendingEncryptedBuffer(null);
+                  setPendingFileName('');
+                  resetRestore();
+                }}
+                className="rounded-lg border border-slate-200 bg-surface px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 dark:border-navy-800 dark:bg-navy-900 dark:text-slate-300"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleDecryptConfirm}
+                className="rounded-lg bg-primary-navy dark:bg-tertiary-sage text-white px-5 py-2 text-xs font-bold shadow-md hover:opacity-90 transition-all"
+              >
+                解密并导入
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

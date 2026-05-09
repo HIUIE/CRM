@@ -1,57 +1,64 @@
-# Todo List - 利润保存 Bug 修复与阿里订单号全链路打通
+# SmartTrade ERP CRM - 待办任务清单 (Todo List)
 
-## 任务一：修复利润核算保存无反应且无法成功保存的问题
+## 任务一：数据库模式扩展与阿里订单号支持 (已完成)
+- [x] 1. 数据库 schema 扩展
+- [x] 2. 数据库启动自愈 DDL 检查
+- [x] 3. 后端服务逻辑及 Payload 验证
+- [x] 4. 前端列表、详情及阿里订单号 Tag 显示
+
+## 任务二：阿里订单号快捷复制与创建/编辑双向表单集成 (已完成)
+- [x] 1. 一键复制微交互及状态提示
+- [x] 2. 双端录入表单修改
+
+## 任务三：端到端加密（E2EE）安全灾备备份与恢复 (已完成)
 ### 目标与验收标准 (Acceptance Criteria)
-- [x] 1. 用户输入利润核算信息后点击“保存核算明细”，数据能成功保存到数据库中，抽屉能够正常关闭并提示“保存成功”。
-- [x] 2. 关闭抽屉后，详情页的利润核算部分能够实时加载更新后的最新利润数据。
-- [x] 3. 当抽屉没有修改时，按钮显示为“已保存”；当内容有修改时，按钮显示“保存核算明细”；点击取消或外面空白处时，如果没有修改可直接关闭，如果有修改才弹出“放弃未保存修改”的提示。
+- [x] 1. **纯客户端安全沙箱**：解密密码绝不传输到后端服务器，所有加解密逻辑均在浏览器本地安全沙箱（Web Crypto API）中执行，确保服务器对密码“完全盲存”。
+- [x] 2. **安全的备份导出加密**：
+  - 用户在 settings 页面选择导出“系统迁移与灾备包（restorable-backup）”时，弹出提示框要求输入解密密码（支持二次输入确认以防打错）。
+  - 下载文件自动包装为 `.zip.enc` 加密安全包，而非原有的未加密 ZIP。
+  - 文件结构安全：必须包含特征魔数（Magic Header）、抗爆破加盐哈希（Salt）以及 AES-GCM 高强度认证标签。
+- [x] 3. **无缝的备份恢复解密**：
+  - 用户上传灾备包时，系统自动通过二进制幻数（Magic Header）识别是否为端到端加密包。
+  - 若为加密包，以精美交互弹窗引导用户输入解密密码；
+  - 浏览器在内存中实时解密并校验数据。若密码错误，友好提示并允许重新输入。
+  - 解密成功后，自动组装为标准的 ZIP 二进制对象并流式传输至后端服务器原有的 preview/import 接口，实现旧版无缝融合。
+- [x] 4. **完全向后兼容**：
+  - 如果用户上传旧版本未加密的标准 `.zip` 备份文件，系统应该跳过解密直接执行原有的导入校验流程，不造成任何业务阻断。
 
-### 结果说明 (Results)
-- **位置**：[orders.ts:L425-450](file:///Users/carlosfu/Projects/CRM/server/routes/orders.ts#L425-L450) 和 [orders.ts:L464-490](file:///Users/carlosfu/Projects/CRM/server/routes/orders.ts#L464-L490)
-- **修改详情**：
-  - 在获取利润核算数据 (`GET /:id/profit`) 和保存利润核算数据 (`POST /:id/profit`) 接口中，移除之前只允许纯数字 `orderId` 的强制类型限制（`const orderId = Number(req.params.id)`，若为字符串单号则会产生 `NaN` 并返回 `400` 错误）。
-  - 改为使用已经封装好的具有多态查找和订单越权检查功能的 `checkOrderAccess(req, req.params.id)` 接口，以此来适配传入的 `id` 是真实的数字 `id` 还是字符串的订单单号 `display_id`（如 `CQBX-xxxx`）。
-  - 获取到合法的 `order` 对象后，提取其真实数字自增 `order.id` 来进行 `order_profits` 的增删改查。
+### 核心技术方案设计
+#### 1. 加密包二进制报文协议 (Custom Secure Envelope)
+```
++-------------------+--------------------+--------------------+----------------------------------+
+| Magic Header      | Salt (PBKDF2)      | IV (AES-GCM)       | Encrypted Payload (Ciphertext)   |
+| "STE2EE\x01"      | 16 bytes           | 12 bytes           | Variable length                  |
+| (7 bytes)         |                    |                    | (Includes 16-byte GCM Auth Tag)  |
++-------------------+--------------------+--------------------+----------------------------------+
+```
+- **Magic Header**：固定为 7 字节字符串 `STE2EE\x01`，用以绝对区分普通 ZIP 备份和加密备份。
+- **Salt**：16 字节随机二进制，用作 PBKDF2 对密码进行哈希迭代时引入的盐分，抵御彩虹表爆破攻击。
+- **IV (Initialization Vector)**：12 字节随机二进制，保证即使密码和内容完全相同，每次加密出来的密文也截然不同。
+- **Ciphertext**：使用 `AES-GCM-256` 进行强认证加密。
 
----
+#### 2. 加密密钥派生 (PBKDF2 DERIVATION)
+使用浏览器原生 Web Crypto API 实现高强度派生：
+- 哈希函数：`SHA-256`
+- 迭代次数：`100,000` 次（防算力穷举）
+- 派生算法：`PBKDF2` -> 生成 256 位 `AES-GCM` 密钥
 
-## 任务二：阿里订单号（alibaba_order_no）全链路功能开发
-### 目标与验收标准 (Acceptance Criteria)
-- [x] 1. **数据库 DDL 升级**：在数据库 `orders` 表中新增 `alibaba_order_no TEXT` 物理列，并支持自动化启动时校验自愈。
-- [x] 2. **后端 Payload 解析与持久化**：
-  - 扩展后端参数解析器（Payloads）适配，在 `readOrderPayload` 中增加对 `alibabaOrderNo` 的解析。
-  - 在创建订单 (INSERT) 和更新订单 (UPDATE) 接口中，将该字段持久化写入数据库。
-- [x] 3. **全局与列表穿透搜索**：在订单模糊检索的 SQL 查询中，将 `o.alibaba_order_no` 字段加入 LIKE 匹配，确保在全局搜索框及订单列表页搜索框输入阿里订单号能精准命中相关的 CRM 内部订单。
-- [x] 4. **前端 TS 类型定义对齐**：
-  - 更新订单详情核心类型 `OrderInfo` 增加 `alibaba_order_no?: string | null`；
-  - 更新表单状态类型 `OrderFormState` 增加 `alibabaOrderNo: string`，并补全默认初始空状态以及转换映射。
-- [x] 5. **详情页头部 Tag 显示与复制**：
-  - 在订单详情页左上角系统订单编号 `CQBX-xx-xxxxxx` 右侧新增行内 Tag，文本内容为 `阿里订单: {Alibaba_Order_No}`。
-  - 样式使用柔和、高质感的极浅橙色背景。
-  - 单号右侧附带微型 [复制] 按钮，点击将单号自动复制到剪切板，并由复制按钮切换为绿色的“✔”图标（2秒后自动恢复），提升 Premium 微交互细节。
-- [x] 6. **创建/编辑订单表单支持**：
-  - 在订单编辑抽屉 `OrderEditForm` 的基本卡片中加入“阿里订单号”输入框。
-  - 在新建订单抽屉 `OrderCreateDrawer` 的表单中加入“阿里订单号”输入框。
-
-### 结果说明 (Results)
-#### 1. 数据库物理扩充与持久化
-- **DDL 升级迁移脚本**：[1778000000000_add_alibaba_order_no.js](file:///Users/carlosfu/Projects/CRM/migrations/1778000000000_add_alibaba_order_no.js)
-- **启动自愈增强**：在 [server/db-pg.ts:L87](file:///Users/carlosfu/Projects/CRM/server/db-pg.ts#L87) 中添加了 `ALTER TABLE orders ADD COLUMN IF NOT EXISTS alibaba_order_no TEXT` 字段强更。
-- **Payload 校验与数据转化**：修改 [server/services/payloads.ts:L120](file:///Users/carlosfu/Projects/CRM/server/services/payloads.ts#L120) 在 `readOrderPayload` 中增加 `alibabaOrderNo` 处理。
-- **CRUD 写入修改**：修改 [server/routes/orders.ts](file:///Users/carlosfu/Projects/CRM/server/routes/orders.ts) (L205 和 L247)，在 INSERT 和 UPDATE 操作中加入 `alibaba_order_no`。
-
-#### 2. 联合搜索联合匹配
-- **模糊搜索路由**：修改 [server/routes/orders.ts:L87-92](file:///Users/carlosfu/Projects/CRM/server/routes/orders.ts#L87-L92)，将 SQL 的 LIKE 模糊匹配追加 `o.alibaba_order_no ILIKE $1` 联合检索逻辑。
-
-#### 3. 前端界面、表单与 TS 类型对应
-- **类型定义扩展**：[src/features/order-detail/types.ts](file:///Users/carlosfu/Projects/CRM/src/features/order-detail/types.ts) 补齐了 TS 接口类型。
-- **转换映射与默认状态**：[src/features/order-detail/utils.ts](file:///Users/carlosfu/Projects/CRM/src/features/order-detail/utils.ts) 在 `EMPTY_ORDER_FORM` 中定义 `alibabaOrderNo: ''`，并在 `orderToFormState` 里建立对应属性映射。
-- **极浅橙色微动 Tag 渲染与复制**：修改 [src/features/order-detail/sections-primary.tsx](file:///Users/carlosfu/Projects/CRM/src/features/order-detail/sections-primary.tsx) (L165-173)，添加了 `useState` 用于管理复制状态，引入了 `Copy` 按钮，高精度地还原了视觉设计。
-- **双端录入表单**：
-  - 编辑表单：修改 [src/features/order-detail/drawers.tsx](file:///Users/carlosfu/Projects/CRM/src/features/order-detail/drawers.tsx) (L47) 新增一列 `sm:grid-cols-3` 的“阿里订单号”输入框。
-  - 创建表单：修改 [src/components/ui/OrderCreateDrawer.tsx](file:///Users/carlosfu/Projects/CRM/src/components/ui/OrderCreateDrawer.tsx) 在“备注”之上追加阿里单号 Field。
+### 具体开发步骤
+- [x] **步骤 1**：创建客户端加密核心库 [src/lib/backup-crypto.ts](file:///Users/carlosfu/Projects/CRM/src/lib/backup-crypto.ts)，实现 PBKDF2 密钥派生、`encryptBackup`、`decryptBackup` 核心方法。
+- [x] **步骤 2**：编写 [src/lib/__tests__/backup-crypto.test.ts](file:///Users/carlosfu/Projects/CRM/src/lib/__tests__/backup-crypto.test.ts) 单测，模拟密钥派生及加解密往返，并在本地 Vitest 运行验证。
+- [x] **步骤 3**：改造 [src/pages/settings/DataTab.tsx](file:///Users/carlosfu/Projects/CRM/src/pages/settings/DataTab.tsx) 的“数据导出”区块：
+  - 引入密码输入/确认 Dialog 状态。
+  - 将原有的 `fetchExportBlob` 下载流程拦截，传入 `encryptBackup` 生成加密包，再执行本地下载。
+- [x] **步骤 4**：改造 [src/pages/settings/DataTab.tsx](file:///Users/carlosfu/Projects/CRM/src/pages/settings/DataTab.tsx) 的“数据恢复”区块：
+  - 在选择文件后，读取前 7 字节检查 Magic Header。
+  - 如果匹配，弹出精美解密密码输入弹窗。
+  - 本地调用 `decryptBackup`。若成功解密，生成标准的 JS `File` 对象，覆盖 file 状态，使其无缝触发后端预览、恢复操作；若失败，给出清晰红色报错。
 
 ---
 
 ## 验证与合规测试 (Validation)
 - [x] **全站类型检查**：在工作空间根目录下运行 `npx tsc --noEmit`，未发现任何 TypeScript 错误，静态编译成功，`Exit code: 0`。
+- [x] **Vitest 单元测试**：运行 `npx vitest run src/lib/__tests__/backup-crypto.test.ts` 以确保算法层 100% 稳固。
+- [x] **打包构建验证**：运行 `npm run build` 确保前端构建产物顺利通过，无副作用。
