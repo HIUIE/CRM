@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { WorkSection, EmptyStateBoard, LightActionButton } from './components';
-import { asNumber, asText, formatDateOnly, formatIncoterm, formatTransportMode, STAGE_STEPS } from './utils';
+import { asNumber, asText, formatDateOnly, formatIncoterm, formatTransportMode, getTaxModeMeta, STAGE_STEPS } from './utils';
 import type {
   CustomerInfo,
   FinanceRecord,
@@ -164,6 +164,7 @@ export function OrderHeaderSection({
   const transportMode = formatTransportMode(primaryLogistics?.transportMode, '待确认');
   const etd = primaryLogistics?.etd || primaryLogistics?.shippingDate || productionPlan?.estimatedDeliveryDate || order.deliveryDate;
   const eta = primaryLogistics?.eta;
+  const taxModeMeta = getTaxModeMeta(order.taxMode || order.tax_mode);
 
   return (
     <header ref={headerRef} className="bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-6 shadow-sm mt-0 transition-colors">
@@ -194,6 +195,7 @@ export function OrderHeaderSection({
             <div className="flex flex-wrap gap-4 text-xs font-bold text-secondary-slate dark:text-slate-400 tracking-tight">
               <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tertiary-sage" />{asText(customer.country)}</span>
               <span className="flex items-center gap-1.5"><Mail size={12} className="text-info dark:text-blue-400" />{asText(customer.contact)}</span>
+              <span className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-primary-navy dark:border-navy-700 dark:bg-navy-950 dark:text-white"><ShieldCheck size={12} className="text-tertiary-sage" />{taxModeMeta.label}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 items-center">

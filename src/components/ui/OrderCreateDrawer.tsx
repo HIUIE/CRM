@@ -4,7 +4,8 @@ import { Drawer } from './Drawer';
 import { Combobox } from './Combobox';
 import { Hash } from 'lucide-react';
 import Field from './Field';
-import type { CustomerListItem } from '../../types/crm';
+import type { CustomerListItem, TaxMode } from '../../types/crm';
+import { TAX_MODE_OPTIONS } from '../../features/order-detail/utils';
 
 interface OrderCreateDrawerProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface OrderCreateDrawerProps {
 type OrderFormState = {
   displayId: string;
   customerId: string;
+  taxMode: TaxMode;
   productSummary: string;
   details: string;
   totalAmount: string;
@@ -26,6 +28,7 @@ type OrderFormState = {
 const EMPTY_FORM: OrderFormState = {
   displayId: '',
   customerId: '',
+  taxMode: 'A',
   productSummary: '',
   details: '',
   totalAmount: '0',
@@ -119,6 +122,22 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
         {formError && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-3 text-xs font-bold text-red-600 dark:text-red-400">{formError}</div>}
         
         <div className="space-y-6">
+          <Field label="订单业务模式 *">
+            <div className="grid gap-2 sm:grid-cols-3">
+              {TAX_MODE_OPTIONS.map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, taxMode: option.value })}
+                  className={`rounded-lg border px-3 py-3 text-left transition-all ${formData.taxMode === option.value ? 'border-primary-navy bg-slate-50 text-primary-navy shadow-sm dark:border-tertiary-sage dark:bg-navy-950 dark:text-white' : 'border-slate-200 bg-surface text-slate-500 hover:border-slate-300 dark:border-navy-800 dark:bg-navy-900 dark:text-slate-400 dark:hover:border-navy-700'}`}
+                >
+                  <div className="text-xs font-black">{option.label}</div>
+                  <div className="mt-1 text-[10px] font-bold leading-relaxed opacity-70">{option.description}</div>
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <Field label="订单单号 *">
             <div className="relative">
               <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -190,4 +209,3 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
     </>
   );
 }
-

@@ -22,7 +22,23 @@ import type {
   ProductionLog,
   ProductionLogFormState,
   SectionKey,
+  TaxMode,
 } from './types';
+
+export const TAX_MODE_OPTIONS: Array<{ value: TaxMode; label: string; shortLabel: string; description: string }> = [
+  { value: 'A', label: '标准出口退税', shortLabel: '退税出口', description: '正规报关、保留退税联，利润核算包含预估退税额。' },
+  { value: 'B', label: '买单出口不退税', shortLabel: '买单出口', description: '不计算退税，报关资料降噪为出口凭证。' },
+  { value: 'C', label: '视同内销征税', shortLabel: '内销征税', description: '按内销税务口径展示纳税申报与应缴增值税。' },
+];
+
+export function normalizeTaxMode(value: unknown): TaxMode {
+  return value === 'B' || value === 'C' ? value : 'A';
+}
+
+export function getTaxModeMeta(value: unknown) {
+  const taxMode = normalizeTaxMode(value);
+  return TAX_MODE_OPTIONS.find(option => option.value === taxMode) || TAX_MODE_OPTIONS[0];
+}
 
 export const STAGE_STEPS: Array<{ key: OrderStatus; label: string; target: SectionKey }> = [
   { key: 'draft', label: '待受理', target: 'basic' },
@@ -34,6 +50,7 @@ export const STAGE_STEPS: Array<{ key: OrderStatus; label: string; target: Secti
 
 export const EMPTY_ORDER_FORM: OrderFormState = {
   status: 'draft',
+  taxMode: 'A',
   customerId: '',
   productSummary: '',
   totalAmount: '0',
@@ -180,6 +197,7 @@ export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFor
   return {
     id: order.id,
     status: order.status,
+    taxMode: normalizeTaxMode(order.taxMode || order.tax_mode),
     customerId: String(order.customer_id),
     productSummary: asText(order.product_summary),
     totalAmount: String(order.total_amount),

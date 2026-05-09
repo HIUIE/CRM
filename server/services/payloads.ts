@@ -7,6 +7,7 @@ import {
   LOGISTICS_SEGMENTS,
   LOGISTICS_STATUSES,
   ORDER_STATUSES,
+  TAX_MODES,
   PARTNER_TYPES,
   PAYMENT_CATEGORIES,
   PRODUCTION_STATUSES,
@@ -19,6 +20,7 @@ import {
   type LogisticsSegment,
   type LogisticsStatus,
   type OrderStatus,
+  type TaxMode,
   type PartnerType,
   type PaymentCategory,
   type ProductionStatus,
@@ -121,6 +123,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
   const freightAmount = Number.isFinite(freightAmountInput) ? freightAmountInput : 0;
   const miscAmount = Number.isFinite(miscAmountInput) ? miscAmountInput : 0;
   const alibabaOrderNo = readString(body.alibabaOrderNo || body.alibaba_order_no, 100);
+  const taxMode = readString(body.taxMode || body.tax_mode || 'A', 10).toUpperCase();
 
   if (!Number.isInteger(customerId) || customerId <= 0) {
     return { error: '请选择有效客户' };
@@ -136,6 +139,9 @@ export async function readOrderPayload(body: Record<string, unknown>) {
   }
   if (!Number.isFinite(miscAmount) || miscAmount < 0) {
     return { error: '杂费必须大于或等于 0' };
+  }
+  if (!isOneOf(taxMode, TAX_MODES)) {
+    return { error: '订单业务模式不正确' };
   }
 
   const customer = await dbGet<{ id: number }>(`SELECT id FROM customers WHERE id = ? AND deleted_at IS NULL`, [customerId]);
@@ -155,6 +161,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
       freightAmount,
       miscAmount,
       alibabaOrderNo,
+      taxMode: taxMode as TaxMode,
     },
   };
 }

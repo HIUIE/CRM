@@ -16,7 +16,8 @@ import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates } from '../lib/date';
 import type { StandardTimeRange } from '../lib/date';
-import type { CustomerListItem, OrderSummary } from '../types/crm';
+import type { CustomerListItem, OrderSummary, TaxMode } from '../types/crm';
+import { TAX_MODE_OPTIONS, getTaxModeMeta, normalizeTaxMode } from '../features/order-detail/utils';
 
 
 type OrderFormState = {
@@ -25,6 +26,7 @@ type OrderFormState = {
   productSummary: string;
   details: string;
   totalAmount: string;
+  taxMode: TaxMode;
 };
 
 const EMPTY_FORM: OrderFormState = {
@@ -33,6 +35,7 @@ const EMPTY_FORM: OrderFormState = {
   productSummary: '',
   details: '',
   totalAmount: '0',
+  taxMode: 'A',
 };
 
 function getOrderStatusMeta(status: string) {
@@ -71,6 +74,7 @@ export default function OrdersView() {
 
   const q = searchParams.get('q') || '';
   const status = searchParams.get('status') || '';
+  const taxMode = searchParams.get('tax_mode') || '';
   const timeRange = searchParams.get('timeRange') || 'all';
 
   const updateParam = (key: string, val: string) => {
@@ -195,6 +199,7 @@ export default function OrdersView() {
       productSummary: order.product_summary || '',
       details: '',
       totalAmount: String(order.total_amount || 0),
+      taxMode: normalizeTaxMode(order.tax_mode),
     };
     setFormData(newForm);
     setInitialForm(newForm);
@@ -262,7 +267,7 @@ export default function OrdersView() {
   return (
     <div className="flex flex-col space-y-4 animate-page-in">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_220px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
@@ -284,6 +289,18 @@ export default function OrdersView() {
                <option value="customs">报关中</option>
                <option value="shipping">发货中</option>
                <option value="completed">已完成</option>
+             </select>
+          </div>
+          <div className="relative">
+             <select
+               value={taxMode}
+               onChange={e => updateParam('tax_mode', e.target.value)}
+               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 px-4 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
+             >
+               <option value="">全部业务模式</option>
+               {TAX_MODE_OPTIONS.map(option => (
+                 <option key={option.value} value={option.value}>{option.label}</option>
+               ))}
              </select>
           </div>
         </div>
@@ -327,6 +344,7 @@ export default function OrdersView() {
                     <th className="px-4 py-4 text-left">订单号 / 日期</th>
                     <th className="px-4 py-4 text-left">客户 / 国家</th>
                     <th className="px-4 py-4 text-left">产品摘要</th>
+                    <th className="px-4 py-4 text-left">业务模式</th>
                     <th className="px-4 py-4 text-right">金额</th>
                     <th className="px-4 py-4 text-right">收款进度</th>
                     <th className="px-4 py-4 text-center">操作</th>
@@ -335,6 +353,7 @@ export default function OrdersView() {
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800 bg-surface dark:bg-navy-900">
                   {currentItems.length ? currentItems.map(o => {
                     const meta = getOrderStatusMeta(o.status);
+                    const taxModeMeta = getTaxModeMeta(o.tax_mode);
                     const isSelected = selectedIds.includes(o.id);
                     return (
                       <tr key={o.id} onClick={() => {
@@ -363,6 +382,12 @@ export default function OrdersView() {
                            <div className="flex items-center gap-2 mb-1.5"><Chip tone={meta.tone}>{meta.label}</Chip></div>
                            <div className="text-slate-600 dark:text-slate-400 font-bold truncate max-w-[200px]" title={o.product_summary}>{o.product_summary || '—'}</div>
                         </td>
+                        <td className="px-4 py-4 text-left">
+                          <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-black text-slate-600 dark:border-navy-700 dark:bg-navy-950 dark:text-slate-300">
+                            {taxModeMeta.shortLabel}
+                          </div>
+                          <div className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500">{taxModeMeta.value}</div>
+                        </td>
                         <td className="px-4 py-4 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
                         <td className="px-4 py-4 text-right">
                            <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
@@ -383,7 +408,7 @@ export default function OrdersView() {
                         </td>
                       </tr>
                     );
-                  }) : <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight text-xs">暂无订单记录。</td></tr>}
+                  }) : <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight text-xs">暂无订单记录。</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -416,6 +441,29 @@ export default function OrdersView() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {formError && <div className="rounded-lg border border-red-100 dark:border-red-800/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 font-bold">{formError}</div>}
           <div className="space-y-6">
+            <Field label="订单业务模式 *">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {TAX_MODE_OPTIONS.map(option => {
+                  const active = formData.taxMode === option.value;
+                  const locked = Boolean(editingOrder && editingOrder.status !== 'draft');
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      disabled={locked}
+                      onClick={() => setFormData({ ...formData, taxMode: option.value })}
+                      className={`rounded-lg border p-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${active ? 'border-primary-navy bg-primary-navy text-white shadow-sm dark:border-tertiary-sage dark:bg-tertiary-sage' : 'border-slate-200 bg-slate-50 text-primary-navy hover:border-primary-navy/30 dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:hover:border-tertiary-sage/40'}`}
+                    >
+                      <div className="text-xs font-black">{option.label}</div>
+                      <div className={`mt-1 text-[10px] font-bold leading-relaxed ${active ? 'text-white/75' : 'text-slate-400 dark:text-slate-500'}`}>{option.description}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {editingOrder && editingOrder.status !== 'draft' && (
+                <p className="mt-2 text-[11px] font-bold text-amber-600 dark:text-amber-300">订单已进入履约流程，业务模式变更需走审批流。</p>
+              )}
+            </Field>
             <Field label="订单单号 *">
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />

@@ -1,6 +1,7 @@
 import type { AuthUser } from './auth';
 
 export type OrderStatus = 'draft' | 'production' | 'customs' | 'shipping' | 'completed';
+export type TaxMode = 'A' | 'B' | 'C';
 export type FinanceType = 'receipt' | 'payment';
 export type FinanceStatus = 'pending' | 'completed';
 export type FinanceCategory = 'deposit' | 'balance' | 'goods' | 'freight' | 'customs' | 'other';
@@ -55,6 +56,7 @@ export type OrderSummary = {
   display_id: string;
   customer_id: number;
   status: OrderStatus;
+  tax_mode?: TaxMode | null;
   total_amount: number;
   product_summary: string;
   customer_name?: string;

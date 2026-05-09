@@ -1,5 +1,6 @@
 export const USER_ROLES = ['admin', 'staff'] as const;
 export const ORDER_STATUSES = ['draft', 'production', 'customs', 'shipping', 'completed'] as const;
+export const TAX_MODES = ['A', 'B', 'C'] as const;
 export const FINANCE_TYPES = ['receipt', 'payment'] as const;
 export const FINANCE_STATUSES = ['pending', 'completed'] as const;
 export const PAYMENT_CATEGORIES = ['receipt', 'freight', 'goods', 'other'] as const;
@@ -15,6 +16,7 @@ export const INSPECTION_STATUSES = ['pending', 'passed', 'failed'] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export type TaxMode = (typeof TAX_MODES)[number];
 export type FinanceType = (typeof FINANCE_TYPES)[number];
 export type FinanceStatus = (typeof FINANCE_STATUSES)[number];
 export type PaymentCategory = (typeof PAYMENT_CATEGORIES)[number];

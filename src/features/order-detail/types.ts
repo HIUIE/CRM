@@ -1,5 +1,6 @@
 export type SectionKey = 'basic' | 'todos' | 'items' | 'production' | 'finance' | 'customs' | 'logistics';
 export type OrderStatus = 'draft' | 'production' | 'customs' | 'shipping' | 'completed';
+export type TaxMode = 'A' | 'B' | 'C';
 export type FinanceType = 'receipt' | 'payment';
 export type FinanceStatus = 'pending' | 'completed';
 export type FinanceCategory = 'deposit' | 'balance' | 'goods' | 'freight' | 'customs' | 'other';
@@ -59,6 +60,8 @@ export type OrderInfo = {
   display_id: string;
   customer_id: number;
   status: OrderStatus;
+  tax_mode?: TaxMode | null;
+  taxMode?: TaxMode | null;
   details?: string | null;
   quick_notes?: string | null;
   product_summary?: string | null;
@@ -269,6 +272,7 @@ export type EditableOrderItem = {
 export type OrderFormState = {
   id?: number;
   status: OrderStatus;
+  taxMode: TaxMode;
   customerId: string;
   productSummary: string;
   totalAmount: string;

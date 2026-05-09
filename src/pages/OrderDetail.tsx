@@ -67,6 +67,7 @@ import {
   EMPTY_ORDER_FORM,
   EMPTY_PRODUCTION_FORM,
   formatDateOnly,
+  normalizeTaxMode,
   orderToFormState,
   STAGE_STEPS,
 } from '../features/order-detail/utils';
@@ -179,6 +180,7 @@ export default function OrderDetailPage() {
   const internationalLogistics = detail?.internationalLogistics || null;
   const summary = detail?.summary || { receiptsByCurrency: {}, paymentsByCurrency: {}, freightByCurrency: {}, pendingFinanceCount: 0, paidAmount: 0, outstandingAmount: 0, paymentStatus: 'unpaid' as const, settled: false, attachmentsSummary: { finance: 0, logistics: 0, customs: 0 } };
   const hasAnyLogistics = Boolean(domesticLogistics || internationalLogistics || logisticsRecords.length);
+  const taxMode = normalizeTaxMode(order?.taxMode || order?.tax_mode);
 
   const itemsTotal = items.reduce((sum, item) => sum + asNumber(item.subtotal), 0);
   const freightAmount = asNumber(order?.freightAmount);
@@ -198,13 +200,13 @@ export default function OrderDetailPage() {
       case 'finance': return '收付款记录';
       case 'production': return '生产信息';
       case 'production-log': return '添加生产进度';
-      case 'customs': return '报关信息';
+      case 'customs': return taxMode === 'B' ? '买单出口凭证' : taxMode === 'C' ? '纳税申报信息' : '报关信息';
       case 'logistics': return '物流信息';
       case 'packing': return '装箱明细维护';
       case 'ai-analysis': return 'AI 智能辅助诊断';
       default: return '';
     }
-  }, [drawer.mode]);
+  }, [drawer.mode, taxMode]);
 
   const deliveryMeta = useMemo(() => {
     if (!order?.deliveryDate) return { label: '未设置', tone: 'neutral' as const };
@@ -219,11 +221,13 @@ export default function OrderDetailPage() {
     finance: summary.settled ? { label: '已结清', tone: 'success' as const } : { label: '未结清', tone: 'warning' as const },
     production: productionPlan?.productionStatus === 'ready' ? { label: '完成', tone: 'success' as const } : { label: productionPlan ? '进行中' : '未排产', tone: productionPlan ? 'neutral' as const : 'warning' as const },
     logistics: hasAnyLogistics ? { label: '已发运', tone: 'success' as const } : { label: '未发运', tone: 'warning' as const },
-    customs: customs ? { label: customs.status === 'released' ? '已放行' : '处理中', tone: customs.status === 'released' ? 'success' as const : 'neutral' as const } : { label: '缺失', tone: 'warning' as const },
+    customs: customs
+      ? { label: taxMode === 'B' ? '已留存' : customs.status === 'released' ? '已放行' : '处理中', tone: customs.status === 'released' || taxMode === 'B' ? 'success' as const : 'neutral' as const }
+      : { label: taxMode === 'B' ? '待凭证' : taxMode === 'C' ? '待申报' : '缺失', tone: 'warning' as const },
     packing: packingRecords.length ? { label: '已录入', tone: 'success' as const } : { label: '待录入', tone: 'warning' as const },
     documents: orderDocuments.length ? { label: `${orderDocuments.length} 份`, tone: 'neutral' as const } : { label: '待上传', tone: 'warning' as const },
     todos: tasks.some(t => t.status !== 'done') ? { label: `${tasks.filter(t => t.status !== 'done').length} 待办`, tone: 'warning' as const } : { label: '完成', tone: 'success' as const },
-  }), [summary.settled, productionPlan, hasAnyLogistics, customs, packingRecords.length, orderDocuments.length, tasks]);
+  }), [summary.settled, productionPlan, hasAnyLogistics, customs, taxMode, packingRecords.length, orderDocuments.length, tasks]);
 
   const stageIndex = STAGE_STEPS.findIndex((s) => s.key === order?.status);
 
@@ -574,6 +578,7 @@ export default function OrderDetailPage() {
             <CustomsSection
               sectionRef={sectionRefs.customs}
               customs={customs}
+              taxMode={taxMode}
               onEditCustoms={openCustomsDrawer}
               onUploadDocument={(files, docType) => handleUploadEvidenceFiles(files, { order, customer, entityType: 'customs', entityId: customs?.id, docType, label: '报关单据', setUploading: setIsUploading, showToast, loadDetail: refreshDetail })}
               onDeleteAttachment={requestDeleteAttachment}
@@ -595,6 +600,7 @@ export default function OrderDetailPage() {
               freightAmount={freightAmount}
               miscAmount={miscAmount}
               itemsTotal={itemsTotal}
+              taxMode={taxMode}
               showToast={showToast}
             />
             <FollowupsSection followUps={followUps} />
@@ -604,7 +610,7 @@ export default function OrderDetailPage() {
         {/* Right Nav Rail */}
         <aside className="hidden w-[280px] shrink-0 self-start space-y-6 lg:sticky lg:top-6 lg:block">
           <Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 animate-pulse" />}>
-            <NavRailSection activeSection={activeSection} scrollToSection={scrollToSection} moduleAlerts={moduleAlerts} />
+            <NavRailSection activeSection={activeSection} scrollToSection={scrollToSection} moduleAlerts={moduleAlerts} taxMode={taxMode} />
             <QuickFollowUpSection
               followUpInput={followUpInput}
               onFollowUpChange={setFollowUpInput}
@@ -706,7 +712,7 @@ export default function OrderDetailPage() {
                 {drawerError && <div className="p-6 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg text-sm font-bold text-error mb-8 flex items-start gap-4 shadow-inner"><X size={18} className="shrink-0 mt-0.5" /> {drawerError}</div>}
                 <Suspense fallback={<div className="p-12 text-center text-slate-400 animate-pulse font-bold tracking-tight">正在载入组件...</div>}>
                   {drawer.mode === 'order' ? (
-                    <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} />
+                    <OrderEditForm orderForm={orderForm} setOrderForm={setOrderForm} deletedItemIds={deletedItemIds} setDeletedItemIds={setDeletedItemIds} taxModeLocked={order?.status !== 'draft'} />
                   ) : drawer.mode === 'production-log' ? (
                     <ProductionLogForm productionLogForm={productionLogForm} setProductionLogForm={setProductionLogForm} isUploading={isUploading} uploadProgress={uploadProgress} />
                   ) : drawer.mode === 'customs' ? (

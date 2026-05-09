@@ -73,6 +73,7 @@ export const up = (pgm) => {
       key_milestone TEXT,
       freight_amount REAL DEFAULT 0,
       misc_amount REAL DEFAULT 0,
+      tax_mode TEXT DEFAULT 'A',
       quick_notes TEXT,
       created_by INTEGER REFERENCES users(id),
       updated_by INTEGER,

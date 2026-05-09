@@ -54,6 +54,7 @@ export function createOrdersRouter() {
     const q = readString(req.query.q);
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
+    const taxMode = readString(req.query.tax_mode || req.query.taxMode, 10).toUpperCase();
 
     let sql = `
       SELECT 
@@ -83,6 +84,10 @@ export function createOrdersRouter() {
     if (status) {
       sql += ` AND o.status = ?`;
       params.push(status);
+    }
+    if (taxMode && ['A', 'B', 'C'].includes(taxMode)) {
+      sql += ` AND COALESCE(NULLIF(o.tax_mode, ''), 'A') = ?`;
+      params.push(taxMode);
     }
     if (q) {
       sql += ` AND (o.display_id LIKE ? OR o.product_summary LIKE ? OR c.name LIKE ? OR o.alibaba_order_no LIKE ?)`;
@@ -202,8 +207,8 @@ export function createOrdersRouter() {
         }
 
         return await tx.run(
-          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, created_by, updated_by, exchange_rate_snapshot, alibaba_order_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, req.user?.id || null, currentRate, result.payload.alibabaOrderNo || null]
+          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, tax_mode, created_by, updated_by, exchange_rate_snapshot, alibaba_order_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, req.user?.id || null, req.user?.id || null, currentRate, result.payload.alibabaOrderNo || null]
         );
       });
 
@@ -241,11 +246,19 @@ export function createOrdersRouter() {
       if (!(await checkOrderAccess(req, orderId))) {
         return fail(res, 404, '订单不存在');
       }
+      const existingOrder = await dbGet<{ status: string; tax_mode: string | null }>(
+        `SELECT status, tax_mode FROM orders WHERE id = ? AND deleted_at IS NULL`,
+        [orderId],
+      );
+      const currentTaxMode = (existingOrder?.tax_mode || 'A').toUpperCase();
+      if (existingOrder?.status !== 'draft' && result.payload.taxMode !== currentTaxMode) {
+        return fail(res, 403, '订单已进入履约流程，业务模式变更需走审批流程', 'TAX_MODE_LOCKED');
+      }
 
       await withTransaction(async (tx) => {
         await tx.run(
-          `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, updated_by = ?, alibaba_order_no = ? WHERE id = ?`,
-          [result.payload.customerId, result.payload.status, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, req.user?.id || null, result.payload.alibabaOrderNo || null, orderId]
+          `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, tax_mode = ?, updated_by = ?, alibaba_order_no = ? WHERE id = ?`,
+          [result.payload.customerId, result.payload.status, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, req.user?.id || null, result.payload.alibabaOrderNo || null, orderId]
         );
 
         const deletedIds = (req.body.deletedItemIds || []) as number[];

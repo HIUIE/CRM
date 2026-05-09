@@ -383,6 +383,8 @@ async function upsertCustomer(tx: TransactionExecutor, data: CsvRowData, userId?
 async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: number) {
   const displayId = data.display_id || data.displayId;
   if (!displayId) return;
+  const rawTaxMode = String(data.tax_mode || data.taxMode || 'A').toUpperCase();
+  const taxMode = ['A', 'B', 'C'].includes(rawTaxMode) ? rawTaxMode : 'A';
 
   // Find customer by name or id from backup
   const customerName = data.customer_name || data.customerName;
@@ -392,14 +394,14 @@ async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: n
   const existing = await tx.get<{ id: number }>(`SELECT id FROM orders WHERE display_id = ?`, [displayId]);
   if (existing) {
     await tx.run(
-      `UPDATE orders SET customer_id = ?, status = ?, total_amount = ?, product_summary = ?, details = ?, updated_by = ? WHERE id = ?`,
-      [customer.id, data.status, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, existing.id]
+      `UPDATE orders SET customer_id = ?, status = ?, tax_mode = ?, total_amount = ?, product_summary = ?, details = ?, updated_by = ? WHERE id = ?`,
+      [customer.id, data.status, taxMode, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, existing.id]
     );
   } else {
     await tx.run(
-      `INSERT INTO orders (display_id, customer_id, status, total_amount, product_summary, details, created_by, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [displayId, customer.id, data.status, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, userId]
+      `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, product_summary, details, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [displayId, customer.id, data.status, taxMode, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, userId]
     );
   }
 }
@@ -443,10 +445,12 @@ async function importOrder(tx: TransactionExecutor, data: ImportRowData, userId?
 
   const totalAmount = Number(data.totalAmount) || 0;
   const status = data.status || 'draft';
+  const rawTaxMode = String(data.taxMode || data.tax_mode || 'A').toUpperCase();
+  const taxMode = ['A', 'B', 'C'].includes(rawTaxMode) ? rawTaxMode : 'A';
 
   await tx.run(
-    `INSERT INTO orders (display_id, customer_id, status, total_amount, product_summary, details, created_by, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [displayId, customer.id, status, totalAmount, data.productSummary, data.details, userId, userId]
+    `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, product_summary, details, created_by, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [displayId, customer.id, status, taxMode, totalAmount, data.productSummary, data.details, userId, userId]
   );
 }

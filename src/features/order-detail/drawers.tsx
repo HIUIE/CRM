@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Check, Search, Trash, Plus, Clock, Upload, FileCheck, X } from 'lucide-react';
 import { Field, AttachmentEditor } from './components';
-import { asNumber, formatDateOnly } from './utils';
+import { TAX_MODE_OPTIONS, asNumber, formatDateOnly } from './utils';
 import type {
   AIAnalysisResult,
   CustomsFormState,
@@ -27,11 +27,13 @@ export function OrderEditForm({
   setOrderForm,
   deletedItemIds,
   setDeletedItemIds,
+  taxModeLocked = false,
 }: {
   orderForm: OrderFormState;
   setOrderForm: React.Dispatch<React.SetStateAction<OrderFormState>>;
   deletedItemIds: number[];
   setDeletedItemIds: React.Dispatch<React.SetStateAction<number[]>>;
+  taxModeLocked?: boolean;
 }) {
   return (
     <div className="space-y-12">
@@ -50,6 +52,31 @@ export function OrderEditForm({
         </Field>
         <Field label="阿里订单号">
           <input type="text" value={orderForm.alibabaOrderNo || ''} onChange={e => setOrderForm({ ...orderForm, alibabaOrderNo: e.target.value })} placeholder="关联的阿里订单号 (可选)..." className="w-full bg-slate-50 dark:bg-navy-950 p-3 text-[14px] font-bold text-primary-navy dark:text-white focus:outline-none rounded-lg border border-slate-200 dark:border-navy-800 shadow-sm" />
+        </Field>
+      </section>
+
+      <section className="space-y-3">
+        <Field label="订单业务模式 *">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {TAX_MODE_OPTIONS.map(option => {
+              const active = orderForm.taxMode === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  disabled={taxModeLocked}
+                  onClick={() => setOrderForm({ ...orderForm, taxMode: option.value })}
+                  className={`rounded-lg border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${active ? 'border-primary-navy bg-primary-navy text-white shadow-sm dark:border-tertiary-sage dark:bg-tertiary-sage' : 'border-slate-200 bg-slate-50 text-primary-navy hover:border-primary-navy/30 dark:border-navy-800 dark:bg-navy-950 dark:text-white dark:hover:border-tertiary-sage/40'}`}
+                >
+                  <div className="text-xs font-black">{option.label}</div>
+                  <div className={`mt-1.5 text-[11px] font-bold leading-relaxed ${active ? 'text-white/75' : 'text-slate-400 dark:text-slate-500'}`}>{option.description}</div>
+                </button>
+              );
+            })}
+          </div>
+          {taxModeLocked && (
+            <p className="mt-2 text-[11px] font-bold text-amber-600 dark:text-amber-300">订单已进入履约流程，业务模式变更需走审批流。</p>
+          )}
         </Field>
       </section>
 

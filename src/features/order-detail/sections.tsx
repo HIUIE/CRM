@@ -11,10 +11,10 @@ import {
   WorkSection, DocumentBoard, EmptyStateBoard, FinanceDashboard, ProductionDashboard,
   Chip, GridItem, FileIcon, LightActionButton, FilterPill,
 } from './components';
-import { formatDateOnly, formatDateTime, asNumber, asText, formatIncoterm, formatTransportMode, STAGE_STEPS } from './utils';
+import { formatDateOnly, formatDateTime, asNumber, asText, formatIncoterm, formatTransportMode, getTaxModeMeta, normalizeTaxMode, STAGE_STEPS } from './utils';
 import type {
   AttachmentMeta, CustomerInfo, CustomsRecord, DocumentSlot, FinanceRecord, LogisticsRecord, OrderInfo, OrderItem,
-  PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType, ProfitData,
+  PackingRecord, ProductionPlan, ProductionStatus, InspectionStatus, SectionKey, FinanceType, ProfitData, TaxMode,
 } from './types';
 
 // ==================== Header Section ====================
@@ -207,6 +207,13 @@ const CUSTOMS_DOCUMENT_SLOTS: DocumentSlot[] = [
   { key: 'customs-declaration', docType: 'CUSTOMS_DECLARATION', label: '报关单', name: '报关单', group: '报关资料', pattern: /customs declaration|报关单/i },
   { key: 'tax-refund-copy', docType: 'TAX_REFUND_COPY', label: '退税', name: '退税联', group: '退税资料', pattern: /tax refund|退税/i },
 ];
+
+const BUY_ORDER_DOCUMENT_SLOTS: DocumentSlot[] = [
+  { key: 'buy-export-voucher', docType: 'BUY_EXPORT_VOUCHER', label: '凭证', name: '买单出口凭证', group: '出口凭证', pattern: /buy.*export|买单|出口凭证/i },
+  { key: 'logistics-voucher', docType: 'LOGISTICS_VOUCHER', label: '物流', name: '物流凭证', group: '出口凭证', pattern: /logistics|waybill|物流|运单/i },
+];
+
+const DOMESTIC_TAX_DOCUMENT_SLOTS: DocumentSlot[] = CUSTOMS_DOCUMENT_SLOTS.filter((slot) => slot.docType !== 'TAX_REFUND_COPY');
 
 function getDocumentSlotMatch(slot: DocumentSlot, documents: AttachmentMeta[]) {
   const explicitMatch = documents.find((doc) => String(doc.remark || '').toUpperCase() === `DOCTYPE:${slot.docType}`);
@@ -439,6 +446,7 @@ export function ProfitSection({
   freightAmount,
   miscAmount,
   itemsTotal,
+  taxMode,
   showToast,
 }: {
   user?: { name?: string; role?: string } | null;
@@ -447,9 +455,14 @@ export function ProfitSection({
   freightAmount: number;
   miscAmount: number;
   itemsTotal: number;
+  taxMode?: TaxMode | null;
   showToast?: (msg: string) => void;
 }) {
   const isAdmin = user?.role === 'admin';
+  const normalizedTaxMode = normalizeTaxMode(taxMode);
+  const taxModeMeta = getTaxModeMeta(normalizedTaxMode);
+  const includesRefund = normalizedTaxMode === 'A';
+  const includesDomesticVat = normalizedTaxMode === 'C';
   const [revealed, setRevealed] = useState(false);
   const [profitData, setProfitData] = useState<ProfitData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -499,11 +512,12 @@ export function ProfitSection({
     }
   }
 
-  const estimatedRefundCny = pd.invoiceAmount > 0 ? (pd.invoiceAmount / 1.13 * (pd.refundRate / 100)) : 0;
+  const estimatedRefundCny = includesRefund && pd.invoiceAmount > 0 ? (pd.invoiceAmount / 1.13 * (pd.refundRate / 100)) : 0;
   const totalRevenueCny = totalCnyFromReceipts + estimatedRefundCny + (pd.otherIncomeCny || 0);
   const miscTotal = (pd.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
   const freightCny = pd.freightCurrency === 'USD' ? (pd.freightValue * (pd.receipts[0]?.exchangeRate || 7.2)) : pd.freightValue;
-  const totalCostCny = pd.factoryCostCny + pd.domesticFees + freightCny + pd.customsMisc + miscTotal;
+  const domesticVatCny = includesDomesticVat ? Math.max(((totalCnyFromReceipts + (pd.otherIncomeCny || 0)) - pd.factoryCostCny) / 1.13 * 0.13, 0) : 0;
+  const totalCostCny = pd.factoryCostCny + pd.domesticFees + freightCny + pd.customsMisc + miscTotal + domesticVatCny;
   const netProfitCny = totalRevenueCny - totalCostCny;
   const margin = totalRevenueCny > 0 ? (netProfitCny / totalRevenueCny) * 100 : 0;
 
@@ -531,6 +545,10 @@ export function ProfitSection({
         </div>
       }>
         <div className="grid gap-8 lg:grid-cols-2">
+          <div className="lg:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500 dark:border-navy-800 dark:bg-navy-950/40 dark:text-slate-400">
+            当前业务模式：<span className="text-primary-navy dark:text-white">{taxModeMeta.label}</span>
+            <span className="ml-2">{includesRefund ? '利润公式包含预估退税。' : includesDomesticVat ? '利润公式自动计入应缴增值税。' : '利润公式已移除退税项，按销售本币减成本合计核算。'}</span>
+          </div>
           {/* Left: Revenue */}
           <div className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-100 dark:border-navy-800 pb-3">
@@ -546,7 +564,7 @@ export function ProfitSection({
                   {r.currency === 'USD' && <Row label="结汇汇率" value={revealed ? String(r.exchangeRate) : '***'} />}
                 </div>
               ))}
-              <Row label={`预估退税额 (退税率 ${pd.refundRate}%)`} value={fmtCny(estimatedRefundCny)} />
+              {includesRefund && <Row label={`预估退税额 (退税率 ${pd.refundRate}%)`} value={fmtCny(estimatedRefundCny)} />}
               <Row label="其他收入" value={fmtCny(pd.otherIncomeCny || 0)} />
               <Row label="实际折合本币 (总)" value={fmtCny(totalRevenueCny)} bold />
             </div>
@@ -563,6 +581,7 @@ export function ProfitSection({
               <Row label="国内费用 (拖车/入仓)" value={fmtCny(pd.domesticFees)} />
               <Row label={`国际运费 (${pd.freightCurrency})`} value={fmt(pd.freightValue, pd.freightCurrency)} />
               <Row label="报关与杂费 (含偏远/产地证等)" value={fmtCny(pd.customsMisc + (pd.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0))} />
+              {includesDomesticVat && <Row label="应缴增值税" value={fmtCny(domesticVatCny)} />}
               <Row label="成本合计" value={fmtCny(totalCostCny)} bold />
             </div>
           </div>
@@ -589,6 +608,7 @@ export function ProfitSection({
       {showDrawer && (
         <ProfitDrawer
           data={pd}
+          taxMode={normalizedTaxMode}
           onSave={handleSave}
           onClose={() => setShowDrawer(false)}
         />
@@ -629,11 +649,14 @@ function InputRow({ label, value, onChange, suffix, step }: { label: string; val
   );
 }
 
-function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
+function ProfitDrawer({ data, taxMode, onSave, onClose }: { data: ProfitData; taxMode: TaxMode; onSave: (d: ProfitData) => Promise<void>; onClose: () => void }) {
   const [form, setForm] = useState(data);
   const [savedBaseline, setSavedBaseline] = useState(data);
   const [saving, setSaving] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const includesRefund = taxMode === 'A';
+  const includesDomesticVat = taxMode === 'C';
+  const taxModeMeta = getTaxModeMeta(taxMode);
 
   const updN = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: Number(v) || 0 });
   const updS = (k: keyof ProfitData, v: string) => setForm({ ...form, [k]: v });
@@ -671,11 +694,12 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
       calcTotalCnyFromReceipts += r.amount - r.bankFees - r.platformFees;
     }
   }
-  const calcRefund = form.invoiceAmount > 0 ? (form.invoiceAmount / 1.13 * (form.refundRate / 100)) : 0;
+  const calcRefund = includesRefund && form.invoiceAmount > 0 ? (form.invoiceAmount / 1.13 * (form.refundRate / 100)) : 0;
   const calcRevenueCny = calcTotalCnyFromReceipts + calcRefund + (form.otherIncomeCny || 0);
   const calcMiscTotal = (form.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
   const calcFreightCny = form.freightCurrency === 'USD' ? (form.freightValue * (receipts[0]?.exchangeRate || 7.2)) : form.freightValue;
-  const calcTotalCost = form.factoryCostCny + form.domesticFees + calcFreightCny + form.customsMisc + calcMiscTotal;
+  const calcDomesticVat = includesDomesticVat ? Math.max((calcTotalCnyFromReceipts + (form.otherIncomeCny || 0) - form.factoryCostCny) / 1.13 * 0.13, 0) : 0;
+  const calcTotalCost = form.factoryCostCny + form.domesticFees + calcFreightCny + form.customsMisc + calcMiscTotal + calcDomesticVat;
   const calcProfit = calcRevenueCny - calcTotalCost;
   const calcMargin = calcRevenueCny > 0 ? (calcProfit / calcRevenueCny) * 100 : 0;
 
@@ -713,7 +737,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 dark:border-navy-800 bg-surface dark:bg-navy-950/50 px-4 py-5 sm:px-8 sm:py-6">
           <div className="min-w-0">
             <h3 className="text-lg font-black text-primary-navy dark:text-white tracking-tight">编辑利润核算</h3>
-            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2">统一维护收入、退税、成本与实时利润预估</p>
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2">当前模式：{taxModeMeta.label}，系统会自动切换退税或增值税口径。</p>
           </div>
           <button type="button" onClick={handleClose} disabled={saving} className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-800 p-2 text-slate-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm disabled:opacity-50"><X size={20} /></button>
         </div>
@@ -767,23 +791,28 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
                 <Plus size={13} /> 添加一笔收款
               </button>
 
-              {/* Tax Refund Automation */}
-              <div className="p-4 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
-                <div className="text-xs font-bold text-blue-600 dark:text-blue-400 tracking-tight">退税自动化组件</div>
-                <div className="grid gap-4 sm:grid-cols-[1fr_140px] sm:items-end">
-                  <div>
-                    <InputRow label="开票金额 (Invoice)" value={form.invoiceAmount} onChange={v => updN('invoiceAmount', v)} suffix="CNY" />
+              {includesRefund ? (
+                <div className="p-4 rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
+                  <div className="text-xs font-bold text-blue-600 dark:text-blue-400 tracking-tight">退税自动化组件</div>
+                  <div className="grid gap-4 sm:grid-cols-[1fr_140px] sm:items-end">
+                    <div>
+                      <InputRow label="开票金额 (Invoice)" value={form.invoiceAmount} onChange={v => updN('invoiceAmount', v)} suffix="CNY" />
+                    </div>
+                    <div>
+                      <InputRow label="退税率 %" value={form.refundRate} onChange={v => updN('refundRate', v)} suffix="%" />
+                    </div>
                   </div>
-                  <div>
-                    <InputRow label="退税率 %" value={form.refundRate} onChange={v => updN('refundRate', v)} suffix="%" />
-                  </div>
+                  {form.invoiceAmount > 0 && (
+                    <div className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                      预估退税额：¥{(form.invoiceAmount / 1.13 * (form.refundRate / 100)).toFixed(2)}
+                    </div>
+                  )}
                 </div>
-                {form.invoiceAmount > 0 && (
-                  <div className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                    预估退税额：¥{(form.invoiceAmount / 1.13 * (form.refundRate / 100)).toFixed(2)}
-                  </div>
-                )}
-              </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500 dark:border-navy-800 dark:bg-navy-950/40 dark:text-slate-400">
+                  {taxMode === 'B' ? '买单出口模式不计入退税收入。' : '视同内销模式不上传退税联，利润将自动计入应缴增值税。'}
+                </div>
+              )}
 
               <InputRow label="其他收入 (Other Income)" value={form.otherIncomeCny} onChange={v => updN('otherIncomeCny', v)} suffix="CNY" />
             </div>
@@ -816,6 +845,11 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
               </label>
 
               <InputRow label="报关与杂费 (包含偏远/产地证等)" value={form.customsMisc} onChange={v => updN('customsMisc', v)} suffix="CNY" />
+              {includesDomesticVat && (
+                <div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
+                  应缴增值税预估：¥{calcDomesticVat.toFixed(2)}
+                </div>
+              )}
 
               {(form.miscFees || []).map((fee, i) => (
                 <div key={i} className="grid gap-2 border-l-2 border-tertiary-sage/30 pl-4 sm:grid-cols-[1fr_140px_40px_auto] sm:items-center">
@@ -839,6 +873,7 @@ function ProfitDrawer({ data, onSave, onClose }: { data: ProfitData; onSave: (d:
             {hasCnyReceipt && <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">累计人民币收款 (Net CNY)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{(receipts.filter(r=>r.currency==='CNY').reduce((s,r)=>s+r.amount-r.bankFees-r.platformFees,0)).toFixed(2)}</span></div>}
             <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">预估总收入 (Total Income)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{calcRevenueCny.toFixed(2)}</span></div>
             <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">预估总成本 (Total Cost)</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{calcTotalCost.toFixed(2)}</span></div>
+            {includesDomesticVat && <div className="flex justify-between gap-4 rounded-md px-3 py-2 text-sm"><span className="font-medium text-slate-500 dark:text-slate-400">应缴增值税</span><span className="font-bold data-field text-primary-navy dark:text-white">¥{calcDomesticVat.toFixed(2)}</span></div>}
             <div className="flex justify-between gap-4 rounded-md border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-3 py-2.5 text-sm">
               <span className="font-medium text-slate-500 dark:text-slate-400">预估净利润 (Net Profit)</span>
               <span className={`font-black data-field ${calcProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>¥{calcProfit.toFixed(2)}</span>
@@ -931,6 +966,7 @@ export function ProductionSection({
 export function CustomsSection({
   sectionRef,
   customs,
+  taxMode,
   onEditCustoms,
   onUploadDocument,
   onDeleteAttachment,
@@ -939,6 +975,7 @@ export function CustomsSection({
 }: {
   sectionRef: React.RefObject<HTMLDivElement | null>;
   customs: CustomsRecord | null;
+  taxMode?: TaxMode | null;
   onEditCustoms: () => void;
   onUploadDocument: (files: FileList | null, docType: string) => void;
   onDeleteAttachment: (id: number) => Promise<void>;
@@ -946,25 +983,38 @@ export function CustomsSection({
   user?: { name?: string; role?: string } | null;
 }) {
   const taxRefundStatus = getTaxRefundStatus(customs?.status);
+  const normalizedTaxMode = normalizeTaxMode(taxMode);
+  const isBuyOrderMode = normalizedTaxMode === 'B';
+  const isDomesticTaxMode = normalizedTaxMode === 'C';
+  const sectionTitle = isBuyOrderMode ? '买单出口凭证' : isDomesticTaxMode ? '纳税申报信息' : '报关信息';
+  const sectionActionLabel = isBuyOrderMode ? '更新凭证' : isDomesticTaxMode ? '更新申报' : '更新报关';
+  const slots = isBuyOrderMode ? BUY_ORDER_DOCUMENT_SLOTS : isDomesticTaxMode ? DOMESTIC_TAX_DOCUMENT_SLOTS : CUSTOMS_DOCUMENT_SLOTS;
+  const voucherTitle = isBuyOrderMode ? '物流与出口凭证' : isDomesticTaxMode ? '纳税申报电子存根' : '官方凭证电子存根';
+  const emptyTitle = isBuyOrderMode ? '暂无买单出口凭证' : isDomesticTaxMode ? '暂无纳税申报信息' : '暂无报关信息';
+  const emptyDesc = isBuyOrderMode
+    ? '买单出口不需要完整报关单据槽位，请保留物流凭证或出口凭证，便于后续追溯。'
+    : isDomesticTaxMode
+      ? '视同内销模式无需退税联，请维护申报编号、纳税类型、申报日期和官方附件。'
+      : '出货前请维护报关单号、贸易方式、报关日期和官方附件，避免后续出口节点缺资料。';
 
   return (
-    <DocumentBoard ref={sectionRef} title="报关信息" action={customs ? <LightActionButton onClick={onEditCustoms} className="!py-1.5 !px-3 !text-xs"><ShieldCheck size={14} className="mr-1 opacity-70" /> 更新报关</LightActionButton> : null}>
+    <DocumentBoard ref={sectionRef} title={sectionTitle} action={customs ? <LightActionButton onClick={onEditCustoms} className="!py-1.5 !px-3 !text-xs"><ShieldCheck size={14} className="mr-1 opacity-70" /> {sectionActionLabel}</LightActionButton> : null}>
       {customs ? (
         <div className="grid gap-8 lg:grid-cols-12 items-start">
           <div className="lg:col-span-4 space-y-6 border-r border-slate-100 dark:border-navy-800 pr-8 flex flex-col justify-center">
-            <GridItem label="报关单号" value={<span className="data-field font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
-            <GridItem label="报关方式" value={<Chip tone="neutral">{asText(customs?.tradeMode, '一般贸易')}</Chip>} />
-            <GridItem label="退税状态" value={<Chip tone={taxRefundStatus.tone}>{taxRefundStatus.label}</Chip>} />
-            <GridItem label="报关日期" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
-            <GridItem label="预计出口" value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
+            <GridItem label={isBuyOrderMode ? '凭证编号' : isDomesticTaxMode ? '申报编号' : '报关单号'} value={<span className="data-field font-bold text-primary-navy dark:text-white">{asText(customs?.declarationNo, '待填')}</span>} />
+            <GridItem label={isDomesticTaxMode ? '纳税类型' : isBuyOrderMode ? '出口方式' : '报关方式'} value={<Chip tone="neutral">{asText(customs?.tradeMode, isDomesticTaxMode ? '视同内销' : isBuyOrderMode ? '买单出口' : '一般贸易')}</Chip>} />
+            {!isBuyOrderMode && <GridItem label={isDomesticTaxMode ? '申报状态' : '退税状态'} value={<Chip tone={taxRefundStatus.tone}>{taxRefundStatus.label}</Chip>} />}
+            <GridItem label={isDomesticTaxMode ? '申报日期' : isBuyOrderMode ? '凭证日期' : '报关日期'} value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.declarationDate, '待定')}</span>} />
+            <GridItem label={isDomesticTaxMode ? '预计完成' : '预计出口'} value={<span className="data-field font-bold text-primary-navy dark:text-white">{formatDateOnly(customs?.releaseDate, '待定')}</span>} />
           </div>
           <div className="lg:col-span-8 overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-navy-800 pb-3">
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">官方凭证电子存根</div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-tight">{voucherTitle}</div>
               <button onClick={onEditCustoms} className="text-xs font-bold text-primary-navy dark:text-tertiary-sage hover:underline">追加文件 +</button>
             </div>
             <SlotDocumentGrid
-              slots={CUSTOMS_DOCUMENT_SLOTS}
+              slots={slots}
               documents={customs.attachments || []}
               onUpload={onUploadDocument}
               onPreview={onPreview}
@@ -975,7 +1025,7 @@ export function CustomsSection({
           </div>
         </div>
       ) : (
-        <EmptyStateBoard title="暂无报关信息" description="出货前请维护报关单号、贸易方式、报关日期和官方附件，避免后续出口节点缺资料。" icon={ShieldCheck} actionLabel="+ 初始化报关资料" onAction={onEditCustoms} />
+        <EmptyStateBoard title={emptyTitle} description={emptyDesc} icon={ShieldCheck} actionLabel={isBuyOrderMode ? '+ 初始化出口凭证' : isDomesticTaxMode ? '+ 初始化纳税申报' : '+ 初始化报关资料'} onAction={onEditCustoms} />
       )}
     </DocumentBoard>
   );
@@ -1396,14 +1446,18 @@ export function NavRailSection({
   activeSection,
   scrollToSection,
   moduleAlerts = {},
+  taxMode,
 }: {
   activeSection: string;
   scrollToSection: (section: string) => void;
   moduleAlerts?: Partial<Record<string, { label: string; tone: 'warning' | 'error' | 'success' | 'neutral' }>>;
+  taxMode?: TaxMode | null;
 }) {
+  const normalizedTaxMode = normalizeTaxMode(taxMode);
+  const customsLabel = normalizedTaxMode === 'B' ? '出口凭证' : normalizedTaxMode === 'C' ? '纳税申报' : '报关资料';
   const navGroups = [
     { group: '订单', items: [{ section: 'items', label: '商品明细' }, { section: 'documents', label: '核心单据' }] },
-    { group: '履约', items: [{ section: 'production', label: '生产排产' }, { section: 'packing', label: '装箱明细' }, { section: 'logistics', label: '运输轨迹' }, { section: 'customs', label: '报关资料' }] },
+    { group: '履约', items: [{ section: 'production', label: '生产排产' }, { section: 'packing', label: '装箱明细' }, { section: 'logistics', label: '运输轨迹' }, { section: 'customs', label: customsLabel }] },
     { group: '结算', items: [{ section: 'finance', label: '财务信息' }, { section: 'profit', label: '利润核算' }] },
     { group: '协同', items: [{ section: 'todos', label: '协同任务' }, { section: 'followups', label: '跟进时间轴' }] },
   ];

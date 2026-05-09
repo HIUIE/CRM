@@ -54,6 +54,7 @@ export const up = (pgm) => {
       ADD COLUMN IF NOT EXISTS key_milestone TEXT,
       ADD COLUMN IF NOT EXISTS freight_amount REAL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS misc_amount REAL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS tax_mode TEXT DEFAULT 'A',
       ADD COLUMN IF NOT EXISTS quick_notes TEXT,
       ADD COLUMN IF NOT EXISTS created_by INTEGER,
       ADD COLUMN IF NOT EXISTS updated_by INTEGER,
