@@ -1095,11 +1095,38 @@ function getLogisticsStatusMeta(status?: LogisticsRecord['status']) {
   }
 }
 
-const LOGISTICS_ATTACHMENT_PLACEHOLDER = 'https://placehold.co/240x180/e2e8f0/64748b?text=Image';
+function isPreviewableImageAttachment(att: AttachmentMeta) {
+  return Boolean(att.url) && (att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|avif|svg)$/i.test(att.fileName || ''));
+}
 
-function getLogisticsAttachmentPreview(att: AttachmentMeta) {
-  const isImage = att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|avif)$/i.test(att.fileName || '');
-  return isImage && att.url ? att.url : LOGISTICS_ATTACHMENT_PLACEHOLDER;
+function getAttachmentTypeLabel(att: AttachmentMeta) {
+  const fileName = att.fileName || '';
+  const ext = fileName.includes('.') ? fileName.split('.').pop()?.toLowerCase() : '';
+  const mimeType = att.mimeType || '';
+  if (mimeType === 'application/pdf' || ext === 'pdf') return 'PDF';
+  if (['xls', 'xlsx'].includes(ext || '') || mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'Excel';
+  if (ext === 'csv' || mimeType.includes('csv')) return 'CSV';
+  if (['doc', 'docx'].includes(ext || '') || mimeType.includes('word')) return 'Word';
+  if (['ppt', 'pptx'].includes(ext || '') || mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'PPT';
+  if (['zip', 'rar', '7z'].includes(ext || '')) return 'ZIP';
+  return ext ? ext.toUpperCase() : 'FILE';
+}
+
+function AttachmentThumbnailPreview({ att, title }: { att: AttachmentMeta; title: string }) {
+  if (isPreviewableImageAttachment(att)) {
+    return <img src={att.url} alt={att.fileName || title} className="h-full w-full object-cover" loading="lazy" />;
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-slate-50 px-2 pb-5 text-center dark:bg-navy-950">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-sm dark:border-navy-700 dark:bg-navy-900">
+        <FileIcon fileName={att.fileName || getAttachmentTypeLabel(att)} url={att.url} size={24} />
+      </div>
+      <span className="max-w-full truncate text-[11px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-300">
+        {getAttachmentTypeLabel(att)}
+      </span>
+    </div>
+  );
 }
 
 function getCompactFileName(fileName: string) {
@@ -1137,7 +1164,7 @@ function EvidenceThumbnailGrid({
             <Tooltip text={att.fileName}>
               <span className="block h-24 w-24">
                 <button type="button" onClick={() => onPreview(att)} className="block h-full w-full text-left">
-                  <img src={getLogisticsAttachmentPreview(att)} alt={att.fileName || title} className="h-full w-full object-cover" loading="lazy" />
+                  <AttachmentThumbnailPreview att={att} title={title} />
                   <div className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1.5 text-[10px] font-bold leading-none text-white backdrop-blur-[2px]">
                     <span className="block truncate">{getCompactFileName(att.fileName)}</span>
                   </div>
@@ -1260,12 +1287,7 @@ export function LogisticsSection({
                             onClick={() => onPreview(att)}
                             className="block h-full w-full text-left"
                           >
-                            <img
-                              src={getLogisticsAttachmentPreview(att)}
-                              alt={att.fileName || '物流单据'}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
+                            <AttachmentThumbnailPreview att={att} title="物流单据" />
                             <div className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1.5 text-[10px] font-bold leading-none text-white backdrop-blur-[2px]">
                               <span className="block truncate">{getCompactFileName(att.fileName)}</span>
                             </div>
