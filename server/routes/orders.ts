@@ -234,9 +234,14 @@ export function createOrdersRouter() {
           }
         }
 
+        const owner = await tx.get<{ owner_user_id: number | null }>(
+          `SELECT owner_user_id FROM customers WHERE id = ? AND deleted_at IS NULL`,
+          [result.payload.customerId],
+        );
+        const assignedUserId = owner?.owner_user_id || req.user?.id || null;
         return await tx.run(
           `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, tax_mode, created_by, updated_by, exchange_rate_snapshot, alibaba_order_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, req.user?.id || null, req.user?.id || null, currentRate, result.payload.alibabaOrderNo || null]
+          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, assignedUserId, req.user?.id || null, currentRate, result.payload.alibabaOrderNo || null]
         );
       });
 

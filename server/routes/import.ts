@@ -364,20 +364,31 @@ async function upsertCustomer(tx: TransactionExecutor, data: CsvRowData, userId?
   const displayId = data.display_id || data.displayId;
   const name = data.name;
   if (!displayId || !name) return;
+  const owner = await resolveOwnerUser(tx, data.owner_user_id || data.ownerUserId || data.owner_user_name || data.ownerUserName);
+  const ownerUserId = owner?.id || userId || null;
 
   const existing = await tx.get<{ id: number }>(`SELECT id FROM customers WHERE display_id = ?`, [displayId]);
   if (existing) {
     await tx.run(
-      `UPDATE customers SET name = ?, country = ?, contact = ?, source_channel = ?, intent_products = ?, updated_by = ? WHERE id = ?`,
-      [name, data.country, data.contact, data.source_channel || data.sourceChannel, data.intent_products || data.intentProducts, userId, existing.id]
+      `UPDATE customers SET name = ?, country = ?, contact = ?, source_channel = ?, intent_products = ?, owner_user_id = COALESCE(?, owner_user_id), updated_by = ? WHERE id = ?`,
+      [name, data.country, data.contact, data.source_channel || data.sourceChannel, data.intent_products || data.intentProducts, ownerUserId, userId, existing.id]
     );
   } else {
     await tx.run(
-      `INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, created_by, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [displayId, name, data.country, data.contact, data.source_channel || data.sourceChannel, data.intent_products || data.intentProducts, userId, userId]
+      `INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, owner_user_id, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [displayId, name, data.country, data.contact, data.source_channel || data.sourceChannel, data.intent_products || data.intentProducts, ownerUserId, userId, userId]
     );
   }
+}
+
+async function resolveOwnerUser(tx: TransactionExecutor, value: unknown) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) {
+    return tx.get<{ id: number }>(`SELECT id FROM users WHERE id = ? AND active != 0`, [Number(raw)]);
+  }
+  return tx.get<{ id: number }>(`SELECT id FROM users WHERE active != 0 AND (LOWER(name) = LOWER(?) OR LOWER(username) = LOWER(?))`, [raw, raw]);
 }
 
 async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: number) {
@@ -388,8 +399,9 @@ async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: n
 
   // Find customer by name or id from backup
   const customerName = data.customer_name || data.customerName;
-  const customer = await tx.get<{ id: number }>(`SELECT id FROM customers WHERE name = ? AND deleted_at IS NULL`, [customerName]);
+  const customer = await tx.get<{ id: number; owner_user_id?: number | null }>(`SELECT id, owner_user_id FROM customers WHERE name = ? AND deleted_at IS NULL`, [customerName]);
   if (!customer) throw new Error(`找不到订单关联的客户: ${customerName}`);
+  const assignedUserId = customer.owner_user_id || userId || null;
 
   const existing = await tx.get<{ id: number }>(`SELECT id FROM orders WHERE display_id = ?`, [displayId]);
   if (existing) {
@@ -401,7 +413,7 @@ async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: n
     await tx.run(
       `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, product_summary, details, created_by, updated_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [displayId, customer.id, data.status, taxMode, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, userId]
+      [displayId, customer.id, data.status, taxMode, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, assignedUserId, userId]
     );
   }
 }
@@ -421,11 +433,13 @@ async function importCustomer(tx: TransactionExecutor, data: ImportRowData, user
   }
 
   const displayId = `cust-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 8)}`;
+  const owner = await resolveOwnerUser(tx, data.ownerUserId || data.owner_user_id || data.ownerUserName || data.owner_user_name);
+  const ownerUserId = owner?.id || userId || null;
   
   await tx.run(
-    `INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, created_by, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [displayId, name, country, data.contact, data.sourceChannel, data.intentProducts, userId, userId]
+    `INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, owner_user_id, created_by, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [displayId, name, country, data.contact, data.sourceChannel, data.intentProducts, ownerUserId, userId, userId]
   );
 }
 
@@ -434,8 +448,9 @@ async function importOrder(tx: TransactionExecutor, data: ImportRowData, userId?
   if (!customerName) throw new Error('缺少必填项：客户名称');
 
   // Find customer
-  const customer = await tx.get<{ id: number }>(`SELECT id FROM customers WHERE name = ? AND deleted_at IS NULL`, [customerName]);
+  const customer = await tx.get<{ id: number; owner_user_id?: number | null }>(`SELECT id, owner_user_id FROM customers WHERE name = ? AND deleted_at IS NULL`, [customerName]);
   if (!customer) throw new Error(`未找到匹配的客户: ${customerName}`);
+  const assignedUserId = customer.owner_user_id || userId || null;
 
   let displayId = String(data.displayId || '').trim();
   if (!displayId) {
@@ -451,6 +466,6 @@ async function importOrder(tx: TransactionExecutor, data: ImportRowData, userId?
   await tx.run(
     `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, product_summary, details, created_by, updated_by)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [displayId, customer.id, status, taxMode, totalAmount, data.productSummary, data.details, userId, userId]
+    [displayId, customer.id, status, taxMode, totalAmount, data.productSummary, data.details, assignedUserId, userId]
   );
 }

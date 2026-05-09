@@ -21,6 +21,7 @@ export type DocumentSettings = {
 };
 
 export interface ManagedUser extends AuthUser {
+  active?: boolean;
   created_at?: string;
 }
 
@@ -32,6 +33,8 @@ export type CustomerListItem = {
   contact: string;
   source_channel?: string | null;
   intent_products?: string | null;
+  owner_user_id?: number | null;
+  owner_user_name?: string | null;
   order_count: number;
   created_by_name?: string | null;
 };

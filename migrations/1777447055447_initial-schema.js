@@ -36,11 +36,24 @@ export const up = (pgm) => {
       payment_terms TEXT,
       source_channel TEXT,
       intent_products TEXT,
+      owner_user_id INTEGER REFERENCES users(id),
       created_by INTEGER REFERENCES users(id),
       updated_by INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       deleted_at TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS customer_transfer_logs (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      from_user_id INTEGER REFERENCES users(id),
+      to_user_id INTEGER NOT NULL REFERENCES users(id),
+      reason TEXT NOT NULL,
+      sync_open_orders INTEGER DEFAULT 1,
+      sync_open_tasks INTEGER DEFAULT 1,
+      transferred_by INTEGER REFERENCES users(id),
+      transferred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS partners (

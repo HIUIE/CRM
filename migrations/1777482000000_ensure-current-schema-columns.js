@@ -22,11 +22,24 @@ export const up = (pgm) => {
       ADD COLUMN IF NOT EXISTS payment_terms TEXT,
       ADD COLUMN IF NOT EXISTS source_channel TEXT,
       ADD COLUMN IF NOT EXISTS intent_products TEXT,
+      ADD COLUMN IF NOT EXISTS owner_user_id INTEGER,
       ADD COLUMN IF NOT EXISTS created_by INTEGER,
       ADD COLUMN IF NOT EXISTS updated_by INTEGER,
       ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+    CREATE TABLE IF NOT EXISTS customer_transfer_logs (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      from_user_id INTEGER REFERENCES users(id),
+      to_user_id INTEGER NOT NULL REFERENCES users(id),
+      reason TEXT NOT NULL,
+      sync_open_orders INTEGER DEFAULT 1,
+      sync_open_tasks INTEGER DEFAULT 1,
+      transferred_by INTEGER REFERENCES users(id),
+      transferred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
     ALTER TABLE partners
       ADD COLUMN IF NOT EXISTS partner_type TEXT,

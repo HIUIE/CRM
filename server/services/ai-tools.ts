@@ -33,7 +33,7 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
     params: 'customer_id (客户ID), content (跟进内容), channel (渠道,如电话/邮件/会面, 可选)',
     mutating: true,
     handler: async (p, context) => {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'c');
+      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'c', 'owner_user_id');
       const customer = await dbGet<{ id: number; display_id: string; name: string }>(`SELECT id, display_id, name FROM customers c WHERE deleted_at IS NULL ${scopeSql} AND (id = ? OR display_id = ?)`, [...scopeParams, p.customer_id, p.customer_id]);
       if (!customer) return { success: false, message: `未找到客户"${p.customer_id}"或无权访问` };
       await dbRun(
@@ -128,7 +128,7 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
     description: '查看客户列表',
     params: 'keyword (关键词搜索, 可选)',
     handler: async (p, context) => {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'c');
+      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'c', 'owner_user_id');
       const sql = p.keyword
         ? `SELECT id, name, country FROM customers c WHERE deleted_at IS NULL ${scopeSql} AND (name LIKE ? OR country LIKE ?) ORDER BY created_at DESC LIMIT 10`
         : `SELECT id, name, country FROM customers c WHERE deleted_at IS NULL ${scopeSql} ORDER BY created_at DESC LIMIT 10`;

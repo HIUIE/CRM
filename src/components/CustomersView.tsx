@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Edit, Search, Trash2 } from 'lucide-react';
+import { Edit, Search, Trash2, UserRound } from 'lucide-react';
 import Field from './ui/Field';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigateWithTransition } from '../lib/transition';
@@ -20,6 +20,13 @@ import CountryDisplay from './ui/CountryDisplay';
 import { getCountryDisplay } from '../lib/countries';
 import type { CustomerListItem } from '../types/crm';
 
+type OwnerOption = {
+  id: number;
+  name: string;
+  username: string;
+  role: string;
+  active?: boolean;
+};
 
 type CustomerForm = {
   name: string;
@@ -27,6 +34,7 @@ type CustomerForm = {
   contact: string;
   sourceChannel: string;
   intentProducts: string;
+  ownerUserId: string;
 };
 
 const EMPTY_FORM: CustomerForm = {
@@ -35,6 +43,7 @@ const EMPTY_FORM: CustomerForm = {
   contact: '',
   sourceChannel: '',
   intentProducts: '',
+  ownerUserId: '',
 };
 
 export default function CustomersView() {
@@ -100,6 +109,18 @@ export default function CustomersView() {
   });
   const error = queryError ? getErrorMessage(queryError, '读取客户数据失败') : '';
 
+  const { data: ownerOptions = [] } = useQuery<OwnerOption[]>({
+    queryKey: ['users', 'customer-owner-options'],
+    queryFn: () => apiFetch<OwnerOption[]>('/api/users'),
+    enabled: user?.role === 'admin',
+    staleTime: 60_000,
+  });
+
+  const activeOwnerOptions = useMemo(
+    () => ownerOptions.filter((option) => option.active !== false),
+    [ownerOptions],
+  );
+
   const countryOptions = useMemo(
     () =>
       Array.from(
@@ -144,9 +165,10 @@ export default function CustomersView() {
   }, [searchParams]);
 
   const openCreate = () => {
+    const nextForm = { ...EMPTY_FORM, ownerUserId: user?.id ? String(user.id) : '' };
     setEditingCustomer(null);
-    setForm(EMPTY_FORM);
-    setInitialForm(EMPTY_FORM);
+    setForm(nextForm);
+    setInitialForm(nextForm);
     setFormError('');
     setFieldErrors({});
     setShowForm(true);
@@ -162,6 +184,7 @@ export default function CustomersView() {
       contact: customer.contact || '',
       sourceChannel: customer.source_channel || '',
       intentProducts: customer.intent_products || '',
+      ownerUserId: customer.owner_user_id ? String(customer.owner_user_id) : '',
     };
     setForm(newForm);
     setInitialForm(newForm);
@@ -198,6 +221,7 @@ export default function CustomersView() {
       contact: form.contact.trim(),
       sourceChannel: form.sourceChannel.trim(),
       intentProducts: form.intentProducts.trim(),
+      ...(user?.role === 'admin' && !editingCustomer && form.ownerUserId ? { ownerUserId: Number(form.ownerUserId) } : {}),
     };
 
     try {
@@ -296,7 +320,7 @@ export default function CustomersView() {
                     <th className="px-4 py-4 text-center">来源渠道</th>
                     <th className="px-4 py-4 text-left">联系方式</th>
                     <th className="px-4 py-4 text-right">订单数</th>
-                    <th className="px-4 py-4 text-center">创建人</th>
+                    <th className="px-4 py-4 text-center">负责人</th>
                     <th className="px-4 py-4 text-center">操作</th>
                   </tr>
                 </thead>
@@ -315,7 +339,12 @@ export default function CustomersView() {
                         <td className="px-4 py-4 text-center">{customer.source_channel ? <Chip tone="neutral">{customer.source_channel}</Chip> : '—'}</td>
                         <td className="px-4 py-4 text-left text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px]" title={customer.contact}>{customer.contact || '—'}</td>
                         <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-300 font-bold data-field">{customer.order_count || '—'}</td>
-                        <td className="px-4 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-500">{customer.created_by_name || '系统'}</td>
+                        <td className="px-4 py-4 text-center">
+                          <div className="inline-flex max-w-[140px] items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 px-2.5 py-1 text-xs font-bold text-slate-600 dark:text-slate-300">
+                            <UserRound size={12} className="shrink-0 text-slate-400" />
+                            <span className="truncate">{customer.owner_user_name || customer.created_by_name || '未分配'}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                             <button onClick={() => openEdit(customer)} className="rounded-lg border border-transparent p-2 text-secondary-slate dark:text-slate-400 transition-all hover:bg-surface dark:hover:bg-navy-800 hover:text-primary-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-navy-600 shadow-sm">
@@ -391,6 +420,23 @@ export default function CustomersView() {
             <Field label="联系方式">
               <input value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })} placeholder="姓名 / 邮箱 / 电话" className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none text-primary-navy dark:text-white" />
             </Field>
+            {user?.role === 'admin' && !editingCustomer ? (
+              <Field label="客户负责人">
+                <select
+                  value={form.ownerUserId}
+                  onChange={(event) => setForm({ ...form, ownerUserId: event.target.value })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
+                >
+                  <option value="">默认归属当前创建人</option>
+                  {activeOwnerOptions.map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      {owner.name || owner.username}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs font-medium text-slate-400 dark:text-slate-500">建档后如需变更负责人，请在客户详情页执行转交并留下原因。</p>
+              </Field>
+            ) : null}
             <Field label="客户来源渠道">
               <select value={form.sourceChannel} onChange={(event) => setForm({ ...form, sourceChannel: event.target.value })} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none cursor-pointer text-primary-navy dark:text-white">
                   <option value="">请选择来源...</option>
@@ -427,4 +473,3 @@ export default function CustomersView() {
     </div>
   );
 }
-

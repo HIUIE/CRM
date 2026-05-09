@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { maskContact } from '../lib/privacy';
 import { apiFetch, getErrorMessage } from '../lib/api';
-import type { OrderSummary, FinanceListRecord } from '../types/crm';
+import { useAuth } from '../context/AuthContext';
+import type { OrderSummary, FinanceListRecord, ManagedUser } from '../types/crm';
 import Chip from '../components/ui/Chip';
 import EmptyStateBoard from '../components/ui/EmptyStateBoard';
 import Toast from '../components/ui/Toast';
@@ -56,6 +57,17 @@ interface CustomerTask {
   source_order_display_id?: string | null;
 }
 
+interface CustomerTransferLog {
+  id: number;
+  from_user_name?: string | null;
+  to_user_name?: string | null;
+  transferred_by_name?: string | null;
+  reason: string;
+  sync_open_orders?: number | boolean;
+  sync_open_tasks?: number | boolean;
+  transferred_at: string;
+}
+
 interface CustomerDetailData {
   id: number;
   display_id: string;
@@ -64,6 +76,8 @@ interface CustomerDetailData {
   contact: string;
   source_channel?: string;
   intent_products?: string;
+  owner_user_id?: number | null;
+  owner_user_name?: string | null;
   created_by_name?: string;
   created_at: string;
   orders: any[];
@@ -72,6 +86,7 @@ interface CustomerDetailData {
   followups: CustomerFollowup[];
   contacts: CustomerContact[];
   tasks: CustomerTask[];
+  transfer_logs?: CustomerTransferLog[];
 }
 
 type TabKey = 'followups' | 'orders' | 'finance' | 'tasks' | 'contacts' | 'system_activities';
@@ -87,6 +102,7 @@ const LEAD_SOURCE_OPTIONS = [
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const navigate = useNavigateWithTransition();
   const [activeTab, setActiveTab] = useState<TabKey>('followups');
   const [toast, setToast] = useState('');
@@ -96,6 +112,15 @@ export default function CustomerDetailPage() {
   const [showOrderDrawer, setShowOrderDrawer] = useState(false);
   const [showFinanceDrawer, setShowFinanceDrawer] = useState(false);
   const [showContactDrawer, setShowContactDrawer] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    toUserId: '',
+    reason: '',
+    syncOpenOrders: true,
+    syncOpenTasks: true,
+  });
+  const [transferError, setTransferError] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
 
   // Inline Editing State
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -107,6 +132,18 @@ export default function CustomerDetailPage() {
   });
   const loading = isLoading;
   const error = queryError ? getErrorMessage(queryError, '读取客户画像失败') : '';
+
+  const { data: users = [] } = useQuery<ManagedUser[]>({
+    queryKey: ['users', 'customer-transfer-options'],
+    queryFn: () => apiFetch<ManagedUser[]>('/api/users'),
+    enabled: user?.role === 'admin',
+    staleTime: 60_000,
+  });
+
+  const transferUserOptions = useMemo(
+    () => users.filter((candidate) => candidate.active !== false && candidate.id !== data?.owner_user_id),
+    [data?.owner_user_id, users],
+  );
 
   const loadDetail = async () => {
     if (!id) return;
@@ -156,6 +193,50 @@ export default function CustomerDetailPage() {
       setToast(getErrorMessage(err, '发布失败'));
     } finally {
       setIsSubmittingFollowup(false);
+    }
+  };
+
+  const openTransferModal = () => {
+    setTransferForm({
+      toUserId: '',
+      reason: '',
+      syncOpenOrders: true,
+      syncOpenTasks: true,
+    });
+    setTransferError('');
+    setShowTransferModal(true);
+  };
+
+  const handleTransferCustomer = async () => {
+    if (!data) return;
+    setTransferError('');
+    if (!transferForm.toUserId) {
+      setTransferError('请选择新的客户负责人');
+      return;
+    }
+    if (!transferForm.reason.trim()) {
+      setTransferError('请填写转交原因，方便后续审计追溯');
+      return;
+    }
+    setIsTransferring(true);
+    try {
+      const result = await apiFetch<{ ordersUpdated: number; tasksUpdated: number }>(`/api/customers/${data.id}/transfer`, {
+        method: 'POST',
+        body: JSON.stringify({
+          toUserId: Number(transferForm.toUserId),
+          reason: transferForm.reason.trim(),
+          syncOpenOrders: transferForm.syncOpenOrders,
+          syncOpenTasks: transferForm.syncOpenTasks,
+        }),
+      });
+      setToast(`客户已转交，已同步 ${result.ordersUpdated} 个未完成订单、${result.tasksUpdated} 个待办任务`);
+      setShowTransferModal(false);
+      await loadDetail();
+      setTimeout(() => setToast(''), 3000);
+    } catch (err) {
+      setTransferError(getErrorMessage(err, '转交客户失败'));
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -282,9 +363,39 @@ export default function CustomerDetailPage() {
                 )}
               </div>
               <div className="mt-6 flex items-center justify-between text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight">
-                <span>归属人员：{data.created_by_name || '系统分配'}</span>
+                <span>归属人员：{data.owner_user_name || data.created_by_name || '系统分配'}</span>
                 <span>建档：{data.created_at ? formatDateOnly(data.created_at) : '—'}</span>
               </div>
+              {user?.role === 'admin' ? (
+                <button
+                  type="button"
+                  onClick={openTransferModal}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 px-4 py-2.5 text-xs font-extrabold text-primary-navy dark:text-tertiary-sage hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"
+                >
+                  <Users size={14} /> 转交客户负责人
+                </button>
+              ) : null}
+            </section>
+            <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm">
+              <h3 className="mb-4 text-xs font-extrabold tracking-tight text-primary-navy dark:text-white">归属变更记录</h3>
+              {data.transfer_logs?.length ? (
+                <div className="space-y-3">
+                  {data.transfer_logs.slice(0, 5).map((log) => (
+                    <div key={log.id} className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-3">
+                      <div className="mb-1 flex items-center justify-between gap-3 text-xs font-extrabold text-primary-navy dark:text-white">
+                        <span className="truncate">{log.from_user_name || '未分配'} → {log.to_user_name || '未知成员'}</span>
+                        <span className="shrink-0 text-slate-400 data-field">{formatDateOnly(log.transferred_at)}</span>
+                      </div>
+                      <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{log.reason}</p>
+                      <div className="mt-2 text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                        操作人：{log.transferred_by_name || '系统'} · {log.sync_open_orders ? '同步订单' : '不动订单'} · {log.sync_open_tasks ? '同步任务' : '不动任务'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950/50 px-4 py-6 text-center text-xs font-bold text-slate-400">暂无转交记录</div>
+              )}
             </section>
           </div>
 
@@ -562,6 +673,75 @@ export default function CustomerDetailPage() {
         onSuccess={loadDetail}
         customerId={data.id}
       />
+      {showTransferModal ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-lg border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 px-6 py-4">
+              <div>
+                <h3 className="text-base font-extrabold text-primary-navy dark:text-white">转交客户负责人</h3>
+                <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{data.name} · 当前负责人：{data.owner_user_name || '未分配'}</p>
+              </div>
+              <button type="button" onClick={() => setShowTransferModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-navy-800">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-5 px-6 py-5">
+              {transferError ? <div className="rounded-lg border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400">{transferError}</div> : null}
+              <label className="block">
+                <span className="mb-2 block text-xs font-extrabold text-slate-500 dark:text-slate-400">新负责人 *</span>
+                <select
+                  value={transferForm.toUserId}
+                  onChange={(event) => setTransferForm({ ...transferForm, toUserId: event.target.value })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none focus:border-primary-navy dark:focus:border-tertiary-sage"
+                >
+                  <option value="">请选择员工...</option>
+                  {transferUserOptions.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.name || candidate.username}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-extrabold text-slate-500 dark:text-slate-400">转交原因 *</span>
+                <textarea
+                  value={transferForm.reason}
+                  onChange={(event) => setTransferForm({ ...transferForm, reason: event.target.value })}
+                  rows={4}
+                  placeholder="例如：业务员离职、区域调整、客户移交给大客户经理..."
+                  className="w-full resize-y rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-950 px-4 py-3 text-sm font-medium text-primary-navy dark:text-white outline-none focus:border-primary-navy dark:focus:border-tertiary-sage"
+                />
+              </label>
+              <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-4">
+                <label className="mb-3 flex items-start gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={transferForm.syncOpenOrders}
+                    onChange={(event) => setTransferForm({ ...transferForm, syncOpenOrders: event.target.checked })}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                  />
+                  同步转交该客户未完成订单的负责人
+                </label>
+                <label className="flex items-start gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={transferForm.syncOpenTasks}
+                    onChange={(event) => setTransferForm({ ...transferForm, syncOpenTasks: event.target.checked })}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                  />
+                  同步转交该客户及未完成订单下的待办任务
+                </label>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-100 dark:border-navy-800 px-6 py-4">
+              <button type="button" onClick={() => setShowTransferModal(false)} className="rounded-lg border border-slate-200 dark:border-navy-800 px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800">取消</button>
+              <button type="button" disabled={isTransferring} onClick={() => void handleTransferCustomer()} className="btn-primary disabled:opacity-60">
+                {isTransferring ? '转交中...' : '确认转交'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );

@@ -11,7 +11,7 @@ async function canAccessEntity(user: AuthedRequest['user'], entityType: string, 
   // Staff users: verify they own or are assigned the linked entity
   const scopeQueries: Record<string, string> = {
     ORDER: `SELECT 1 FROM orders WHERE display_id = ? AND created_by = ? AND deleted_at IS NULL`,
-    CUSTOMER: `SELECT 1 FROM customers WHERE display_id = ? AND created_by = ? AND deleted_at IS NULL`,
+    CUSTOMER: `SELECT 1 FROM customers WHERE display_id = ? AND (owner_user_id = ? OR created_by = ?) AND deleted_at IS NULL`,
     FINANCE: `SELECT 1 FROM finance_records f LEFT JOIN orders o ON o.id = f.order_id WHERE f.id = ? AND (f.created_by = ? OR o.created_by = ?)`,
     LOGISTICS: `SELECT 1 FROM logistics_records l LEFT JOIN orders o ON o.id = l.order_id WHERE l.id = ? AND (l.created_by = ? OR o.created_by = ?)`,
     CUSTOMS: `SELECT 1 FROM customs_records c LEFT JOIN orders o ON o.id = c.order_id WHERE c.id = ? AND (c.created_by = ? OR o.created_by = ?)`,

@@ -23,6 +23,7 @@ type CustomerRow = Record<string, unknown> & {
   contact?: string | null;
   logistics_preference?: string | null;
   payment_terms?: string | null;
+  owner_user_name?: string | null;
   created_at?: string | null;
   order_count?: number;
 };
@@ -60,16 +61,39 @@ const LEGACY_EXPORTS: LegacyExportDefinition[] = [
         c.*,
         cu.name AS created_by_name,
         uu.name AS updated_by_name,
+        ou.name AS owner_user_name,
         COUNT(o.id) AS order_count
       FROM customers c
       LEFT JOIN users cu ON cu.id = c.created_by
       LEFT JOIN users uu ON uu.id = c.updated_by
+      LEFT JOIN users ou ON ou.id = c.owner_user_id
       LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL
       WHERE c.deleted_at IS NULL
-      GROUP BY c.id
+      GROUP BY c.id, cu.name, uu.name, ou.name
       ORDER BY c.id ASC
     `,
-    extraColumns: ['created_by_name', 'updated_by_name', 'order_count'],
+    extraColumns: ['created_by_name', 'updated_by_name', 'owner_user_name', 'order_count'],
+  },
+  {
+    table: 'customer_transfer_logs',
+    fileName: 'customer_transfer_logs.csv',
+    query: `
+      SELECT
+        ctl.*,
+        c.display_id AS customer_no,
+        c.name AS customer_name,
+        fu.name AS from_user_name,
+        tu.name AS to_user_name,
+        bu.name AS transferred_by_name
+      FROM customer_transfer_logs ctl
+      LEFT JOIN customers c ON c.id = ctl.customer_id
+      LEFT JOIN users fu ON fu.id = ctl.from_user_id
+      LEFT JOIN users tu ON tu.id = ctl.to_user_id
+      LEFT JOIN users bu ON bu.id = ctl.transferred_by
+      WHERE c.deleted_at IS NULL
+      ORDER BY ctl.transferred_at DESC, ctl.id DESC
+    `,
+    extraColumns: ['customer_no', 'customer_name', 'from_user_name', 'to_user_name', 'transferred_by_name'],
   },
   {
     table: 'partners',
@@ -431,11 +455,13 @@ async function getCustomersForArchive() {
   return dbAll<CustomerRow[]>(`
     SELECT
       c.*,
+      ou.name AS owner_user_name,
       COUNT(o.id) AS order_count
     FROM customers c
+    LEFT JOIN users ou ON ou.id = c.owner_user_id
     LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL
     WHERE c.deleted_at IS NULL
-    GROUP BY c.id
+    GROUP BY c.id, ou.name
     ORDER BY c.id ASC
   `);
 }

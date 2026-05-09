@@ -270,7 +270,7 @@ export function createDashboardRouter() {
       };
 
       // Total customer count
-      const customerCount = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL ${req.user?.role !== 'admin' ? ' AND created_by = ?' : ''}`, req.user?.role !== 'admin' ? [req.user?.id] : []);
+      const customerCount = await dbGet<{ count: number }>(`SELECT COUNT(*) AS count FROM customers WHERE deleted_at IS NULL ${req.user?.role !== 'admin' ? ' AND owner_user_id = ?' : ''}`, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
       // Risk detection: low margin (< 8%) and freight inversion
       const profitRows = await dbAll<{ order_id: number; display_id: string; customer_name: string; data: any }[]>(`

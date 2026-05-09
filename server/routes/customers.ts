@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { dbAll, dbGet, dbRun, SQL } from '../lib/db.js';
+import { dbAll, dbGet, dbRun, SQL, withTransaction } from '../lib/db.js';
 import { requireAdmin, requireAuth, type AuthedRequest, getDataScopeConstraint } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString, readPagination, buildLimitOffset, calculateSimilarity } from '../lib/values.js';
 import { logAction } from '../lib/audit.js';
+import { createNotification } from '../lib/notifications.js';
 
 function generateCustomerDisplayId() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -22,7 +23,7 @@ export function createCustomersRouter() {
     let whereSql = 'WHERE c.deleted_at IS NULL';
     const params: (string | number | null | undefined)[] = [];
 
-    const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
+    const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c', 'owner_user_id');
     whereSql += scopeSql;
     params.push(...scopeParams);
 
@@ -46,12 +47,14 @@ export function createCustomersRouter() {
         SELECT
           c.*,
           u.name AS created_by_name,
+          ou.name AS owner_user_name,
           COUNT(o.id) AS order_count
         FROM customers c
         LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL
         LEFT JOIN users u ON u.id = c.created_by
+        LEFT JOIN users ou ON ou.id = c.owner_user_id
         ${whereSql}
-        GROUP BY c.id
+        GROUP BY c.id, u.name, ou.name
         ORDER BY datetime(c.created_at) DESC, c.id DESC
         ${buildLimitOffset(readPagination(req.query as Record<string, unknown>), params)}
       `, params);
@@ -65,13 +68,14 @@ export function createCustomersRouter() {
     const customerIdOrDisplay = req.params.id as string;
     
     try {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c', 'owner_user_id');
       // Try by display_id first, then by id (PG can't compare int = text)
       const isNumeric = /^\d+$/.test(customerIdOrDisplay);
       const customer = await dbGet(`
-        SELECT c.*, u.name AS created_by_name
+        SELECT c.*, u.name AS created_by_name, ou.name AS owner_user_name
         FROM customers c
         LEFT JOIN users u ON u.id = c.created_by
+        LEFT JOIN users ou ON ou.id = c.owner_user_id
         WHERE c.deleted_at IS NULL
           ${scopeSql}
           AND (
@@ -86,7 +90,7 @@ export function createCustomersRouter() {
 
       const actualId = customer.id;
 
-      const [orders, finance_records, followups, system_activities, tasks, contacts] = await Promise.all([
+      const [orders, finance_records, followups, system_activities, tasks, contacts, transfer_logs] = await Promise.all([
         dbAll(`
           SELECT 
             id, display_id, status, total_amount, product_summary, created_at,
@@ -159,7 +163,7 @@ export function createCustomersRouter() {
             NULL as source_order_display_id
           FROM tasks t
           JOIN users u ON t.assignee_id = u.id
-          WHERE t.entity_type = 'CUSTOMER' AND t.entity_id = ?
+          WHERE t.entity_type = 'CUSTOMER' AND t.entity_id IN (?, ?)
           UNION ALL
           SELECT
             t.*,
@@ -172,11 +176,20 @@ export function createCustomersRouter() {
           JOIN orders o ON t.entity_type = 'ORDER' AND t.entity_id = o.display_id
           WHERE o.customer_id = ? AND o.deleted_at IS NULL
           ORDER BY due_date ASC, created_at DESC
-        `, [actualId, actualId]),
-        dbAll(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId])
+        `, [String(actualId), customer.display_id || String(actualId), actualId]),
+        dbAll(`SELECT * FROM customer_contacts WHERE customer_id = ?`, [actualId]),
+        dbAll(`
+          SELECT ctl.*, fu.name AS from_user_name, tu.name AS to_user_name, bu.name AS transferred_by_name
+          FROM customer_transfer_logs ctl
+          LEFT JOIN users fu ON fu.id = ctl.from_user_id
+          LEFT JOIN users tu ON tu.id = ctl.to_user_id
+          LEFT JOIN users bu ON bu.id = ctl.transferred_by
+          WHERE ctl.customer_id = ?
+          ORDER BY datetime(ctl.transferred_at) DESC, ctl.id DESC
+        `, [actualId])
       ]);
 
-      res.json({ ...customer, orders, finance_records, system_activities, followups, contacts, tasks });
+      res.json({ ...customer, orders, finance_records, system_activities, followups, contacts, tasks, transfer_logs });
     } catch (error) {
       return handleRouteError(res, error, '读取客户详情失败');
     }
@@ -188,6 +201,7 @@ export function createCustomersRouter() {
     const contact = readString(req.body?.contact);
     const sourceChannel = readString(req.body?.sourceChannel);
     const intentProducts = readString(req.body?.intentProducts);
+    const requestedOwnerId = Number(req.body?.ownerUserId || req.body?.owner_user_id);
 
     if (!name || !country) {
       return fail(res, 400, '请完整填写客户名称和国家信息', 'INVALID_CUSTOMER_PAYLOAD');
@@ -203,13 +217,19 @@ export function createCustomersRouter() {
       }
 
       const displayId = generateCustomerDisplayId();
+      let ownerUserId = req.user?.id || null;
+      if (req.user?.role === 'admin' && Number.isInteger(requestedOwnerId) && requestedOwnerId > 0) {
+        const owner = await dbGet<{ id: number }>(`SELECT id FROM users WHERE id = ? AND active != 0`, [requestedOwnerId]);
+        if (!owner) return fail(res, 400, '客户负责人无效或已停用', 'INVALID_CUSTOMER_OWNER');
+        ownerUserId = owner.id;
+      }
       const result = await dbRun(
         `
-          INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, created_by, updated_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO customers (display_id, name, country, contact, source_channel, intent_products, owner_user_id, created_by, updated_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING id
         `,
-        [displayId, name, country, contact, sourceChannel, intentProducts, req.user?.id || null, req.user?.id || null],
+        [displayId, name, country, contact, sourceChannel, intentProducts, ownerUserId, req.user?.id || null, req.user?.id || null],
       );
 
       const customerId = result.lastID;
@@ -220,7 +240,7 @@ export function createCustomersRouter() {
         action: 'CREATE',
         entityType: 'CUSTOMER',
         entityId: customerId,
-        newValue: { name, country, contact, sourceChannel, intentProducts, display_id: displayId }
+        newValue: { name, country, contact, sourceChannel, intentProducts, ownerUserId, display_id: displayId }
       });
 
       res.status(201).json({ id: customerId, displayId });
@@ -236,7 +256,7 @@ export function createCustomersRouter() {
     if (!content) return fail(res, 400, '请输入跟进内容');
 
     try {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c', 'owner_user_id');
       const customer = await dbGet(`SELECT id FROM customers c WHERE c.deleted_at IS NULL ${scopeSql} AND (c.id = ? OR c.display_id = ?)`, [...scopeParams, customerId, customerId]);
       if (!customer) return fail(res, 404, '客户不存在');
 
@@ -267,7 +287,7 @@ export function createCustomersRouter() {
     }
 
     try {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c');
+      const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'c', 'owner_user_id');
       const oldVal = await dbGet(`SELECT * FROM customers c WHERE c.deleted_at IS NULL ${scopeSql} AND (c.id = ? OR c.display_id = ?)`, [...scopeParams, customerId, String(req.params.id)]);
       if (!oldVal) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
 
@@ -293,6 +313,78 @@ export function createCustomersRouter() {
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新客户失败');
+    }
+  });
+
+  router.post('/:id/transfer', requireAdmin, async (req: AuthedRequest, res) => {
+    const customerId = Number(req.params.id);
+    const toUserId = Number(req.body?.toUserId || req.body?.to_user_id);
+    const reason = readString(req.body?.reason, 1000);
+    const syncOpenOrders = req.body?.syncOpenOrders !== false;
+    const syncOpenTasks = req.body?.syncOpenTasks !== false;
+    if (!Number.isInteger(customerId) || customerId <= 0) return fail(res, 400, '无效的客户编号', 'INVALID_CUSTOMER_ID');
+    if (!Number.isInteger(toUserId) || toUserId <= 0) return fail(res, 400, '请选择新负责人', 'INVALID_OWNER');
+    if (!reason) return fail(res, 400, '请填写转交原因', 'TRANSFER_REASON_REQUIRED');
+
+    try {
+      const customer = await dbGet<{ id: number; display_id: string; name: string; owner_user_id: number | null }>(
+        `SELECT id, display_id, name, owner_user_id FROM customers WHERE id = ? AND deleted_at IS NULL`,
+        [customerId],
+      );
+      if (!customer) return fail(res, 404, '客户不存在', 'CUSTOMER_NOT_FOUND');
+      if (customer.owner_user_id === toUserId) return fail(res, 409, '新负责人不能与当前负责人相同', 'SAME_OWNER');
+      const toUser = await dbGet<{ id: number; name: string; active: number }>(
+        `SELECT id, name, active FROM users WHERE id = ? AND active != 0`,
+        [toUserId],
+      );
+      if (!toUser) return fail(res, 400, '新负责人无效或已停用', 'INVALID_OWNER');
+
+      const result = await withTransaction(async (tx) => {
+        await tx.run(`UPDATE customers SET owner_user_id = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [toUserId, req.user?.id || null, customer.id]);
+        const log = await tx.run(
+          `INSERT INTO customer_transfer_logs (customer_id, from_user_id, to_user_id, reason, sync_open_orders, sync_open_tasks, transferred_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+          [customer.id, customer.owner_user_id || null, toUserId, reason, syncOpenOrders ? 1 : 0, syncOpenTasks ? 1 : 0, req.user?.id || null],
+        );
+        let ordersUpdated = 0;
+        let tasksUpdated = 0;
+        if (syncOpenOrders) {
+          const orderUpdate = await tx.run(
+            `UPDATE orders SET created_by = ?, updated_by = ? WHERE customer_id = ? AND deleted_at IS NULL AND status != 'completed'`,
+            [toUserId, req.user?.id || null, customer.id],
+          );
+          ordersUpdated = orderUpdate.changes || 0;
+        }
+        if (syncOpenTasks) {
+          const taskUpdate = await tx.run(
+            `UPDATE tasks SET assignee_id = ? WHERE status != 'done' AND (
+              (entity_type = 'CUSTOMER' AND entity_id IN (?, ?))
+              OR (entity_type = 'ORDER' AND entity_id IN (SELECT display_id FROM orders WHERE customer_id = ? AND deleted_at IS NULL AND status != 'completed'))
+            )`,
+            [toUserId, customer.display_id || String(customer.id), String(customer.id), customer.id],
+          );
+          tasksUpdated = taskUpdate.changes || 0;
+        }
+        return { transferLogId: log.lastID, ordersUpdated, tasksUpdated };
+      });
+
+      await createNotification({
+        userId: toUserId,
+        title: '收到新客户',
+        message: `你收到一个新客户：${customer.name}。${result.ordersUpdated} 个未完成订单、${result.tasksUpdated} 个待办任务已同步转交。`,
+        link: `/customers/detail/${String(customer.display_id || customer.id).toLowerCase()}`,
+      });
+      await logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'UPDATE',
+        entityType: 'CUSTOMER',
+        entityId: customer.id,
+        newValue: { action: 'transfer_customer', fromUserId: customer.owner_user_id, toUserId, reason, syncOpenOrders, syncOpenTasks, ...result },
+      });
+      res.json({ success: true, ...result });
+    } catch (error) {
+      return handleRouteError(res, error, '转交客户失败');
     }
   });
 

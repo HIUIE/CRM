@@ -18,6 +18,7 @@ const TABLE_SET = new Set<string>();
 const TABLES = [
   'users',
   'customers',
+  'customer_transfer_logs',
   'partners',
   'orders',
   'order_items',

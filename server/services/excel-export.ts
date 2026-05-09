@@ -83,8 +83,29 @@ export async function buildExcelWorkbook() {
     LEFT JOIN orders o ON o.id = pr.order_id WHERE o.deleted_at IS NULL ORDER BY pr.id ASC
   `);
   await addDataSheet(wb, '客户', `
-    SELECT c.*, COUNT(o.id) AS order_count FROM customers c
-    LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL WHERE c.deleted_at IS NULL GROUP BY c.id ORDER BY c.id ASC
+    SELECT c.*, ou.name AS owner_user_name, COUNT(o.id) AS order_count
+    FROM customers c
+    LEFT JOIN users ou ON ou.id = c.owner_user_id
+    LEFT JOIN orders o ON o.customer_id = c.id AND o.deleted_at IS NULL
+    WHERE c.deleted_at IS NULL
+    GROUP BY c.id, ou.name
+    ORDER BY c.id ASC
+  `);
+  await addDataSheet(wb, '客户转交记录', `
+    SELECT
+      ctl.*,
+      c.display_id AS customer_no,
+      c.name AS customer_name,
+      fu.name AS from_user_name,
+      tu.name AS to_user_name,
+      bu.name AS transferred_by_name
+    FROM customer_transfer_logs ctl
+    LEFT JOIN customers c ON c.id = ctl.customer_id
+    LEFT JOIN users fu ON fu.id = ctl.from_user_id
+    LEFT JOIN users tu ON tu.id = ctl.to_user_id
+    LEFT JOIN users bu ON bu.id = ctl.transferred_by
+    WHERE c.deleted_at IS NULL
+    ORDER BY ctl.transferred_at DESC, ctl.id DESC
   `);
   await addDataSheet(wb, '合作伙伴', `
     SELECT p.*, u.name AS created_by FROM partners p
@@ -128,6 +149,7 @@ export async function buildCustomerXlsx(customer: Record<string, unknown>, order
     ['客户编号', customer.display_id],
     ['来源渠道', customer.source_channel],
     ['意向产品', customer.intent_products],
+    ['客户负责人', customer.owner_user_name || customer.owner_user_id],
     ['建档时间', customer.created_at],
     ['关联订单数', String(orders.length)],
   ];
@@ -158,6 +180,26 @@ export async function buildCustomerXlsx(customer: Record<string, unknown>, order
     cols.forEach((c, i) => ws.getRow(1).getCell(i + 1).style = HEADER_STYLE);
     followups.forEach((r: any, idx: number) => {
       const row = ws.addRow({ content: r.content, channel: r.channel, created_by_name: r.created_by_name, created_at: r.created_at });
+      if (idx % 2 === 1) row.eachCell(cell => { cell.style = ALT_ROW_FILL; });
+    });
+  }
+
+  const transferLogs = await dbAll(`
+    SELECT ctl.*, fu.name AS from_user_name, tu.name AS to_user_name, bu.name AS transferred_by_name
+    FROM customer_transfer_logs ctl
+    LEFT JOIN users fu ON fu.id = ctl.from_user_id
+    LEFT JOIN users tu ON tu.id = ctl.to_user_id
+    LEFT JOIN users bu ON bu.id = ctl.transferred_by
+    WHERE ctl.customer_id = ?
+    ORDER BY datetime(ctl.transferred_at) DESC, ctl.id DESC
+  `, [customer.id]);
+  if (transferLogs.length) {
+    const ws = wb.addWorksheet('归属变更记录', { properties: { tabColor: { argb: 'FF0F172A' } } });
+    const cols = Object.keys(transferLogs[0]);
+    ws.columns = cols.map(c => ({ header: c, key: c, width: 22 }));
+    cols.forEach((c, i) => ws.getRow(1).getCell(i + 1).style = HEADER_STYLE);
+    transferLogs.forEach((r: any, idx: number) => {
+      const row = ws.addRow(r);
       if (idx % 2 === 1) row.eachCell(cell => { cell.style = ALT_ROW_FILL; });
     });
   }

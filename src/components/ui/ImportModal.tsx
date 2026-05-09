@@ -16,6 +16,7 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     contact: '联系方式',
     sourceChannel: '来源渠道',
     intentProducts: '意向产品',
+    ownerUserName: '客户负责人',
   },
   ORDER: {
     customerName: '客户名称 (必填, 需匹配已有客户)',
