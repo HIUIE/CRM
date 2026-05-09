@@ -6,7 +6,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import { requireAdmin, requireAuth, type AuthedRequest, checkOrderAccess } from '../lib/auth.js';
-import { buildAttachmentUrl } from '../lib/files.js';
+import { buildAttachmentUrl, validateFileMagicBytes } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
 import { bindAttachmentsToEntity, getAttachmentsByEntity } from '../services/attachments.js';
@@ -145,7 +145,7 @@ export function createCustomsRouter() {
           req.user?.id || null,
         ],
       );
-      await bindAttachmentsToEntity('customs', created.lastID as number, result.payload.attachmentIds);
+      await bindAttachmentsToEntity('customs', created.lastID as number, result.payload.attachmentIds, req.user);
       res.status(201).json({ id: created.lastID });
     } catch (error) {
       return handleRouteError(res, error, '保存报关信息失败');
@@ -191,7 +191,7 @@ export function createCustomsRouter() {
           customsId,
         ],
       );
-      await bindAttachmentsToEntity('customs', customsId, result.payload.attachmentIds);
+      await bindAttachmentsToEntity('customs', customsId, result.payload.attachmentIds, req.user);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新报关信息失败');
@@ -204,9 +204,12 @@ export function createCustomsRouter() {
       return fail(res, 400, '报关记录编号无效', 'INVALID_CUSTOMS_ID');
     }
 
-    const existing = await dbGet<{ id: number }>(`SELECT id FROM customs_records WHERE id = ?`, [customsId]);
+    const existing = await dbGet<{ id: number; order_id: number }>(`SELECT id, order_id FROM customs_records WHERE id = ?`, [customsId]);
     if (!existing) {
       return fail(res, 404, '报关记录不存在', 'CUSTOMS_NOT_FOUND');
+    }
+    if (!(await checkOrderAccess(req as AuthedRequest, existing.order_id))) {
+      return fail(res, 403, '无权向该报关记录上传附件', 'CUSTOMS_ACCESS_DENIED');
     }
 
     const files = (req.files as Express.Multer.File[]) || [];
@@ -218,13 +221,18 @@ export function createCustomsRouter() {
       const uploaded = [];
       for (const file of files) {
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        const magicValid = await validateFileMagicBytes(file.path, file.mimetype);
+        if (!magicValid) {
+          await fs.unlink(file.path).catch(() => {});
+          return fail(res, 400, `文件类型不匹配: ${originalName}`, 'FILE_MAGIC_MISMATCH');
+        }
         const result = await dbRun(
           `
-            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, uploaded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
           `,
-          ['customs', customsId, originalName, file.filename, file.mimetype, file.size, file.filename],
+          ['customs', customsId, originalName, file.filename, file.mimetype, file.size, file.filename, (req as AuthedRequest).user?.id || null],
         );
         uploaded.push({
           id: result.lastID,

@@ -6,7 +6,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import { checkOrderAccess, requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
-import { buildAttachmentUrl, resolveAttachmentAbsolutePath } from '../lib/files.js';
+import { buildAttachmentUrl, resolveAttachmentAbsolutePath, validateFileMagicBytes } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { UPLOADS_DIR } from '../paths.js';
 import { bindAttachmentsToEntity, getAttachmentsByEntity, deleteAttachmentRows } from '../services/attachments.js';
@@ -181,7 +181,7 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
           req.user?.id || null,
         ],
       );
-      await bindAttachmentsToEntity('logistics', created.lastID as number, result.payload.attachmentIds);
+      await bindAttachmentsToEntity('logistics', created.lastID as number, result.payload.attachmentIds, req.user);
       res.status(201).json({ id: created.lastID });
     } catch (error) {
       return handleRouteError(res, error, '保存物流数据失败');
@@ -244,7 +244,7 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
       if (!updated.changes) {
         return fail(res, 404, '物流记录不存在', 'LOGISTICS_NOT_FOUND');
       }
-      await bindAttachmentsToEntity('logistics', recordId, result.payload.attachmentIds);
+      await bindAttachmentsToEntity('logistics', recordId, result.payload.attachmentIds, req.user);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新物流记录失败');
@@ -318,13 +318,18 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     try {
       const uploaded = [];
       for (const file of files) {
+        const magicValid = await validateFileMagicBytes(file.path, file.mimetype);
+        if (!magicValid) {
+          await fs.unlink(file.path).catch(() => {});
+          return fail(res, 400, `文件类型不匹配: ${file.originalname}`, 'FILE_MAGIC_MISMATCH');
+        }
         const result = await dbRun(
           `
-            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, uploaded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
           `,
-          [null, null, file.originalname, file.filename, file.mimetype, file.size, file.filename],
+          [null, null, file.originalname, file.filename, file.mimetype, file.size, file.filename, (req as AuthedRequest).user?.id || null],
         );
         uploaded.push({
           id: result.lastID,

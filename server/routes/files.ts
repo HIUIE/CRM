@@ -70,7 +70,8 @@ export function createFilesRouter() {
         file_path: string;
         entity_type: string | null;
         entity_id: string | null;
-      }>(`SELECT file_name, stored_name, mime_type, file_path, entity_type, entity_id FROM attachments WHERE id = ?`, [attachmentId]);
+        uploaded_by: number | null;
+      }>(`SELECT file_name, stored_name, mime_type, file_path, entity_type, entity_id, uploaded_by FROM attachments WHERE id = ?`, [attachmentId]);
 
       if (!attachment) {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
@@ -86,7 +87,11 @@ export function createFilesRouter() {
         return fail(res, 404, '附件不存在', 'ATTACHMENT_NOT_FOUND');
       }
 
-      if (attachment.entity_type && attachment.entity_id && !(await canAccessEntity(authUser, attachment.entity_type, attachment.entity_id))) {
+      if (!attachment.entity_type || !attachment.entity_id) {
+        if (authUser?.role !== 'admin' && attachment.uploaded_by !== authUser?.id) {
+          return fail(res, 403, '无权访问此附件', 'ATTACHMENT_ACCESS_DENIED');
+        }
+      } else if (!(await canAccessEntity(authUser, attachment.entity_type, attachment.entity_id))) {
         return fail(res, 403, '无权访问此附件', 'ATTACHMENT_ACCESS_DENIED');
       }
 

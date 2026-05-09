@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import { dbAll, dbRun } from '../lib/db.js';
 import type { AttachmentEntityType } from '../domain.js';
 import { buildAttachmentUrl, getStoredNameFromRecord, resolveAttachmentAbsolutePath } from '../lib/files.js';
+import type { AuthUser } from '../lib/auth.js';
 
 export async function getAttachmentsByEntity(entityType: AttachmentEntityType, entityIds: number[]) {
   if (!entityIds.length) {
@@ -43,7 +44,7 @@ export async function getAttachmentsByEntity(entityType: AttachmentEntityType, e
   return grouped;
 }
 
-export async function bindAttachmentsToEntity(entityType: AttachmentEntityType, entityId: number, attachmentIds: number[]) {
+export async function bindAttachmentsToEntity(entityType: AttachmentEntityType, entityId: number, attachmentIds: number[], user?: AuthUser) {
   // First, unbind all currently bound attachments for this entity that are NOT in the new list
   const placeholders = attachmentIds.length > 0 ? attachmentIds.map(() => '?').join(', ') : null;
   const unbindSql = placeholders 
@@ -55,14 +56,17 @@ export async function bindAttachmentsToEntity(entityType: AttachmentEntityType, 
 
   if (attachmentIds.length > 0) {
     const bindPlaceholders = attachmentIds.map(() => '?').join(', ');
+    const ownerGuard = user?.role === 'admin' ? '' : 'AND (entity_type IS NOT NULL OR uploaded_by = ?)';
+    const ownerParams = user?.role === 'admin' ? [] : [user?.id || -1];
     await dbRun(
       `
         UPDATE attachments
         SET entity_type = ?, entity_id = ?
         WHERE id IN (${bindPlaceholders})
           AND (entity_type IS NULL OR (entity_type = ? AND entity_id = ?))
+          ${ownerGuard}
       `,
-      [entityType, entityId, ...attachmentIds, entityType, entityId],
+      [entityType, entityId, ...attachmentIds, entityType, entityId, ...ownerParams],
     );
   }
 }

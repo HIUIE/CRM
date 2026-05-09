@@ -145,11 +145,11 @@ export function createAttachmentsRouter() {
         }
         const result = await dbRun(
           `
-            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, remark)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO attachments (entity_type, entity_id, file_name, stored_name, mime_type, file_size, file_path, remark, uploaded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
           `,
-          [entityType, entityId, originalName, file.filename, file.mimetype, file.size, relativePath, remark],
+          [entityType, entityId, originalName, file.filename, file.mimetype, file.size, relativePath, remark, req.user?.id || null],
         );
         uploaded.push({
           id: result.lastID,

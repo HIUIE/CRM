@@ -105,7 +105,7 @@ export function createFinanceRouter() {
           snapshot,
         ],
       );
-      await bindAttachmentsToEntity('finance', created.lastID as number, result.payload.attachmentIds);
+      await bindAttachmentsToEntity('finance', created.lastID as number, result.payload.attachmentIds, req.user);
 
       await logAction({
         userId: req.user?.id || null,
@@ -173,7 +173,7 @@ export function createFinanceRouter() {
         await dbRun(`UPDATE orders SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [result.payload.orderId]);
       }
 
-      await bindAttachmentsToEntity('finance', recordId, result.payload.attachmentIds);
+      await bindAttachmentsToEntity('finance', recordId, result.payload.attachmentIds, req.user);
       res.json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '更新财务记录失败');

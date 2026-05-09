@@ -387,7 +387,7 @@ export function createOrdersRouter() {
     if ('error' in result) return fail(res, 400, result.error!);
     try {
       const created = await dbRun(`INSERT INTO production_logs (plan_id, content, log_date, created_by) VALUES (?, ?, ?, ?) RETURNING id`, [planId, result.payload.content, result.payload.logDate || null, req.user?.id || null]);
-      await bindAttachmentsToEntity('production_log', created.lastID as number, result.payload.attachmentIds);
+      await bindAttachmentsToEntity('production_log', created.lastID as number, result.payload.attachmentIds, req.user);
       res.status(201).json({ success: true });
     } catch (error) {
       return handleRouteError(res, error, '添加失败');
@@ -572,7 +572,7 @@ export function createOrdersRouter() {
       const created = await dbRun(`INSERT INTO production_plans (order_id, partner_id, order_date, estimated_delivery_date, production_status, inspection_status, remark, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
         [orderId, result.payload.partnerId, result.payload.orderDate || null, result.payload.estimatedDeliveryDate || null, result.payload.productionStatus, result.payload.inspectionStatus, result.payload.remark, req.user?.id || null, req.user?.id || null]);
       if (Array.isArray(req.body?.attachmentIds)) {
-        await bindAttachmentsToEntity('production_photo', orderId, result.payload.attachmentIds);
+        await bindAttachmentsToEntity('production_photo', orderId, result.payload.attachmentIds, req.user);
       }
       res.status(201).json({ id: created.lastID });
     } catch (error) {
@@ -615,7 +615,7 @@ export function createOrdersRouter() {
         ]
       );
       if (Array.isArray(req.body?.attachmentIds)) {
-        await bindAttachmentsToEntity('production_photo', existing.order_id, result.payload.attachmentIds);
+        await bindAttachmentsToEntity('production_photo', existing.order_id, result.payload.attachmentIds, req.user);
       }
       res.json({ success: true });
     } catch (error) {
