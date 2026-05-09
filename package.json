@@ -1,7 +1,7 @@
 {
   "name": "smarttrade-ai-crm",
   "private": true,
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "SmartTrade AI CRM — 外贸订单与利润管理工作台",
   "author": "SmartTrade",
   "type": "module",
