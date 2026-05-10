@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Edit, Search, Trash2, Hash, CheckSquare, Square, CheckCircle } from 'lucide-react';
+import { Edit, Search, Trash2, Hash, CheckSquare, Square, CheckCircle, UserRound, X } from 'lucide-react';
 import Field from './ui/Field';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigateWithTransition } from '../lib/transition';
@@ -16,7 +16,7 @@ import { usePagination } from '../hooks/usePagination';
 import { Combobox } from './ui/Combobox';
 import { getRangeDates } from '../lib/date';
 import type { StandardTimeRange } from '../lib/date';
-import type { CustomerListItem, OrderSummary, TaxMode } from '../types/crm';
+import type { CustomerListItem, ManagedUser, OrderSummary, TaxMode } from '../types/crm';
 import { TAX_MODE_OPTIONS, getTaxModeMeta, normalizeTaxMode } from '../features/order-detail/utils';
 
 
@@ -75,6 +75,7 @@ export default function OrdersView() {
   const q = searchParams.get('q') || '';
   const status = searchParams.get('status') || '';
   const taxMode = searchParams.get('tax_mode') || '';
+  const ownerFilter = searchParams.get('owner_user_id') || '';
   const timeRange = searchParams.get('timeRange') || 'all';
 
   const updateParam = (key: string, val: string) => {
@@ -118,8 +119,20 @@ export default function OrdersView() {
     queryFn: () => apiFetch<CustomerListItem[]>('/api/customers'),
     staleTime: 5 * 60 * 1000,
   });
+  const { data: users = [] } = useQuery<ManagedUser[]>({
+    queryKey: ['users', 'order-owner-options'],
+    queryFn: () => apiFetch<ManagedUser[]>('/api/users'),
+    enabled: user?.role === 'admin',
+    staleTime: 60_000,
+  });
   const loading = ordersLoading || customersLoading;
   const error = ordersError ? getErrorMessage(ordersError, '读取数据失败') : customersError ? getErrorMessage(customersError, '读取数据失败') : '';
+  const activeOwnerOptions = users.filter((item) => item.active !== false);
+  const ownerFilterLabel = ownerFilter === 'me'
+    ? '我的订单'
+    : ownerFilter === 'unassigned'
+      ? '未分配订单'
+      : activeOwnerOptions.find(item => String(item.id) === ownerFilter)?.name || '';
 
   const {
     currentPage,
@@ -130,6 +143,10 @@ export default function OrdersView() {
     setCurrentPage,
     setPageSize,
   } = usePagination(orders);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [q, status, taxMode, ownerFilter, timeRange, setCurrentPage]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === currentItems.length && currentItems.length > 0) {
@@ -264,10 +281,15 @@ export default function OrdersView() {
     }
   };
 
+  const clearFilters = () => {
+    setSearchInput('');
+    setSearchParams(new URLSearchParams());
+  };
+
   return (
     <div className="flex flex-col space-y-4 animate-page-in">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm transition-colors text-primary-navy dark:text-white">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_220px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px_220px_220px]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
@@ -303,10 +325,32 @@ export default function OrdersView() {
                ))}
              </select>
           </div>
+          <div className="relative">
+             <select
+               value={ownerFilter}
+               onChange={e => updateParam('owner_user_id', e.target.value)}
+               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 px-4 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none cursor-pointer text-primary-navy dark:text-white"
+             >
+               <option value="">全部负责人</option>
+               <option value="me">我的订单</option>
+               {user?.role === 'admin' ? <option value="unassigned">未分配订单</option> : null}
+               {user?.role === 'admin' ? activeOwnerOptions.map(owner => (
+                 <option key={owner.id} value={owner.id}>{owner.name || owner.username}</option>
+               )) : null}
+             </select>
+          </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <TimeRangeFilter value={timeRange} onChange={(key) => updateParam('timeRange', key)} />
+          {ownerFilterLabel ? <ActiveFilter label={`负责人：${ownerFilterLabel}`} onClear={() => updateParam('owner_user_id', '')} /> : null}
+          {status ? <ActiveFilter label={`状态：${getOrderStatusMeta(status).label}`} onClear={() => updateParam('status', '')} /> : null}
+          {taxMode ? <ActiveFilter label={`业务模式：${getTaxModeMeta(taxMode as TaxMode).shortLabel}`} onClear={() => updateParam('tax_mode', '')} /> : null}
+          {(q || status || taxMode || ownerFilter || timeRange !== 'all') ? (
+            <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition-colors hover:border-primary-navy hover:text-primary-navy dark:border-navy-800 dark:text-slate-400 dark:hover:border-tertiary-sage dark:hover:text-tertiary-sage">
+              <X size={12} /> 清空筛选
+            </button>
+          ) : null}
         </div>
         {error && <div className="mt-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-800/30 font-bold">{error}</div>}
       </section>
@@ -345,6 +389,7 @@ export default function OrdersView() {
                     <th className="px-4 py-4 text-left">客户 / 国家</th>
                     <th className="px-4 py-4 text-left">产品摘要</th>
                     <th className="px-4 py-4 text-left">业务模式</th>
+                    <th className="px-4 py-4 text-center">负责人</th>
                     <th className="px-4 py-4 text-right">金额</th>
                     <th className="px-4 py-4 text-right">收款进度</th>
                     <th className="px-4 py-4 text-center">操作</th>
@@ -388,6 +433,15 @@ export default function OrdersView() {
                           </div>
                           <div className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500">{taxModeMeta.value}</div>
                         </td>
+                        <td className="px-4 py-4 text-center">
+                          <div className="inline-flex max-w-[140px] items-center gap-1.5 rounded-full border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950 px-2.5 py-1 text-xs font-bold text-slate-600 dark:text-slate-300">
+                            <UserRound size={12} className="shrink-0 text-slate-400" />
+                            <span className="truncate">{o.created_by_name || '未分配'}</span>
+                          </div>
+                          {o.customer_owner_user_name && o.customer_owner_user_name !== o.created_by_name ? (
+                            <div className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500">客户：{o.customer_owner_user_name}</div>
+                          ) : null}
+                        </td>
                         <td className="px-4 py-4 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
                         <td className="px-4 py-4 text-right">
                            <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
@@ -408,7 +462,7 @@ export default function OrdersView() {
                         </td>
                       </tr>
                     );
-                  }) : <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight text-xs">暂无订单记录。</td></tr>}
+                  }) : <tr><td colSpan={9} className="px-4 py-12 text-center text-slate-400 font-bold tracking-tight text-xs">暂无订单记录。</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -527,4 +581,15 @@ export default function OrdersView() {
 function formatDateOnly(v: string) {
   if (!v) return '—';
   return v.split(' ')[0];
+}
+
+function ActiveFilter({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-300">
+      {label}
+      <button type="button" onClick={onClear} className="rounded-full p-0.5 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/40" aria-label={`清除${label}`}>
+        <X size={12} />
+      </button>
+    </span>
+  );
 }

@@ -19,6 +19,7 @@ export function createCustomersRouter() {
     const q = readString(req.query.q);
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
+    const ownerUserIdRaw = readString(req.query.owner_user_id || req.query.ownerUserId);
 
     let whereSql = 'WHERE c.deleted_at IS NULL';
     const params: (string | number | null | undefined)[] = [];
@@ -40,6 +41,20 @@ export function createCustomersRouter() {
       // P11: Ensure end_date covers the full day (23:59:59)
       whereSql += ` AND c.created_at <= ?`;
       params.push(`${endDate} 23:59:59`);
+    }
+    if (ownerUserIdRaw) {
+      if (ownerUserIdRaw === 'me' && req.user?.id) {
+        whereSql += ` AND c.owner_user_id = ?`;
+        params.push(req.user.id);
+      } else if (ownerUserIdRaw === 'unassigned') {
+        whereSql += ` AND c.owner_user_id IS NULL`;
+      } else if (req.user?.role === 'admin') {
+        const ownerUserId = Number(ownerUserIdRaw);
+        if (Number.isInteger(ownerUserId) && ownerUserId > 0) {
+          whereSql += ` AND c.owner_user_id = ?`;
+          params.push(ownerUserId);
+        }
+      }
     }
 
     try {

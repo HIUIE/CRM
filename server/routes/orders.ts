@@ -83,12 +83,15 @@ export function createOrdersRouter() {
     const startDate = readString(req.query.start_date);
     const endDate = readString(req.query.end_date);
     const taxMode = readString(req.query.tax_mode || req.query.taxMode, 10).toUpperCase();
+    const ownerUserIdRaw = readString(req.query.owner_user_id || req.query.ownerUserId);
 
     let sql = `
       SELECT 
         o.*, 
         c.name AS customer_name,
         c.country AS customer_country,
+        ou.name AS created_by_name,
+        cu.name AS customer_owner_user_name,
         (SELECT COUNT(*) FROM finance_records WHERE order_id = o.id AND status = 'pending' AND deleted_at IS NULL) AS pending_finance_count,
         COALESCE((
           SELECT SUM(f.amount) 
@@ -97,6 +100,8 @@ export function createOrdersRouter() {
         ), 0) AS completed_receipt_usd
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN users ou ON ou.id = o.created_by
+      LEFT JOIN users cu ON cu.id = c.owner_user_id
       WHERE o.deleted_at IS NULL
     `;
     const params: (string | number | null | undefined)[] = [];
@@ -116,6 +121,20 @@ export function createOrdersRouter() {
     if (taxMode && ['A', 'B', 'C'].includes(taxMode)) {
       sql += ` AND COALESCE(NULLIF(o.tax_mode, ''), 'A') = ?`;
       params.push(taxMode);
+    }
+    if (ownerUserIdRaw) {
+      if (ownerUserIdRaw === 'me' && req.user?.id) {
+        sql += ` AND o.created_by = ?`;
+        params.push(req.user.id);
+      } else if (ownerUserIdRaw === 'unassigned') {
+        sql += ` AND o.created_by IS NULL`;
+      } else if (req.user?.role === 'admin') {
+        const ownerUserId = Number(ownerUserIdRaw);
+        if (Number.isInteger(ownerUserId) && ownerUserId > 0) {
+          sql += ` AND o.created_by = ?`;
+          params.push(ownerUserId);
+        }
+      }
     }
     if (q) {
       sql += ` AND (o.display_id LIKE ? OR o.product_summary LIKE ? OR c.name LIKE ? OR o.alibaba_order_no LIKE ?)`;

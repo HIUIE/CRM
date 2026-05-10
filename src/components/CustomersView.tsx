@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Edit, Search, Trash2, UserRound } from 'lucide-react';
+import { Edit, Search, Trash2, UserRound, X } from 'lucide-react';
 import Field from './ui/Field';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigateWithTransition } from '../lib/transition';
@@ -69,6 +69,7 @@ export default function CustomersView() {
 
   const query = searchParams.get('q') || '';
   const countryFilter = searchParams.get('country') || '';
+  const ownerFilter = searchParams.get('owner_user_id') || '';
   const timeRange = searchParams.get('timeRange') || 'all';
 
   // Debounced search input: local state drives the input, URL param updates after 300ms of inactivity
@@ -129,6 +130,14 @@ export default function CustomersView() {
     [customers],
   );
 
+  const ownerFilterLabel = useMemo(() => {
+    if (!ownerFilter) return '';
+    if (ownerFilter === 'me') return '我负责的客户';
+    if (ownerFilter === 'unassigned') return '未分配客户';
+    const match = activeOwnerOptions.find((owner) => String(owner.id) === ownerFilter);
+    return match ? (match.name || match.username) : '';
+  }, [activeOwnerOptions, ownerFilter]);
+
   const filteredCustomers = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return customers.filter((customer) => {
@@ -153,7 +162,7 @@ export default function CustomersView() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, countryFilter, timeRange, setCurrentPage]);
+  }, [query, countryFilter, ownerFilter, timeRange, setCurrentPage]);
 
   // Read create flag from URL to open drawer
   useEffect(() => {
@@ -270,10 +279,15 @@ export default function CustomersView() {
     }
   };
 
+  const clearFilters = () => {
+    setInputValue('');
+    setSearchParams(new URLSearchParams());
+  };
+
   return (
     <div className="flex flex-col space-y-4 animate-page-in">
       <section className="shrink-0 rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm transition-colors">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
@@ -297,10 +311,31 @@ export default function CustomersView() {
                ))}
              </select>
           </div>
+          <div className="relative">
+             <select
+               value={ownerFilter}
+               onChange={(event) => updateParam('owner_user_id', event.target.value)}
+               className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 px-3 py-2.5 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage transition-colors outline-none appearance-none text-primary-navy dark:text-white cursor-pointer"
+             >
+               <option value="">全部负责人</option>
+               <option value="me">我负责的客户</option>
+               {user?.role === 'admin' ? <option value="unassigned">未分配客户</option> : null}
+               {user?.role === 'admin' ? activeOwnerOptions.map((owner) => (
+                 <option key={owner.id} value={owner.id}>{owner.name || owner.username}</option>
+               )) : null}
+             </select>
+          </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <TimeRangeFilter value={timeRange} onChange={(key) => updateParam('timeRange', key)} />
+          {ownerFilterLabel ? <ActiveFilter label={`负责人：${ownerFilterLabel}`} onClear={() => updateParam('owner_user_id', '')} /> : null}
+          {countryFilter ? <ActiveFilter label={`国家：${getCountryDisplay(countryFilter)}`} onClear={() => updateParam('country', '')} /> : null}
+          {(query || countryFilter || ownerFilter || timeRange !== 'all') ? (
+            <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition-colors hover:border-primary-navy hover:text-primary-navy dark:border-navy-800 dark:text-slate-400 dark:hover:border-tertiary-sage dark:hover:text-tertiary-sage">
+              <X size={12} /> 清空筛选
+            </button>
+          ) : null}
         </div>
 
         {error ? <div className="mt-4 rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
@@ -471,5 +506,16 @@ export default function CustomersView() {
 
 {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
+  );
+}
+
+function ActiveFilter({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-300">
+      {label}
+      <button type="button" onClick={onClear} className="rounded-full p-0.5 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/40" aria-label={`清除${label}`}>
+        <X size={12} />
+      </button>
+    </span>
   );
 }

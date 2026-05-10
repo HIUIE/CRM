@@ -71,6 +71,7 @@ export type OrderSummary = {
   latest_tracking_no?: string;
   latest_activity_at: string;
   created_by_name?: string | null;
+  customer_owner_user_name?: string | null;
 };
 
 export type OrderOption = {
