@@ -28,12 +28,14 @@ export function OrderEditForm({
   deletedItemIds,
   setDeletedItemIds,
   taxModeLocked = false,
+  taxModeAdminOverride = false,
 }: {
   orderForm: OrderFormState;
   setOrderForm: React.Dispatch<React.SetStateAction<OrderFormState>>;
   deletedItemIds: number[];
   setDeletedItemIds: React.Dispatch<React.SetStateAction<number[]>>;
   taxModeLocked?: boolean;
+  taxModeAdminOverride?: boolean;
 }) {
   return (
     <div className="space-y-12">
@@ -76,6 +78,11 @@ export function OrderEditForm({
           </div>
           {taxModeLocked && (
             <p className="mt-2 text-[11px] font-bold text-amber-600 dark:text-amber-300">订单已进入履约流程，业务模式变更需走审批流。</p>
+          )}
+          {taxModeAdminOverride && (
+            <p className="mt-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
+              管理员可调整已履约订单的业务模式。保存时系统会二次确认，并联动刷新报关、进项发票和利润核算口径。
+            </p>
           )}
         </Field>
       </section>

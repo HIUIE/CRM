@@ -15,7 +15,8 @@ import {
   Upload,
   FileCode,
   X,
-  Package
+  Package,
+  ImageOff,
 } from 'lucide-react';
 import type { 
   SectionKey, 
@@ -515,6 +516,8 @@ export function AttachmentEditor({
 }
 
 export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMeta | null; onClose: () => void }) {
+  const [imageFailed, setImageFailed] = React.useState(false);
+  React.useEffect(() => { setImageFailed(false); }, [attachment?.id, attachment?.url]);
   if (!attachment) return null;
   if (typeof document === 'undefined') return null;
   const isImage = attachment.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.fileName);
@@ -536,16 +539,16 @@ export function PreviewModal({ attachment, onClose }: { attachment: AttachmentMe
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50/50 dark:bg-navy-950/50 p-4 sm:p-8">
           {isPdf ? (
             <iframe src={attachment.url} className="h-full w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-lg" title={attachment.fileName} />
-          ) : isImage ? (
-            <img src={attachment.url} alt={attachment.fileName} className="max-h-full max-w-full object-contain rounded-lg shadow-2xl bg-surface dark:bg-navy-900 border-4 border-white dark:border-navy-800" />
+          ) : isImage && !imageFailed ? (
+            <img src={attachment.url} alt={attachment.fileName} onError={() => setImageFailed(true)} className="max-h-full max-w-full object-contain rounded-lg shadow-2xl bg-surface dark:bg-navy-900 border-4 border-white dark:border-navy-800" />
           ) : (
             <div className="flex flex-col items-center justify-center space-y-6 rounded-lg border border-dashed border-slate-300 dark:border-navy-700 bg-surface dark:bg-navy-900 p-16 shadow-inner">
               <div className="h-24 w-24 rounded-full bg-slate-50 dark:bg-navy-950 flex items-center justify-center border border-slate-100 dark:border-navy-800">
-                 <FileCode size={48} className="text-slate-200 dark:text-navy-800" />
+                 {isImage ? <ImageOff size={48} className="text-slate-300 dark:text-slate-600" /> : <FileCode size={48} className="text-slate-200 dark:text-navy-800" />}
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-slate-900 dark:text-white tracking-tighter">预览暂不支持</p>
-                <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">请下载后在本地查看此文件类型。</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white tracking-tighter">{isImage ? '图片无法加载' : '预览暂不支持'}</p>
+                <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">{isImage ? '可能是文件不存在、链接失效或权限未同步。' : '请下载后在本地查看此文件类型。'}</p>
               </div>
               <a href={attachment.url} download className="mt-4 rounded-lg bg-slate-900 dark:bg-tertiary-sage px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition-all tracking-tight active:scale-95">
                 立即下载文件

@@ -31,10 +31,16 @@ export async function handleSaveOrder(
     closeDrawer: () => void;
     loadDetail: (opts?: { showLoading?: boolean }) => Promise<void>;
     setDrawerError: (msg: string) => void;
+    confirmTaxModeOverride?: boolean;
   }
 ) {
-  const { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail, setDrawerError } = deps;
-  e.preventDefault(); setSaving(true);
+  const { orderForm, deletedItemIds, order, setSaving, showToast, closeDrawer, loadDetail, setDrawerError, confirmTaxModeOverride } = deps;
+  e.preventDefault();
+  if (confirmTaxModeOverride) {
+    const confirmed = window.confirm('修改订单业务模式会影响报关资料、退税、进项发票预警和利润核算，请确认是否继续。');
+    if (!confirmed) return;
+  }
+  setSaving(true);
   try {
     const payload = { ...orderForm, customerId: Number(orderForm.customerId), totalAmount: Number(orderForm.totalAmount), freightAmount: Number(orderForm.freightAmount), miscAmount: Number(orderForm.miscAmount), deletedItemIds };
     await apiFetch(`/api/orders/${order?.id}`, { method: 'PATCH', body: JSON.stringify(payload) });

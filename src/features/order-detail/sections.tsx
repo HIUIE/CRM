@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronRight, MapPin, Mail, Edit3, DollarSign, Factory, ShieldCheck, Truck, Printer, Trash,
-  FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles, Eye, EyeOff, AlertTriangle,
+  FileText, Plus, Package, Upload, Download, Wallet, Box, Check, Clock, CheckCircle2, X, Sparkles, Eye, EyeOff, AlertTriangle, ImageOff,
 } from 'lucide-react';
 import { Tooltip } from '../../components/ui/Tooltip';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
@@ -1378,7 +1378,7 @@ export function PackingSection({
                     <td className="px-5 py-3">{r.grossWeight} / {r.netWeight}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="inline-flex h-9 w-9 aspect-square shrink-0 rounded border border-slate-200 dark:border-navy-700 bg-surface dark:bg-navy-800 items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-primary-navy dark:hover:border-tertiary-sage transition-all" onClick={() => r.imageUrl && onPreview({ id: -1, fileName: `序号 ${i+1} 装箱实拍.jpg`, url: r.imageUrl })}>
-                        {r.imageUrl ? <img src={r.imageUrl} alt="" className="h-full w-full object-cover" /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
+                        {r.imageUrl ? <ImagePreviewWithFallback src={r.imageUrl} alt={`序号 ${i+1} 装箱实拍`} /> : <Box size={16} className="text-slate-200 dark:text-navy-700" />}
                       </div>
                     </td>
                   </tr>
@@ -1472,7 +1472,7 @@ function getAttachmentTypeLabel(att: AttachmentMeta) {
 
 function AttachmentThumbnailPreview({ att, title }: { att: AttachmentMeta; title: string }) {
   if (isPreviewableImageAttachment(att)) {
-    return <img src={att.url} alt={att.fileName || title} className="h-full w-full object-cover" loading="lazy" />;
+    return <ImagePreviewWithFallback src={att.url} alt={att.fileName || title} compactLabel={getAttachmentTypeLabel(att)} />;
   }
 
   return (
@@ -1485,6 +1485,19 @@ function AttachmentThumbnailPreview({ att, title }: { att: AttachmentMeta; title
       </span>
     </div>
   );
+}
+
+function ImagePreviewWithFallback({ src, alt, compactLabel = '图片无法加载' }: { src?: string | null; alt: string; compactLabel?: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-slate-50 px-1 text-center dark:bg-navy-950">
+        <ImageOff size={18} className="text-slate-300 dark:text-slate-600" />
+        <span className="max-w-full truncate text-[10px] font-black leading-tight text-slate-400 dark:text-slate-500">{compactLabel}</span>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className="h-full w-full object-cover" loading="lazy" onError={() => setFailed(true)} />;
 }
 
 function getCompactFileName(fileName: string) {

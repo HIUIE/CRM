@@ -284,7 +284,7 @@ export function createOrdersRouter() {
         [orderId],
       );
       const currentTaxMode = (existingOrder?.tax_mode || 'A').toUpperCase();
-      if (existingOrder?.status !== 'draft' && result.payload.taxMode !== currentTaxMode) {
+      if (existingOrder?.status !== 'draft' && result.payload.taxMode !== currentTaxMode && req.user?.role !== 'admin') {
         return fail(res, 403, '订单已进入履约流程，业务模式变更需走审批流程', 'TAX_MODE_LOCKED');
       }
 

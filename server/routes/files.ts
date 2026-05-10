@@ -28,6 +28,27 @@ async function canAccessEntity(user: AuthedRequest['user'], entityType: string, 
   return Boolean(row);
 }
 
+async function canAccessUnboundAttachment(user: AuthedRequest['user'], attachmentId: number, uploadedBy: number | null): Promise<boolean> {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+
+  const packingRow = await dbGet<{ allowed: number }>(
+    `
+      SELECT 1 AS allowed
+      FROM packing_records pr
+      JOIN orders o ON o.id = pr.order_id
+      WHERE pr.attachment_id = ?
+        AND o.deleted_at IS NULL
+        AND o.created_by = ?
+      LIMIT 1
+    `,
+    [attachmentId, user.id],
+  );
+  if (packingRow) return true;
+
+  return uploadedBy === user.id;
+}
+
 async function verifyEntityExists(entityType: string, entityId: string): Promise<boolean> {
   const queries: Record<string, string> = {
     ORDER: `SELECT 1 FROM orders WHERE display_id = ? AND deleted_at IS NULL`,
@@ -88,7 +109,7 @@ export function createFilesRouter() {
       }
 
       if (!attachment.entity_type || !attachment.entity_id) {
-        if (authUser?.role !== 'admin' && attachment.uploaded_by !== authUser?.id) {
+        if (!(await canAccessUnboundAttachment(authUser, attachmentId, attachment.uploaded_by))) {
           return fail(res, 403, '无权访问此附件', 'ATTACHMENT_ACCESS_DENIED');
         }
       } else if (!(await canAccessEntity(authUser, attachment.entity_type, attachment.entity_id))) {
