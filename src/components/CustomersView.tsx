@@ -146,9 +146,14 @@ export default function CustomersView() {
         [customer.name, customer.country || '', customer.contact || '', customer.source_channel || '', customer.intent_products || '']
           .some((value) => value.toLowerCase().includes(keyword));
       const matchesCountry = !countryFilter || customer.country === countryFilter;
-      return matchesQuery && matchesCountry;
+      const matchesOwner =
+        !ownerFilter ||
+        (ownerFilter === 'me' && user?.id && customer.owner_user_id === user.id) ||
+        (ownerFilter === 'unassigned' && !customer.owner_user_id) ||
+        String(customer.owner_user_id || '') === ownerFilter;
+      return matchesQuery && matchesCountry && matchesOwner;
     });
-  }, [countryFilter, customers, query]);
+  }, [countryFilter, customers, ownerFilter, query, user?.id]);
 
   const {
     currentPage,

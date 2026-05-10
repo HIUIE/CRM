@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Search, Trash2, Hash, CheckSquare, Square, CheckCircle, UserRound, X } from 'lucide-react';
 import Field from './ui/Field';
@@ -133,6 +133,16 @@ export default function OrdersView() {
     : ownerFilter === 'unassigned'
       ? '未分配订单'
       : activeOwnerOptions.find(item => String(item.id) === ownerFilter)?.name || '';
+  const visibleOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesOwner =
+        !ownerFilter ||
+        (ownerFilter === 'me' && user?.name && order.created_by_name === user.name) ||
+        (ownerFilter === 'unassigned' && !order.created_by_name) ||
+        activeOwnerOptions.some((owner) => String(owner.id) === ownerFilter && (owner.name || owner.username) === order.created_by_name);
+      return matchesOwner;
+    });
+  }, [activeOwnerOptions, orders, ownerFilter, user?.name]);
 
   const {
     currentPage,
@@ -142,7 +152,7 @@ export default function OrdersView() {
     currentItems,
     setCurrentPage,
     setPageSize,
-  } = usePagination(orders);
+  } = usePagination(visibleOrders);
 
   useEffect(() => {
     setCurrentPage(1);
