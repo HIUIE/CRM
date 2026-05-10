@@ -79,7 +79,7 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
       const production = await dbGet('SELECT production_status, inspection_status FROM production_plans WHERE order_id = ?', [order.id]);
       return {
         success: true,
-        message: `订单 ${p.order_no} 当前状态：${order.status}，客户：${order.customer_name}，金额：$${Number(order.total_amount).toLocaleString()}${production ? `，生产：${production.production_status}` : ''}`,
+        message: `订单 ${p.order_no} 当前状态：${order.status}，客户：${order.customer_name}，金额：${order.currency || 'USD'} ${Number(order.total_amount).toLocaleString()}${production ? `，生产：${production.production_status}` : ''}`,
         data: { order: order as Record<string, unknown>, finance, logistics, production: production as Record<string, unknown> || null },
       };
     },
@@ -110,8 +110,8 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
       const items = await dbAll(`
         SELECT *
         FROM (
-          SELECT o.display_id, c.name AS customer_name, o.total_amount, o.created_at,
-            COALESCE((SELECT SUM(amount) FROM finance_records WHERE order_id = o.id AND type = 'receipt' AND status = 'completed' AND deleted_at IS NULL), 0) AS paid
+          SELECT o.display_id, c.name AS customer_name, COALESCE(NULLIF(o.currency, ''), 'USD') AS currency, o.total_amount, o.created_at,
+            COALESCE((SELECT SUM(amount) FROM finance_records WHERE order_id = o.id AND type = 'receipt' AND status = 'completed' AND currency = COALESCE(NULLIF(o.currency, ''), 'USD') AND deleted_at IS NULL), 0) AS paid
           FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
           WHERE o.status != 'completed' AND o.deleted_at IS NULL ${scopeSql}
         ) overdue_orders
@@ -119,7 +119,7 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
         ORDER BY created_at ASC
       `, scopeParams);
       if (!items.length) return { success: true, message: '没有逾期未收款。' };
-      const lines = items.map((i: any) => `${i.display_id} ${i.customer_name} 应收 $${Number(i.total_amount).toLocaleString()} 已收 $${Number(i.paid).toLocaleString()}`);
+      const lines = items.map((i: any) => `${i.display_id} ${i.customer_name} 应收 ${i.currency || 'USD'} ${Number(i.total_amount).toLocaleString()} 已收 ${i.currency || 'USD'} ${Number(i.paid).toLocaleString()}`);
       return { success: true, message: `以下 ${items.length} 笔订单尚未结清：\n${lines.join('\n')}` };
     },
   },

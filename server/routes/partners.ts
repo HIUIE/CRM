@@ -139,7 +139,7 @@ export function createPartnersRouter() {
 
       // Orders linked via production_plans (factory)
       const productionOrders = await dbAll(`
-        SELECT o.id, o.display_id, o.status, o.total_amount, o.product_summary, o.created_at,
+        SELECT o.id, o.display_id, o.status, COALESCE(NULLIF(o.currency, ''), 'USD') AS currency, o.total_amount, o.product_summary, o.created_at,
                pp.production_status, pp.inspection_status, pp.order_date AS prod_order_date,
                pp.estimated_delivery_date
         FROM production_plans pp
@@ -183,7 +183,7 @@ export function createPartnersRouter() {
       if (linkedOrderIds.length) {
         const placeholders = linkedOrderIds.map(() => '?').join(',');
         linkedOrders = await dbAll(
-          `SELECT id, display_id, status, total_amount, product_summary, created_at FROM orders WHERE id IN (${placeholders})`,
+          `SELECT id, display_id, status, COALESCE(NULLIF(currency, ''), 'USD') AS currency, total_amount, product_summary, created_at FROM orders WHERE id IN (${placeholders}) AND deleted_at IS NULL`,
           linkedOrderIds,
         );
       }

@@ -26,6 +26,7 @@ type OrderFormState = {
   productSummary: string;
   details: string;
   totalAmount: string;
+  currency: string;
   taxMode: TaxMode;
 };
 
@@ -35,8 +36,13 @@ const EMPTY_FORM: OrderFormState = {
   productSummary: '',
   details: '',
   totalAmount: '0',
+  currency: 'USD',
   taxMode: 'A',
 };
+
+function formatMoney(amount: number, currency = 'USD') {
+  return `${currency} ${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
 
 function getOrderStatusMeta(status: string) {
   switch (status) {
@@ -226,6 +232,7 @@ export default function OrdersView() {
       productSummary: order.product_summary || '',
       details: '',
       totalAmount: String(order.total_amount || 0),
+      currency: String(order.currency || 'USD'),
       taxMode: normalizeTaxMode(order.tax_mode),
     };
     setFormData(newForm);
@@ -452,9 +459,9 @@ export default function OrdersView() {
                             <div className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500">客户：{o.customer_owner_user_name}</div>
                           ) : null}
                         </td>
-                        <td className="px-4 py-4 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">USD {Number(o.total_amount).toLocaleString()}</td>
+                        <td className="px-4 py-4 text-right font-bold text-primary-navy dark:text-white data-field text-[15px]">{formatMoney(Number(o.total_amount), String(o.currency || 'USD'))}</td>
                         <td className="px-4 py-4 text-right">
-                           <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">USD {Number(o.completed_receipt_usd).toLocaleString()}</div>
+                           <div className="text-tertiary-sage dark:text-emerald-400 font-bold data-field">{formatMoney(Number(o.completed_receipt_amount ?? o.completed_receipt_usd), String(o.currency || 'USD'))}</div>
                            <div className="mt-1.5 text-xs font-bold text-slate-400 dark:text-slate-500">{o.pending_finance_count > 0 ? `核销中: ${o.pending_finance_count} 笔` : '—'}</div>
                         </td>
                         <td className="px-4 py-4 text-center" onClick={e=>e.stopPropagation()}>
@@ -555,8 +562,18 @@ export default function OrdersView() {
                 placeholder="搜索并选择客户..."
               />
             </Field>
-            <Field label="订单总额 (USD) *">
-              <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+            <Field label="订单总额 *">
+              <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
+                <select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-3 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-black text-primary-navy dark:text-white appearance-none">
+                  <option value="USD">USD 美元</option>
+                  <option value="CNY">CNY 人民币</option>
+                  <option value="EUR">EUR 欧元</option>
+                  <option value="GBP">GBP 英镑</option>
+                  <option value="HKD">HKD 港币</option>
+                  <option value="JPY">JPY 日元</option>
+                </select>
+                <input required type="number" step="0.01" value={formData.totalAmount} onChange={e=>setFormData({...formData, totalAmount:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none font-bold text-primary-navy dark:text-white" />
+              </div>
             </Field>
             <Field label="产品摘要 *" error={fieldErrors.productSummary}>
               <input required value={formData.productSummary} onChange={e => {

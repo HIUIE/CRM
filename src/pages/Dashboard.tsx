@@ -161,7 +161,7 @@ function OrderListDrawerContent({ filter, onClose }: { filter: { status?: string
                   <tr key={o.id} onClick={() => { onClose(); navigate(`/orders/${o.display_id.toLowerCase()}`); }} className="hover:bg-slate-50 dark:hover:bg-navy-800 cursor-pointer transition-colors">
                     <td className="px-4 py-3 font-bold text-primary-navy dark:text-white">{o.display_id}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{o.customer_name || '-'}</td>
-                    <td className="px-4 py-3 text-right font-bold data-field">USD {o.total_amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-bold data-field">{o.currency || 'USD'} {o.total_amount.toLocaleString()}</td>
                     <td className="px-4 py-3"><Chip tone={meta.tone}>{meta.label}</Chip></td>
                   </tr>
                 );
@@ -324,7 +324,7 @@ export default function DashboardView() {
           onClick={() => setDrawer({ title: '全部订单', filter: { label: '全部订单' } })}
         />
         <StatCard
-          title="已收金额 (USD)" value={formatAmount(data.overview.receiptUsd, '$')} subValue={`较上月 ${revenueGrowth.label}`} subValueColor={revenueGrowth.color}
+          title="已收金额 (折合 USD)" value={formatAmount(data.overview.receiptUsd, '$')} subValue={`较上月 ${revenueGrowth.label}`} subValueColor={revenueGrowth.color}
           icon={<Wallet size={16} className="text-emerald-500" />} sparklineColor="#10B981" sparklineData={[5, 10, 15, 10, 20, 25]}
           onClick={() => setDrawer({ title: '已结清订单', filter: { status: 'completed', label: '已结清' } })}
         />
@@ -488,7 +488,7 @@ export default function DashboardView() {
 
             {data.profitTrends && data.profitTrends.length > 0 && (
               <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm shrink-0">
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">利润趋势 (USD)</h2>
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">利润趋势 (折合 USD)</h2>
                 <div className="space-y-3">
                   {data.profitTrends.map(m => {
                     const maxProfit = Math.max(...data.profitTrends.map(x => x.profit), 1);

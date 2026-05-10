@@ -858,7 +858,8 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
     }
 
     const orderAmount = Number(order.total_amount) || 0;
-    const receiptTotal = receiptsByCurrency.USD || 0;
+    const orderCurrency = String(order.currency || 'USD').toUpperCase();
+    const receiptTotal = receiptsByCurrency[orderCurrency] || 0;
 
     let paymentStatus: string;
     if (receiptTotal <= 0) {
@@ -906,6 +907,7 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
       order: {
         ...order,
         status: normalizeStatus(String(order.status || 'draft')),
+        currency: orderCurrency,
         deliveryDate: order.delivery_date || null,
         freightAmount: Number(order.freight_amount) || 0,
         miscAmount: Number(order.misc_amount) || 0,
@@ -1031,7 +1033,8 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
         pendingFinanceCount: pendingCount || 0,
         latestLogisticsStatus: latestLogistics?.status || null,
         latestShippingDate: latestLogistics?.shipping_date || null,
-        paidAmount: receiptsByCurrency.USD || 0,
+        paidAmount: receiptTotal,
+        paidCurrency: orderCurrency,
         outstandingAmount,
         paymentStatus,
         settled,

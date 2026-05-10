@@ -129,6 +129,9 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
                     <option value="USD">USD</option>
                     <option value="CNY">CNY</option>
                     <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="HKD">HKD</option>
+                    <option value="JPY">JPY</option>
                   </select>
                 </Field>
               </div>
@@ -178,4 +181,3 @@ export function FinanceCreateDrawer({ isOpen, onClose, onSuccess, initialOrderId
     </Drawer>
   );
 }
-

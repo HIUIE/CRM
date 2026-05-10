@@ -38,7 +38,7 @@ export async function buildExcelWorkbook() {
   wb.created = new Date();
 
   await addDataSheet(wb, '订单', `
-    SELECT o.id, o.display_id, o.status, COALESCE(NULLIF(o.tax_mode, ''), 'A') AS tax_mode, o.total_amount, o.freight_amount, o.misc_amount,
+    SELECT o.id, o.display_id, o.status, COALESCE(NULLIF(o.tax_mode, ''), 'A') AS tax_mode, COALESCE(NULLIF(o.currency, ''), 'USD') AS currency, o.total_amount, o.freight_amount, o.misc_amount,
            o.product_summary, o.delivery_date, o.created_at,
            c.name AS customer_name, c.country AS customer_country,
            u.name AS created_by
@@ -207,11 +207,11 @@ export async function buildCustomerXlsx(customer: Record<string, unknown>, order
   // Orders overview sheet
   if (orders.length) {
     const ws = wb.addWorksheet('订单一览', { properties: { tabColor: { argb: 'FF0F172A' } } });
-    const cols = ['display_id', 'status', 'tax_mode', 'total_amount', 'product_summary', 'delivery_date', 'created_at'];
+    const cols = ['display_id', 'status', 'tax_mode', 'currency', 'total_amount', 'product_summary', 'delivery_date', 'created_at'];
     ws.columns = cols.map(c => ({ header: c, key: c, width: 20 }));
     cols.forEach((c, i) => ws.getRow(1).getCell(i + 1).style = HEADER_STYLE);
     orders.forEach((o, idx) => {
-      const row = ws.addRow({ display_id: o.display_id, status: o.status, tax_mode: o.tax_mode || 'A', total_amount: o.total_amount, product_summary: o.product_summary, delivery_date: o.delivery_date, created_at: o.created_at });
+      const row = ws.addRow({ display_id: o.display_id, status: o.status, tax_mode: o.tax_mode || 'A', currency: o.currency || 'USD', total_amount: o.total_amount, product_summary: o.product_summary, delivery_date: o.delivery_date, created_at: o.created_at });
       if (idx % 2 === 1) row.eachCell(cell => { cell.style = ALT_ROW_FILL; });
     });
     ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: orders.length + 1, column: cols.length } };
@@ -235,9 +235,9 @@ export async function buildOrderXlsx(detail: any) {
   const infoData: [string, string][] = [
     ['订单号', order.display_id], ['状态', order.status], ['业务模式', order.tax_mode || 'A'], ['客户', customer.name],
     ['国家', customer.country], ['联系人', customer.contact], ['产品摘要', order.product_summary],
-    ['总金额', `$${Number(order.total_amount).toLocaleString()}`],
-    ['运费', `$${Number(order.freight_amount).toLocaleString()}`],
-    ['杂费', `$${Number(order.misc_amount).toLocaleString()}`],
+    ['总金额', `${order.currency || 'USD'} ${Number(order.total_amount).toLocaleString()}`],
+    ['运费', `${order.currency || 'USD'} ${Number(order.freight_amount).toLocaleString()}`],
+    ['杂费', `${order.currency || 'USD'} ${Number(order.misc_amount).toLocaleString()}`],
     ['交付日期', order.delivery_date || '—'],
     ['创建时间', order.created_at],
   ];

@@ -154,6 +154,7 @@ export function RemarkBoard({ content, onEdit }: { content: string; onEdit: () =
 
 export function FinanceDashboard({
   totalAmount,
+  orderCurrency = 'USD',
   records,
   receiptsByCurrency = {},
   onPreview,
@@ -161,16 +162,18 @@ export function FinanceDashboard({
   onDelete,
 }: {
   totalAmount: number;
+  orderCurrency?: string;
   records: FinanceRecord[];
   receiptsByCurrency?: Record<string, number>;
   onPreview?: (attachment: AttachmentMeta) => void;
   onEdit?: (record: FinanceRecord) => void;
   onDelete?: (record: FinanceRecord) => void;
 }) {
-  const [activeCurrency, setActiveCurrency] = React.useState('USD');
-  const currencies = Object.keys(receiptsByCurrency).length > 0 ? Object.keys(receiptsByCurrency) : ['USD'];
+  const [activeCurrency, setActiveCurrency] = React.useState(orderCurrency);
+  React.useEffect(() => setActiveCurrency(orderCurrency), [orderCurrency]);
+  const currencies = Object.keys(receiptsByCurrency).length > 0 ? Array.from(new Set([orderCurrency, ...Object.keys(receiptsByCurrency)])) : [orderCurrency];
   const paid = receiptsByCurrency[activeCurrency] || 0;
-  const canCalculateProgress = activeCurrency === 'USD' && totalAmount > 0;
+  const canCalculateProgress = activeCurrency === orderCurrency && totalAmount > 0;
   const rawPercentage = canCalculateProgress ? Math.round((paid / totalAmount) * 100) : 0;
   const progressWidth = Math.min(Math.max(rawPercentage, 0), 100);
   const isOverpaid = rawPercentage > 100;
@@ -192,7 +195,7 @@ export function FinanceDashboard({
            {canCalculateProgress ? (
              <div className="space-y-3">
                 <div className="flex justify-between text-xs font-medium text-slate-500 tracking-tight">
-                   <span>订单总额 USD {totalAmount.toLocaleString()}</span>
+                   <span>订单总额 {orderCurrency} {totalAmount.toLocaleString()}</span>
                    <span className={`font-bold ${isOverpaid ? 'text-amber-600' : 'text-emerald-600'}`}>{isOverpaid ? `超额 ${rawPercentage}%` : `${rawPercentage}%`}</span>
                 </div>
                 <div className="h-2 w-full bg-slate-100 dark:bg-navy-950 rounded-full overflow-hidden shadow-inner">

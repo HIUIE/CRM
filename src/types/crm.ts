@@ -2,6 +2,7 @@ import type { AuthUser } from './auth';
 
 export type OrderStatus = 'draft' | 'production' | 'customs' | 'shipping' | 'completed';
 export type TaxMode = 'A' | 'B' | 'C';
+export type CurrencyCode = 'USD' | 'CNY' | 'EUR' | 'GBP' | 'HKD' | 'JPY';
 export type FinanceType = 'receipt' | 'payment';
 export type FinanceStatus = 'pending' | 'completed';
 export type FinanceCategory = 'deposit' | 'balance' | 'goods' | 'freight' | 'customs' | 'other';
@@ -60,12 +61,14 @@ export type OrderSummary = {
   customer_id: number;
   status: OrderStatus;
   tax_mode?: TaxMode | null;
+  currency?: CurrencyCode | string | null;
   total_amount: number;
   product_summary: string;
   customer_name?: string;
   customer_country?: string;
   created_at: string;
   completed_receipt_usd: number;
+  completed_receipt_amount?: number;
   pending_finance_count: number;
   latest_logistics_status?: string;
   latest_tracking_no?: string;

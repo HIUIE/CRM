@@ -475,7 +475,7 @@ export default function FinanceView() {
               </select>
             </Field>
             <div className="flex gap-4">
-                <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></Field></div>
+                <div className="w-24"><Field label="币种"><select value={formData.currency} onChange={e=>setFormData({...formData, currency:e.target.value})} className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm focus:border-primary-navy dark:focus:border-tertiary-sage outline-none appearance-none text-primary-navy dark:text-white"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="HKD">HKD</option><option value="JPY">JPY</option></select></Field></div>
                 <div className="flex-1"><Field label="金额 *" error={fieldErrors.amount}><input required type="number" min="0.01" step="0.01" value={formData.amount} onChange={e => {
                   setFormData({...formData, amount:e.target.value});
                   if (fieldErrors.amount) setFieldErrors(prev => { const next = { ...prev }; delete next.amount; return next; });

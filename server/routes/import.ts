@@ -396,6 +396,8 @@ async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: n
   if (!displayId) return;
   const rawTaxMode = String(data.tax_mode || data.taxMode || 'A').toUpperCase();
   const taxMode = ['A', 'B', 'C'].includes(rawTaxMode) ? rawTaxMode : 'A';
+  const rawCurrency = String(data.currency || data.settlement_currency || data.settlementCurrency || 'USD').toUpperCase();
+  const currency = ['USD', 'CNY', 'EUR', 'GBP', 'HKD', 'JPY'].includes(rawCurrency) ? rawCurrency : 'USD';
 
   // Find customer by name or id from backup
   const customerName = data.customer_name || data.customerName;
@@ -409,11 +411,12 @@ async function upsertOrder(tx: TransactionExecutor, data: CsvRowData, userId?: n
       `UPDATE orders SET customer_id = ?, status = ?, tax_mode = ?, total_amount = ?, product_summary = ?, details = ?, updated_by = ? WHERE id = ?`,
       [customer.id, data.status, taxMode, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, userId, existing.id]
     );
+    await tx.run(`UPDATE orders SET currency = ? WHERE id = ?`, [currency, existing.id]);
   } else {
     await tx.run(
-      `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, product_summary, details, created_by, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [displayId, customer.id, data.status, taxMode, asNumber(data.total_amount || data.totalAmount), data.product_summary || data.productSummary, data.details, assignedUserId, userId]
+      `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, currency, product_summary, details, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [displayId, customer.id, data.status, taxMode, asNumber(data.total_amount || data.totalAmount), currency, data.product_summary || data.productSummary, data.details, assignedUserId, userId]
     );
   }
 }
@@ -462,10 +465,12 @@ async function importOrder(tx: TransactionExecutor, data: ImportRowData, userId?
   const status = data.status || 'draft';
   const rawTaxMode = String(data.taxMode || data.tax_mode || 'A').toUpperCase();
   const taxMode = ['A', 'B', 'C'].includes(rawTaxMode) ? rawTaxMode : 'A';
+  const rawCurrency = String(data.currency || data.settlementCurrency || data.settlement_currency || 'USD').toUpperCase();
+  const currency = ['USD', 'CNY', 'EUR', 'GBP', 'HKD', 'JPY'].includes(rawCurrency) ? rawCurrency : 'USD';
 
   await tx.run(
-    `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, product_summary, details, created_by, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [displayId, customer.id, status, taxMode, totalAmount, data.productSummary, data.details, assignedUserId, userId]
+    `INSERT INTO orders (display_id, customer_id, status, tax_mode, total_amount, currency, product_summary, details, created_by, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [displayId, customer.id, status, taxMode, totalAmount, currency, data.productSummary, data.details, assignedUserId, userId]
   );
 }

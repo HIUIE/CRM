@@ -118,6 +118,7 @@ export function buildOrderParsingPrompt(text: string) {
   "logistics": "提取的物流要求，如果没有填 无",
   "payment": "付款方式，如 30%定金",
   "totalAmount": 只保留数字金额，如果没提到则填 0,
+  "currency": 订单结算币种，如 USD/CNY/EUR，未提到默认 USD,
   "details": "关于商品规格、包装、要求等的详细摘要",
   "suggestedReply": "拟写一段简短、专业、得体的英文回复，可用于快速确认订单"
 }

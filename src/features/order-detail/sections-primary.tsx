@@ -149,15 +149,16 @@ export function OrderHeaderSection({
   };
 
   const orderTotal = asNumber(order.total_amount) || items.reduce((sum, item) => sum + asNumber(item.subtotal), 0);
-  const paidUsd = financeRecords
-    .filter((record) => record.type === 'receipt' && record.status === 'completed' && record.currency === 'USD')
+  const orderCurrency = String(order.currency || 'USD').toUpperCase();
+  const paidInOrderCurrency = financeRecords
+    .filter((record) => record.type === 'receipt' && record.status === 'completed' && String(record.currency || 'USD').toUpperCase() === orderCurrency)
     .reduce((sum, record) => sum + asNumber(record.amount), 0);
-  const outstandingUsd = Math.max(orderTotal - paidUsd, 0);
-  const collectionRate = orderTotal > 0 ? Math.min(Math.round((paidUsd / orderTotal) * 100), 100) : 0;
+  const outstandingAmount = Math.max(orderTotal - paidInOrderCurrency, 0);
+  const collectionRate = orderTotal > 0 ? Math.min(Math.round((paidInOrderCurrency / orderTotal) * 100), 100) : 0;
   const productionMeta = getProductionOverview(productionPlan);
   const logisticsMeta = getLogisticsOverview(hasAnyLogistics);
   const openTasks = financeRecords.filter((record) => record.status === 'pending').length + (productionPlan ? 0 : 1) + (hasAnyLogistics ? 0 : 1);
-  const riskTone = outstandingUsd > 0 || openTasks > 0 ? 'warning' : 'success';
+  const riskTone = outstandingAmount > 0 || openTasks > 0 ? 'warning' : 'success';
   const primaryLogistics = logisticsRecords.find((record) => record.segmentType === 'international') || logisticsRecords[0];
   const incotermRecord = logisticsRecords.find((record) => record.segmentType === 'international' && formatIncoterm(record.incoterm, '') !== '') || logisticsRecords.find((record) => formatIncoterm(record.incoterm, '') !== '');
   const incoterm = formatIncoterm(incotermRecord?.incoterm);
@@ -220,8 +221,8 @@ export function OrderHeaderSection({
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <OverviewMetric label="订单总额" value={`${formatMoney(orderTotal)}${incoterm !== '待确认' ? ` (${incoterm})` : ''}`} helper={`${items.length} 个商品 · 回款 ${collectionRate}%`} icon={<DollarSign size={16} />} tone="neutral" onClick={() => scrollToSection('items')} />
-          <OverviewMetric label="已收 / 未收" value={`${formatMoney(paidUsd)} / ${formatMoney(outstandingUsd)}`} helper={outstandingUsd > 0 ? '仍有尾款待核销' : '回款已覆盖订单金额'} icon={<Wallet size={16} />} tone={outstandingUsd > 0 ? 'warning' : 'success'} onClick={() => scrollToSection('finance')} />
+          <OverviewMetric label="订单总额" value={`${formatMoney(orderTotal, orderCurrency)}${incoterm !== '待确认' ? ` (${incoterm})` : ''}`} helper={`${items.length} 个商品 · 回款 ${collectionRate}%`} icon={<DollarSign size={16} />} tone="neutral" onClick={() => scrollToSection('items')} />
+          <OverviewMetric label="已收 / 未收" value={`${formatMoney(paidInOrderCurrency, orderCurrency)} / ${formatMoney(outstandingAmount, orderCurrency)}`} helper={outstandingAmount > 0 ? '仍有尾款待核销' : '回款已覆盖订单金额'} icon={<Wallet size={16} />} tone={outstandingAmount > 0 ? 'warning' : 'success'} onClick={() => scrollToSection('finance')} />
           <OverviewMetric label="生产状态" value={productionMeta.label} helper={`${productionMeta.detail} · ${productionMeta.progress}%`} icon={<Factory size={16} />} tone={productionMeta.tone} onClick={() => scrollToSection('production')} />
           <OverviewMetric label="物流状态" value={logisticsMeta.label} helper={logisticsMeta.detail} icon={<Truck size={16} />} tone={logisticsMeta.tone} onClick={() => scrollToSection('logistics')} />
         </div>
@@ -229,7 +230,7 @@ export function OrderHeaderSection({
         <div className="grid gap-3 md:grid-cols-4">
           <TradeSignal label="贸易术语" value={incoterm} helper={incotermRecord ? '来源于国际段物流记录' : '贸易术语待物流记录确认'} icon={<Truck size={13} />} onClick={() => scrollToSection('logistics')} />
           <TradeSignal label="运输方式" value={transportMode} helper={primaryLogistics ? '已维护物流方式' : '运输方式待物流记录确认'} icon={<Truck size={13} />} onClick={() => scrollToSection('logistics')} />
-          <TradeSignal label="付款条件" value={customer.paymentTerms || '待维护'} helper={outstandingUsd > 0 ? '财务需关注尾款风险' : '当前回款风险较低'} icon={<Wallet size={13} />} onClick={() => scrollToSection('finance')} />
+          <TradeSignal label="付款条件" value={customer.paymentTerms || '待维护'} helper={outstandingAmount > 0 ? '财务需关注尾款风险' : '当前回款风险较低'} icon={<Wallet size={13} />} onClick={() => scrollToSection('finance')} />
           <TradeSignal label="预计离港 / 到港 (ETD/ETA)" value={`${formatDateOnly(etd, 'ETD 待定')} / ${formatDateOnly(eta, 'ETA 待定')}`} helper={primaryLogistics?.vesselVoyage || '上船/到港时间锚点'} icon={<CalendarDays size={13} />} onClick={() => scrollToSection('logistics')} />
         </div>
 
@@ -250,7 +251,7 @@ export function OrderHeaderSection({
               <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${toneClasses(riskTone)}`}>{riskTone === 'success' ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}</span>
             </div>
             <div className="mt-2 text-sm font-black text-primary-navy dark:text-white">{riskTone === 'success' ? '暂无明显阻塞' : `${openTasks} 项需要跟进`}</div>
-            <div className="mt-1 text-xs font-bold text-slate-400 dark:text-slate-500">{outstandingUsd > 0 ? '优先核对回款与交付节点' : '继续维护跟进记录'}</div>
+            <div className="mt-1 text-xs font-bold text-slate-400 dark:text-slate-500">{outstandingAmount > 0 ? '优先核对回款与交付节点' : '继续维护跟进记录'}</div>
           </button>
         </div>
       </div>
@@ -268,6 +269,7 @@ export function ItemsSection({
   itemsTotal = 0,
   freightAmount = 0,
   miscAmount = 0,
+  currency = 'USD',
 }: {
   sectionRef: React.RefObject<HTMLDivElement | null>;
   collapsed: boolean;
@@ -278,14 +280,16 @@ export function ItemsSection({
   itemsTotal?: number;
   freightAmount?: number;
   miscAmount?: number;
+  currency?: string;
 }) {
+  const money = (amount: number) => `${currency} ${amount.toLocaleString()}`;
   return (
     <WorkSection ref={sectionRef} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed} onToggle={onToggle} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!text-xs !px-3"><Plus size={12} className="mr-1" /> 编辑清单</LightActionButton> : null}>
       {items.length ? (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
           <table className="min-w-full text-left text-xs font-medium">
             <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
-              <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">HS Code</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">总价 (USD)</th></tr>
+              <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">HS Code</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 ({currency})</th><th className="px-5 py-4 text-right">总价 ({currency})</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-medium tracking-tight">
               {items.map(item => (
@@ -296,30 +300,30 @@ export function ItemsSection({
                   <td className="px-5 py-4 text-center font-bold text-primary-navy dark:text-white data-field">{item.quantity}</td>
                   <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 font-bold">{item.unit || 'pcs'}</td>
                   <td className="px-5 py-4 text-right text-secondary-slate dark:text-slate-400 data-field font-bold">{asNumber(item.unit_price).toLocaleString()}</td>
-                  <td className="px-5 py-4 text-right font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">USD {asNumber(item.subtotal).toLocaleString()}</td>
+                  <td className="px-5 py-4 text-right font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">{money(asNumber(item.subtotal))}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-slate-50 dark:bg-navy-950/50 border-t border-slate-200 dark:border-navy-800">
               <tr className="text-secondary-slate dark:text-slate-400">
                 <td colSpan={6} className="px-5 py-3 text-right text-xs tracking-tight">商品小计 (Subtotal)</td>
-                <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {itemsTotal.toLocaleString()}</td>
+                <td className="px-5 py-3 text-right text-sm font-bold data-field">{money(itemsTotal)}</td>
               </tr>
               {freightAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
                   <td colSpan={6} className="px-5 py-3 text-right text-xs tracking-tight">运费估算 (Freight)</td>
-                  <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {freightAmount.toLocaleString()}</td>
+                  <td className="px-5 py-3 text-right text-sm font-bold data-field">{money(freightAmount)}</td>
                 </tr>
               )}
               {miscAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
                   <td colSpan={6} className="px-5 py-3 text-right text-xs tracking-tight">其他杂费 (Misc)</td>
-                  <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {miscAmount.toLocaleString()}</td>
+                  <td className="px-5 py-3 text-right text-sm font-bold data-field">{money(miscAmount)}</td>
                 </tr>
               )}
               <tr className="text-primary-navy dark:text-white font-extrabold border-t border-slate-200 dark:border-navy-700">
                 <td colSpan={6} className="px-5 py-5 text-right text-xs tracking-tight">合计总值 (Grand Total)</td>
-                <td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td>
+                <td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">{money(grandTotal)}</td>
               </tr>
             </tfoot>
           </table>

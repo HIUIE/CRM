@@ -1,6 +1,7 @@
 export type SectionKey = 'basic' | 'todos' | 'items' | 'production' | 'finance' | 'invoices' | 'customs' | 'logistics';
 export type OrderStatus = 'draft' | 'production' | 'customs' | 'shipping' | 'completed';
 export type TaxMode = 'A' | 'B' | 'C';
+export type CurrencyCode = 'USD' | 'CNY' | 'EUR' | 'GBP' | 'HKD' | 'JPY';
 export type InputInvoiceType = 'vat_special' | 'vat_general';
 export type InputInvoiceStatus = 'pending' | 'received' | 'verified' | 'insufficient' | 'general_only' | 'waived';
 export type FinanceType = 'receipt' | 'payment';
@@ -17,7 +18,7 @@ export type MiscFee = { label: string; amount: number };
 
 export type ReceiptItem = {
   amount: number;
-  currency: 'USD' | 'CNY';
+  currency: CurrencyCode;
   bankFees: number;
   platformFees: number;
   exchangeRate: number;
@@ -31,7 +32,7 @@ export type ProfitData = {
   factoryCostCny: number;
   domesticFees: number;
   freightValue: number;
-  freightCurrency: 'CNY' | 'USD';
+  freightCurrency: CurrencyCode;
   customsMisc: number;
   miscFees: MiscFee[];
 };
@@ -64,6 +65,7 @@ export type OrderInfo = {
   status: OrderStatus;
   tax_mode?: TaxMode | null;
   taxMode?: TaxMode | null;
+  currency?: CurrencyCode | string | null;
   details?: string | null;
   quick_notes?: string | null;
   product_summary?: string | null;
@@ -298,6 +300,7 @@ export type OrderFormState = {
   customerId: string;
   productSummary: string;
   totalAmount: string;
+  currency: CurrencyCode;
   deliveryDate: string;
 
   freightAmount: string;

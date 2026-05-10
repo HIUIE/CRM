@@ -110,22 +110,22 @@ export async function notifyTaskAssigned(title: string, assignee: string) {
 export async function scanAndNotifyOverduePayments() {
   try {
     const query = `
-      SELECT o.id, o.display_id, o.total_amount, c.name as customer_name,
-             COALESCE((SELECT SUM(amount) FROM finance_records WHERE order_id = o.id AND type = 'receipt' AND status = 'completed' AND deleted_at IS NULL), 0) as paid_amount
+      SELECT o.id, o.display_id, COALESCE(NULLIF(o.currency, ''), 'USD') AS currency, o.total_amount, c.name as customer_name,
+             COALESCE((SELECT SUM(amount) FROM finance_records WHERE order_id = o.id AND type = 'receipt' AND status = 'completed' AND currency = COALESCE(NULLIF(o.currency, ''), 'USD') AND deleted_at IS NULL), 0) as paid_amount
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id
       WHERE o.status = 'shipped' 
         AND o.deleted_at IS NULL
         AND datetime(o.created_at) < datetime('now', '-30 days')
     `;
-    const candidates = await dbAll<{ id: number; display_id: string; total_amount: number; customer_name: string; paid_amount: number }[]>(query);
+    const candidates = await dbAll<{ id: number; display_id: string; currency: string; total_amount: number; customer_name: string; paid_amount: number }[]>(query);
     
     for (const order of candidates) {
       const remaining = order.total_amount - order.paid_amount;
       if (remaining > 0.01) {
         await sendWebhook(
           '⚠️ 回款逾期预警',
-          `**订单号**: ${order.display_id}\n**客户**: ${order.customer_name}\n**订单总额**: USD ${order.total_amount}\n**待收余额**: USD ${remaining.toFixed(2)}\n**预警原因**: 已发货超过 30 天未结清`
+          `**订单号**: ${order.display_id}\n**客户**: ${order.customer_name}\n**订单总额**: ${order.currency} ${order.total_amount}\n**待收余额**: ${order.currency} ${remaining.toFixed(2)}\n**预警原因**: 已发货超过 30 天未结清`
         );
       }
     }

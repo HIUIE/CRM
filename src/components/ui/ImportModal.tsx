@@ -22,6 +22,7 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     customerName: '客户名称 (必填, 需匹配已有客户)',
     displayId: '订单编号',
     totalAmount: '订单总额',
+    currency: '结算币种 (USD/CNY/EUR)',
     productSummary: '产品概括',
     status: '订单状态',
     details: '备注详情',

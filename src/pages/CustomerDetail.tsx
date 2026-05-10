@@ -100,6 +100,10 @@ const LEAD_SOURCE_OPTIONS = [
   '其他'
 ];
 
+function formatMoney(amount: number, currency = 'USD') {
+  return `${currency} ${Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -153,6 +157,11 @@ export default function CustomerDetailPage() {
   const totalPaid = useMemo(() => data?.orders?.reduce((sum, o) => sum + (Number(o.paid_amount) || 0), 0) || 0, [data]);
   const totalAmount = useMemo(() => data?.orders?.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) || 0, [data]);
   const pendingAmount = totalAmount - totalPaid;
+  const customerCurrency = useMemo(() => {
+    const currencies = new Set((data?.orders || []).map((o) => String(o.currency || 'USD')));
+    return currencies.size <= 1 ? Array.from(currencies)[0] || 'USD' : 'MIXED';
+  }, [data?.orders]);
+  const formatCustomerMoney = (amount: number) => customerCurrency === 'MIXED' ? '多币种' : formatMoney(amount, customerCurrency);
 
   const handleInlineSave = async (field: keyof CustomerDetailData, value: string) => {
     if (!data) return;
@@ -312,10 +321,10 @@ export default function CustomerDetailPage() {
                 <div className="space-y-5 border-t border-slate-50 dark:border-navy-800 pt-8">
                   <div className="rounded-lg bg-slate-50 dark:bg-navy-950 p-5 border border-slate-100 dark:border-navy-800 shadow-inner">
                     <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">累计贡献额 (LTV)</div>
-                    <div className="text-2xl font-extrabold text-primary-navy dark:text-white data-field mb-4">$ {totalPaid.toLocaleString()}</div>
+                    <div className="text-2xl font-extrabold text-primary-navy dark:text-white data-field mb-4">{formatCustomerMoney(totalPaid)}</div>
                     
                     <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tight mb-1">当前欠款总额</div>
-                    <div className={`text-2xl font-extrabold data-field ${pendingAmount > 0 ? 'text-amber-600 dark:text-amber-500' : 'text-slate-700 dark:text-slate-300'}`}>$ {pendingAmount.toLocaleString()}</div>
+                    <div className={`text-2xl font-extrabold data-field ${pendingAmount > 0 ? 'text-amber-600 dark:text-amber-500' : 'text-slate-700 dark:text-slate-300'}`}>{formatCustomerMoney(pendingAmount)}</div>
                   </div>
 
                   <div className="flex items-center gap-4 group px-1">
@@ -501,7 +510,7 @@ export default function CustomerDetailPage() {
                           <tr>
                             <th className="px-6 py-4">订单号 / 日期</th>
                             <th className="px-6 py-4">产品摘要</th>
-                            <th className="px-6 py-4 text-right">金额 (USD)</th>
+                            <th className="px-6 py-4 text-right">金额</th>
                             <th className="px-6 py-4 text-center">状态</th>
                           </tr>
                         </thead>
@@ -516,7 +525,7 @@ export default function CustomerDetailPage() {
                                 <div className="text-slate-600 dark:text-slate-400 font-bold truncate max-w-[200px]" title={order.product_summary}>{order.product_summary || '—'}</div>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                <div className="text-sm font-extrabold text-primary-navy dark:text-white data-field">{Number(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                                <div className="text-sm font-extrabold text-primary-navy dark:text-white data-field">{formatMoney(Number(order.total_amount), String(order.currency || 'USD'))}</div>
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <Chip tone={order.status === 'completed' ? 'success' : order.status === 'draft' ? 'neutral' : 'warning'}>{order.status}</Chip>

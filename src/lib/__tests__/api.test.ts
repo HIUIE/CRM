@@ -11,10 +11,11 @@ Object.defineProperty(global.document, 'cookie', {
 });
 
 // Mock URL.createObjectURL and URL.revokeObjectURL
-vi.stubGlobal('URL', {
+const OriginalURL = globalThis.URL;
+vi.stubGlobal('URL', Object.assign(OriginalURL, {
   createObjectURL: vi.fn(() => 'blob:test'),
   revokeObjectURL: vi.fn(),
-});
+}));
 
 describe('apiFetch', () => {
   beforeEach(() => {
@@ -80,6 +81,12 @@ describe('apiFetch', () => {
 
     const { apiFetch, ApiError } = await import('../api');
     await expect(apiFetch('/api/test')).rejects.toThrow(ApiError);
+    mockFetch.mockResolvedValueOnce({
+      status: 400,
+      ok: false,
+      headers: new Map([['content-type', 'application/json']]),
+      json: () => Promise.resolve({ error: { code: 'BAD_REQUEST', message: 'Something went wrong' } }),
+    });
     await expect(apiFetch('/api/test')).rejects.toThrow('Something went wrong');
   });
 

@@ -205,6 +205,12 @@ export async function buildOrderDetail(idOrNo: number | string) {
   const rawRates = await dbGet<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['exchange_rates']);
   const rates = rawRates ? JSON.parse(rawRates.value) : { USD: 1, CNY: 7.2, EUR: 0.92 };
   const cnyRate = rates.CNY || 7.2;
+  const toCny = (amount: number, currency: string) => {
+    const cur = currency.toUpperCase();
+    if (cur === 'CNY') return amount;
+    const rate = Number(rates[cur] || 1);
+    return rate > 0 ? (amount / rate) * cnyRate : amount * cnyRate;
+  };
 
   const domesticLogisticsRecord = logisticsRecords.find((item) => item.segment_type === 'domestic') || null;
   const internationalLogisticsRecord = logisticsRecords.find((item) => item.segment_type !== 'domestic') || null;
@@ -214,7 +220,8 @@ export async function buildOrderDetail(idOrNo: number | string) {
     domesticLogisticsRecord ||
     null;
   const orderAmount = Number(order.total_amount) || 0;
-  const receiptTotal = receiptsByCurrency.USD || 0;
+  const orderCurrency = String(order.currency || 'USD').toUpperCase();
+  const receiptTotal = receiptsByCurrency[orderCurrency] || 0;
   const paymentStatus =
     receiptTotal <= 0
       ? 'unpaid'
@@ -249,6 +256,7 @@ export async function buildOrderDetail(idOrNo: number | string) {
     order: {
       ...order,
       status: normalizeOrderStatus(String(order.status || 'draft')),
+      currency: orderCurrency,
       deliveryDate: order.delivery_date || null,
       freightAmount: Number(order.freight_amount) || 0,
       miscAmount: Number(order.misc_amount) || 0,
@@ -434,8 +442,9 @@ export async function buildOrderDetail(idOrNo: number | string) {
       pendingFinanceCount: pendingFinanceCount?.count || 0,
       latestLogisticsStatus: latestLogistics?.status || null,
       latestShippingDate: latestLogistics?.shipping_date || null,
-      paidAmount: receiptsByCurrency.USD || 0,
-      paidAmountCny: (receiptsByCurrency.USD || 0) * cnyRate,
+      paidAmount: receiptTotal,
+      paidCurrency: orderCurrency,
+      paidAmountCny: toCny(receiptTotal, orderCurrency),
       outstandingAmount,
       paymentStatus,
       settled,

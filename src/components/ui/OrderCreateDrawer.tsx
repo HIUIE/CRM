@@ -22,6 +22,7 @@ type OrderFormState = {
   productSummary: string;
   details: string;
   totalAmount: string;
+  currency: string;
   alibabaOrderNo?: string;
 };
 
@@ -32,6 +33,7 @@ const EMPTY_FORM: OrderFormState = {
   productSummary: '',
   details: '',
   totalAmount: '0',
+  currency: 'USD',
   alibabaOrderNo: '',
 };
 
@@ -166,15 +168,30 @@ export function OrderCreateDrawer({ isOpen, onClose, onSuccess, initialCustomerI
             )}
           </Field>
 
-          <Field label="订单总额 (USD) *">
-            <input 
-              required 
-              type="number" 
-              step="0.01" 
-              value={formData.totalAmount} 
-              onChange={e => setFormData({...formData, totalAmount: e.target.value})} 
-              className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none" 
-            />
+          <Field label="订单总额 *">
+            <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
+              <select
+                value={formData.currency}
+                onChange={e => setFormData({ ...formData, currency: e.target.value })}
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-3 py-3 text-sm font-black text-primary-navy dark:text-white outline-none appearance-none"
+              >
+                <option value="USD">USD 美元</option>
+                <option value="CNY">CNY 人民币</option>
+                <option value="EUR">EUR 欧元</option>
+                <option value="GBP">GBP 英镑</option>
+                <option value="HKD">HKD 港币</option>
+                <option value="JPY">JPY 日元</option>
+              </select>
+              <input
+                required
+                type="number"
+                step="0.01"
+                value={formData.totalAmount}
+                onChange={e => setFormData({...formData, totalAmount: e.target.value})}
+                className="w-full rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 px-4 py-3 text-sm font-bold text-primary-navy dark:text-white outline-none"
+              />
+            </div>
+            <p className="mt-1 text-[10px] font-bold text-slate-400">不退税、境内人民币付款等订单可直接选择 CNY，财务收款会默认跟随该币种。</p>
           </Field>
 
           <Field label="产品摘要 *">

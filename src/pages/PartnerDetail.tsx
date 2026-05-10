@@ -45,6 +45,7 @@ interface PartnerDetail {
     id: number;
     display_id: string;
     status: string;
+    currency?: string;
     total_amount: number;
     product_summary?: string;
     created_at: string;
@@ -428,7 +429,7 @@ export default function PartnerDetailPage() {
                               <Chip tone={getStatusMeta(o.status).tone}>{getStatusMeta(o.status).label}</Chip>
                             </td>
                             <td className="px-6 py-4 text-right font-bold text-primary-navy dark:text-white data-field">
-                              ${Number(o.total_amount).toLocaleString()}
+                              {o.currency || 'USD'} {Number(o.total_amount).toLocaleString()}
                             </td>
                             <td className="px-6 py-4 text-slate-600 dark:text-slate-400 text-sm max-w-[200px] truncate">
                               {o.product_summary || '—'}

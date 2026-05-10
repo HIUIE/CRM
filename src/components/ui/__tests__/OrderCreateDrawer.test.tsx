@@ -133,6 +133,7 @@ describe('OrderCreateDrawer Form Validation', () => {
     // Fill the form
     const inputs = screen.getAllByRole('textbox');
     fireEvent.change(screen.getByTestId('mock-combobox'), { target: { value: '42' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'CNY' } });
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '9999.99' } });
     fireEvent.change(inputs[2], { target: { value: 'Valid Product Summary' } });
 
@@ -155,6 +156,7 @@ describe('OrderCreateDrawer Form Validation', () => {
     const payload = JSON.parse(postCall[1]?.body as string);
     expect(payload.customerId).toBe(42);
     expect(payload.totalAmount).toBe(9999.99);
+    expect(payload.currency).toBe('CNY');
     expect(payload.productSummary).toBe('Valid Product Summary');
     
     // Verify drawer closed

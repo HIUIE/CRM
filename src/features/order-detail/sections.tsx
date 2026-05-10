@@ -126,6 +126,7 @@ export function ItemsSection({
   itemsTotal = 0,
   freightAmount = 0,
   miscAmount = 0,
+  currency = 'USD',
 }: {
   sectionRef: React.RefObject<HTMLDivElement | null>;
   collapsed: boolean;
@@ -136,14 +137,16 @@ export function ItemsSection({
   itemsTotal?: number;
   freightAmount?: number;
   miscAmount?: number;
+  currency?: string;
 }) {
+  const money = (amount: number) => `${currency} ${amount.toLocaleString()}`;
   return (
     <WorkSection ref={sectionRef} section="items" title="商品明细" icon={<FileText size={16} />} collapsed={collapsed} onToggle={onToggle} action={items.length ? <LightActionButton onClick={openOrderDrawer} className="!py-1.5 !px-3 !text-xs"><Plus size={14} className="mr-1 opacity-70" /> 编辑清单</LightActionButton> : null}>
       {items.length ? (
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm">
           <table className="min-w-full text-left text-xs font-medium">
             <thead className="bg-slate-50 dark:bg-navy-950 font-bold tracking-tight border-b border-slate-200 dark:border-navy-800 data-field text-xs text-secondary-slate dark:text-slate-400">
-              <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 (USD)</th><th className="px-5 py-4 text-right">总价 (USD)</th></tr>
+              <tr><th className="px-5 py-4">产品名称</th><th className="px-5 py-4 text-center">规格/型号</th><th className="px-5 py-4 text-center">数量</th><th className="px-5 py-4 text-center">单位</th><th className="px-5 py-4 text-right">单价 ({currency})</th><th className="px-5 py-4 text-right">总价 ({currency})</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800 font-medium tracking-tight">
               {items.map(item => (
@@ -153,30 +156,30 @@ export function ItemsSection({
                   <td className="px-5 py-4 text-center font-bold text-primary-navy dark:text-white data-field">{item.quantity}</td>
                   <td className="px-5 py-4 text-center text-secondary-slate dark:text-slate-400 font-bold">{item.unit || 'pcs'}</td>
                   <td className="px-5 py-4 text-right text-secondary-slate dark:text-slate-400 data-field font-bold">{asNumber(item.unit_price).toLocaleString()}</td>
-                  <td className="px-5 py-4 text-right font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">USD {asNumber(item.subtotal).toLocaleString()}</td>
+                  <td className="px-5 py-4 text-right font-bold text-primary-navy dark:text-tertiary-sage data-field text-sm">{money(asNumber(item.subtotal))}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-slate-50 dark:bg-navy-950/50 border-t border-slate-200 dark:border-navy-800">
               <tr className="text-secondary-slate dark:text-slate-400">
                 <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">商品小计 (Subtotal)</td>
-                <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {itemsTotal.toLocaleString()}</td>
+                <td className="px-5 py-3 text-right text-sm font-bold data-field">{money(itemsTotal)}</td>
               </tr>
               {freightAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
                   <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">运费估算 (Freight)</td>
-                  <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {freightAmount.toLocaleString()}</td>
+                  <td className="px-5 py-3 text-right text-sm font-bold data-field">{money(freightAmount)}</td>
                 </tr>
               )}
               {miscAmount > 0 && (
                 <tr className="text-secondary-slate dark:text-slate-400">
                   <td colSpan={5} className="px-5 py-3 text-right text-xs tracking-tight">其他杂费 (Misc)</td>
-                  <td className="px-5 py-3 text-right text-sm font-bold data-field">USD {miscAmount.toLocaleString()}</td>
+                  <td className="px-5 py-3 text-right text-sm font-bold data-field">{money(miscAmount)}</td>
                 </tr>
               )}
               <tr className="text-primary-navy dark:text-white font-extrabold border-t border-slate-200 dark:border-navy-700">
                 <td colSpan={5} className="px-5 py-5 text-right text-xs tracking-tight">合计总值 (Grand Total)</td>
-                <td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">USD {grandTotal.toLocaleString()}</td>
+                <td className="px-5 py-5 text-right text-xl data-field text-primary-navy dark:text-tertiary-sage">{money(grandTotal)}</td>
               </tr>
             </tfoot>
           </table>
@@ -397,6 +400,7 @@ export function FinanceSection({
   financeRecords,
   filteredRecords,
   grandTotal,
+  orderCurrency = 'USD',
   summary,
   onPreview,
   onEdit,
@@ -409,6 +413,7 @@ export function FinanceSection({
   financeRecords: FinanceRecord[];
   filteredRecords: FinanceRecord[];
   grandTotal: number;
+  orderCurrency?: string;
   summary: { receiptsByCurrency: Record<string, number>; attachmentsSummary?: { finance: number; logistics: number; customs: number } };
   onPreview: (att: AttachmentMeta | null) => void;
   onEdit: (record: FinanceRecord) => void;
@@ -429,7 +434,7 @@ export function FinanceSection({
       </div>
     ) : null}>
       {financeRecords.length ? (
-        <FinanceDashboard totalAmount={grandTotal} records={filteredRecords} receiptsByCurrency={summary.receiptsByCurrency} onPreview={onPreview} onEdit={onEdit} onDelete={onDelete} />
+        <FinanceDashboard totalAmount={grandTotal} orderCurrency={orderCurrency} records={filteredRecords} receiptsByCurrency={summary.receiptsByCurrency} onPreview={onPreview} onEdit={onEdit} onDelete={onDelete} />
       ) : (
         <EmptyStateBoard title="暂无账务往来" description="请登记客户定金、尾款或需支付给合作伙伴的运费/报关费，并上传银行水单等凭证。" icon={Wallet} actionLabel="+ 登记第一笔收支" onAction={onAdd} />
       )}
@@ -724,6 +729,7 @@ export function ProfitSection({
   user,
   orderNo,
   totalAmount,
+  orderCurrency = 'USD',
   freightAmount,
   miscAmount,
   itemsTotal,
@@ -734,6 +740,7 @@ export function ProfitSection({
   user?: { name?: string; role?: string } | null;
   orderNo: string;
   totalAmount: number;
+  orderCurrency?: string;
   freightAmount: number;
   miscAmount: number;
   itemsTotal: number;
@@ -769,14 +776,14 @@ export function ProfitSection({
   if (!isAdmin) return null;
 
   const pd = profitData || {
-    receipts: [{ amount: totalAmount, currency: 'USD' as const, bankFees: 0, platformFees: 0, exchangeRate: 7.2 }],
+    receipts: [{ amount: totalAmount, currency: orderCurrency as ProfitData['receipts'][number]['currency'], bankFees: 0, platformFees: 0, exchangeRate: getDefaultExchangeRate(orderCurrency) }],
     invoiceAmount: itemsTotal * 7.2 * 0.7,
     refundRate: 13,
     otherIncomeCny: 0,
     factoryCostCny: itemsTotal * 7.2 * 0.7,
     domesticFees: 0,
     freightValue: freightAmount || 0,
-    freightCurrency: 'USD' as const,
+    freightCurrency: orderCurrency as ProfitData['freightCurrency'],
     customsMisc: miscAmount || 0,
     miscFees: [],
   };
@@ -786,9 +793,9 @@ export function ProfitSection({
   let totalCnyFromReceipts = 0;
 
   for (const r of pd.receipts) {
-    if (r.currency === 'USD') {
+    if (r.currency !== 'CNY') {
       const net = r.amount - r.bankFees - r.platformFees;
-      totalNetUsd += net;
+      if (r.currency === 'USD') totalNetUsd += net;
       totalCnyFromReceipts += net * r.exchangeRate;
     } else {
       // CNY receipt: exchange rate is 1, fees are in CNY
@@ -799,7 +806,7 @@ export function ProfitSection({
   const estimatedRefundCny = includesRefund && !invoiceRiskBlocksTaxBenefit && pd.invoiceAmount > 0 ? (pd.invoiceAmount / 1.13 * (pd.refundRate / 100)) : 0;
   const totalRevenueCny = totalCnyFromReceipts + estimatedRefundCny + (pd.otherIncomeCny || 0);
   const miscTotal = (pd.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
-  const freightCny = pd.freightCurrency === 'USD' ? (pd.freightValue * (pd.receipts[0]?.exchangeRate || 7.2)) : pd.freightValue;
+  const freightCny = pd.freightCurrency === 'CNY' ? pd.freightValue : (pd.freightValue * (pd.receipts.find(r => r.currency === pd.freightCurrency)?.exchangeRate || getDefaultExchangeRate(pd.freightCurrency)));
   const salesCnyForVat = totalCnyFromReceipts + (pd.otherIncomeCny || 0);
   const domesticVatCny = includesDomesticVat
     ? invoiceRiskBlocksTaxBenefit
@@ -853,7 +860,7 @@ export function ProfitSection({
                   <div className="mb-2 text-xs font-bold text-tertiary-sage tracking-tight">收款明细 {i + 1} ({r.currency})</div>
                   <Row label="收款金额" value={fmt(r.amount, r.currency)} />
                   <Row label="手续费" value={fmt(r.bankFees + r.platformFees, r.currency)} />
-                  {r.currency === 'USD' && <Row label="结汇汇率" value={revealed ? String(r.exchangeRate) : '***'} />}
+                  {r.currency !== 'CNY' && <Row label="折算汇率" value={revealed ? String(r.exchangeRate) : '***'} />}
                 </div>
               ))}
               {includesRefund && <Row label={invoiceRiskBlocksTaxBenefit ? '预估退税额已失效' : `预估退税额 (退税率 ${pd.refundRate}%)`} value={invoiceRiskBlocksTaxBenefit ? (revealed ? '已失效：未取得可退税专票' : '***') : fmtCny(estimatedRefundCny)} />}
@@ -937,6 +944,19 @@ function hasBlockingInputInvoiceRisk(inputInvoices: InputInvoiceRecord[] = []) {
   );
 }
 
+function getDefaultExchangeRate(currency: string) {
+  switch (String(currency || 'USD').toUpperCase()) {
+    case 'CNY': return 1;
+    case 'EUR': return 7.8;
+    case 'GBP': return 9.1;
+    case 'HKD': return 0.92;
+    case 'JPY': return 0.047;
+    case 'USD':
+    default:
+      return 7.2;
+  }
+}
+
 // Stable InputRow defined OUTSIDE ProfitDrawer to prevent re-mount / focus loss
 function InputRow({ label, value, onChange, suffix, step }: { label: string; value: number; onChange: (v: string) => void; suffix: string; step?: string }) {
   return (
@@ -972,7 +992,7 @@ function ProfitDrawer({ data, taxMode, inputInvoices, onSave, onClose }: { data:
     const next = [...receipts];
     next[i] = { ...next[i], [k]: k === 'currency' ? v : (Number(v) || 0) };
     if (k === 'currency' && v === 'CNY') next[i].exchangeRate = 1;
-    if (k === 'currency' && v === 'USD' && next[i].exchangeRate <= 1) next[i].exchangeRate = 7.2;
+    if (k === 'currency' && v !== 'CNY') next[i].exchangeRate = getDefaultExchangeRate(v);
     setForm({ ...form, receipts: next });
   };
 
@@ -989,9 +1009,9 @@ function ProfitDrawer({ data, taxMode, inputInvoices, onSave, onClose }: { data:
   let calcTotalNetUsd = 0;
   let calcTotalCnyFromReceipts = 0;
   for (const r of receipts) {
-    if (r.currency === 'USD') {
+    if (r.currency !== 'CNY') {
       const net = r.amount - r.bankFees - r.platformFees;
-      calcTotalNetUsd += net;
+      if (r.currency === 'USD') calcTotalNetUsd += net;
       calcTotalCnyFromReceipts += net * r.exchangeRate;
     } else {
       calcTotalCnyFromReceipts += r.amount - r.bankFees - r.platformFees;
@@ -1000,7 +1020,7 @@ function ProfitDrawer({ data, taxMode, inputInvoices, onSave, onClose }: { data:
   const calcRefund = includesRefund && !invoiceRiskBlocksTaxBenefit && form.invoiceAmount > 0 ? (form.invoiceAmount / 1.13 * (form.refundRate / 100)) : 0;
   const calcRevenueCny = calcTotalCnyFromReceipts + calcRefund + (form.otherIncomeCny || 0);
   const calcMiscTotal = (form.miscFees || []).reduce((s, f) => s + (f.amount || 0), 0);
-  const calcFreightCny = form.freightCurrency === 'USD' ? (form.freightValue * (receipts[0]?.exchangeRate || 7.2)) : form.freightValue;
+  const calcFreightCny = form.freightCurrency === 'CNY' ? form.freightValue : (form.freightValue * (receipts.find(r => r.currency === form.freightCurrency)?.exchangeRate || getDefaultExchangeRate(form.freightCurrency)));
   const calcSalesCnyForVat = calcTotalCnyFromReceipts + (form.otherIncomeCny || 0);
   const calcDomesticVat = includesDomesticVat
     ? invoiceRiskBlocksTaxBenefit
@@ -1079,6 +1099,8 @@ function ProfitDrawer({ data, taxMode, inputInvoices, onSave, onClose }: { data:
                         className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${r.currency === 'CNY' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>CNY</button>
                       <button type="button" onClick={() => updReceipt(i, 'currency', 'USD')}
                         className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${r.currency === 'USD' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>USD</button>
+                      <button type="button" onClick={() => updReceipt(i, 'currency', 'EUR')}
+                        className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${r.currency === 'EUR' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>EUR</button>
                     </div>
                   </div>
 
@@ -1087,8 +1109,8 @@ function ProfitDrawer({ data, taxMode, inputInvoices, onSave, onClose }: { data:
                     <InputRow label="平台与信保" value={r.platformFees} onChange={v => updReceipt(i, 'platformFees', v)} suffix={r.currency} />
                   </div>
 
-                  {r.currency === 'USD' ? (
-                    <InputRow label="结汇汇率" value={r.exchangeRate} onChange={v => updReceipt(i, 'exchangeRate', v)} suffix="CNY/USD" step="0.01" />
+                  {r.currency !== 'CNY' ? (
+                    <InputRow label="折算汇率" value={r.exchangeRate} onChange={v => updReceipt(i, 'exchangeRate', v)} suffix={`CNY/${r.currency}`} step="0.01" />
                   ) : (
                     <div className="rounded-lg bg-slate-50 dark:bg-navy-950 px-3 py-2 text-xs font-medium text-slate-400">人民币收款，汇率锁定为 1</div>
                   )}
@@ -1148,6 +1170,8 @@ function ProfitDrawer({ data, taxMode, inputInvoices, onSave, onClose }: { data:
                       className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'CNY' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>CNY</button>
                     <button type="button" onClick={() => updS('freightCurrency', 'USD')}
                       className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'USD' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>USD</button>
+                    <button type="button" onClick={() => updS('freightCurrency', 'EUR')}
+                      className={`flex-1 px-4 py-2.5 text-xs font-bold transition-all ${form.freightCurrency === 'EUR' ? 'bg-primary-navy dark:bg-tertiary-sage text-white' : 'bg-surface dark:bg-navy-950 text-slate-400'}`}>EUR</button>
                   </div>
                 </div>
               </label>

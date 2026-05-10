@@ -117,6 +117,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
   const productSummary = readString(body.productSummary, 2000);
   const details = readString(body.details, 10000);
   const totalAmount = readNumber(body.totalAmount);
+  const currencyInput = readString(body.currency || body.settlementCurrency || 'USD', 10).toUpperCase();
   const deliveryDate = readOptionalDate(body.deliveryDate);
   const freightAmountInput = readNumber(body.freightAmount);
   const miscAmountInput = readNumber(body.miscAmount);
@@ -130,6 +131,9 @@ export async function readOrderPayload(body: Record<string, unknown>) {
   }
   if (!Number.isFinite(totalAmount) || totalAmount < 0) {
     return { error: '订单金额必须大于或等于 0' };
+  }
+  if (!isOneOf(currencyInput, CURRENCIES)) {
+    return { error: '订单结算币种不正确' };
   }
   if (deliveryDate === '__invalid__') {
     return { error: '交货期格式不正确' };
@@ -157,6 +161,7 @@ export async function readOrderPayload(body: Record<string, unknown>) {
       productSummary,
       details,
       totalAmount,
+      currency: currencyInput as Currency,
       deliveryDate,
       freightAmount,
       miscAmount,
@@ -242,6 +247,9 @@ export async function readFinancePayload(body: Record<string, unknown>) {
   }
   if (!currency) {
     return { error: '请填写币种' };
+  }
+  if (!isOneOf(currency, CURRENCIES)) {
+    return { error: '币种不正确' };
   }
   if (!isOneOf(status, FINANCE_STATUSES)) {
     return { error: '财务状态不正确' };

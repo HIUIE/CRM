@@ -386,7 +386,7 @@ export default function OrderDetailPage() {
   };
 
   const openFinanceDrawer = (record: FinanceRecord | null = null) => {
-    setFinanceForm(buildFinanceForm(record, customer.name || ''));
+    setFinanceForm(buildFinanceForm(record, customer.name || '', String(order?.currency || 'USD')));
     setDrawer({ mode: 'finance' });
   };
 
@@ -527,6 +527,7 @@ export default function OrderDetailPage() {
             itemsTotal={itemsTotal}
             freightAmount={freightAmount}
             miscAmount={miscAmount}
+            currency={String(order?.currency || 'USD')}
           />
 
           <Suspense fallback={sectionChunkFallback}>
@@ -544,6 +545,7 @@ export default function OrderDetailPage() {
               financeRecords={financeRecords}
               filteredRecords={filteredFinanceRecords}
               grandTotal={grandTotal}
+              orderCurrency={String(order?.currency || 'USD')}
               summary={summary}
               onPreview={setPreviewAttachment}
               onEdit={openFinanceDrawer}
@@ -622,6 +624,7 @@ export default function OrderDetailPage() {
               user={user}
               orderNo={orderNo || ''}
               totalAmount={itemsTotal + freightAmount + miscAmount || 0}
+              orderCurrency={String(order?.currency || 'USD')}
               freightAmount={freightAmount}
               miscAmount={miscAmount}
               itemsTotal={itemsTotal}

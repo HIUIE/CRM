@@ -27,8 +27,26 @@ export function createDashboardRouter() {
         pendingCount: number;
       }>(`
         SELECT
-          SUM(CASE WHEN f.status = 'completed' AND f.type = 'receipt' AND f.currency = 'USD' THEN f.amount ELSE 0 END) as receiptUsd,
-          SUM(CASE WHEN f.status = 'pending' AND f.type = 'receipt' AND f.currency = 'USD' THEN f.amount ELSE 0 END) as pendingReceiptUsd,
+          SUM(CASE WHEN f.status = 'completed' AND f.type = 'receipt' THEN
+            CASE
+              WHEN f.currency = 'CNY' THEN f.amount / 7.2
+              WHEN f.currency = 'EUR' THEN f.amount / 0.92
+              WHEN f.currency = 'GBP' THEN f.amount / 0.78
+              WHEN f.currency = 'HKD' THEN f.amount / 7.8
+              WHEN f.currency = 'JPY' THEN f.amount / 155
+              ELSE f.amount
+            END
+          ELSE 0 END) as receiptUsd,
+          SUM(CASE WHEN f.status = 'pending' AND f.type = 'receipt' THEN
+            CASE
+              WHEN f.currency = 'CNY' THEN f.amount / 7.2
+              WHEN f.currency = 'EUR' THEN f.amount / 0.92
+              WHEN f.currency = 'GBP' THEN f.amount / 0.78
+              WHEN f.currency = 'HKD' THEN f.amount / 7.8
+              WHEN f.currency = 'JPY' THEN f.amount / 155
+              ELSE f.amount
+            END
+          ELSE 0 END) as pendingReceiptUsd,
           SUM(CASE WHEN f.status = 'pending' AND f.type = 'receipt' THEN 1 ELSE 0 END) as pendingCount
         FROM finance_records f
         LEFT JOIN orders o ON o.id = f.order_id
@@ -287,7 +305,7 @@ export function createDashboardRouter() {
         UNION ALL
         SELECT 'order' as type, o.id, o.display_id, c.name as customer_name,
           '新建订单' as title, o.product_summary as desc, o.created_at,
-          'USD ' || o.total_amount as value,
+          COALESCE(NULLIF(o.currency, ''), 'USD') || ' ' || o.total_amount as value,
           'text-primary-navy dark:text-white' as valueColor
         FROM orders o LEFT JOIN customers c ON o.customer_id = c.id
         WHERE o.deleted_at IS NULL
@@ -338,7 +356,14 @@ export function createDashboardRouter() {
         SELECT
           ${SQL.date('created_at', '%Y-%m')} AS month,
           COUNT(*) AS orders,
-          COALESCE(SUM(total_amount), 0) AS revenue
+          COALESCE(SUM(CASE
+            WHEN COALESCE(NULLIF(currency, ''), 'USD') = 'CNY' THEN total_amount / 7.2
+            WHEN COALESCE(NULLIF(currency, ''), 'USD') = 'EUR' THEN total_amount / 0.92
+            WHEN COALESCE(NULLIF(currency, ''), 'USD') = 'GBP' THEN total_amount / 0.78
+            WHEN COALESCE(NULLIF(currency, ''), 'USD') = 'HKD' THEN total_amount / 7.8
+            WHEN COALESCE(NULLIF(currency, ''), 'USD') = 'JPY' THEN total_amount / 155
+            ELSE total_amount
+          END), 0) AS revenue
         FROM orders
         WHERE created_at >= ${SQL.monthsAgo(6)} AND deleted_at IS NULL
         ${req.user?.role !== 'admin' ? ' AND created_by = ?' : ''}

@@ -10,6 +10,20 @@ import { logAction } from '../lib/audit.js';
 export function createFinanceRouter() {
   const router = Router();
 
+  async function getExchangeSnapshot(currency: string) {
+    if (currency === 'CNY') return 1.0;
+    const { getSettingValue } = await import('../services/settings.js');
+    const rawRates = await getSettingValue('exchange_rates', JSON.stringify({ USD: 1, CNY: 7.2, EUR: 0.92 }));
+    try {
+      const rates = JSON.parse(rawRates);
+      const cnyRate = Number(rates.CNY || 7.2);
+      const baseRate = Number(rates[currency] || 1);
+      return baseRate > 0 ? cnyRate / baseRate : cnyRate;
+    } catch {
+      return currency === 'USD' ? parseFloat(await getSettingValue('exchange_rate_usd_cny', '7.2')) : 1.0;
+    }
+  }
+
   router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     const q = readString(req.query.q);
     const startDate = readString(req.query.start_date);
@@ -78,10 +92,7 @@ export function createFinanceRouter() {
     }
 
     try {
-      // P7: Capture exchange rate snapshot
-      const { getSettingValue } = await import('../services/settings.js');
-      const systemRate = parseFloat(await getSettingValue('exchange_rate_usd_cny', '7.2'));
-      const snapshot = result.payload.currency === 'USD' ? systemRate : 1.0;
+      const snapshot = await getExchangeSnapshot(result.payload.currency);
 
       const created = await dbRun(
         `
@@ -137,9 +148,7 @@ export function createFinanceRouter() {
       const existing = await dbGet<{ order_id: number; status: string }>(`SELECT order_id, status FROM finance_records WHERE id = ?`, [recordId]);
       if (!existing) return fail(res, 404, '财务记录不存在');
 
-      const { getSettingValue } = await import('../services/settings.js');
-      const systemRate = parseFloat(await getSettingValue('exchange_rate_usd_cny', '7.2'));
-      const snapshot = result.payload.currency === 'USD' ? systemRate : 1.0;
+      const snapshot = await getExchangeSnapshot(result.payload.currency);
 
       const updated = await dbRun(
         `

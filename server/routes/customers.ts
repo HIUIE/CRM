@@ -108,8 +108,8 @@ export function createCustomersRouter() {
       const [orders, finance_records, followups, system_activities, tasks, contacts, transfer_logs] = await Promise.all([
         dbAll(`
           SELECT 
-            id, display_id, status, total_amount, product_summary, created_at,
-            (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed' AND deleted_at IS NULL) as paid_amount
+            id, display_id, status, COALESCE(NULLIF(currency, ''), 'USD') AS currency, total_amount, product_summary, created_at,
+            (SELECT COALESCE(SUM(amount), 0) FROM finance_records WHERE order_id = orders.id AND type = 'receipt' AND status = 'completed' AND currency = COALESCE(NULLIF(orders.currency, ''), 'USD') AND deleted_at IS NULL) as paid_amount
           FROM orders
           WHERE customer_id = ? AND deleted_at IS NULL
           ORDER BY created_at DESC
@@ -162,7 +162,7 @@ export function createCustomersRouter() {
           UNION ALL
           SELECT 'order' as type, o.id, o.display_id as order_display_id, 
             '新建订单' as title, o.product_summary as desc, o.created_at,
-            'USD ' || o.total_amount as value,
+            COALESCE(NULLIF(o.currency, ''), 'USD') || ' ' || o.total_amount as value,
             'text-primary-navy dark:text-white' as valueColor
           FROM orders o
           WHERE o.customer_id = ? AND o.deleted_at IS NULL

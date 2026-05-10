@@ -96,6 +96,11 @@ export function createOrdersRouter() {
         COALESCE((
           SELECT SUM(f.amount) 
           FROM finance_records f 
+          WHERE f.order_id = o.id AND f.type = 'receipt' AND f.status = 'completed' AND f.currency = COALESCE(NULLIF(o.currency, ''), 'USD') AND f.deleted_at IS NULL
+        ), 0) AS completed_receipt_amount,
+        COALESCE((
+          SELECT SUM(f.amount)
+          FROM finance_records f
           WHERE f.order_id = o.id AND f.type = 'receipt' AND f.status = 'completed' AND f.currency = 'USD' AND f.deleted_at IS NULL
         ), 0) AS completed_receipt_usd
       FROM orders o
@@ -271,8 +276,8 @@ export function createOrdersRouter() {
         );
         const assignedUserId = owner?.owner_user_id || req.user?.id || null;
         return await tx.run(
-          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, product_summary, delivery_date, freight_amount, misc_amount, tax_mode, created_by, updated_by, exchange_rate_snapshot, alibaba_order_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, assignedUserId, req.user?.id || null, currentRate, result.payload.alibabaOrderNo || null]
+          `INSERT INTO orders (display_id, customer_id, status, details, total_amount, currency, product_summary, delivery_date, freight_amount, misc_amount, tax_mode, created_by, updated_by, exchange_rate_snapshot, alibaba_order_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+          [displayId, result.payload.customerId, ORDER_STATUSES[0], result.payload.details, result.payload.totalAmount, result.payload.currency, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, assignedUserId, req.user?.id || null, currentRate, result.payload.alibabaOrderNo || null]
         );
       });
 
@@ -321,8 +326,8 @@ export function createOrdersRouter() {
 
       await withTransaction(async (tx) => {
         await tx.run(
-          `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, tax_mode = ?, updated_by = ?, alibaba_order_no = ? WHERE id = ?`,
-          [result.payload.customerId, result.payload.status, result.payload.details, result.payload.totalAmount, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, req.user?.id || null, result.payload.alibabaOrderNo || null, orderId]
+          `UPDATE orders SET customer_id = ?, status = ?, details = ?, total_amount = ?, currency = ?, product_summary = ?, delivery_date = ?, freight_amount = ?, misc_amount = ?, tax_mode = ?, updated_by = ?, alibaba_order_no = ? WHERE id = ?`,
+          [result.payload.customerId, result.payload.status, result.payload.details, result.payload.totalAmount, result.payload.currency, result.payload.productSummary, result.payload.deliveryDate || null, result.payload.freightAmount, result.payload.miscAmount, result.payload.taxMode, req.user?.id || null, result.payload.alibabaOrderNo || null, orderId]
         );
 
         const deletedIds = (req.body.deletedItemIds || []) as number[];
@@ -547,11 +552,12 @@ export function createOrdersRouter() {
       const order = await checkOrderAccess(req, orderParam);
       if (!order) return fail(res, 404, '订单不存在');
       const orderId = order.id;
+      const freightCurrency = String(req.body.freightCurrency || 'USD').toUpperCase();
 
       const data = {
         receipts: Array.isArray(req.body.receipts) ? req.body.receipts.map((r: any) => ({
           amount: asNumber(r.amount),
-          currency: r.currency === 'CNY' ? 'CNY' : 'USD',
+          currency: ['USD', 'CNY', 'EUR', 'GBP', 'HKD', 'JPY'].includes(String(r.currency || '').toUpperCase()) ? String(r.currency).toUpperCase() : 'USD',
           bankFees: asNumber(r.bankFees),
           platformFees: asNumber(r.platformFees),
           exchangeRate: asNumber(r.exchangeRate, r.currency === 'CNY' ? 1 : 7.2),
@@ -562,7 +568,7 @@ export function createOrdersRouter() {
         factoryCostCny: asNumber(req.body.factoryCostCny),
         domesticFees: asNumber(req.body.domesticFees),
         freightValue: asNumber(req.body.freightValue),
-        freightCurrency: req.body.freightCurrency === 'CNY' ? 'CNY' : 'USD',
+        freightCurrency: ['USD', 'CNY', 'EUR', 'GBP', 'HKD', 'JPY'].includes(freightCurrency) ? freightCurrency : 'USD',
         customsMisc: asNumber(req.body.customsMisc),
         miscFees: Array.isArray(req.body.miscFees) ? req.body.miscFees : [],
       };

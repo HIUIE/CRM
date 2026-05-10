@@ -54,6 +54,7 @@ export const EMPTY_ORDER_FORM: OrderFormState = {
   customerId: '',
   productSummary: '',
   totalAmount: '0',
+  currency: 'USD',
   deliveryDate: '',
   freightAmount: '0',
   miscAmount: '0',
@@ -201,6 +202,7 @@ export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFor
     customerId: String(order.customer_id),
     productSummary: asText(order.product_summary),
     totalAmount: String(order.total_amount),
+    currency: (String(order.currency || 'USD').toUpperCase() as OrderFormState['currency']),
     deliveryDate: asText(order.deliveryDate),
     freightAmount: String(order.freightAmount || 0),
     miscAmount: String(order.miscAmount || 0),
@@ -220,12 +222,12 @@ export function orderToFormState(order: OrderInfo, items: OrderItem[]): OrderFor
   };
 }
 
-export function buildFinanceForm(record: FinanceRecord | null, customerName: string): FinanceFormState {
+export function buildFinanceForm(record: FinanceRecord | null, customerName: string, defaultCurrency = 'USD'): FinanceFormState {
   return {
     id: record?.id,
     type: record?.type || 'receipt',
     amount: record ? String(record.amount) : '',
-    currency: record?.currency || 'USD',
+    currency: record?.currency || defaultCurrency,
     status: record?.status || 'completed',
     recordCategory: (record?.recordCategory as FinanceCategory) || (record?.type === 'payment' ? 'goods' : 'deposit'),
     target: record?.target || (record?.type === 'receipt' ? customerName : ''),
