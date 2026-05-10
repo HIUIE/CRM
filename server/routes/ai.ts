@@ -5,7 +5,7 @@ import { buildOrderDetail } from '../services/order-detail.js';
 import { getSettingValue } from '../services/settings.js';
 import { readString } from '../lib/values.js';
 import { fail, handleRouteError } from '../lib/http.js';
-import { requireAuth, type AuthedRequest } from '../lib/auth.js';
+import { checkOrderAccess, requireAuth, type AuthedRequest } from '../lib/auth.js';
 
 async function resolveModel() {
   const selectedModel = (await getSettingValue('current_ai_model', 'deepseek-v4-flash')).trim();
@@ -164,11 +164,15 @@ export function createAiRouter() {
   });
 
   // 3. 订单分析路由
-  router.post('/analyze-order', async (req, res) => {
+  router.post('/analyze-order', async (req: AuthedRequest, res) => {
     const orderNo = readString(req.body?.orderNo);
     if (!orderNo) return fail(res, 400, '请提供订单编号', 'INVALID_AI_INPUT');
 
     try {
+      const allowedOrder = await checkOrderAccess(req, orderNo);
+      if (!allowedOrder) {
+        return fail(res, 404, '订单不存在或无权访问', 'ORDER_NOT_FOUND');
+      }
       const rawData = await buildOrderDetail(orderNo);
       if (!rawData) return fail(res, 404, '订单不存在');
 

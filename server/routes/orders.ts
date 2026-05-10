@@ -187,13 +187,25 @@ export function createOrdersRouter() {
     if (!Array.isArray(ids) || !ids.length || !status) {
       return fail(res, 400, '无效的批量操作请求');
     }
+    const normalizedIds = [...new Set(ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))];
+    if (!normalizedIds.length || normalizedIds.length !== ids.length) {
+      return fail(res, 400, '订单编号无效', 'INVALID_ORDER_IDS');
+    }
+    if (!ORDER_STATUSES.includes(status)) {
+      return fail(res, 400, '订单状态无效', 'INVALID_ORDER_STATUS');
+    }
 
     try {
+      for (const id of normalizedIds) {
+        if (!(await checkOrderAccess(req, id))) {
+          return fail(res, 403, '无权批量修改所选订单', 'ORDER_BATCH_FORBIDDEN');
+        }
+      }
       await withTransaction(async (tx) => {
-        const placeholders = ids.map(() => '?').join(',');
-        await tx.run(`UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [status, ...ids]);
+        const placeholders = normalizedIds.map(() => '?').join(',');
+        await tx.run(`UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [status, ...normalizedIds]);
         
-        for (const id of ids) {
+        for (const id of normalizedIds) {
           await logAction({
             userId: req.user!.id,
             userName: req.user!.name,
@@ -204,7 +216,7 @@ export function createOrdersRouter() {
           });
         }
       });
-      res.json({ success: true, count: ids.length });
+      res.json({ success: true, count: normalizedIds.length });
     } catch (error) {
       return handleRouteError(res, error, '批量更新失败');
     }
@@ -579,7 +591,7 @@ export function createOrdersRouter() {
       const order = await checkOrderAccess(req, orderParam);
       if (!order) return fail(res, 404, '订单不存在');
       const payloadResult = readInputInvoicePayload(req.body, req.user?.role);
-      if ('error' in payloadResult) return fail(res, 400, payloadResult.error, 'INVALID_INPUT_INVOICE');
+      if ('error' in payloadResult) return fail(res, 400, payloadResult.error || '进项发票参数无效', 'INVALID_INPUT_INVOICE');
       const payload = payloadResult.payload;
       const waivedBy = payload.invoiceStatus === 'waived' ? req.user?.id || null : null;
       const waivedAtSql = payload.invoiceStatus === 'waived' ? 'CURRENT_TIMESTAMP' : 'NULL';
@@ -634,7 +646,7 @@ export function createOrdersRouter() {
       const order = await checkOrderAccess(req, invoice.order_id);
       if (!order) return fail(res, 404, '订单不存在');
       const payloadResult = readInputInvoicePayload(req.body, req.user?.role);
-      if ('error' in payloadResult) return fail(res, 400, payloadResult.error, 'INVALID_INPUT_INVOICE');
+      if ('error' in payloadResult) return fail(res, 400, payloadResult.error || '进项发票参数无效', 'INVALID_INPUT_INVOICE');
       const payload = payloadResult.payload;
       const waivedBy = payload.invoiceStatus === 'waived' ? req.user?.id || null : null;
       const waivedAtSql = payload.invoiceStatus === 'waived' ? 'COALESCE(waived_at, CURRENT_TIMESTAMP)' : 'NULL';

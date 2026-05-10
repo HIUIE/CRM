@@ -7,6 +7,15 @@ import { readPartnerPayload } from '../services/payloads.js';
 export function createPartnersRouter() {
   const router = Router();
 
+  async function canAccessPartner(req: AuthedRequest, partnerId: number) {
+    const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'p');
+    const partner = await dbGet<{ id: number }>(
+      `SELECT p.id FROM partners p WHERE p.id = ? AND p.deleted_at IS NULL ${scopeSql}`,
+      [partnerId, ...scopeParams],
+    );
+    return Boolean(partner);
+  }
+
   router.get('/', requireAuth, async (req: AuthedRequest, res) => {
     try {
       const { readPagination, buildLimitOffset } = await import('../lib/values.js');
@@ -75,11 +84,14 @@ export function createPartnersRouter() {
     }
 
     try {
+      if (!(await canAccessPartner(req, partnerId))) {
+        return fail(res, 404, '伙伴不存在', 'PARTNER_NOT_FOUND');
+      }
       const updated = await dbRun(
         `
           UPDATE partners
           SET name = ?, partner_type = ?, country = ?, contact = ?, contact_person = ?, address = ?, rating = ?, payment_terms = ?, remark = ?, updated_by = ?
-          WHERE id = ?
+          WHERE id = ? AND deleted_at IS NULL
         `,
         [
           result.payload.name,
@@ -115,7 +127,7 @@ export function createPartnersRouter() {
       const partner = await dbGet(`
         SELECT p.*, u.name AS created_by_name
         FROM partners p LEFT JOIN users u ON u.id = p.created_by
-        WHERE p.id = ? ${scopeSql}
+        WHERE p.id = ? AND p.deleted_at IS NULL ${scopeSql}
       `, [partnerId, ...scopeParams]);
 
       if (!partner) {
@@ -183,9 +195,10 @@ export function createPartnersRouter() {
       const monthlyStats = await dbAll(`
         SELECT ${SQL.date('pp.created_at', '%Y-%m')} AS month, COUNT(*) AS count
         FROM production_plans pp
-        WHERE pp.partner_id = ?
+        JOIN orders o ON o.id = pp.order_id
+        WHERE pp.partner_id = ? AND o.deleted_at IS NULL${relScopeSql}
         GROUP BY month ORDER BY month DESC LIMIT 12
-      `, [partnerId]);
+      `, [partnerId, ...relScopeParams]);
 
       const thisMonthCount = monthlyStats.find((m: any) => m.month === thisMonth)?.count || 0;
       const lastMonthCount = monthlyStats.find((m: any) => m.month === lastMonth)?.count || 0;
@@ -254,6 +267,9 @@ export function createPartnersRouter() {
     if (!name) return fail(res, 400, '联系人姓名不能为空');
 
     try {
+      if (!Number.isInteger(partnerId) || partnerId <= 0 || !(await canAccessPartner(req, partnerId))) {
+        return fail(res, 404, '伙伴不存在', 'PARTNER_NOT_FOUND');
+      }
       if (isPrimary) {
         await dbRun(`UPDATE partner_contacts SET is_primary = false WHERE partner_id = ?`, [partnerId]);
       }
@@ -274,6 +290,9 @@ export function createPartnersRouter() {
     try {
       const existing = await dbGet<{ partner_id: number }>(`SELECT partner_id FROM partner_contacts WHERE id = ?`, [contactId]);
       if (!existing) return fail(res, 404, '联系人不存在');
+      if (!(await canAccessPartner(req, existing.partner_id))) {
+        return fail(res, 404, '联系人不存在', 'PARTNER_CONTACT_NOT_FOUND');
+      }
 
       if (isPrimary) {
         await dbRun(`UPDATE partner_contacts SET is_primary = false WHERE partner_id = ?`, [existing.partner_id]);
@@ -292,6 +311,10 @@ export function createPartnersRouter() {
   router.delete('/contacts/:contactId', requireAuth, async (req: AuthedRequest, res) => {
     const contactId = Number(req.params.contactId);
     try {
+      const existing = await dbGet<{ partner_id: number }>(`SELECT partner_id FROM partner_contacts WHERE id = ?`, [contactId]);
+      if (!existing || !(await canAccessPartner(req, existing.partner_id))) {
+        return fail(res, 404, '联系人不存在', 'PARTNER_CONTACT_NOT_FOUND');
+      }
       await dbRun(`DELETE FROM partner_contacts WHERE id = ?`, [contactId]);
       res.json({ success: true });
     } catch (error) {

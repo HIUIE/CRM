@@ -6,6 +6,38 @@ import type { AddressInfo } from 'node:net';
 const { Pool } = pkg;
 
 describe('PostgreSQL Integration Tests', () => {
+  async function startTestServer() {
+    const { createApp } = await import('../server/app.js');
+    const app = await createApp();
+    const server = app.listen(0);
+    const port = (server.address() as AddressInfo).port;
+    return {
+      baseUrl: `http://127.0.0.1:${port}`,
+      close: () => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())),
+    };
+  }
+
+  async function login(baseUrl: string, username: string, password: string) {
+    const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    assert.strictEqual(loginResponse.status, 200);
+    const headers = loginResponse.headers as Headers & { getSetCookie?: () => string[] };
+    const setCookie = (typeof headers.getSetCookie === 'function'
+      ? headers.getSetCookie().join(', ')
+      : headers.get('set-cookie') || '');
+    const token = setCookie.match(/token=[^;,]+/)?.[0];
+    const csrfToken = setCookie.match(/csrf_token=([^;,]+)/)?.[1];
+    assert.ok(token, 'Login should set auth cookie');
+    assert.ok(csrfToken, 'Login should set CSRF cookie');
+    return {
+      cookie: `${token}; csrf_token=${csrfToken}`,
+      csrfToken,
+    };
+  }
+
   before(async () => {
     // 1. Setup the test database
     const setupPool = new Pool({
@@ -208,6 +240,108 @@ describe('PostgreSQL Integration Tests', () => {
       assert.ok(!dashboard.activities.some((item) => item.order_display_id === 'ORD-DASH-DELETED'));
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
+  test('AI order analysis does not expose orders outside staff scope', async () => {
+    const { dbRun, dbGet } = await import('../server/lib/db.js');
+    const bcrypt = await import('bcryptjs');
+
+    const [ownerHash, viewerHash] = await Promise.all([
+      bcrypt.hash('owner-pass', 10),
+      bcrypt.hash('viewer-pass', 10),
+    ]);
+    await dbRun(
+      'INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, ?)',
+      ['ai-scope-owner', ownerHash, 'staff', 'AI Scope Owner', 1],
+    );
+    await dbRun(
+      'INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, ?)',
+      ['ai-scope-viewer', viewerHash, 'staff', 'AI Scope Viewer', 1],
+    );
+    const owner = await dbGet<{ id: number }>('SELECT id FROM users WHERE username = ?', ['ai-scope-owner']);
+    assert.ok(owner);
+
+    await dbRun(
+      'INSERT INTO customers (display_id, name, country, owner_user_id, created_by) VALUES (?, ?, ?, ?, ?)',
+      ['C-AI-SCOPE-001', 'AI Scope Customer', 'US', owner.id, owner.id],
+    );
+    const customer = await dbGet<{ id: number }>('SELECT id FROM customers WHERE display_id = ?', ['C-AI-SCOPE-001']);
+    assert.ok(customer);
+    await dbRun(
+      'INSERT INTO orders (display_id, customer_id, status, total_amount, product_summary, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+      ['ORD-AI-SCOPE-001', customer.id, 'draft', 300, 'Private product', owner.id],
+    );
+
+    const server = await startTestServer();
+    try {
+      const session = await login(server.baseUrl, 'ai-scope-viewer', 'viewer-pass');
+      const response = await fetch(`${server.baseUrl}/api/ai/analyze-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: session.cookie,
+          'X-CSRF-Token': session.csrfToken,
+        },
+        body: JSON.stringify({ orderNo: 'ORD-AI-SCOPE-001' }),
+      });
+      assert.strictEqual(response.status, 404);
+      const body = await response.json() as { error?: { code?: string; message?: string } };
+      assert.strictEqual(body.error?.code, 'ORDER_NOT_FOUND');
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('Batch order status update rejects orders outside staff scope', async () => {
+    const { dbRun, dbGet } = await import('../server/lib/db.js');
+    const bcrypt = await import('bcryptjs');
+
+    const [ownerHash, viewerHash] = await Promise.all([
+      bcrypt.hash('batch-owner-pass', 10),
+      bcrypt.hash('batch-viewer-pass', 10),
+    ]);
+    await dbRun(
+      'INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, ?)',
+      ['batch-scope-owner', ownerHash, 'staff', 'Batch Scope Owner', 1],
+    );
+    await dbRun(
+      'INSERT INTO users (username, password, role, name, active) VALUES (?, ?, ?, ?, ?)',
+      ['batch-scope-viewer', viewerHash, 'staff', 'Batch Scope Viewer', 1],
+    );
+    const owner = await dbGet<{ id: number }>('SELECT id FROM users WHERE username = ?', ['batch-scope-owner']);
+    assert.ok(owner);
+
+    await dbRun(
+      'INSERT INTO customers (display_id, name, country, owner_user_id, created_by) VALUES (?, ?, ?, ?, ?)',
+      ['C-BATCH-SCOPE-001', 'Batch Scope Customer', 'US', owner.id, owner.id],
+    );
+    const customer = await dbGet<{ id: number }>('SELECT id FROM customers WHERE display_id = ?', ['C-BATCH-SCOPE-001']);
+    assert.ok(customer);
+    await dbRun(
+      'INSERT INTO orders (display_id, customer_id, status, total_amount, product_summary, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+      ['ORD-BATCH-SCOPE-001', customer.id, 'draft', 500, 'Scoped product', owner.id],
+    );
+    const order = await dbGet<{ id: number }>('SELECT id FROM orders WHERE display_id = ?', ['ORD-BATCH-SCOPE-001']);
+    assert.ok(order);
+
+    const server = await startTestServer();
+    try {
+      const session = await login(server.baseUrl, 'batch-scope-viewer', 'batch-viewer-pass');
+      const response = await fetch(`${server.baseUrl}/api/orders/batch`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: session.cookie,
+          'X-CSRF-Token': session.csrfToken,
+        },
+        body: JSON.stringify({ ids: [order.id], status: 'production' }),
+      });
+      assert.strictEqual(response.status, 403);
+      const persistedOrder = await dbGet<{ status: string }>('SELECT status FROM orders WHERE id = ?', [order.id]);
+      assert.strictEqual(persistedOrder?.status, 'draft');
+    } finally {
+      await server.close();
     }
   });
 });
