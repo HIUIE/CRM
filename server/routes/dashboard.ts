@@ -98,6 +98,102 @@ export function createDashboardRouter() {
         LIMIT 2
       `, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
+      const staleLogistics = await dbAll<{
+        id: number;
+        order_display_id: string;
+        customer_name: string;
+        carrier: string;
+        tracking_no: string;
+        days_pending: number;
+      }[]>(`
+        SELECT
+          l.id, o.display_id as order_display_id, c.name as customer_name, l.carrier, l.tracking_no,
+          ${SQL.daysBetween('l.created_at')} as days_pending
+        FROM logistics_records l
+        JOIN orders o ON l.order_id = o.id
+        LEFT JOIN customers c ON o.customer_id = c.id
+        WHERE l.status != 'arrived' AND l.deleted_at IS NULL AND o.deleted_at IS NULL
+          AND l.created_at < NOW() - INTERVAL '7 days'
+        ${req.user?.role !== 'admin' ? ' AND (l.created_by = ? OR o.created_by = ?)' : ''}
+        ORDER BY l.created_at ASC
+        LIMIT 3
+      `, req.user?.role !== 'admin' ? [req.user?.id, req.user?.id] : []);
+
+      const invoiceCandidates = await dbAll<{
+        id: number;
+        order_display_id: string;
+        customer_name: string;
+        tax_mode: 'A' | 'C';
+        etd: string | null;
+        shipping_date: string | null;
+      }[]>(`
+        SELECT
+          o.id, o.display_id as order_display_id, c.name as customer_name,
+          COALESCE(NULLIF(o.tax_mode, ''), 'A') AS tax_mode,
+          (
+            SELECT NULLIF(l.etd, '')
+            FROM logistics_records l
+            WHERE l.order_id = o.id AND l.deleted_at IS NULL AND NULLIF(l.etd, '') IS NOT NULL
+            ORDER BY l.etd DESC, l.id DESC
+            LIMIT 1
+          ) AS etd,
+          (
+            SELECT NULLIF(l.shipping_date, '')
+            FROM logistics_records l
+            WHERE l.order_id = o.id AND l.deleted_at IS NULL AND NULLIF(l.shipping_date, '') IS NOT NULL
+            ORDER BY l.shipping_date DESC, l.id DESC
+            LIMIT 1
+          ) AS shipping_date
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        WHERE o.status IN ('customs', 'shipping', 'completed')
+          AND COALESCE(NULLIF(o.tax_mode, ''), 'A') IN ('A', 'C')
+          AND o.deleted_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM input_invoices ii
+            WHERE ii.order_id = o.id
+              AND ii.deleted_at IS NULL
+              AND ii.invoice_type = 'vat_special'
+              AND ii.invoice_status IN ('received', 'verified')
+          )
+        ${req.user?.role !== 'admin' ? ' AND o.created_by = ?' : ''}
+        ORDER BY o.updated_at DESC NULLS LAST, o.created_at DESC
+        LIMIT 20
+      `, req.user?.role !== 'admin' ? [req.user?.id] : []);
+
+      const toDate = (value?: string | null) => {
+        if (!value) return null;
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      };
+      const today = new Date();
+      const inputInvoiceAlerts = invoiceCandidates
+        .map(row => {
+          const anchor = toDate(row.tax_mode === 'A' ? row.etd : (row.shipping_date || row.etd));
+          if (!anchor) return null;
+          const due = new Date(anchor);
+          if (row.tax_mode === 'A') {
+            due.setDate(due.getDate() + 30);
+          } else {
+            due.setDate(25);
+          }
+          const days = Math.floor((today.getTime() - due.getTime()) / (24 * 60 * 60 * 1000));
+          if (days < 0) return null;
+          return {
+            id: row.id,
+            order_display_id: row.order_display_id,
+            customer_name: row.customer_name,
+            desc: row.tax_mode === 'A'
+              ? 'ETD 后 30 天仍未收齐可抵扣专票'
+              : '本月内销纳税申报前需催收进项专票',
+            days,
+            actionLabel: '催发票',
+            urgency: days > 7 ? 'high' : 'medium'
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 3);
+
       const todos = [
         ...overduePayments.map(p => ({
           id: `payment-${p.id}`,
@@ -128,8 +224,31 @@ export function createDashboardRouter() {
           days: 0,
           actionLabel: '创建物流',
           urgency: 'medium'
+        })),
+        ...staleLogistics.map(l => ({
+          id: `logistics-stale-${l.id}`,
+          type: 'logistics_stale',
+          order_display_id: l.order_display_id,
+          customer_name: l.customer_name,
+          desc: `${l.carrier || '物流'} ${l.tracking_no || ''} 超 7 天未送达`,
+          days: Math.max(0, l.days_pending),
+          actionLabel: '查物流',
+          urgency: l.days_pending > 14 ? 'high' : 'medium'
+        })),
+        ...inputInvoiceAlerts.map((i: any) => ({
+          id: `input-invoice-${i.id}`,
+          type: 'input_invoice_risk',
+          order_display_id: i.order_display_id,
+          customer_name: i.customer_name,
+          desc: i.desc,
+          days: Math.max(0, i.days),
+          actionLabel: i.actionLabel,
+          urgency: i.urgency
         }))
-      ].slice(0, 5);
+      ].sort((a, b) => {
+        const score = (t: any) => (t.urgency === 'high' ? 1000 : t.urgency === 'medium' ? 100 : 10) + Math.max(0, t.days || 0);
+        return score(b) - score(a);
+      }).slice(0, 6);
 
       const activitiesRows = await dbAll<{
         type: string;

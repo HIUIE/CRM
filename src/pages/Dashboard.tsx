@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowDownRight, ArrowUpRight, FileText, Truck, Wallet, Clock,
-  FilePlus, CreditCard, Send, Users, Download, MoreHorizontal, Sparkles, ChevronRight,
-  Building2, ArrowRightLeft, AlertTriangle, TrendingDown, Loader2
+  FilePlus, CreditCard, Send, Users, Download, Sparkles, ChevronRight,
+  Building2, ArrowRightLeft, AlertTriangle, TrendingDown, Loader2, ShieldAlert, ClipboardCheck,
+  CalendarClock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useNavigateWithTransition } from '../lib/transition';
@@ -19,6 +20,7 @@ interface DashboardData {
     activeOrders: number;
     receiptUsd: number;
     pendingReceiptUsd: number;
+    pendingFinanceCount?: number;
     activeLogistics: number;
     customerCount: number;
     estProfit: number;
@@ -34,13 +36,24 @@ interface DashboardData {
 
 interface TodoItem {
   id: string;
-  type: 'payment_overdue' | 'customs_missing' | 'logistics_pending';
+  type: 'payment_overdue' | 'customs_missing' | 'logistics_pending' | 'input_invoice_risk' | 'logistics_stale';
   order_display_id: string;
   customer_name: string;
   desc: string;
   days: number;
   urgency: 'high' | 'medium' | 'low';
   actionLabel: string;
+}
+
+function getTodoMeta(todo: TodoItem) {
+  const map: Record<TodoItem['type'], { title: string; icon: React.ReactNode; path: string }> = {
+    payment_overdue: { title: '收款提醒', icon: <Wallet size={18} />, path: 'finance' },
+    customs_missing: { title: '报关资料', icon: <FileText size={18} />, path: 'customs' },
+    logistics_pending: { title: '创建物流', icon: <Truck size={18} />, path: 'logistics' },
+    logistics_stale: { title: '物流滞留', icon: <Clock size={18} />, path: 'logistics' },
+    input_invoice_risk: { title: '进项发票', icon: <ClipboardCheck size={18} />, path: 'invoices' },
+  };
+  return map[todo.type];
 }
 
 interface ActivityItem {
@@ -180,7 +193,7 @@ function AIBriefing({ data }: { data: DashboardData }) {
     if (loading) return;
     if (!force && briefing) return;
     setLoading(true);
-    const prompt = `请基于以下控制台数据生成一段50字以内的外贸业务早报（直接输出文本，不加任何前缀）：今日待处理${data.todos.length}项，活跃订单${data.overview.activeOrders}个，已收金额$${data.overview.receiptUsd.toLocaleString()}，运输中${data.overview.activeLogistics}笔。语气专业，带一点鼓励。`;
+    const prompt = `请基于以下控制台数据生成一段50字以内的外贸业务早报（直接输出文本，不加任何前缀）：今日待处理${data.todos.length}项，风控预警${data.overview.risks?.length || 0}项，待收款${data.overview.pendingFinanceCount || 0}笔，活跃订单${data.overview.activeOrders}个，运输中${data.overview.activeLogistics}笔。语气专业，提醒优先级。`;
     try {
       const res = await apiFetch<{ content: string }>('/api/ai/chat', { method: 'POST', body: JSON.stringify({ message: prompt }) });
       const nextBriefing = res.content || fallbackBriefing;
@@ -289,8 +302,10 @@ export default function DashboardView() {
   if (error || !data) return <div className="p-8 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-lg m-4 font-bold border border-red-100">{getErrorMessage(error, '无法读取控制台数据')}</div>;
 
   const revenueGrowth = formatGrowth(data.overview.growth.revenue);
-  const profitGrowth = formatGrowth(data.overview.growth.profit);
   const risks = data.overview.risks || [];
+  const highPriorityTodos = data.todos.filter(t => t.urgency === 'high').length;
+  const overdueTodos = data.todos.filter(t => t.days > 0).length;
+  const invoiceTodos = data.todos.filter(t => t.type === 'input_invoice_risk').length;
 
   const filteredActivities = activityFilter === 'all'
     ? data.activities
@@ -314,9 +329,10 @@ export default function DashboardView() {
           onClick={() => setDrawer({ title: '已结清订单', filter: { status: 'completed', label: '已结清' } })}
         />
         <StatCard
-          title="本月估算利润 (USD)" value={formatAmount(data.overview.estProfit, '$')} subValue={`较上月 ${profitGrowth.label}`} subValueColor={profitGrowth.color}
-          icon={<ArrowUpRight size={16} className="text-indigo-500" />} sparklineColor="#6366F1" sparklineData={[2, 8, 12, 10, 18, 22]}
-          onClick={() => setDrawer({ title: '全部订单（含利润）', filter: { label: '利润视图' } })}
+          title="待收款风险" value={`${data.overview.pendingFinanceCount || 0} 笔`} subValue={data.overview.pendingReceiptUsd > 0 ? formatAmount(data.overview.pendingReceiptUsd, 'USD') : '暂无待收款'}
+          subValueColor={(data.overview.pendingFinanceCount || 0) > 0 ? 'text-amber-500' : 'text-emerald-500'}
+          icon={<ShieldAlert size={16} className="text-amber-500" />} sparklineColor="#F59E0B" sparklineData={[2, 4, 3, 5, 4, 6]}
+          onClick={() => navigate('/finance?status=pending&type=receipt')}
         />
         <StatCard
           title="运输中的订单" value={`${data.overview.activeLogistics} 笔`} subValue={`客户 ${data.overview.customerCount} 个`}
@@ -328,59 +344,49 @@ export default function DashboardView() {
       <div className="grid gap-6 lg:grid-cols-[65%_minmax(0,1fr)] items-start">
         {/* Left Column */}
         <div className="flex flex-col space-y-8">
-          {/* Risk Alerts */}
-          {risks.length > 0 && (
-            <section className="flex flex-col rounded-lg border-2 border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-900/5 shadow-sm transition-colors">
-              <div className="px-6 py-4 border-b border-red-100 dark:border-red-800/20 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle size={16} className="text-error" />
-                  <div>
-                    <h2 className="text-sm font-extrabold text-error tracking-tight">风控预警 ({risks.length})</h2>
-                    <p className="text-[11px] text-red-400 dark:text-red-500 font-bold tracking-tight mt-0.5">以下订单触发利润红线或成本倒挂</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 space-y-2">
-                {risks.map((risk, i) => (
-                  <div key={i} onClick={() => navigate(`/orders/${risk.displayId.toLowerCase()}`)} className="flex items-center justify-between p-3 bg-surface dark:bg-navy-900 rounded-lg border border-red-100 dark:border-red-800/20 hover:border-red-300 dark:hover:border-red-700 cursor-pointer transition-all group">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${risk.riskType === 'low_margin' ? 'bg-red-100 dark:bg-red-900/20 text-error' : 'bg-amber-100 dark:bg-amber-900/20 text-amber-500'}`}>
-                        {risk.riskType === 'low_margin' ? <TrendingDown size={14} /> : <Truck size={14} />}
-                      </div>
-                      <div>
-                        <div className="text-[12px] font-extrabold text-primary-navy dark:text-white">{risk.displayId} · {risk.customerName}</div>
-                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                          {risk.riskType === 'low_margin'
-                            ? `利润率 ${risk.value}% 低于红线 ${risk.threshold}%`
-                            : `运费 ¥${risk.value.toLocaleString()} 超过货品成本 ¥${risk.threshold.toLocaleString()}`}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="text-slate-300 group-hover:text-error transition-colors" />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Todos */}
+          {/* Risk Workbench */}
           <section className="flex flex-col rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 shadow-sm transition-colors">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-navy-800 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">今日待处理 ({data.todos.length})</h2>
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold tracking-tight mt-0.5">优先处理以下业务阻点</p>
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">风险与待办中心 ({data.todos.length + risks.length})</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold tracking-tight mt-0.5">按资金、单据、物流和利润风险排序</p>
               </div>
               <button onClick={() => navigate('/orders')} className="text-[11px] font-bold text-slate-500 hover:text-primary-navy transition-colors flex items-center gap-1">查看全部 <ChevronRight size={14} /></button>
             </div>
+            <div className="grid gap-3 border-b border-slate-100 p-4 dark:border-navy-800 sm:grid-cols-4">
+              <MiniInsightCard label="高优先级" value={highPriorityTodos} tone={highPriorityTodos > 0 ? 'error' : 'neutral'} icon={<AlertTriangle size={15} />} />
+              <MiniInsightCard label="已逾期" value={overdueTodos} tone={overdueTodos > 0 ? 'warning' : 'neutral'} icon={<CalendarClock size={15} />} />
+              <MiniInsightCard label="发票风险" value={invoiceTodos} tone={invoiceTodos > 0 ? 'warning' : 'neutral'} icon={<ClipboardCheck size={15} />} />
+              <MiniInsightCard label="利润预警" value={risks.length} tone={risks.length > 0 ? 'error' : 'neutral'} icon={<TrendingDown size={15} />} />
+            </div>
             <div className="p-4 space-y-3">
-              {data.todos.length > 0 ? data.todos.map((todo) => (
-                <div key={todo.id} onClick={() => navigate(`/orders/${String(todo.order_display_id).toLowerCase()}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
+              {risks.map((risk, i) => (
+                <div key={`risk-${i}`} onClick={() => navigate(`/orders/${risk.displayId.toLowerCase()}`)} className="flex items-center justify-between p-4 bg-red-50/60 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-800/20 hover:border-red-300 dark:hover:border-red-700 cursor-pointer transition-all group">
                   <div className="flex items-center gap-4">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${todo.urgency === 'high' ? 'bg-red-50 dark:bg-red-900/20 text-error' : todo.urgency === 'medium' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500'}`}>
-                      {todo.urgency === 'high' ? <ArrowUpRight size={18} /> : <FileText size={18} />}
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${risk.riskType === 'low_margin' ? 'bg-red-100 dark:bg-red-900/30 text-error' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-500'}`}>
+                      {risk.riskType === 'low_margin' ? <TrendingDown size={18} /> : <Truck size={18} />}
                     </div>
                     <div>
-                      <div className="text-[13px] font-extrabold text-primary-navy dark:text-white mb-0.5">{todo.type === 'payment_overdue' ? '收款提醒' : todo.type === 'customs_missing' ? '报关资料' : '创建物流'}</div>
+                      <div className="text-[13px] font-extrabold text-primary-navy dark:text-white mb-0.5">{risk.riskType === 'low_margin' ? '利润率预警' : '运费倒挂'}</div>
+                      <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1">{risk.displayId} · {risk.customerName}</div>
+                      <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                        {risk.riskType === 'low_margin'
+                          ? `利润率 ${risk.value}% 低于红线 ${risk.threshold}%`
+                          : `运费 ¥${risk.value.toLocaleString()} 超过货品成本 ¥${risk.threshold.toLocaleString()}`}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-error transition-colors" />
+                </div>
+              ))}
+              {data.todos.length > 0 ? data.todos.map((todo) => (
+                <div key={todo.id} onClick={() => navigate(`/orders/${String(todo.order_display_id).toLowerCase()}?section=${getTodoMeta(todo).path}`)} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-950/50 rounded-lg border border-slate-100 dark:border-navy-800 hover:bg-surface dark:hover:bg-navy-800 hover:border-primary-navy/20 transition-all cursor-pointer group">
+                  <div className="flex items-center gap-4">
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${todo.urgency === 'high' ? 'bg-red-50 dark:bg-red-900/20 text-error' : todo.urgency === 'medium' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500'}`}>
+                      {getTodoMeta(todo).icon}
+                    </div>
+                    <div>
+                      <div className="text-[13px] font-extrabold text-primary-navy dark:text-white mb-0.5">{getTodoMeta(todo).title}</div>
                       <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1">{todo.order_display_id} · {todo.customer_name}</div>
                       <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{todo.desc}</div>
                     </div>
@@ -390,9 +396,9 @@ export default function DashboardView() {
                     <button className={`px-4 py-1.5 rounded text-[11px] font-bold border transition-colors ${todo.urgency === 'high' ? 'border-error text-error hover:bg-error hover:text-white' : 'border-primary-navy dark:border-tertiary-sage text-primary-navy dark:text-tertiary-sage hover:bg-primary-navy dark:hover:bg-tertiary-sage hover:text-white'}`}>{todo.actionLabel}</button>
                   </div>
                 </div>
-              )) : (
-                <EmptyState title="暂无待处理任务" description="今天所有的关键任务都已处理完毕" />
-              )}
+              )) : risks.length === 0 ? (
+                <EmptyState title="暂无风险与待办" description="今天所有关键业务点都已处理完毕" />
+              ) : null}
             </div>
           </section>
 
@@ -442,6 +448,22 @@ export default function DashboardView() {
 
         {/* Right Column */}
         <div className="flex flex-col space-y-8">
+          {/* Quick Actions */}
+          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm shrink-0">
+            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">快捷操作</h2>
+            <div className="grid grid-cols-3 gap-3">
+              <QuickAction icon={<FilePlus size={20} />} label="新建订单" onClick={() => setShowOrderDrawer(true)} />
+              <QuickAction icon={<Wallet size={20} />} label="收款登记" onClick={() => navigate('/finance?create=1')} />
+              <QuickAction icon={<Truck size={20} />} label="创建物流" onClick={() => navigate('/logistics?create=1')} />
+              <QuickAction icon={<FileText size={20} />} label="报关资料" onClick={() => navigate('/orders')} />
+              <QuickAction icon={<Building2 size={20} />} label="合作伙伴" onClick={() => navigate('/partners')} />
+              <QuickAction icon={<CreditCard size={20} />} label="费用登记" onClick={() => navigate('/finance?create=1')} />
+              <QuickAction icon={<Download size={20} />} label="数据导出" onClick={() => navigate('/settings?tab=export')} />
+              <QuickAction icon={<Users size={20} />} label="客户管理" onClick={() => navigate('/customers')} />
+              <QuickAction icon={<Send size={20} />} label="系统配置" onClick={() => navigate('/settings')} />
+            </div>
+          </section>
+
           {/* Monthly Trends */}
           <div className="grid gap-6">
             {data.monthlyTrends && data.monthlyTrends.length > 0 && (
@@ -487,23 +509,6 @@ export default function DashboardView() {
 
           {/* Currency Exchange */}
           <CurrencyExchangeWidget />
-
-          {/* Quick Actions */}
-          <section className="rounded-lg border border-slate-200 dark:border-navy-800 bg-surface dark:bg-navy-900 p-6 shadow-sm shrink-0">
-            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">快捷操作</h2>
-            <div className="grid grid-cols-3 gap-3">
-              <QuickAction icon={<FilePlus size={20} />} label="新建订单" onClick={() => setShowOrderDrawer(true)} />
-              <QuickAction icon={<Wallet size={20} />} label="收款登记" onClick={() => navigate('/finance?create=1')} />
-              <QuickAction icon={<Truck size={20} />} label="创建物流" onClick={() => navigate('/logistics?create=1')} />
-              <QuickAction icon={<FileText size={20} />} label="报关资料" onClick={() => navigate('/orders')} />
-              <QuickAction icon={<Building2 size={20} />} label="合作伙伴" onClick={() => navigate('/partners')} />
-              <QuickAction icon={<CreditCard size={20} />} label="费用登记" onClick={() => navigate('/finance?create=1')} />
-              <QuickAction icon={<Download size={20} />} label="数据导出" onClick={() => navigate('/settings?tab=export')} />
-              <QuickAction icon={<Users size={20} />} label="客户管理" onClick={() => navigate('/customers')} />
-              <QuickAction icon={<Send size={20} />} label="系统配置" onClick={() => navigate('/settings')} />
-              <QuickAction icon={<MoreHorizontal size={20} />} label="更多功能" onClick={() => navigate('/help')} />
-            </div>
-          </section>
 
           {/* AI CTA */}
           <section className="relative shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-surface p-6 shadow-sm transition-colors dark:border-navy-800 dark:bg-navy-900">
@@ -568,6 +573,23 @@ export default function DashboardView() {
 }
 
 // ==================== Inner Components ====================
+
+function MiniInsightCard({ label, value, tone, icon }: { label: string; value: number; tone: 'error' | 'warning' | 'neutral'; icon: React.ReactNode }) {
+  const toneClass = tone === 'error'
+    ? 'border-red-100 bg-red-50 text-error dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400'
+    : tone === 'warning'
+      ? 'border-amber-100 bg-amber-50 text-amber-600 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-400'
+      : 'border-slate-100 bg-slate-50 text-slate-500 dark:border-navy-800 dark:bg-navy-950/50 dark:text-slate-400';
+  return (
+    <div className={`flex items-center justify-between rounded-lg border px-3 py-3 ${toneClass}`}>
+      <div>
+        <div className="text-[10px] font-black tracking-tight opacity-80">{label}</div>
+        <div className="mt-1 text-lg font-extrabold leading-none data-field">{value}</div>
+      </div>
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 dark:bg-navy-900/70">{icon}</div>
+    </div>
+  );
+}
 
 function StatCard({ title, value, subValue, subValueColor = "text-slate-400", icon, sparklineColor, sparklineData, onClick }: {
   title: string; value: string; subValue: string; subValueColor?: string; icon: React.ReactNode; sparklineColor: string; sparklineData: number[]; onClick?: () => void;
