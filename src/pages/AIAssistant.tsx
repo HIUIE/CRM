@@ -21,11 +21,11 @@ type AiChatResponse = {
 };
 
 const STORAGE_KEY = 'smarttrade_ai_chat_history';
+const LEGACY_LOCAL_STORAGE_KEY = STORAGE_KEY;
 
 export default function AIAssistantPage() {
-  // 1. 初始化时尝试从本地存储读取历史记录
   const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = sessionStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -44,16 +44,17 @@ export default function AIAssistantPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
-  // 2. 每当消息列表更新时，自动同步到本地存储
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
   }, [messages]);
 
   const clearHistory = () => {
     setIsClearing(true);
     const initialMsg: Message[] = [{ role: 'assistant', content: '对话已重置。请问还有什么可以帮您？' }];
     setMessages(initialMsg);
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
     setShowClearConfirm(false);
     setIsClearing(false);
   };
