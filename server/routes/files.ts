@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import { Router } from 'express';
 import { dbGet } from '../lib/db.js';
+import { logAction } from '../lib/audit.js';
 import { getStoredNameFromRecord, isSafeStoredName, resolveAttachmentAbsolutePath, sanitizeDownloadFilename } from '../lib/files.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import type { AuthedRequest } from '../lib/auth.js';
@@ -10,21 +11,28 @@ async function canAccessEntity(user: AuthedRequest['user'], entityType: string, 
   if (user.role === 'admin') return true;
   // Staff users: verify they own or are assigned the linked entity
   const scopeQueries: Record<string, string> = {
-    ORDER: `SELECT 1 FROM orders WHERE display_id = ? AND created_by = ? AND deleted_at IS NULL`,
+    ORDER: `SELECT 1 FROM orders o LEFT JOIN customers c ON c.id = o.customer_id WHERE (o.display_id = ? OR CAST(o.id AS TEXT) = ?) AND (o.created_by = ? OR c.owner_user_id = ?) AND o.deleted_at IS NULL`,
     CUSTOMER: `SELECT 1 FROM customers WHERE display_id = ? AND (owner_user_id = ? OR created_by = ?) AND deleted_at IS NULL`,
-    FINANCE: `SELECT 1 FROM finance_records f LEFT JOIN orders o ON o.id = f.order_id WHERE f.id = ? AND (f.created_by = ? OR o.created_by = ?)`,
-    LOGISTICS: `SELECT 1 FROM logistics_records l LEFT JOIN orders o ON o.id = l.order_id WHERE l.id = ? AND (l.created_by = ? OR o.created_by = ?)`,
-    CUSTOMS: `SELECT 1 FROM customs_records c LEFT JOIN orders o ON o.id = c.order_id WHERE c.id = ? AND (c.created_by = ? OR o.created_by = ?)`,
-    PRODUCTION: `SELECT 1 FROM production_plans pp LEFT JOIN orders o ON o.id = pp.order_id WHERE pp.id = ? AND (pp.created_by = ? OR o.created_by = ?)`,
-    PRODUCTION_PHOTO: `SELECT 1 FROM orders WHERE id = ? AND (created_by = ? OR created_by = ?) AND deleted_at IS NULL`,
-    ORDER_DOCUMENT: `SELECT 1 FROM orders WHERE id = ? AND (created_by = ? OR created_by = ?) AND deleted_at IS NULL`,
-    PACKING: `SELECT 1 FROM orders WHERE id = ? AND (created_by = ? OR created_by = ?) AND deleted_at IS NULL`,
+    FINANCE: `SELECT 1 FROM finance_records f LEFT JOIN orders o ON o.id = f.order_id LEFT JOIN customers c ON c.id = o.customer_id WHERE f.id = ? AND (f.created_by = ? OR o.created_by = ? OR c.owner_user_id = ?)`,
+    LOGISTICS: `SELECT 1 FROM logistics_records l LEFT JOIN orders o ON o.id = l.order_id LEFT JOIN customers c ON c.id = o.customer_id WHERE l.id = ? AND (l.created_by = ? OR o.created_by = ? OR c.owner_user_id = ?)`,
+    CUSTOMS: `SELECT 1 FROM customs_records cr LEFT JOIN orders o ON o.id = cr.order_id LEFT JOIN customers c ON c.id = o.customer_id WHERE cr.id = ? AND (cr.created_by = ? OR o.created_by = ? OR c.owner_user_id = ?)`,
+    PRODUCTION: `SELECT 1 FROM production_plans pp LEFT JOIN orders o ON o.id = pp.order_id LEFT JOIN customers c ON c.id = o.customer_id WHERE pp.id = ? AND (pp.created_by = ? OR o.created_by = ? OR c.owner_user_id = ?)`,
+    PRODUCTION_PHOTO: `SELECT 1 FROM orders o LEFT JOIN customers c ON c.id = o.customer_id WHERE o.id = ? AND (o.created_by = ? OR c.owner_user_id = ?) AND o.deleted_at IS NULL`,
+    ORDER_DOCUMENT: `SELECT 1 FROM orders o LEFT JOIN customers c ON c.id = o.customer_id WHERE o.id = ? AND (o.created_by = ? OR c.owner_user_id = ?) AND o.deleted_at IS NULL`,
+    PACKING: `SELECT 1 FROM orders o LEFT JOIN customers c ON c.id = o.customer_id WHERE o.id = ? AND (o.created_by = ? OR c.owner_user_id = ?) AND o.deleted_at IS NULL`,
     TASK: `SELECT 1 FROM tasks WHERE id = ? AND (created_by = ? OR assignee_id = ?)`,
   };
   const upperType = entityType.toUpperCase();
   const sql = scopeQueries[upperType];
   if (!sql) return false; // Unknown entity types — deny
-  const row = await dbGet<{ 1: number }>(sql, [entityId, user.id, user.id]);
+  const row = await dbGet<{ 1: number }>(
+    sql,
+    upperType === 'ORDER'
+      ? [entityId, entityId, user.id, user.id]
+      : ['FINANCE', 'LOGISTICS', 'CUSTOMS', 'PRODUCTION'].includes(upperType)
+        ? [entityId, user.id, user.id, user.id]
+        : [entityId, user.id, user.id],
+  );
   return Boolean(row);
 }
 
@@ -37,12 +45,13 @@ async function canAccessUnboundAttachment(user: AuthedRequest['user'], attachmen
       SELECT 1 AS allowed
       FROM packing_records pr
       JOIN orders o ON o.id = pr.order_id
+      LEFT JOIN customers c ON c.id = o.customer_id
       WHERE pr.attachment_id = ?
         AND o.deleted_at IS NULL
-        AND o.created_by = ?
+        AND (o.created_by = ? OR c.owner_user_id = ?)
       LIMIT 1
     `,
-    [attachmentId, user.id],
+    [attachmentId, user.id, user.id],
   );
   if (packingRow) return true;
 
@@ -132,6 +141,18 @@ export function createFilesRouter() {
         'Content-Disposition',
         `inline; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(originalFileName)}`,
       );
+      void logAction({
+        userId: authUser?.id || null,
+        userName: authUser?.name || null,
+        action: 'DOWNLOAD',
+        entityType: 'ATTACHMENT',
+        entityId: attachmentId,
+        newValue: {
+          fileName: originalFileName,
+          entityType: attachment.entity_type,
+          entityId: attachment.entity_id,
+        },
+      });
       res.type(attachment.mime_type || 'application/octet-stream');
       res.sendFile(absolutePath);
     } catch (error: unknown) {

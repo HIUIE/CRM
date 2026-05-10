@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, CheckCircle2, Loader2, ExternalLink, Clock } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Loader2, ExternalLink, Clock, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 
@@ -12,6 +12,7 @@ export default function UpdateTab() {
   const [updateLog, setUpdateLog] = useState<string[]>([]);
   const [updateStatus, setUpdateStatus] = useState<any>(null);
   const [updateHistory, setUpdateHistory] = useState<any[]>([]);
+  const [selfCheck, setSelfCheck] = useState<any>(null);
   const [error, setError] = useState('');
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
 
@@ -19,9 +20,11 @@ export default function UpdateTab() {
     Promise.all([
       apiFetch<any>('/api/settings/system/version').catch(() => null),
       apiFetch<any[]>('/api/settings/system/update/history').catch(() => []),
-    ]).then(([version, history]) => {
+      apiFetch<any>('/api/settings/system/self-check').catch((e) => ({ ok: false, checks: [], error: getErrorMessage(e, '自检失败') })),
+    ]).then(([version, history, check]) => {
       setLocalVersion(version);
       setUpdateHistory(history);
+      setSelfCheck(check);
     }).finally(() => setLoading(false));
 
     const checkStatus = async () => {
@@ -75,6 +78,27 @@ export default function UpdateTab() {
       </div>
 
       {error && <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400">{error}</div>}
+
+      {selfCheck && (
+        <div className={`rounded-lg border p-5 ${selfCheck.ok ? 'border-emerald-100 bg-emerald-50/60 dark:border-emerald-900/30 dark:bg-emerald-900/10' : 'border-amber-100 bg-amber-50/70 dark:border-amber-900/30 dark:bg-amber-900/10'}`}>
+          <div className="mb-4 flex items-center gap-2 text-sm font-extrabold text-primary-navy dark:text-white">
+            {selfCheck.ok ? <ShieldCheck size={16} className="text-emerald-500" /> : <AlertTriangle size={16} className="text-amber-500" />}
+            启动自检
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(selfCheck.checks || []).map((check: any) => (
+              <div key={check.key} className="rounded-lg border border-white/70 bg-white/70 p-3 text-xs shadow-sm dark:border-navy-800 dark:bg-navy-900/70">
+                <div className="mb-1 flex items-center gap-2 font-black text-slate-700 dark:text-slate-200">
+                  {check.ok ? <CheckCircle2 size={13} className="text-emerald-500" /> : <AlertTriangle size={13} className="text-amber-500" />}
+                  {check.label}
+                </div>
+                <div className="font-medium leading-relaxed text-slate-500 dark:text-slate-400">{check.detail}</div>
+              </div>
+            ))}
+          </div>
+          {selfCheck.error && <div className="mt-3 text-xs font-bold text-amber-700 dark:text-amber-400">{selfCheck.error}</div>}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-950/50 p-6 transition-colors">

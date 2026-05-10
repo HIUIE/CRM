@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
+import fs from 'fs/promises';
+import path from 'path';
 import { swaggerSpec } from './swagger.js';
 import { normalizeBrandText, sanitizeBrandAssetUrl } from './lib/brand.js';
 import { csrfProtection, requireAuth, requireAdmin } from './lib/auth.js';
+import { dbGet } from './lib/db.js';
+import { PROJECT_ROOT, UPLOADS_DIR } from './paths.js';
 import { createAiRouter } from './routes/ai.js';
 import { createAttachmentsRouter } from './routes/attachments.js';
 import { createAuthRouter } from './routes/auth.js';
@@ -48,11 +52,50 @@ const heavyLimiter = rateLimit({
 });
 
 const router = Router();
+const startupTime = Date.now();
 
-router.get('/health', (_req, res) => {
-  res.json({
-    ok: true,
+async function getPackageVersion() {
+  try {
+    const pkg = JSON.parse(await fs.readFile(path.join(PROJECT_ROOT, 'package.json'), 'utf8'));
+    return String(pkg.version || '0.0.0');
+  } catch {
+    return '0.0.0';
+  }
+}
+
+router.get('/health', async (_req, res) => {
+  const checks: Record<string, boolean> = {
+    database: false,
+    uploads: false,
+    dist: process.env.NODE_ENV !== 'production',
+  };
+  try {
+    await dbGet<{ ok: number }>('SELECT 1 AS ok');
+    checks.database = true;
+  } catch {
+    checks.database = false;
+  }
+  try {
+    await fs.access(UPLOADS_DIR);
+    checks.uploads = true;
+  } catch {
+    checks.uploads = false;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      await fs.access(path.join(PROJECT_ROOT, 'dist', 'index.html'));
+      checks.dist = true;
+    } catch {
+      checks.dist = false;
+    }
+  }
+  const ok = Object.values(checks).every(Boolean);
+  res.status(ok ? 200 : 503).json({
+    ok,
+    checks,
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    startupTime,
+    version: await getPackageVersion(),
     timestamp: new Date().toISOString(),
   });
 });

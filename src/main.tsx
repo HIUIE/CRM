@@ -6,6 +6,7 @@ import App from './App.tsx';
 import ErrorBoundary from './components/ui/ErrorBoundary.tsx';
 import { AuthProvider } from './context/AuthContext.tsx';
 import { queryClient } from './lib/query.ts';
+import { installRuntimeRecovery } from './lib/runtimeRecovery.ts';
 import './index.css';
 
 // Global Day.js Configuration
@@ -18,6 +19,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.locale('zh-cn');
 dayjs.tz.setDefault("Asia/Shanghai");
+
+installRuntimeRecovery();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

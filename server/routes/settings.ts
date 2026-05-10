@@ -3,11 +3,13 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { spawn } from 'child_process';
-import { requireAdmin, requireAuth } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
+import { logAction } from '../lib/audit.js';
+import { dbGet } from '../lib/db.js';
 import { normalizeBrandText, sanitizeBrandAssetUrl } from '../lib/brand.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { readString } from '../lib/values.js';
-import { PROJECT_ROOT } from '../paths.js';
+import { PROJECT_ROOT, UPLOADS_DIR } from '../paths.js';
 import { buildLegacyExportZip, getExportFileName, streamCustomerArchiveZip } from '../services/export.js';
 import { buildExcelWorkbook } from '../services/excel-export.js';
 import { getOrderNumberPrefix, getSettingValue, setSettingValue } from '../services/settings.js';
@@ -582,6 +584,48 @@ export function createSettingsRouter() {
     }
   });
 
+  router.get('/system/self-check', requireAdmin, async (_req, res) => {
+    const checks: Array<{ key: string; label: string; ok: boolean; detail: string }> = [];
+    try {
+      await dbGet<{ ok: number }>('SELECT 1 AS ok');
+      checks.push({ key: 'database', label: '数据库连接', ok: true, detail: 'PostgreSQL 可访问' });
+    } catch (error) {
+      checks.push({ key: 'database', label: '数据库连接', ok: false, detail: error instanceof Error ? error.message : '连接失败' });
+    }
+
+    try {
+      await fs.access(UPLOADS_DIR);
+      checks.push({ key: 'uploads', label: '附件目录', ok: true, detail: 'uploads 目录可访问' });
+    } catch {
+      checks.push({ key: 'uploads', label: '附件目录', ok: false, detail: 'uploads 目录不存在或不可访问' });
+    }
+
+    try {
+      const backupConfig = await getBackupConfig();
+      checks.push({
+        key: 'backup',
+        label: '自动备份',
+        ok: !backupConfig.enabled || Boolean(backupConfig.directory),
+        detail: backupConfig.enabled ? `已启用，每 ${backupConfig.intervalHours} 小时` : '未启用',
+      });
+    } catch (error) {
+      checks.push({ key: 'backup', label: '自动备份', ok: false, detail: error instanceof Error ? error.message : '读取失败' });
+    }
+
+    const requiredEnv = ['JWT_SECRET', 'DB_ENCRYPTION_KEY'];
+    for (const key of requiredEnv) {
+      checks.push({
+        key: `env_${key.toLowerCase()}`,
+        label: `${key} 环境变量`,
+        ok: Boolean(process.env[key]),
+        detail: process.env[key] ? '已配置' : '未配置，生产环境会影响安全启动',
+      });
+    }
+
+    const ok = checks.every(check => check.ok);
+    res.json({ ok, checks, checkedAt: new Date().toISOString() });
+  });
+
   router.get('/system/update/status', requireAdmin, async (_req, res) => {
     await ensureSystemUpdateStatusLoaded();
     res.json(systemUpdateStatus);
@@ -613,10 +657,18 @@ export function createSettingsRouter() {
     }
   });
 
-  router.get('/export/xlsx', requireAdmin, async (_req, res) => {
+  router.get('/export/xlsx', requireAdmin, async (req: AuthedRequest, res) => {
     try {
       const wb = await buildExcelWorkbook();
       const fileName = `SmartTrade_CRM_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      void logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'EXPORT',
+        entityType: 'SYSTEM',
+        entityId: 'settings-export-xlsx',
+        newValue: { format: 'xlsx', fileName },
+      });
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       await wb.xlsx.write(res);
@@ -666,9 +718,17 @@ export function createSettingsRouter() {
     }
   });
 
-  router.get('/backup/download', requireAdmin, async (_req, res) => {
+  router.get('/backup/download', requireAdmin, async (req: AuthedRequest, res) => {
     try {
       const zipBuffer = await buildSystemBackupZipBuffer();
+      void logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'EXPORT',
+        entityType: 'SYSTEM',
+        entityId: 'system-backup',
+        newValue: { format: 'restorable-backup', size: zipBuffer.length },
+      });
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${getBackupFileName()}"`);
       res.setHeader('Content-Length', String(zipBuffer.length));
@@ -678,7 +738,7 @@ export function createSettingsRouter() {
     }
   });
 
-  router.get('/export', requireAdmin, async (req, res) => {
+  router.get('/export', requireAdmin, async (req: AuthedRequest, res) => {
     const format = readString(req.query.format) || 'customer-archive';
     if (!['customer-archive', 'zip-csv', 'restorable-backup'].includes(format)) {
       return res.status(400).json({
@@ -692,6 +752,14 @@ export function createSettingsRouter() {
     try {
       if (format === 'restorable-backup') {
         const zipBuffer = await buildSystemBackupZipBuffer();
+        void logAction({
+          userId: req.user?.id || null,
+          userName: req.user?.name || null,
+          action: 'EXPORT',
+          entityType: 'SYSTEM',
+          entityId: 'system-backup',
+          newValue: { format, size: zipBuffer.length },
+        });
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', `attachment; filename="${getBackupFileName()}"`);
         res.setHeader('Content-Length', String(zipBuffer.length));
@@ -705,11 +773,27 @@ export function createSettingsRouter() {
 
       if (format === 'zip-csv') {
         const zipBuffer = await buildLegacyExportZip();
+        void logAction({
+          userId: req.user?.id || null,
+          userName: req.user?.name || null,
+          action: 'EXPORT',
+          entityType: 'SYSTEM',
+          entityId: 'legacy-export',
+          newValue: { format, size: zipBuffer.length },
+        });
         res.setHeader('Content-Length', String(zipBuffer.length));
         res.end(zipBuffer);
         return;
       }
 
+      void logAction({
+        userId: req.user?.id || null,
+        userName: req.user?.name || null,
+        action: 'EXPORT',
+        entityType: 'SYSTEM',
+        entityId: 'customer-archive',
+        newValue: { format },
+      });
       await streamCustomerArchiveZip(res);
     } catch (error) {
       return handleRouteError(res, error, '导出数据失败');

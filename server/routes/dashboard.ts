@@ -179,6 +179,64 @@ export function createDashboardRouter() {
         LIMIT 20
       `, req.user?.role !== 'admin' ? [req.user?.id] : []);
 
+      const documentCandidates = await dbAll<{
+        id: number;
+        order_display_id: string;
+        customer_name: string;
+        tax_mode: 'A' | 'B' | 'C';
+        doc_types: string | null;
+      }[]>(`
+        SELECT
+          o.id,
+          o.display_id AS order_display_id,
+          c.name AS customer_name,
+          COALESCE(NULLIF(o.tax_mode, ''), 'A') AS tax_mode,
+          COALESCE(string_agg(REPLACE(a.remark, 'docType:', ''), ','), '') AS doc_types
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN attachments a ON a.entity_type = 'order_document'
+          AND CAST(a.entity_id AS INTEGER) = o.id
+          AND a.remark LIKE 'docType:%'
+        WHERE o.status IN ('customs', 'shipping', 'completed')
+          AND o.deleted_at IS NULL
+        ${req.user?.role !== 'admin' ? ' AND o.created_by = ?' : ''}
+        GROUP BY o.id, o.display_id, c.name, o.tax_mode, o.updated_at, o.created_at
+        ORDER BY o.updated_at DESC NULLS LAST, o.created_at DESC
+        LIMIT 20
+      `, req.user?.role !== 'admin' ? [req.user?.id] : []);
+
+      const requiredDocumentsByMode: Record<string, string[]> = {
+        A: ['CI', 'PL', 'BL', 'CUSTOMS_DECLARATION', 'TAX_REFUND_COPY'],
+        B: ['LOGISTICS_VOUCHER'],
+        C: ['CI', 'PL', 'CUSTOMS_DECLARATION'],
+      };
+      const documentLabels: Record<string, string> = {
+        CI: '商业发票',
+        PL: '装箱单',
+        BL: '提单',
+        CUSTOMS_DECLARATION: '报关单',
+        TAX_REFUND_COPY: '退税联',
+        LOGISTICS_VOUCHER: '物流凭证',
+      };
+      const documentAlerts = documentCandidates
+        .map(row => {
+          const present = new Set(String(row.doc_types || '').split(',').map(item => item.trim()).filter(Boolean));
+          const required = requiredDocumentsByMode[row.tax_mode] || requiredDocumentsByMode.A;
+          const missing = required.filter(docType => !present.has(docType));
+          if (!missing.length) return null;
+          return {
+            id: row.id,
+            order_display_id: row.order_display_id,
+            customer_name: row.customer_name,
+            desc: `缺少 ${missing.slice(0, 3).map(docType => documentLabels[docType] || docType).join('、')}`,
+            days: 0,
+            actionLabel: '补单据',
+            urgency: missing.includes('BL') || missing.includes('CUSTOMS_DECLARATION') ? 'high' : 'medium',
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 4);
+
       const toDate = (value?: string | null) => {
         if (!value) return null;
         const parsed = new Date(value);
@@ -232,6 +290,16 @@ export function createDashboardRouter() {
           days: 0,
           actionLabel: '去上传',
           urgency: 'medium'
+        })),
+        ...documentAlerts.map((d: any) => ({
+          id: `documents-${d.id}`,
+          type: 'document_missing',
+          order_display_id: d.order_display_id,
+          customer_name: d.customer_name,
+          desc: d.desc,
+          days: d.days,
+          actionLabel: d.actionLabel,
+          urgency: d.urgency
         })),
         ...missingLogistics.map(l => ({
           id: `logistics-${l.id}`,

@@ -38,6 +38,16 @@ function getReloadKey(error: Error) {
   return `${ERROR_RELOAD_KEY}:${window.location.pathname}:${normalizedMessage}`;
 }
 
+function recoverFromRuntimeError(error: Error) {
+  const reloadKey = getReloadKey(error);
+  if (window.sessionStorage.getItem(reloadKey) === '1') return false;
+  window.sessionStorage.setItem(reloadKey, '1');
+  const url = new URL(window.location.href);
+  url.searchParams.set('_recover', String(Date.now()));
+  window.location.replace(url.toString());
+  return true;
+}
+
 export default class ErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
@@ -46,11 +56,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary]', error, info.componentStack);
     if ((isRecoverableAssetError(error) || isRecoverableRuntimeMismatch(error))) {
-      const reloadKey = getReloadKey(error);
-      if (window.sessionStorage.getItem(reloadKey) !== '1') {
-        window.sessionStorage.setItem(reloadKey, '1');
-        window.location.reload();
-      }
+      recoverFromRuntimeError(error);
     }
   }
 
@@ -70,7 +76,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           <div className="max-w-lg text-center space-y-4">
             <div className="text-4xl font-bold text-primary-navy dark:text-white">页面出现异常</div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              组件渲染时发生错误，请刷新页面重试。
+              组件渲染时发生错误。系统已尝试自动恢复，如仍停留在此页，请手动刷新。
             </p>
             {this.state.error && (
               <pre className="text-xs text-left bg-surface dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-lg p-4 overflow-auto max-h-40 text-error">

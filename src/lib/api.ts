@@ -10,6 +10,8 @@ export class ApiError extends Error {
 }
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null;
+const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+const DEFAULT_TIMEOUT_MS = 15_000;
 
 function getCsrfToken(): string {
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
@@ -29,7 +31,7 @@ export async function apiFetch<T>(input: string, init: RequestInit = {}) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(input, {
+  const response = await fetchWithRetry(input, {
     ...init,
     credentials: 'include',
     headers,
@@ -72,7 +74,7 @@ export async function apiDownload(input: string, init: RequestInit = {}) {
   if (csrf && (init.method && !['GET', 'HEAD'].includes(init.method.toUpperCase()))) {
     headers.set('X-CSRF-Token', csrf);
   }
-  const response = await fetch(input, {
+  const response = await fetchWithRetry(input, {
     ...init,
     credentials: 'include',
     headers,
@@ -128,6 +130,41 @@ export async function apiUploadSimple<T>(url: string, formData: FormData): Promi
     throw new ApiError(response.status, msg);
   }
   return response.json() as Promise<T>;
+}
+
+async function fetchWithRetry(input: string, init: RequestInit, maxAttempts = 2) {
+  const method = String(init.method || 'GET').toUpperCase();
+  const retryableMethod = method === 'GET' || method === 'HEAD';
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    const upstreamSignal = init.signal;
+    const abortFromUpstream = () => controller.abort();
+    upstreamSignal?.addEventListener('abort', abortFromUpstream, { once: true });
+    try {
+      const response = await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+      if (!retryableMethod || !RETRYABLE_STATUS.has(response.status) || attempt >= maxAttempts) {
+        return response;
+      }
+      await response.body?.cancel().catch(() => undefined);
+    } catch (error) {
+      lastError = error;
+      if (!retryableMethod || attempt >= maxAttempts || upstreamSignal?.aborted) {
+        throw error;
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+      upstreamSignal?.removeEventListener('abort', abortFromUpstream);
+    }
+    await new Promise(resolve => window.setTimeout(resolve, 450 * attempt));
+  }
+
+  throw lastError instanceof Error ? lastError : new ApiError(0, '网络连接错误');
 }
 
 export function apiUpload<T>(url: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {

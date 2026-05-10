@@ -2,8 +2,8 @@ import { dbRun } from './db.js';
 import { sanitizeForAI } from './sanitizer.js';
 import { logger } from './logger.js';
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
-export type AuditEntity = 'ORDER' | 'CUSTOMER' | 'FINANCE' | 'PARTNER' | 'LOGISTICS' | 'CUSTOMS' | 'USER' | 'TASK';
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'DOWNLOAD' | 'EXPORT';
+export type AuditEntity = 'ORDER' | 'CUSTOMER' | 'FINANCE' | 'PARTNER' | 'LOGISTICS' | 'CUSTOMS' | 'USER' | 'TASK' | 'ATTACHMENT' | 'SYSTEM';
 
 export async function logAction(params: {
   userId: number | null;

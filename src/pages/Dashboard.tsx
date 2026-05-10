@@ -36,7 +36,7 @@ interface DashboardData {
 
 interface TodoItem {
   id: string;
-  type: 'payment_overdue' | 'customs_missing' | 'logistics_pending' | 'input_invoice_risk' | 'logistics_stale';
+  type: 'payment_overdue' | 'customs_missing' | 'document_missing' | 'logistics_pending' | 'input_invoice_risk' | 'logistics_stale';
   order_display_id: string;
   customer_name: string;
   desc: string;
@@ -49,6 +49,7 @@ function getTodoMeta(todo: TodoItem) {
   const map: Record<TodoItem['type'], { title: string; icon: React.ReactNode; path: string }> = {
     payment_overdue: { title: '收款提醒', icon: <Wallet size={18} />, path: 'finance' },
     customs_missing: { title: '报关资料', icon: <FileText size={18} />, path: 'customs' },
+    document_missing: { title: '单据缺失', icon: <FileText size={18} />, path: 'documents' },
     logistics_pending: { title: '创建物流', icon: <Truck size={18} />, path: 'logistics' },
     logistics_stale: { title: '物流滞留', icon: <Clock size={18} />, path: 'logistics' },
     input_invoice_risk: { title: '进项发票', icon: <ClipboardCheck size={18} />, path: 'invoices' },
