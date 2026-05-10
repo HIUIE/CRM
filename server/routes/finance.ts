@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
-import { requireAdmin, requireAuth, type AuthedRequest, getDataScopeConstraint } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest } from '../lib/auth.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { bindAttachmentsToEntity, deleteAttachmentRows, getAttachmentsByEntity } from '../services/attachments.js';
 import { readFinancePayload } from '../services/payloads.js';
@@ -33,8 +33,8 @@ export function createFinanceRouter() {
     const params: unknown[] = [];
 
     if (req.user?.role !== 'admin') {
-      whereSql += ' AND (f.created_by = ? OR o.created_by = ?)';
-      params.push(req.user?.id, req.user?.id);
+      whereSql += ' AND (f.created_by = ? OR o.created_by = ? OR c.owner_user_id = ?)';
+      params.push(req.user?.id, req.user?.id, req.user?.id);
     }
 
     if (q) {

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, X, Sparkles, Paperclip, Loader2, Zap, Database, ShieldCheck } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../../lib/api';
+import { hasAiSensitiveText, maskAiSensitiveText } from '../../lib/privacy';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -44,6 +45,8 @@ export default function AIAssistantFloating() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const maskedPreview = maskAiSensitiveText(input);
+  const shouldShowPrivacyPreview = hasAiSensitiveText(input);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
@@ -73,6 +76,7 @@ export default function AIAssistantFloating() {
   const sendMessage = async (text?: string) => {
     const msg = (text || input).trim();
     if (!msg || loading) return;
+    const outboundMsg = maskAiSensitiveText(msg);
 
     const userMsg: Message = { role: 'user', content: msg, images: uploadedImages.length ? [...uploadedImages] : undefined };
     setMessages(prev => [...prev, userMsg]);
@@ -83,7 +87,7 @@ export default function AIAssistantFloating() {
     try {
       const response = await apiFetch<AiChatResponse>('/api/ai/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: msg }),
+        body: JSON.stringify({ message: outboundMsg }),
       });
       let content = response.content;
       let isAction = false;
@@ -244,6 +248,12 @@ export default function AIAssistantFloating() {
 
           {/* Input */}
           <div className="p-3 border-t border-slate-100 dark:border-navy-800 shrink-0">
+            {shouldShowPrivacyPreview && (
+              <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
+                <div>将发送脱敏内容：</div>
+                <div className="mt-0.5 line-clamp-2 font-medium opacity-90">{maskedPreview}</div>
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <label className="shrink-0 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-navy-800 transition-all text-slate-400 hover:text-primary-navy dark:hover:text-white">
                 <Paperclip size={18} />

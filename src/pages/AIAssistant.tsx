@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bot, Send, Sparkles, Zap, ShieldCheck, Database, LayoutDashboard, Trash2 } from 'lucide-react';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import { hasAiSensitiveText, maskAiSensitiveText } from '../lib/privacy';
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal';
 
 interface Message {
@@ -43,6 +44,8 @@ export default function AIAssistantPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const maskedPreview = maskAiSensitiveText(input);
+  const shouldShowPrivacyPreview = hasAiSensitiveText(input);
 
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
@@ -63,7 +66,9 @@ export default function AIAssistantPage() {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
-    const userMsg: Message = { role: 'user', content: input };
+    const originalInput = input;
+    const outboundInput = maskAiSensitiveText(input);
+    const userMsg: Message = { role: 'user', content: originalInput };
     setMessages(prev => [...prev, userMsg]);
     setFormInput('');
     setLoading(true);
@@ -74,7 +79,7 @@ export default function AIAssistantPage() {
 
       const response = await apiFetch<AiChatResponse>('/api/ai/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: input, history })
+        body: JSON.stringify({ message: outboundInput, history })
       });
       let msg = response.content;
       if (response.action) {
@@ -185,6 +190,12 @@ export default function AIAssistantPage() {
               <button type="button" onClick={confirmPendingAction} disabled={loading} className="shrink-0 rounded-md bg-amber-700 px-3 py-1.5 text-white disabled:opacity-50">
                 确认执行
               </button>
+            </div>
+          )}
+          {shouldShowPrivacyPreview && (
+            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
+              <div className="mb-1">发送前将自动脱敏，实际发送内容预览：</div>
+              <div className="line-clamp-2 font-medium opacity-90">{maskedPreview}</div>
             </div>
           )}
           <div className="relative flex items-end gap-3 max-w-4xl mx-auto">

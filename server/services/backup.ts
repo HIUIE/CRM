@@ -57,6 +57,25 @@ export type BackupStatus = {
   lastFile: string;
   lastError: string;
   nextRunAt: string;
+  lastVerification?: BackupVerificationResult | null;
+};
+
+export type BackupWatermark = {
+  exportedBy?: string | null;
+  purpose?: string | null;
+  exportedAt?: string;
+};
+
+export type BackupVerificationResult = {
+  ok: boolean;
+  filePath: string;
+  checkedAt: string;
+  format?: string;
+  version?: number;
+  fileCount: number;
+  tableCount: number;
+  missingEntries: string[];
+  errors: string[];
 };
 
 let autoBackupTimer: NodeJS.Timeout | null = null;
@@ -145,7 +164,7 @@ async function rowsForTable(table: string) {
   return dbAll<Record<string, unknown>[]>(`SELECT * FROM ${table} ORDER BY ${table === 'settings' ? 'key' : table === 'order_profits' ? 'order_id' : 'id'} ASC`);
 }
 
-export async function buildSystemBackupZipBuffer() {
+export async function buildSystemBackupZipBuffer(watermark: BackupWatermark = {}) {
   const createdAt = new Date().toISOString();
   const data: Record<string, Record<string, unknown>[]> = {};
   const zip = new AdmZip();
@@ -185,6 +204,8 @@ export async function buildSystemBackupZipBuffer() {
     tables: TABLES,
     counts: Object.fromEntries(TABLES.map((table) => [table, data[table]?.length || 0])),
     checksums,
+    exportedBy: watermark.exportedBy || 'System',
+    exportPurpose: watermark.purpose || '系统迁移与灾备',
     note: 'This archive is intended for SmartTrade CRM restore. Store it securely because it may contain customer data and attachments.',
   };
   zip.addFile('metadata.json', Buffer.from(JSON.stringify(metadata, null, 2), 'utf8'));
@@ -206,6 +227,50 @@ export async function createBackupFile(directory?: string) {
   const filePath = path.join(targetDir, getBackupFileName());
   await fs.writeFile(filePath, buffer);
   return { filePath, size: buffer.length, createdAt: new Date().toISOString() };
+}
+
+export async function verifySystemBackupFile(filePath: string): Promise<BackupVerificationResult> {
+  const result: BackupVerificationResult = {
+    ok: false,
+    filePath,
+    checkedAt: new Date().toISOString(),
+    fileCount: 0,
+    tableCount: 0,
+    missingEntries: [],
+    errors: [],
+  };
+  try {
+    const zip = new AdmZip(filePath);
+    const metadata = parseJson<{ format?: string; version?: number; tables?: string[]; checksums?: Record<string, string> }>(
+      getEntryText(zip, 'metadata.json') || '{}',
+      {},
+    );
+    result.format = metadata.format;
+    result.version = metadata.version;
+    result.fileCount = zip.getEntries().length;
+    if (metadata.format !== BACKUP_FORMAT) result.errors.push('备份格式标识不正确');
+    if ((metadata.version || 0) > BACKUP_VERSION) result.errors.push('备份版本高于当前系统支持版本');
+    const tables = Array.isArray(metadata.tables) ? metadata.tables : [...TABLES];
+    result.tableCount = tables.length;
+    for (const table of tables) {
+      const entryName = `data/${table}.json`;
+      if (!zip.getEntry(entryName)) result.missingEntries.push(entryName);
+    }
+    const checksums = metadata.checksums || {};
+    for (const [entryName, expectedHash] of Object.entries(checksums)) {
+      const entry = zip.getEntry(entryName);
+      if (!entry) {
+        result.missingEntries.push(entryName);
+        continue;
+      }
+      const actualHash = crypto.createHash('sha256').update(entry.getData()).digest('hex');
+      if (actualHash !== expectedHash) result.errors.push(`校验失败: ${entryName}`);
+    }
+    result.ok = result.errors.length === 0 && result.missingEntries.length === 0;
+  } catch (error) {
+    result.errors.push(error instanceof Error ? error.message : String(error));
+  }
+  return result;
 }
 
 async function pruneBackups(directory: string) {
@@ -230,6 +295,7 @@ export async function runManualBackup(directory?: string) {
       lastRunAt: result.createdAt,
       lastFile: result.filePath,
       lastError: '',
+      lastVerification: await verifySystemBackupFile(result.filePath),
     };
     return result;
   } catch (error) {

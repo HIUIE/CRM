@@ -166,14 +166,20 @@ export function getDataScopeConstraint(user: any, tableAlias = 't', creatorField
   return [` AND ${tableAlias}.${creatorField} = ?`, [user.id]];
 }
 
+export function getOrderScopeConstraint(user: any, orderAlias = 'o', customerAlias = 'c'): [string, any[]] {
+  if (!user) return [' AND 1=0', []];
+  if (user.role === 'admin') return ['', []];
+  return [` AND (${orderAlias}.created_by = ? OR ${customerAlias}.owner_user_id = ?)`, [user.id, user.id]];
+}
+
 /**
  * 校验用户是否有权访问特定订单
  */
 export async function checkOrderAccess(req: AuthedRequest, orderId: number | string) {
   const { dbGet } = await import('./db.js');
-  const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'o');
+  const [scopeSql, scopeParams] = getOrderScopeConstraint(req.user, 'o', 'c');
   const isNumeric = (typeof orderId === 'number' && Number.isFinite(orderId)) || (typeof orderId === 'string' && /^\d+$/.test(orderId));
-  const sql = `SELECT id FROM orders o WHERE o.deleted_at IS NULL ${scopeSql} AND (${isNumeric ? 'o.id = ? OR ' : ''}LOWER(o.display_id) = LOWER(?))`;
+  const sql = `SELECT o.id FROM orders o LEFT JOIN customers c ON c.id = o.customer_id WHERE o.deleted_at IS NULL ${scopeSql} AND (${isNumeric ? 'o.id = ? OR ' : ''}LOWER(o.display_id) = LOWER(?))`;
   const params = [...scopeParams, ...(isNumeric ? [Number(orderId), String(orderId)] : [String(orderId)])];
   return await dbGet(sql, params);
 }
@@ -187,4 +193,3 @@ export async function requireAdmin(req: AuthedRequest, res: Response, next: Next
   }
   next();
 }
-

@@ -37,6 +37,19 @@ type BackupStatus = {
   lastFile: string;
   lastError: string;
   nextRunAt: string;
+  lastVerification?: BackupVerification | null;
+};
+
+type BackupVerification = {
+  ok: boolean;
+  checkedAt: string;
+  filePath?: string;
+  format?: string | null;
+  version?: number | null;
+  fileCount?: number;
+  tableCount?: number;
+  missingEntries?: string[];
+  errors?: string[];
 };
 
 type FileSystemWritableFileStream = {
@@ -74,6 +87,7 @@ function normalizeBackupStatus(value: Partial<BackupStatus> | null | undefined):
     lastFile: typeof value?.lastFile === 'string' ? value.lastFile : '',
     lastError: typeof value?.lastError === 'string' ? value.lastError : '',
     nextRunAt: typeof value?.nextRunAt === 'string' ? value.nextRunAt : '',
+    lastVerification: value?.lastVerification || null,
   };
 }
 
@@ -81,11 +95,14 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
   const [error, setError] = useState('');
   const [userMessage, setUserMessage] = useState('');
   const [exportFormat, setExportFormat] = useState<'xlsx' | 'customer-archive' | 'restorable-backup'>('xlsx');
+  const [exportPurpose, setExportPurpose] = useState('内部业务归档');
   const [exporting, setExporting] = useState(false);
   const [backupConfig, setBackupConfig] = useState<BackupConfig>(DEFAULT_BACKUP_CONFIG);
   const [backupStatus, setBackupStatus] = useState<BackupStatus>(DEFAULT_BACKUP_STATUS);
   const [backupSaving, setBackupSaving] = useState(false);
   const [backupRunning, setBackupRunning] = useState(false);
+  const [verifyingBackup, setVerifyingBackup] = useState(false);
+  const [backupVerification, setBackupVerification] = useState<BackupVerification | null>(null);
   const [exportingToFolder, setExportingToFolder] = useState(false);
   const [pickingDirectory, setPickingDirectory] = useState(false);
   const [restoreStep, setRestoreStep] = useState<'idle' | 'previewing' | 'confirming' | 'restoring' | 'done'>('idle');
@@ -137,8 +154,11 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
   }, []);
 
   const getExportUrl = () => {
-    if (exportFormat === 'xlsx') return '/api/settings/export/xlsx';
-    return `/api/settings/export?format=${exportFormat}`;
+    const params = new URLSearchParams();
+    params.set('purpose', exportPurpose.trim() || '内部业务归档');
+    if (exportFormat === 'xlsx') return `/api/settings/export/xlsx?${params.toString()}`;
+    params.set('format', exportFormat);
+    return `/api/settings/export?${params.toString()}`;
   };
 
   const getExportLabel = () => {
@@ -328,11 +348,25 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
         body: JSON.stringify({ directory: backupConfig.directory }),
       });
       setBackupStatus(normalizeBackupStatus(data?.status));
+      setBackupVerification(data?.status?.lastVerification || null);
       setUserMessage(`备份完成：${data.filePath}`);
     } catch (e) {
       setError(getErrorMessage(e, '立即备份失败'));
     } finally {
       setBackupRunning(false);
+    }
+  };
+
+  const verifyLatestBackup = async () => {
+    setError(''); setUserMessage(''); setVerifyingBackup(true);
+    try {
+      const data = await apiFetch<{ success: boolean; verification: BackupVerification }>('/api/settings/backup/verify-latest', { method: 'POST' });
+      setBackupVerification(data.verification);
+      setUserMessage(data.verification?.ok ? '最近备份校验通过，可用于恢复。' : '最近备份校验发现异常，请查看详情。');
+    } catch (e) {
+      setError(getErrorMessage(e, '校验最近备份失败'));
+    } finally {
+      setVerifyingBackup(false);
     }
   };
 
@@ -561,6 +595,19 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
           ))}
         </div>
 
+        <label className="mb-6 block rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-navy-800 dark:bg-navy-950/50">
+          <span className="mb-2 block text-xs font-extrabold text-slate-500 dark:text-slate-400">导出用途备注</span>
+          <input
+            value={exportPurpose}
+            onChange={(e) => setExportPurpose(e.target.value.slice(0, 300))}
+            placeholder="例如：5 月财务审计 / 客户交接归档 / 灾备演练"
+            className="w-full rounded-lg border border-slate-200 bg-surface px-3 py-2 text-sm font-bold text-primary-navy outline-none transition-all focus:border-primary-navy dark:border-navy-800 dark:bg-navy-900 dark:text-white"
+          />
+          <span className="mt-2 block text-[10px] font-bold leading-relaxed text-slate-400">
+            用途会写入导出包说明、水印元数据和审计日志，便于追踪敏感资料流向。
+          </span>
+        </label>
+
         <div className="flex items-center gap-4 p-5 rounded-lg bg-slate-50 dark:bg-navy-950/50 border border-slate-100 dark:border-navy-800">
           <div className="flex-1">
             <div className="text-sm font-bold text-primary-navy dark:text-white">仅管理员可操作</div>
@@ -676,9 +723,30 @@ export default function DataTab({ setImportEntityType }: { setImportEntityType: 
             最近备份：{backupStatus.lastFile || '暂无'}
             {backupStatus.nextRunAt && <span className="ml-3">下次自动备份：{new Date(backupStatus.nextRunAt).toLocaleString()}</span>}
             {backupStatus.lastError && <div className="mt-2 font-bold text-red-500">上次错误：{backupStatus.lastError}</div>}
+            {(backupVerification || backupStatus.lastVerification) && (
+              <div className={`mt-3 rounded-lg border px-3 py-2 font-bold ${
+                (backupVerification || backupStatus.lastVerification)?.ok
+                  ? 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/10 dark:text-emerald-300'
+                  : 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300'
+              }`}>
+                {(backupVerification || backupStatus.lastVerification)?.ok ? '最近备份可恢复性校验通过' : '最近备份可恢复性校验异常'}
+                {(backupVerification || backupStatus.lastVerification)?.checkedAt && (
+                  <span className="ml-2 font-medium opacity-80">
+                    {new Date((backupVerification || backupStatus.lastVerification)!.checkedAt).toLocaleString()}
+                  </span>
+                )}
+                {(backupVerification || backupStatus.lastVerification)?.errors?.length ? (
+                  <div className="mt-1 font-medium">{(backupVerification || backupStatus.lastVerification)!.errors!.join('；')}</div>
+                ) : null}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3">
+            <button type="button" onClick={verifyLatestBackup} disabled={verifyingBackup || !backupStatus.lastFile} className="rounded-lg border border-slate-200 bg-surface px-5 py-2 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-60 dark:border-navy-800 dark:bg-navy-900 dark:text-slate-300">
+              <ShieldCheck className="mr-2 inline h-4 w-4" />
+              {verifyingBackup ? '正在校验...' : '校验最近备份'}
+            </button>
             <button type="button" onClick={runBackupNow} disabled={backupRunning || backupStatus.running} className="rounded-lg border border-slate-200 bg-surface px-5 py-2 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-60 dark:border-navy-800 dark:bg-navy-900 dark:text-slate-300">
               <PlayCircle className="mr-2 inline h-4 w-4" />
               {backupRunning || backupStatus.running ? '正在备份...' : '立即备份'}

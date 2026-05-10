@@ -1,6 +1,12 @@
 import ExcelJS from 'exceljs';
 import { dbAll } from '../lib/db.js';
 
+export type ExportWatermark = {
+  exportedBy?: string | null;
+  purpose?: string | null;
+  exportedAt?: string;
+};
+
 const HEADER_STYLE: Partial<ExcelJS.Style> = {
   font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
   fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } },
@@ -32,10 +38,25 @@ async function addDataSheet<T extends Record<string, unknown>>(
 }
 
 /** Full-system XLSX: 12 sheets */
-export async function buildExcelWorkbook() {
+export async function buildExcelWorkbook(watermark: ExportWatermark = {}) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'SmartTrade AI CRM';
   wb.created = new Date();
+  wb.subject = watermark.purpose || '业务数据导出';
+  wb.description = `Exported by ${watermark.exportedBy || 'System'} at ${watermark.exportedAt || new Date().toISOString()}`;
+
+  const notice = wb.addWorksheet('导出说明', { properties: { tabColor: { argb: 'FFEAB308' } } });
+  notice.columns = [
+    { header: '项目', key: 'label', width: 22 },
+    { header: '内容', key: 'value', width: 80 },
+  ];
+  notice.getRow(1).eachCell(cell => { cell.style = HEADER_STYLE; });
+  [
+    { label: '导出人', value: watermark.exportedBy || '系统' },
+    { label: '导出时间', value: watermark.exportedAt || new Date().toISOString() },
+    { label: '导出用途', value: watermark.purpose || '内部业务归档' },
+    { label: '安全提示', value: '本文件包含客户与订单资料，请勿通过公开网盘或群聊明文传播。' },
+  ].forEach(row => notice.addRow(row));
 
   await addDataSheet(wb, '订单', `
     SELECT o.id, o.display_id, o.status, COALESCE(NULLIF(o.tax_mode, ''), 'A') AS tax_mode, COALESCE(NULLIF(o.currency, ''), 'USD') AS currency, o.total_amount, o.freight_amount, o.misc_amount,

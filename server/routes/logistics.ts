@@ -70,8 +70,8 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
   const params: (string | number | null | undefined)[] = [];
 
   if (req.user?.role !== 'admin') {
-    whereSql += ' AND (l.created_by = ? OR o.created_by = ?)';
-    params.push(req.user?.id, req.user?.id);
+    whereSql += ' AND (l.created_by = ? OR o.created_by = ? OR c.owner_user_id = ?)';
+    params.push(req.user?.id, req.user?.id, req.user?.id);
   }
 
   if (q) {

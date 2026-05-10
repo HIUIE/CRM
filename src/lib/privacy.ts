@@ -25,3 +25,16 @@ export function maskContact(str: string | undefined | null): string {
   
   return '***';
 }
+
+export function maskAiSensitiveText(text: string): string {
+  if (!text) return '';
+
+  return text
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[邮箱已脱敏]')
+    .replace(/(?:\+?\d[\d\s-]{6,}\d)/g, '[号码已脱敏]')
+    .replace(/\b\d{16,19}\b/g, '[长数字已脱敏]');
+}
+
+export function hasAiSensitiveText(text: string): boolean {
+  return Boolean(text) && maskAiSensitiveText(text) !== text;
+}

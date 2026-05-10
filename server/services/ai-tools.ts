@@ -1,6 +1,6 @@
 import { dbAll, dbGet, dbRun } from '../lib/db.js';
 import type { UserRole } from '../domain.js';
-import { getDataScopeConstraint } from '../lib/auth.js';
+import { getDataScopeConstraint, getOrderScopeConstraint } from '../lib/auth.js';
 
 interface ToolResult {
   success: boolean;
@@ -49,9 +49,9 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
     params: 'order_id (订单ID), content (进度内容)',
     mutating: true,
     handler: async (p, context) => {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'o');
+      const [scopeSql, scopeParams] = getOrderScopeConstraint(context, 'o', 'c');
       const plan = await dbGet<{ id: number }>(
-        `SELECT pp.id FROM production_plans pp INNER JOIN orders o ON o.id = pp.order_id WHERE o.deleted_at IS NULL ${scopeSql} AND o.id = ?`,
+        `SELECT pp.id FROM production_plans pp INNER JOIN orders o ON o.id = pp.order_id LEFT JOIN customers c ON c.id = o.customer_id WHERE o.deleted_at IS NULL ${scopeSql} AND o.id = ?`,
         [...scopeParams, Number(p.order_id)],
       );
       if (!plan) return { success: false, message: `订单 ${p.order_id} 暂无生产安排或无权访问` };
@@ -67,7 +67,7 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
     description: '查询指定订单的完整状态摘要',
     params: 'order_no (订单显示编号, 如 ORD-2026-...)',
     handler: async (p, context) => {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'o');
+      const [scopeSql, scopeParams] = getOrderScopeConstraint(context, 'o', 'c');
       const order = await dbGet(`
         SELECT o.*, c.name AS customer_name, c.country
         FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
@@ -106,7 +106,7 @@ export const AI_TOOLS: Record<string, { description: string; params: string; mut
     description: '查看所有逾期未收款项',
     params: '无 (无需参数)',
     handler: async (p, context) => {
-      const [scopeSql, scopeParams] = getDataScopeConstraint(context, 'o');
+      const [scopeSql, scopeParams] = getOrderScopeConstraint(context, 'o', 'c');
       const items = await dbAll(`
         SELECT *
         FROM (

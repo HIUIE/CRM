@@ -22,6 +22,7 @@ import {
   getBackupStatus,
   runManualBackup,
   setBackupConfig,
+  verifySystemBackupFile,
 } from '../services/backup.js';
 
 const BRAND_DIR = path.join(PROJECT_ROOT, 'data', 'brand');
@@ -264,6 +265,18 @@ function pickDirectoryWithSystemDialog() {
       reject(new Error(stderr.trim() || '未选择文件夹'));
     });
   });
+}
+
+function readExportPurpose(req: AuthedRequest) {
+  return readString(req.query?.purpose || req.body?.purpose, 300) || '内部业务归档';
+}
+
+function buildExportWatermark(req: AuthedRequest) {
+  return {
+    exportedBy: req.user?.name || req.user?.username || 'System',
+    purpose: readExportPurpose(req),
+    exportedAt: new Date().toISOString(),
+  };
 }
 
 async function runSystemUpdateJob() {
@@ -659,7 +672,8 @@ export function createSettingsRouter() {
 
   router.get('/export/xlsx', requireAdmin, async (req: AuthedRequest, res) => {
     try {
-      const wb = await buildExcelWorkbook();
+      const watermark = buildExportWatermark(req);
+      const wb = await buildExcelWorkbook(watermark);
       const fileName = `SmartTrade_CRM_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
       void logAction({
         userId: req.user?.id || null,
@@ -667,7 +681,7 @@ export function createSettingsRouter() {
         action: 'EXPORT',
         entityType: 'SYSTEM',
         entityId: 'settings-export-xlsx',
-        newValue: { format: 'xlsx', fileName },
+        newValue: { format: 'xlsx', fileName, purpose: watermark.purpose },
       });
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
@@ -718,16 +732,30 @@ export function createSettingsRouter() {
     }
   });
 
+  router.post('/backup/verify-latest', requireAdmin, async (_req, res) => {
+    try {
+      const status = getBackupStatus();
+      if (!status.lastFile) {
+        return fail(res, 404, '暂无可校验的最近备份文件', 'NO_BACKUP_TO_VERIFY');
+      }
+      const verification = await verifySystemBackupFile(status.lastFile);
+      res.json({ success: verification.ok, verification });
+    } catch (error) {
+      return handleRouteError(res, error, '校验最近备份失败');
+    }
+  });
+
   router.get('/backup/download', requireAdmin, async (req: AuthedRequest, res) => {
     try {
-      const zipBuffer = await buildSystemBackupZipBuffer();
+      const watermark = buildExportWatermark(req);
+      const zipBuffer = await buildSystemBackupZipBuffer(watermark);
       void logAction({
         userId: req.user?.id || null,
         userName: req.user?.name || null,
         action: 'EXPORT',
         entityType: 'SYSTEM',
         entityId: 'system-backup',
-        newValue: { format: 'restorable-backup', size: zipBuffer.length },
+        newValue: { format: 'restorable-backup', size: zipBuffer.length, purpose: watermark.purpose },
       });
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${getBackupFileName()}"`);
@@ -751,14 +779,15 @@ export function createSettingsRouter() {
 
     try {
       if (format === 'restorable-backup') {
-        const zipBuffer = await buildSystemBackupZipBuffer();
+        const watermark = buildExportWatermark(req);
+        const zipBuffer = await buildSystemBackupZipBuffer(watermark);
         void logAction({
           userId: req.user?.id || null,
           userName: req.user?.name || null,
           action: 'EXPORT',
           entityType: 'SYSTEM',
           entityId: 'system-backup',
-          newValue: { format, size: zipBuffer.length },
+          newValue: { format, size: zipBuffer.length, purpose: watermark.purpose },
         });
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', `attachment; filename="${getBackupFileName()}"`);
@@ -772,29 +801,31 @@ export function createSettingsRouter() {
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
       if (format === 'zip-csv') {
-        const zipBuffer = await buildLegacyExportZip();
+        const watermark = buildExportWatermark(req);
+        const zipBuffer = await buildLegacyExportZip(watermark);
         void logAction({
           userId: req.user?.id || null,
           userName: req.user?.name || null,
           action: 'EXPORT',
           entityType: 'SYSTEM',
           entityId: 'legacy-export',
-          newValue: { format, size: zipBuffer.length },
+          newValue: { format, size: zipBuffer.length, purpose: watermark.purpose },
         });
         res.setHeader('Content-Length', String(zipBuffer.length));
         res.end(zipBuffer);
         return;
       }
 
+      const watermark = buildExportWatermark(req);
       void logAction({
         userId: req.user?.id || null,
         userName: req.user?.name || null,
         action: 'EXPORT',
         entityType: 'SYSTEM',
         entityId: 'customer-archive',
-        newValue: { format },
+        newValue: { format, purpose: watermark.purpose },
       });
-      await streamCustomerArchiveZip(res);
+      await streamCustomerArchiveZip(res, watermark);
     } catch (error) {
       return handleRouteError(res, error, '导出数据失败');
     }

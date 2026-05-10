@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { dbAll, dbGet, dbRun, SQL, withTransaction } from '../lib/db.js';
-import { requireAdmin, requireAuth, type AuthedRequest, getDataScopeConstraint, checkOrderAccess } from '../lib/auth.js';
+import { requireAdmin, requireAuth, type AuthedRequest, getOrderScopeConstraint, checkOrderAccess } from '../lib/auth.js';
 import { logAction } from '../lib/audit.js';
 import { fail, handleRouteError } from '../lib/http.js';
 import { notifyOrderCreated } from '../services/notifier.js';
@@ -111,7 +111,7 @@ export function createOrdersRouter() {
     `;
     const params: (string | number | null | undefined)[] = [];
 
-    const [scopeSql, scopeParams] = getDataScopeConstraint(req.user, 'o');
+    const [scopeSql, scopeParams] = getOrderScopeConstraint(req.user, 'o', 'c');
     sql += scopeSql;
     params.push(...scopeParams);
 
@@ -129,15 +129,15 @@ export function createOrdersRouter() {
     }
     if (ownerUserIdRaw) {
       if (ownerUserIdRaw === 'me' && req.user?.id) {
-        sql += ` AND o.created_by = ?`;
-        params.push(req.user.id);
+        sql += ` AND (o.created_by = ? OR c.owner_user_id = ?)`;
+        params.push(req.user.id, req.user.id);
       } else if (ownerUserIdRaw === 'unassigned') {
-        sql += ` AND o.created_by IS NULL`;
+        sql += ` AND o.created_by IS NULL AND c.owner_user_id IS NULL`;
       } else if (req.user?.role === 'admin') {
         const ownerUserId = Number(ownerUserIdRaw);
         if (Number.isInteger(ownerUserId) && ownerUserId > 0) {
-          sql += ` AND o.created_by = ?`;
-          params.push(ownerUserId);
+          sql += ` AND (o.created_by = ? OR c.owner_user_id = ?)`;
+          params.push(ownerUserId, ownerUserId);
         }
       }
     }

@@ -9,6 +9,26 @@ import { ZipStreamWriter, createZipBuffer, type ZipSink } from '../lib/zip.js';
 import { buildOrderDetail } from './order-detail.js';
 import { buildCustomerXlsx, buildOrderXlsx } from './excel-export.js';
 
+export type ExportWatermark = {
+  exportedBy?: string | null;
+  purpose?: string | null;
+  exportedAt?: string;
+};
+
+function buildExportNotice(watermark: ExportWatermark = {}) {
+  return [
+    'SmartTrade CRM Export Notice',
+    `Exported By: ${watermark.exportedBy || 'System'}`,
+    `Exported At: ${watermark.exportedAt || new Date().toISOString()}`,
+    `Purpose: ${watermark.purpose || '内部业务归档'}`,
+    '',
+    'Security Notice:',
+    'This archive may contain customer data, order documents, financial vouchers, and attachment files.',
+    'Do not share it through public cloud drives or group chats without encryption and approval.',
+    '',
+  ].join('\n');
+}
+
 type LegacyExportDefinition = {
   table: string;
   fileName: string;
@@ -439,8 +459,9 @@ async function buildLegacyCsvBuffer(definition: LegacyExportDefinition) {
   return buildCsvBufferFromRows(headers, rows);
 }
 
-export async function buildLegacyExportZip() {
+export async function buildLegacyExportZip(watermark: ExportWatermark = {}) {
   const zip = new AdmZip();
+  zip.addFile('EXPORT_NOTICE.txt', Buffer.from(buildExportNotice(watermark), 'utf8'));
   await Promise.all(
     LEGACY_EXPORTS.map(async (definition) => {
       const data = await buildLegacyCsvBuffer(definition);
@@ -1050,7 +1071,8 @@ async function buildOrderDetails(orderIds: number[]): Promise<Map<number, any>> 
   return result;
 }
 
-async function buildCustomerArchive(writer: ZipStreamWriter) {
+async function buildCustomerArchive(writer: ZipStreamWriter, watermark: ExportWatermark = {}) {
+  await writer.addBuffer('EXPORT_NOTICE.txt', Buffer.from(buildExportNotice(watermark), 'utf8'));
   const customers = await getCustomersForArchive();
   const customerIds = customers.map(c => Number(c.id));
   const allOrders = await getOrdersForCustomers(customerIds);
@@ -1161,9 +1183,9 @@ async function buildCustomerArchive(writer: ZipStreamWriter) {
   }
 }
 
-export async function streamCustomerArchiveZip(res: Response) {
+export async function streamCustomerArchiveZip(res: Response, watermark: ExportWatermark = {}) {
   const writer = new ZipStreamWriter(res as unknown as ZipSink);
-  await buildCustomerArchive(writer);
+  await buildCustomerArchive(writer, watermark);
   await writer.finalize();
 }
 
